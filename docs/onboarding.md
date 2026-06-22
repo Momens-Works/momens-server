@@ -186,7 +186,28 @@ git push -u origin 15-feat/create-category
 
 ---
 
-## 9. 막히면
+## 9. Codex 작업 흐름
+
+이 리포에는 프로젝트 종속 Codex 스킬을 `.codex/skills/` 아래에 둡니다. 스킬은 프로젝트
+문서를 복제하지 않고, 필요한 문서를 어떤 순서로 읽고 어떤 검사를 실행할지 안내합니다.
+
+| 시점 | 스킬 | 목적 |
+| --- | --- | --- |
+| 작업 시작 전 | `sync` | 프로젝트 맥락, 브랜치 상태, 관련 문서 확인 |
+| PR 전 | `diff-review` | `develop`/`main` 대비 diff, 컨벤션, 테스트, 문서, 민감정보, API 계약 점검 |
+| 레거시 이관 전 | `migrate-slice` | Go API에서 Spring으로 옮길 최소 수직 슬라이스 계획 |
+
+권장 흐름:
+
+```text
+작업 시작 전: sync
+PR 전: diff-review
+레거시 기능 이관 전: migrate-slice
+```
+
+---
+
+## 10. 막히면
 
 - 로컬 실행/DB 문제 → [local-development.md](local-development.md)
 - 규칙/컨벤션 질문 → [기반 규칙](rules/README.md)
