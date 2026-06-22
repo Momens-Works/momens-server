@@ -173,3 +173,13 @@ Git 워크플로는 GitFlow를 따르고, 커밋·브랜치·PR 형식은 아래
 - 이미 적용된 마이그레이션은 수정하지 않습니다(변경은 새 마이그레이션으로).
 - 파일명은 순차 버전 + snake_case 설명: `V<n>__<설명>.sql`
   (예: `V1__create_user.sql`, `V2__add_user_index.sql`).
+
+## 테스트
+
+테스트 프레임워크는 JUnit 5를 사용합니다. 테스트 유형:
+
+- 애플리케이션 컨텍스트 로드 테스트
+- Spring Modulith 경계 테스트
+- controller / web 테스트
+- service 단위 테스트
+- repository 통합 테스트 — PostgreSQL Testcontainers 사용([영속성 > DB](#db) 참고, H2 미사용)

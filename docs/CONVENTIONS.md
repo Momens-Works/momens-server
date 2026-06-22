@@ -26,16 +26,6 @@ works.momens.server.retrievalintegration
 검색 연동 모듈은 별도 서비스 `momens-retrieval`과 구분하기 위해
 `retrieval-integration`을 우선 후보로 둡니다.
 
-## 테스트 컨벤션
-
-초기 테스트 유형:
-
-- application context load test
-- Spring Modulith boundary test
-- controller/web tests
-- service unit tests
-- repository integration tests with PostgreSQL Testcontainers
-
 ## API Compatibility
 
 초기 세팅 단계에서는 새 공통 API 응답 포맷을 정하지 않습니다.
