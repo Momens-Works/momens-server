@@ -14,7 +14,6 @@
 | P1 | 도메인 모듈 구조 | Gradle 멀티모듈은 확정. 도메인 지향 vs 레이어 지향, 모듈 경계와 의존 방향은 미정 | 미정 |
 | P2 | 도메인 모듈 목록·이름 | `workspace`/`product`/`memory`/`source`/`retrieval-integration` 등 | 미정 |
 | P4 | 첫 마이그레이션 수직 슬라이스 | 무엇부터? (auth / workspace 등) | 미정 |
-| P5 | API 응답 포맷 | 마이그레이션 단계에서 결정, 우선 Go API 호환 유지 | 보류 |
 | P6 | 인증/인가 상세 | Google OAuth, JWT, `SecurityFilterChain` 설계, `momens.auth.*` 키 | 구현 시점 |
 | P7 | PR 승인 필수 여부 | 세팅 단계엔 0 유지, 팀 논의 후 재검토(1개 상향 여부) | 보류 |
 | P8 | QueryDSL 도입 시점 | 쿼리 복잡도 필요 시 | 보류 |

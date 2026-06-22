@@ -13,13 +13,15 @@ docs/
 ├── local-development.md  # 로컬 개발
 ├── rules/                # 기반 규칙 (성격별 폴더)
 ├── adr/                  # 결정 기록 (ADR, 결정마다 파일 하나씩)
+├── spec/                 # 서버 명세 (API/계약)
 └── pending-decisions.md  # 추후 결정(열린 결정) 로그
 ```
 
-3계층:
+문서 계층:
 
 - **rules/** — 무엇을 지킬지(상시 규칙)
 - **adr/** — 왜·언제 그렇게 정했는지(불변 기록)
+- **spec/** — 서버 외부 계약과 명세(API 응답, 에러 코드 등)
 - **design/** — 현재 사실의 단일 출처(상세설계). 필요해질 때 추가합니다.
 
 ## 문서 목록
@@ -28,6 +30,7 @@ docs/
 - [로컬 개발](local-development.md)
 - [기반 규칙](rules/README.md)
 - [ADR](adr/README.md)
+- [서버 명세](spec/README.md)
 - [추후 결정 로그](pending-decisions.md)
 
 ## 제품 레벨 문서는 어디에?

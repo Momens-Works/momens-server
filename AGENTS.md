@@ -101,7 +101,7 @@ dependencies, CI, local development setup, and conventions.
 | CI order | `spotlessCheck`, `test`, `bootJar` |
 | CI triggers | Pull requests, pushes to `main`, pushes to `develop` |
 | Dockerfile | Add later after skeleton and CI are stable |
-| API response format | Preserve legacy Go API compatibility first; decide cleanup later |
+| API response format | No global success wrapper; preserve legacy Go API compatibility first; see `docs/spec/api-response-error-codes.md` |
 | Git workflow | GitFlow; see `docs/rules/git.md` |
 | Branch strategy | GitFlow with `develop` as the default PR target and `main` for release |
 | Code owners | `@Momens-Works/momens-backend` |
