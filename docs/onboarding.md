@@ -61,7 +61,7 @@ docker compose up -d
 ./gradlew test
 ```
 
-`.env` 키 설명과 프로필 구성은 [로컬 개발](LOCAL_DEVELOPMENT.md)을 참고하세요.
+`.env` 키 설명과 프로필 구성은 [로컬 개발](local-development.md)을 참고하세요.
 
 ---
 
@@ -126,7 +126,7 @@ fix (domain): 버그 수정
 docs: 문서 수정
 ```
 
-타입과 형식 전체는 [기반 규칙 > Git](rules/collaboration/git.md)을 참고하세요.
+타입과 형식 전체는 [기반 규칙 > Git](rules/git.md)을 참고하세요.
 
 ### PR
 
@@ -148,7 +148,7 @@ docs: 문서 수정
 - 현재 **승인(approval)은 필수가 아닙니다**. 단, CODEOWNERS(`@Momens-Works/momens-backend`)에
   리뷰 요청이 자동으로 갑니다 — 리뷰는 권장입니다.
 
-머지 정책 전체는 [기반 규칙 > Git > 머지](rules/collaboration/git.md#머지)에 있습니다.
+머지 정책 전체는 [기반 규칙 > Git > 머지](rules/git.md#머지)에 있습니다.
 
 ---
 
@@ -177,17 +177,17 @@ git push -u origin 15-feat/create-category
 | 문서 | 무엇 |
 | --- | --- |
 | [docs/README.md](README.md) | 문서 인덱스 |
-| [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) | 로컬 실행·DB·프로필·`.env` |
+| [local-development.md](local-development.md) | 로컬 실행·DB·프로필·`.env` |
 | [기반 규칙](rules/README.md) | 코딩·Git·아키텍처 등 |
 | [adr/](adr/) | 결정 기록 (ADR) |
-| [DECISIONS-PENDING.md](DECISIONS-PENDING.md) | 추후 결정 로그 |
+| [pending-decisions.md](pending-decisions.md) | 추후 결정 로그 |
 | [../AGENTS.md](../AGENTS.md) | AI 진입점 (Codex/Claude 공용) |
 
 ---
 
 ## 9. 막히면
 
-- 로컬 실행/DB 문제 → [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)
+- 로컬 실행/DB 문제 → [local-development.md](local-development.md)
 - 규칙/컨벤션 질문 → [기반 규칙](rules/README.md)
 - 제품 맥락/용어 → [`teams`](https://github.com/Momens-Works/teams)
 - 그래도 막히면 백엔드 팀(`@Momens-Works/momens-backend`)에 물어보세요.
