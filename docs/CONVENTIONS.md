@@ -26,13 +26,6 @@ works.momens.server.retrievalintegration
 검색 연동 모듈은 별도 서비스 `momens-retrieval`과 구분하기 위해
 `retrieval-integration`을 우선 후보로 둡니다.
 
-## DTO 컨벤션
-
-- request/response DTO에는 Java record 사용을 우선 검토합니다.
-- API DTO와 persistence model은 분리합니다.
-- 초기 세팅 단계에서 새 공통 응답 포맷을 정하지 않습니다.
-- 마이그레이션 단계에서는 기존 Go API 응답 호환을 우선합니다.
-
 ## DB 컨벤션
 
 - PostgreSQL만 지원합니다.
