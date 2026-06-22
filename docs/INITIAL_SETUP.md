@@ -95,10 +95,14 @@ momens-server
 ├── gradlew.bat
 ├── README.md
 ├── docs/
-│   ├── ARCHITECTURE.md
+│   ├── README.md
+│   ├── ONBOARDING.md
 │   ├── CONVENTIONS.md
 │   ├── INITIAL_SETUP.md
-│   └── LOCAL_DEVELOPMENT.md
+│   ├── LOCAL_DEVELOPMENT.md
+│   ├── spec/            # 서버 명세 (사람용)
+│   └── ai/              # AI용 구조 문서 (영문)
+│       └── ARCHITECTURE.md
 ├── app/
 ├── {domain-module}/
 ├── .env.example

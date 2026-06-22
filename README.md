@@ -47,11 +47,14 @@ Momens의 새로운 Java Spring 제품 API 서버입니다.
 
 ## 문서
 
-- [초기 세팅](docs/INITIAL_SETUP.md)
-- [컨벤션](docs/CONVENTIONS.md)
+- [문서 인덱스](docs/README.md) — 전체 문서 네비게이션
+- [온보딩](docs/ONBOARDING.md) — 처음 합류했다면 여기서 시작
 - [로컬 개발](docs/LOCAL_DEVELOPMENT.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Agent Guide](AGENTS.md)
+- [컨벤션](docs/CONVENTIONS.md)
+- [서버 명세](docs/spec/README.md)
+- [초기 세팅](docs/INITIAL_SETUP.md)
+- [Architecture](docs/ai/ARCHITECTURE.md) (AI용)
+- [Agent Guide](AGENTS.md) (AI용)
 
 사람이 읽는 문서는 한국어로 작성합니다. AI/에이전트가 읽는 구조 문서는 영어로
 작성합니다.
