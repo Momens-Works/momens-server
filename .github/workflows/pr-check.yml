@@ -10,6 +10,7 @@ permissions:
 jobs:
   pr-format:
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     steps:
       - name: Validate PR title and body
         # PR 제목/본문은 신뢰할 수 없는 입력이므로 env 로만 전달하고 스크립트에 직접 보간하지 않습니다.
