@@ -10,3 +10,6 @@ out/
 .env
 .env.*
 !*.env.example
+
+application-secret.yml
+application-*-secret.yml

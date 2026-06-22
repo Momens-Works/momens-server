@@ -33,6 +33,7 @@ dependencies, CI, local development setup, and conventions.
 | Health check | Actuator default `/actuator/health` only |
 | OpenAPI | Include Springdoc OpenAPI during initial setup |
 | Local env | `.env` with `spring-dotenv` |
+| Secret config files | Commit placeholders only; ignore `.env` and `application-*-secret.yml` |
 | Formatting | Spotless with Google Java Format |
 | CI order | `spotlessCheck`, `test`, `bootJar` |
 | CI triggers | Pull requests, pushes to `main`, pushes to `develop` |
@@ -108,6 +109,9 @@ module names are intentionally undecided.
 - Do not add custom `/health`; use Actuator.
 - Do not use H2 for repository or migration compatibility tests.
 - Do not commit `.env`, `.idea`, or `*.iml`.
+- Do not commit real secrets in `application-*.yml`; use environment variable
+  placeholders only.
+- Do not use private submodules or private repositories as secret stores.
 - Do not add a `LICENSE` file during initial setup.
 - Prefer updating human-facing docs in Korean.
 - Keep AI-facing architecture and agent guidance in English.

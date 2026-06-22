@@ -188,3 +188,31 @@ PR title format should also include the issue type:
 
 실제 secret은 커밋하지 않습니다.
 로컬 credential은 `.env` 또는 무시되는 로컬 파일에서 관리합니다.
+
+커밋 가능한 설정 파일에는 실제 값이 아니라 환경변수 placeholder만 둡니다.
+
+커밋 가능:
+
+```text
+application.yml
+application-local.yml
+application-test.yml
+application-prod.yml
+.env.example
+```
+
+커밋 금지:
+
+```text
+.env
+.env.*
+application-secret.yml
+application-*-secret.yml
+```
+
+로컬 secret 공유는 팀 secret manager를 사용합니다.
+CI secret은 GitHub Actions Secrets에 저장합니다.
+운영 secret은 Kubernetes Secret 또는 External Secrets로 관리합니다.
+
+개인 DM, 개인 메모, private submodule, private repo를 secret 저장소로 사용하지
+않습니다.

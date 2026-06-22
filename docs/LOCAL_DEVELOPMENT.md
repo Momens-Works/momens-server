@@ -45,6 +45,54 @@ application-prod.yml
 - `momens.cors`
 - `momens.retrieval`
 
+## 민감 정보 관리
+
+설정 파일은 **구조를 담는 파일**과 **실제 값을 담는 파일**을 분리합니다.
+
+커밋하는 파일:
+
+```text
+application.yml
+application-local.yml
+application-test.yml
+application-prod.yml
+.env.example
+```
+
+커밋하지 않는 파일:
+
+```text
+.env
+.env.*
+application-secret.yml
+application-*-secret.yml
+```
+
+`application-*.yml`에는 실제 secret을 넣지 않습니다.
+대신 환경변수 placeholder만 둡니다.
+
+예:
+
+```yaml
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+
+momens:
+  auth:
+    jwt-secret: ${JWT_SECRET}
+```
+
+실제 값은 로컬에서는 `.env`, CI에서는 GitHub Actions Secrets, 운영에서는
+Kubernetes Secret 또는 이후 도입할 External Secrets를 통해 주입합니다.
+
+개인 DM, 개인 메모, private Git submodule, 별도 private repo로 secret을
+전달하거나 저장하지 않습니다.
+
+`.env.example`에는 실제 값이 아니라 필요한 키 이름과 설명만 둡니다.
+
 ## DB
 
 PostgreSQL을 사용합니다.
