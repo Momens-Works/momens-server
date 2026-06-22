@@ -67,24 +67,6 @@ works.momens.server.retrievalintegration
 - service unit tests
 - repository integration tests with PostgreSQL Testcontainers
 
-## 포맷팅
-
-Use Spotless with Google Java Format.
-
-CI should run:
-
-```bash
-./gradlew spotlessCheck
-./gradlew test
-./gradlew bootJar
-```
-
-Developers can format Java code locally with:
-
-```bash
-./gradlew spotlessApply
-```
-
 ## API Compatibility
 
 초기 세팅 단계에서는 새 공통 API 응답 포맷을 정하지 않습니다.
