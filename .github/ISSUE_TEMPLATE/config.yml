@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 컨벤션 문서
+    url: https://github.com/Momens-Works/momens-server/blob/develop/docs/CONVENTIONS.md
+    about: 브랜치·커밋·PR·머지 정책을 먼저 확인하세요.
