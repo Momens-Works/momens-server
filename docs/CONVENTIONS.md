@@ -26,19 +26,6 @@ works.momens.server.retrievalintegration
 검색 연동 모듈은 별도 서비스 `momens-retrieval`과 구분하기 위해
 `retrieval-integration`을 우선 후보로 둡니다.
 
-## Spring 컨벤션
-
-- 생성자 주입을 사용합니다.
-- 필드 주입은 사용하지 않습니다.
-- Controller는 HTTP 입출력에 집중합니다.
-- 비즈니스 규칙은 Service에 둡니다.
-- 초기 persistence 접근은 JPA를 사용합니다.
-- DB 접근은 Repository 뒤에 둡니다.
-- 공통 인프라 코드는 platform 성격의 모듈에 둡니다.
-- 요청 DTO에는 validation annotation을 사용합니다.
-- 트랜잭션 경계는 Service 메서드에 둡니다.
-- Spring Security 의존성은 초기부터 포함하지만, 보안 설정 클래스는 인증/인가 구현 시점에 만듭니다.
-
 ## DTO 컨벤션
 
 - request/response DTO에는 Java record 사용을 우선 검토합니다.
