@@ -14,7 +14,8 @@ GitHub 차원에서 강제하려 했다.
 머지는 rebase-only로 한다.
 
 - repo 설정에서 merge commit·squash를 끄고 rebase만 허용한다.
-- ruleset `protected-branches`에서 linear history를 강제한다.
+- ruleset `protected-branches`에서 `main`/`develop`의 linear history와 rebase-only
+  merge를 강제한다.
 - 머지된 브랜치는 자동 삭제한다.
 
 ## 대안
@@ -24,5 +25,5 @@ GitHub 차원에서 강제하려 했다.
 
 ## 결과
 
-- 좋음: 선형 히스토리, ruleset으로 일관되게 강제.
+- 좋음: 선형 히스토리, active ruleset으로 일관되게 강제.
 - 감수: SOPT 기본과 다름(문서로 명시). rebase 충돌은 작성자가 해결.

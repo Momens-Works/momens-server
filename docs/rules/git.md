@@ -52,4 +52,6 @@ Git 워크플로는 GitFlow를 따르고, 커밋·브랜치·PR 형식은 아래
 - `develop`/`main`은 PR로만 변경(직접 push 차단).
 - CI(`build`, `pr-format`) 통과 + 리뷰 대화 resolve 후 머지.
 - 머지된 브랜치는 자동 삭제. force-push·브랜치 삭제 차단.
-- 위 머지 규칙은 GitHub ruleset(`protected-branches`)으로 강제됩니다.
+- 위 머지 규칙은 GitHub ruleset(`protected-branches`)으로 강제됩니다. 현재 ruleset은
+  `main`/`develop`에 active 상태이며, rebase merge만 허용하고 필수 체크(`build`,
+  `pr-format`)와 리뷰 대화 resolve를 요구합니다.

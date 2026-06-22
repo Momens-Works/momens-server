@@ -11,7 +11,7 @@
 
 | # | 주제 | 맥락 / 선택지 | 상태 |
 | --- | --- | --- | --- |
-| P1 | 도메인 모듈 구조 | 도메인 지향 vs 레이어 지향 / Gradle 서브모듈 vs 단일 모듈 패키지 + Modulith | 미정 |
+| P1 | 도메인 모듈 구조 | Gradle 멀티모듈은 확정. 도메인 지향 vs 레이어 지향, 모듈 경계와 의존 방향은 미정 | 미정 |
 | P2 | 도메인 모듈 목록·이름 | `workspace`/`product`/`memory`/`source`/`retrieval-integration` 등 | 미정 |
 | P4 | 첫 마이그레이션 수직 슬라이스 | 무엇부터? (auth / workspace 등) | 미정 |
 | P5 | API 응답 포맷 | 마이그레이션 단계에서 결정, 우선 Go API 호환 유지 | 보류 |
