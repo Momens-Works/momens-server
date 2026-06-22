@@ -102,8 +102,7 @@ momens-server
 
 - 베이스 패키지: `works.momens.server`
 - 실행 모듈은 `app`으로 확정. **도메인 모듈 목록은 추후 결정**합니다.
-- 구조/의존 방향의 자세한 의도는 AI용 [`ai/ARCHITECTURE.md`](ai/ARCHITECTURE.md)에
-  정리되어 있습니다.
+- 구조/의존 방향은 [기반 규칙 > 아키텍처](RULES.md#아키텍처)에 정리되어 있습니다.
 
 ---
 

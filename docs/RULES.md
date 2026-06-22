@@ -10,9 +10,8 @@
 - "왜 그렇게 정했나"의 근거는 [ADR](adr/)에 남기고, 여기에는 **상시 지시(무엇을 지킬지)**만
   둡니다.
 
-> 규칙은 토픽별로 하나씩 채워집니다. 기존 [CONVENTIONS.md](CONVENTIONS.md)와
-> [ai/ARCHITECTURE.md](ai/ARCHITECTURE.md)의 내용은 토픽 작업 시 이곳으로 이관 후
-> 원본을 제거합니다.
+> 규칙은 토픽별로 하나씩 채워집니다. 기존 [CONVENTIONS.md](CONVENTIONS.md)의 내용은
+> 토픽 작업 시 이곳으로 이관 후 원본을 제거합니다.
 
 ## Git
 
@@ -251,3 +250,17 @@ Git 워크플로는 GitFlow를 따르고, 커밋·브랜치·PR 형식은 아래
 
 - `deleted_at`(`timestamptz`, nullable)로 소프트 삭제를 표현합니다. 적용 범위는
   레거시 기준으로 엔티티별로 판단합니다.
+
+## 아키텍처
+
+`momens-server`는 **modular modulith**입니다. 하나의 배포 가능한 Spring Boot 애플리케이션을
+유지하면서 내부 모듈 경계를 명시적으로 둡니다.
+
+- 하나의 배포 가능한 애플리케이션을 유지합니다(초기 단계에 마이크로서비스로 분리하지 않음).
+- 프로젝트 구조는 Gradle 멀티모듈을 사용합니다. 실행 모듈은 `app`입니다.
+- 모듈 경계는 Spring Modulith 테스트로 검증합니다.
+- 공통 인프라 코드는 platform 성격의 위치에 둡니다.
+- 레이어 책임(controller 얇게·service 트랜잭션·repository 캡슐화)은 [Spring](#spring)을 따릅니다.
+
+도메인 모듈 목록과 모듈 간 의존 방향은 아직 미정입니다([P1/P2](DECISIONS-PENDING.md)).
+시스템 맥락(레포 역할)은 [AGENTS.md](../AGENTS.md)와 [온보딩](ONBOARDING.md)을 참고합니다.
