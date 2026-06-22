@@ -98,6 +98,7 @@ dependencies, CI, local development setup, and conventions.
 | Local env | `.env` with `spring-dotenv` |
 | Secret config files | Commit placeholders only; ignore `.env` and `application-*-secret.yml` |
 | Formatting | Spotless with Google Java Format |
+| Observability | Prefer Spring Boot 4.1 observability support; use traceId/spanId for log correlation and keep requestId only for external request IDs |
 | CI order | `spotlessCheck`, `test`, `bootJar` |
 | CI triggers | Pull requests, pushes to `main`, pushes to `develop` |
 | Dockerfile | Add later after skeleton and CI are stable |
