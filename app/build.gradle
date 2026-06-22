@@ -20,7 +20,7 @@ dependencies {
     testAnnotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
 
     // Core (Boot BOM 관리, 버전 생략)
-    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -46,7 +46,7 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok'
 
     // Test
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation "org.springframework.modulith:spring-modulith-starter-test:${springModulithVersion}"
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
