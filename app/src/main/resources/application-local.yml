@@ -1,0 +1,18 @@
+# 로컬 개발 프로필.
+# 실제 값은 커밋하지 않는 .env 에서 주입합니다(.env.example 참고).
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/momens}
+    username: ${DATABASE_USERNAME:momens}
+    password: ${DATABASE_PASSWORD:momens}
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    works.momens.server: DEBUG
+    org.hibernate.SQL: DEBUG
+
+springdoc:
+  swagger-ui:
+    enabled: true

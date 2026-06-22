@@ -1,0 +1,14 @@
+# 테스트 프로필.
+# datasource 는 PostgreSQL Testcontainers 가 동적으로 주입합니다(H2 미사용).
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    enabled: true
+
+logging:
+  level:
+    org.testcontainers: INFO
+    com.github.dockerjava: WARN

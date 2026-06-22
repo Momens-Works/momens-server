@@ -1,15 +1,21 @@
 .gradle/
 build/
 out/
+bin/
+!gradle/wrapper/gradle-wrapper.jar
 
 .idea/
 *.iml
+*.ipr
+*.iws
 
 *.log
 
 .env
 .env.*
-!*.env.example
+!.env.example
 
 application-secret.yml
 application-*-secret.yml
+
+.DS_Store
