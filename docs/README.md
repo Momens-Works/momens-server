@@ -11,14 +11,14 @@ docs/
 ├── README.md             # (이 문서) 인덱스
 ├── ONBOARDING.md         # 신규 합류 가이드
 ├── LOCAL_DEVELOPMENT.md  # 로컬 개발
-├── RULES.md              # 기반 규칙 (잘 안 바뀌는 규칙, 섹션)
+├── rules/                # 기반 규칙 (성격별 폴더)
 ├── adr/                  # 결정 기록 (ADR, 결정마다 파일 하나씩)
 └── DECISIONS-PENDING.md  # 추후 결정(열린 결정) 로그
 ```
 
 3계층:
 
-- **RULES.md** — 무엇을 지킬지(상시 규칙)
+- **rules/** — 무엇을 지킬지(상시 규칙)
 - **adr/** — 왜·언제 그렇게 정했는지(불변 기록)
 - **design/** — 현재 사실의 단일 출처(상세설계). 필요해질 때 추가합니다.
 
@@ -26,12 +26,9 @@ docs/
 
 - [온보딩](ONBOARDING.md) — 처음 합류했다면 여기서 시작
 - [로컬 개발](LOCAL_DEVELOPMENT.md)
-- [기반 규칙](RULES.md)
-- [ADR](adr/)
+- [기반 규칙](rules/README.md)
+- [ADR](adr/README.md)
 - [추후 결정 로그](DECISIONS-PENDING.md)
-
-> 이관 중: [CONVENTIONS.md](CONVENTIONS.md)의 남은 내용(패키지·API 호환)은 모듈 구조·API
-> 포맷이 정해지면 `RULES.md`로 옮긴 뒤 제거됩니다.
 
 ## 제품 레벨 문서는 어디에?
 

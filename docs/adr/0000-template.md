@@ -7,7 +7,7 @@ ADR 작성법:
 
 # NNNN. 제목
 
-- 상태: Proposed | Accepted | Superseded by [ADR-XXXX](XXXX-...md)
+- 상태: Proposed | Accepted | Superseded by ADR-XXXX
 - 날짜: YYYY-MM-DD
 
 ## 맥락
@@ -16,7 +16,7 @@ ADR 작성법:
 
 ## 결정
 
-무엇으로 정했는가. (상시 지시로 환원되는 부분은 [RULES.md](../RULES.md)에도 반영)
+무엇으로 정했는가. (상시 지시로 환원되는 부분은 [기반 규칙](../rules/README.md)에도 반영)
 
 ## 대안
 
