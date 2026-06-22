@@ -102,7 +102,7 @@ momens-server
 
 - 베이스 패키지: `works.momens.server`
 - 실행 모듈은 `app`으로 확정. **도메인 모듈 목록은 추후 결정**합니다.
-- 구조/의존 방향은 [기반 규칙 > 아키텍처](RULES.md#아키텍처)에 정리되어 있습니다.
+- 구조/의존 방향은 [기반 규칙 > 아키텍처](rules/architecture.md)에 정리되어 있습니다.
 
 ---
 
@@ -126,7 +126,7 @@ fix (domain): 버그 수정
 docs: 문서 수정
 ```
 
-타입과 형식 전체는 [기반 규칙 > Git](RULES.md#git)을 참고하세요.
+타입과 형식 전체는 [기반 규칙 > Git](rules/collaboration/git.md)을 참고하세요.
 
 ### PR
 
@@ -148,7 +148,7 @@ docs: 문서 수정
 - 현재 **승인(approval)은 필수가 아닙니다**. 단, CODEOWNERS(`@Momens-Works/momens-backend`)에
   리뷰 요청이 자동으로 갑니다 — 리뷰는 권장입니다.
 
-머지 정책 전체는 [기반 규칙 > Git > 머지](RULES.md#머지)에 있습니다.
+머지 정책 전체는 [기반 규칙 > Git > 머지](rules/collaboration/git.md#머지)에 있습니다.
 
 ---
 
@@ -178,7 +178,7 @@ git push -u origin 15-feat/create-category
 | --- | --- |
 | [docs/README.md](README.md) | 문서 인덱스 |
 | [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) | 로컬 실행·DB·프로필·`.env` |
-| [RULES.md](RULES.md) | 기반 규칙 (코딩·Git·아키텍처 등) |
+| [기반 규칙](rules/README.md) | 코딩·Git·아키텍처 등 |
 | [adr/](adr/) | 결정 기록 (ADR) |
 | [DECISIONS-PENDING.md](DECISIONS-PENDING.md) | 추후 결정 로그 |
 | [../AGENTS.md](../AGENTS.md) | AI 진입점 (Codex/Claude 공용) |
@@ -188,6 +188,6 @@ git push -u origin 15-feat/create-category
 ## 9. 막히면
 
 - 로컬 실행/DB 문제 → [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)
-- 규칙/컨벤션 질문 → [CONVENTIONS.md](CONVENTIONS.md)
+- 규칙/컨벤션 질문 → [기반 규칙](rules/README.md)
 - 제품 맥락/용어 → [`teams`](https://github.com/Momens-Works/teams)
 - 그래도 막히면 백엔드 팀(`@Momens-Works/momens-backend`)에 물어보세요.

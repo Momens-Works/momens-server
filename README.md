@@ -50,7 +50,7 @@ Momens의 새로운 Java Spring 제품 API 서버입니다.
 - [문서 인덱스](docs/README.md) — 전체 문서 네비게이션
 - [온보딩](docs/ONBOARDING.md) — 처음 합류했다면 여기서 시작
 - [로컬 개발](docs/LOCAL_DEVELOPMENT.md)
-- [기반 규칙](docs/RULES.md)
+- [기반 규칙](docs/rules/README.md)
 - [ADR](docs/adr/)
 - [추후 결정 로그](docs/DECISIONS-PENDING.md)
 - [Agent Guide](AGENTS.md) — AI 진입점(Codex/Claude 공용), `CLAUDE.md`가 가리킴
