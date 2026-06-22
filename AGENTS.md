@@ -165,8 +165,8 @@ Plus:
 - `docs/ONBOARDING.md`, `docs/LOCAL_DEVELOPMENT.md` — guides
 - `docs/DECISIONS-PENDING.md` — open decisions; do NOT infer these, decide with the team
 
-Migration in progress: `docs/CONVENTIONS.md` and `docs/ai/ARCHITECTURE.md` are legacy
-and are being moved topic-by-topic into `docs/RULES.md` / `docs/adr/`, then removed.
+Migration in progress: `docs/CONVENTIONS.md` holds a few legacy sections (package,
+API compatibility) that move into `docs/RULES.md` once their blocking decisions land.
 
 Rule: never infer an uncertain rule. If a rule is not settled, log it in
 `docs/DECISIONS-PENDING.md` and confirm with the team.

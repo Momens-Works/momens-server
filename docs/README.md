@@ -30,8 +30,8 @@ docs/
 - [ADR](adr/)
 - [추후 결정 로그](DECISIONS-PENDING.md)
 
-> 이관 중: [CONVENTIONS.md](CONVENTIONS.md), [ai/ARCHITECTURE.md](ai/ARCHITECTURE.md)는
-> 토픽별로 `RULES.md`/`adr/`로 옮긴 뒤 제거됩니다.
+> 이관 중: [CONVENTIONS.md](CONVENTIONS.md)의 남은 내용(패키지·API 호환)은 모듈 구조·API
+> 포맷이 정해지면 `RULES.md`로 옮긴 뒤 제거됩니다.
 
 ## 제품 레벨 문서는 어디에?
 
