@@ -179,10 +179,10 @@ git push -u origin 15-feat/create-category
 | --- | --- |
 | [docs/README.md](README.md) | 문서 인덱스 |
 | [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) | 로컬 실행·DB·프로필·`.env` |
-| [CONVENTIONS.md](CONVENTIONS.md) | 코드·Git·머지 컨벤션 |
-| [spec/README.md](spec/README.md) | 서버 명세 |
-| [ai/ARCHITECTURE.md](ai/ARCHITECTURE.md) | (AI용) 구조/의존 방향 |
-| [../AGENTS.md](../AGENTS.md) | (AI용) 에이전트 작업 가이드 |
+| [RULES.md](RULES.md) | 기반 규칙 (코딩·Git·아키텍처 등) |
+| [adr/](adr/) | 결정 기록 (ADR) |
+| [DECISIONS-PENDING.md](DECISIONS-PENDING.md) | 추후 결정 로그 |
+| [../AGENTS.md](../AGENTS.md) | AI 진입점 (Codex/Claude 공용) |
 
 ---
 

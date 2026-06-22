@@ -116,20 +116,27 @@ module names are intentionally undecided.
 - Prefer updating human-facing docs in Korean.
 - Keep AI-facing architecture and agent guidance in English.
 
-## Key Human-Facing Docs
+## Documentation Map
 
-- `README.md`
-- `docs/README.md` (docs index)
-- `docs/ONBOARDING.md`
-- `docs/CONVENTIONS.md`
-- `docs/LOCAL_DEVELOPMENT.md`
-- `docs/spec/` (server spec)
-- `docs/INITIAL_SETUP.md`
+This file (`AGENTS.md`) is the single source of truth for AI guidance and is read by
+both Codex and Claude Code. `CLAUDE.md` is a one-line pointer (`@AGENTS.md`) — do not
+duplicate content there. Humans and AI read the same Korean docs; there is no separate
+AI doc tree.
 
-## Key AI-Facing Docs
+Three tiers under `docs/`:
 
-- `AGENTS.md`
-- `docs/ai/ARCHITECTURE.md`
+- `docs/RULES.md` — standing project-wide rules (what to follow)
+- `docs/adr/` — Architecture Decision Records (why/when; one file per decision)
+- `docs/design/` — single source of truth for evolving detailed design (added when needed)
 
-Doc audience rule: everything under `docs/` is human-facing Korean except
-`docs/ai/`, which is AI-facing English. The root `AGENTS.md` is the AI entry point.
+Plus:
+
+- `README.md`, `docs/README.md` — entry / index
+- `docs/ONBOARDING.md`, `docs/LOCAL_DEVELOPMENT.md` — guides
+- `docs/DECISIONS-PENDING.md` — open decisions; do NOT infer these, decide with the team
+
+Migration in progress: `docs/CONVENTIONS.md` and `docs/ai/ARCHITECTURE.md` are legacy
+and are being moved topic-by-topic into `docs/RULES.md` / `docs/adr/`, then removed.
+
+Rule: never infer an uncertain rule. If a rule is not settled, log it in
+`docs/DECISIONS-PENDING.md` and confirm with the team.
