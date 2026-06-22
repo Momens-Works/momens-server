@@ -1,0 +1,27 @@
+version: 2
+updates:
+  # Gradle 의존성 (root + app 모듈)
+  - package-ecosystem: "gradle"
+    directories:
+      - "/"
+      - "/app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore"
+
+  # GitHub Actions 워크플로
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore"
