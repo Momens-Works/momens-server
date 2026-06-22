@@ -26,17 +26,6 @@ works.momens.server.retrievalintegration
 검색 연동 모듈은 별도 서비스 `momens-retrieval`과 구분하기 위해
 `retrieval-integration`을 우선 후보로 둡니다.
 
-## DB 컨벤션
-
-- PostgreSQL만 지원합니다.
-- 마이그레이션은 Flyway를 사용합니다.
-- 초기 DB 접근은 JPA를 사용합니다.
-- QueryDSL은 필요한 시점에 추가합니다.
-- 이미 적용된 migration은 수정하지 않습니다.
-- migration 이름은 순서와 의미가 드러나게 작성합니다.
-- DB 통합 테스트는 PostgreSQL Testcontainers를 사용합니다.
-- repository/migration 호환성 테스트에 H2를 사용하지 않습니다.
-
 ## 테스트 컨벤션
 
 초기 테스트 유형:
