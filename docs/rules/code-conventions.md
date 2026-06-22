@@ -92,12 +92,14 @@
 - 로그 인자는 문자열 연결 대신 `{}` placeholder로 전달합니다
   (`log.info("user {} created", userId)`).
 - 민감 정보(비밀번호·토큰·개인정보 등)는 로그에 남기지 않습니다([설정 · 시크릿 > 시크릿](configuration.md#시크릿) 참고).
+- 로그 상관관계는 [관측성](observability.md)의 traceId/spanId 기준을 따릅니다.
+- 검색 가능한 로그를 위해 메시지에 주요 도메인 식별자를 명시적으로 남깁니다. 예:
+  `log.info("workspace created workspaceId={} userId={}", workspaceId, userId)`.
 - 로그 레벨:
   - `error`: 시스템 오류·예외
   - `warn`: 경고·복구 가능한 문제
   - `info`: 주요 비즈니스 흐름
   - `debug`: 개발 디버깅
-- 로그 출력 포맷(plain vs 구조적/JSON)은 관측 스택과 함께 정합니다([P13](../pending-decisions.md)).
 
 ## 테스트
 

@@ -17,3 +17,4 @@
 - [코드](code-conventions.md) — 코딩 스타일·Spring·DTO·로깅·테스트
 - [데이터](persistence.md) — 영속성(DB·JPA·Flyway)·시간/식별자
 - [설정 · 시크릿](configuration.md) — 설정(Configuration)·시크릿
+- [관측성](observability.md) — metrics·traces·logs·로그 상관관계
