@@ -1,6 +1,6 @@
 # 로컬 개발
 
-이 문서는 프로젝트 skeleton이 만들어지면서 함께 갱신합니다.
+이 문서는 로컬에서 `momens-server`를 실행하고 검증하는 방법을 정리합니다.
 
 ## 필요 도구
 
@@ -11,9 +11,7 @@
 
 전역 Gradle 대신 레포에 포함된 Gradle wrapper를 사용합니다.
 
-## 예상 명령어
-
-프로젝트 skeleton 생성 후:
+## 기본 명령어
 
 ```bash
 ./gradlew test
@@ -91,7 +89,8 @@ Kubernetes Secret 또는 이후 도입할 External Secrets를 통해 주입합�
 개인 DM, 개인 메모, private Git submodule, 별도 private repo로 secret을
 전달하거나 저장하지 않습니다.
 
-`.env.example`에는 실제 값이 아니라 필요한 키 이름과 설명만 둡니다.
+`.env.example`에는 실제 운영 secret을 두지 않습니다. 로컬 실행을 위한 기본 예시값은
+둘 수 있지만, 공유가 필요한 민감 값은 별도 secret 관리 채널을 사용합니다.
 
 ## DB
 

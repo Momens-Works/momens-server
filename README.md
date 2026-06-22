@@ -55,8 +55,8 @@ Momens의 새로운 Java Spring 제품 API 서버입니다.
 - [추후 결정 로그](docs/pending-decisions.md)
 - [Agent Guide](AGENTS.md) — AI 진입점(Codex/Claude 공용), `CLAUDE.md`가 가리킴
 
-사람이 읽는 문서는 한국어로 작성합니다. AI/에이전트가 읽는 구조 문서는 영어로
-작성합니다.
+사람이 읽는 `docs/` 문서는 한국어로 작성합니다. AI/에이전트 전용 진입점은
+영어로 작성한 [AGENTS.md](AGENTS.md)이며, 별도 AI 문서 트리는 두지 않습니다.
 
 ## 현재 범위
 

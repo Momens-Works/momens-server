@@ -143,8 +143,9 @@ Do not create domain implementation before the project foundation is stable.
   placeholders only.
 - Do not use private submodules or private repositories as secret stores.
 - Do not add a `LICENSE` file during initial setup.
-- Prefer updating human-facing docs in Korean.
-- Keep AI-facing architecture and agent guidance in English.
+- Keep this file and other agent-only guidance in English.
+- Prefer updating shared human-facing docs under `docs/` in Korean; AI agents also
+  read those docs, but there is no separate AI documentation tree.
 
 ## Documentation Map
 
