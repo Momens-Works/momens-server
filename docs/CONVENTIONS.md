@@ -174,7 +174,19 @@ PR title format should also include the issue type:
 - `LGTM`만 남기는 리뷰는 지양합니다.
 - 승인 의견에도 확인한 범위나 판단 근거를 짧게 남깁니다.
 
-머지 커밋 메시지에는 PR 제목이 남아 있어야 합니다.
+## 머지 정책
+
+`develop`, `main` 브랜치는 GitHub ruleset(`protected-branches`)으로 보호합니다.
+
+- 머지는 **rebase merge**로 통일합니다. 머지 커밋을 만들지 않고 선형 히스토리를 유지합니다.
+- `develop`, `main`에는 직접 push 하지 않고 PR로만 변경합니다.
+- CI(`build` job)가 통과해야 머지할 수 있습니다.
+- PR의 리뷰 대화(conversation)는 모두 resolve 된 뒤 머지합니다.
+- 머지된 브랜치는 자동 삭제됩니다.
+- force push와 브랜치 삭제는 차단됩니다.
+
+rebase 머지 시 각 커밋이 그대로 히스토리에 남으므로, 커밋 단위를 의미 있게 유지하고
+커밋 메시지는 위 커밋 컨벤션을 따릅니다.
 
 ## CODEOWNERS
 
