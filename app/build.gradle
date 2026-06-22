@@ -1,0 +1,54 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'org.springframework.boot'
+}
+
+// 비-Boot 관리 의존성 버전.
+// Spring Boot BOM이 관리하지 않는 의존성만 명시적으로 버전을 지정합니다.
+ext {
+    springModulithVersion = '2.0.7'
+    springdocVersion = '3.0.3'
+    springDotenvVersion = '5.1.0'
+}
+
+dependencies {
+    // Spring Boot Gradle plugin이 제공하는 기본 BOM만 사용합니다.
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+    testAnnotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // Core (Boot BOM 관리, 버전 생략)
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    // Persistence / Migration (Boot BOM 관리)
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // Spring Modulith (별도 릴리스 트레인, 명시적 버전)
+    implementation "org.springframework.modulith:spring-modulith-starter-core:${springModulithVersion}"
+
+    // API 문서 / 로컬 env (Boot BOM 비관리, 명시적 버전)
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
+    implementation "me.paulschwarz:spring-dotenv:${springDotenvVersion}"
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation "org.springframework.modulith:spring-modulith-starter-test:${springModulithVersion}"
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+}

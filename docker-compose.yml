@@ -1,0 +1,23 @@
+# 로컬 개발용 PostgreSQL.
+# 일반 postgres 가 아니라 pgvector/pgvector 이미지를 사용해
+# 기존 Go API 의 pgvector 마이그레이션과의 호환성을 미리 확보합니다.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: momens-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-momens}
+      POSTGRES_USER: ${POSTGRES_USER:-momens}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-momens}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - momens-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-momens} -d ${POSTGRES_DB:-momens}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  momens-postgres-data:

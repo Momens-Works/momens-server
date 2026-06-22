@@ -1,0 +1,19 @@
+# 운영 프로필.
+# 모든 민감 값은 환경변수로 주입합니다(Kubernetes Secret / External Secrets 등).
+# 이 파일에는 실제 secret 을 두지 않습니다.
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+  jpa:
+    show-sql: false
+
+springdoc:
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    root: INFO
+    works.momens.server: INFO
