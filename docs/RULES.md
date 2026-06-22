@@ -264,3 +264,16 @@ Git 워크플로는 GitFlow를 따르고, 커밋·브랜치·PR 형식은 아래
 
 도메인 모듈 목록과 모듈 간 의존 방향은 아직 미정입니다([P1/P2](DECISIONS-PENDING.md)).
 시스템 맥락(레포 역할)은 [AGENTS.md](../AGENTS.md)와 [온보딩](ONBOARDING.md)을 참고합니다.
+
+## 로깅
+
+- 로거는 Lombok `@Slf4j`를 사용합니다.
+- 로그 인자는 문자열 연결 대신 `{}` placeholder로 전달합니다
+  (`log.info("user {} created", userId)`).
+- 민감 정보(비밀번호·토큰·개인정보 등)는 로그에 남기지 않습니다([시크릿](#시크릿) 참고).
+- 로그 레벨:
+  - `error`: 시스템 오류·예외
+  - `warn`: 경고·복구 가능한 문제
+  - `info`: 주요 비즈니스 흐름
+  - `debug`: 개발 디버깅
+- 로그 출력 포맷(plain vs 구조적/JSON)은 관측 스택과 함께 정합니다([P13](DECISIONS-PENDING.md)).
