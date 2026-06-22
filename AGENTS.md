@@ -105,8 +105,8 @@ Detailed architecture rules live in `docs/rules/architecture.md`.
 ## Working Rules
 
 - Do not invent dependencies. Add only dependencies confirmed in docs or by the user.
-- Do not infer unsettled decisions. If a rule is not settled, log it in
-  `docs/pending-decisions.md` and confirm with the team.
+- Do not infer unsettled decisions. If a rule is not documented, ask the team or update
+  the appropriate project doc.
 - Do not commit `.env`, `.idea`, `*.iml`, real secrets, or local-only config.
 - Do not use private submodules or private repositories as secret stores.
 - Keep this file and other agent-only guidance in English.
@@ -124,7 +124,6 @@ Start here:
 - `README.md` — repository purpose and current scope
 - `docs/README.md` — documentation index
 - `docs/onboarding.md` — setup and day-to-day workflow
-- `docs/pending-decisions.md` — open decisions; do not infer these
 
 Topic-specific docs:
 
