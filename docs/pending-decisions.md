@@ -16,7 +16,7 @@
 | P4 | 첫 마이그레이션 수직 슬라이스 | 무엇부터? (auth / workspace 등) | 미정 |
 | P5 | API 응답 포맷 | 마이그레이션 단계에서 결정, 우선 Go API 호환 유지 | 보류 |
 | P6 | 인증/인가 상세 | Google OAuth, JWT, `SecurityFilterChain` 설계, `momens.auth.*` 키 | 구현 시점 |
-| P7 | PR 승인 필수 여부 | 현재 0개. 추후 1개로 상향 검토 | 미정 |
+| P7 | PR 승인 필수 여부 | 세팅 단계엔 0 유지, 팀 논의 후 재검토(1개 상향 여부) | 보류 |
 | P8 | QueryDSL 도입 시점 | 쿼리 복잡도 필요 시 | 보류 |
 | P9 | Dockerfile / 배포 / K8s | skeleton·CI 안정화 후 | 보류 |
 | P13 | 로그 출력 포맷 | plain vs 구조적/JSON — 관측 스택·배포와 함께 결정 | 보류 |
