@@ -8,12 +8,12 @@
 - 모듈 경계는 Spring Modulith 테스트로 검증합니다.
 - 공통 인프라 코드는 platform 성격의 위치에 둡니다.
 - 레이어 책임(controller 얇게·service 트랜잭션·repository 캡슐화)은
-  [Spring](code/spring.md)을 따릅니다.
+  [Spring](code-conventions.md#spring)을 따릅니다.
 
 ## 패키지
 
 - base package는 `works.momens.server`입니다.
-- 도메인 모듈 목록과 모듈 간 의존 방향은 아직 미정입니다([P1/P2](../DECISIONS-PENDING.md)).
+- 도메인 모듈 목록과 모듈 간 의존 방향은 아직 미정입니다([P1/P2](../pending-decisions.md)).
 
-시스템 맥락(레포 역할)은 [AGENTS.md](../../AGENTS.md)와 [온보딩](../ONBOARDING.md)을
+시스템 맥락(레포 역할)은 [AGENTS.md](../../AGENTS.md)와 [온보딩](../onboarding.md)을
 참고합니다.

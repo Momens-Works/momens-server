@@ -9,11 +9,11 @@
 ```text
 docs/
 ├── README.md             # (이 문서) 인덱스
-├── ONBOARDING.md         # 신규 합류 가이드
-├── LOCAL_DEVELOPMENT.md  # 로컬 개발
+├── onboarding.md         # 신규 합류 가이드
+├── local-development.md  # 로컬 개발
 ├── rules/                # 기반 규칙 (성격별 폴더)
 ├── adr/                  # 결정 기록 (ADR, 결정마다 파일 하나씩)
-└── DECISIONS-PENDING.md  # 추후 결정(열린 결정) 로그
+└── pending-decisions.md  # 추후 결정(열린 결정) 로그
 ```
 
 3계층:
@@ -24,11 +24,11 @@ docs/
 
 ## 문서 목록
 
-- [온보딩](ONBOARDING.md) — 처음 합류했다면 여기서 시작
-- [로컬 개발](LOCAL_DEVELOPMENT.md)
+- [온보딩](onboarding.md) — 처음 합류했다면 여기서 시작
+- [로컬 개발](local-development.md)
 - [기반 규칙](rules/README.md)
 - [ADR](adr/README.md)
-- [추후 결정 로그](DECISIONS-PENDING.md)
+- [추후 결정 로그](pending-decisions.md)
 
 ## 제품 레벨 문서는 어디에?
 
