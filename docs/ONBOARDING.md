@@ -127,7 +127,7 @@ fix (domain): 버그 수정
 docs: 문서 수정
 ```
 
-타입과 형식 전체는 [컨벤션](CONVENTIONS.md#git-컨벤션)을 참고하세요.
+타입과 형식 전체는 [기반 규칙 > Git](RULES.md#git)을 참고하세요.
 
 ### PR
 
@@ -149,7 +149,7 @@ docs: 문서 수정
 - 현재 **승인(approval)은 필수가 아닙니다**. 단, CODEOWNERS(`@Momens-Works/momens-backend`)에
   리뷰 요청이 자동으로 갑니다 — 리뷰는 권장입니다.
 
-머지 정책 전체는 [컨벤션 > 머지 정책](CONVENTIONS.md#머지-정책)에 있습니다.
+머지 정책 전체는 [기반 규칙 > Git > 머지](RULES.md#머지)에 있습니다.
 
 ---
 
