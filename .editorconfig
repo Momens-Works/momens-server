@@ -1,0 +1,27 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+# Java: Google Java Format(2-space, 100칸)에 맞춤
+[*.java]
+indent_size = 2
+max_line_length = 100
+
+# Gradle / Groovy 빌드 스크립트
+[*.{gradle,groovy}]
+indent_size = 4
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+[*.{sh,properties}]
+indent_size = 2
+
+# Markdown: 줄 끝 공백 2칸이 줄바꿈 의미를 가지므로 trim 하지 않음
+[*.md]
+trim_trailing_whitespace = false
