@@ -119,11 +119,17 @@ module names are intentionally undecided.
 ## Key Human-Facing Docs
 
 - `README.md`
-- `docs/INITIAL_SETUP.md`
+- `docs/README.md` (docs index)
+- `docs/ONBOARDING.md`
 - `docs/CONVENTIONS.md`
 - `docs/LOCAL_DEVELOPMENT.md`
+- `docs/spec/` (server spec)
+- `docs/INITIAL_SETUP.md`
 
 ## Key AI-Facing Docs
 
 - `AGENTS.md`
-- `docs/ARCHITECTURE.md`
+- `docs/ai/ARCHITECTURE.md`
+
+Doc audience rule: everything under `docs/` is human-facing Korean except
+`docs/ai/`, which is AI-facing English. The root `AGENTS.md` is the AI entry point.
