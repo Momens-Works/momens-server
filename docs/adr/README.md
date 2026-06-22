@@ -6,6 +6,4 @@
 
 | # | 제목 | 상태 |
 | --- | --- | --- |
-| [0001](0001-rebase-only-merge.md) | 머지 전략으로 rebase-only 채택 | Accepted |
-| [0002](0002-business-logic-placement.md) | 비즈니스 로직 위치 — 엔티티/서비스 절충 | Accepted |
-| [0003](0003-flyway-sequential-versioning.md) | Flyway 마이그레이션 순차 버전 채택 | Accepted |
+| - | 아직 기록된 ADR 없음 | - |
