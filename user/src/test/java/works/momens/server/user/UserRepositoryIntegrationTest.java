@@ -1,0 +1,49 @@
+package works.momens.server.user;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
+import org.springframework.context.annotation.Import;
+import works.momens.server.common.persistence.JpaAuditingConfig;
+import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+
+/**
+ * 영속성 베이스 패턴 검증.
+ *
+ * <p>실제 PostgreSQL(Testcontainers) + Flyway 마이그레이션 + {@code ddl-auto: validate} 위에서 UUID PK 앱 생성과
+ * 감사 필드 자동 주입을 확인합니다.
+ */
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import(JpaAuditingConfig.class)
+class UserRepositoryIntegrationTest extends AbstractPostgresIntegrationTest {
+
+  @Autowired private UserRepository userRepository;
+  @Autowired private TestEntityManager entityManager;
+
+  @Test
+  void savesUserWithGeneratedIdAndAuditFields() {
+    User saved = userRepository.save(User.builder().email("a@momens.works").name("규일").build());
+
+    assertThat(saved.getId()).isNotNull();
+    assertThat(saved.getCreatedAt()).isNotNull();
+    assertThat(saved.getUpdatedAt()).isNotNull();
+  }
+
+  @Test
+  void readsBackPersistedUser() {
+    User saved = userRepository.save(User.builder().email("b@momens.works").name("이름").build());
+    entityManager.flush();
+    entityManager.clear();
+
+    User found = userRepository.findById(saved.getId()).orElseThrow();
+
+    assertThat(found.getEmail()).isEqualTo("b@momens.works");
+    assertThat(found.getName()).isEqualTo("이름");
+    assertThat(found.getCreatedAt()).isNotNull();
+  }
+}
