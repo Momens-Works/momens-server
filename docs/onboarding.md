@@ -184,10 +184,11 @@ git push -u origin 15-feat/create-category
 
 ---
 
-## 9. Codex 작업 흐름
+## 9. 에이전트 작업 흐름
 
-이 리포에는 프로젝트 종속 Codex 스킬을 `.codex/skills/` 아래에 둡니다. 스킬은 프로젝트
-문서를 복제하지 않고, 필요한 문서를 어떤 순서로 읽고 어떤 검사를 실행할지 안내합니다.
+이 리포에는 프로젝트 종속 에이전트 스킬을 둡니다. Codex는 `.codex/skills/`, Claude Code는
+`.claude/skills/` 아래에 같은 스킬(`sync` / `diff-review` / `migrate-slice`)을 둡니다. 스킬은
+프로젝트 문서를 복제하지 않고, 필요한 문서를 어떤 순서로 읽고 어떤 검사를 실행할지 안내합니다.
 
 | 시점 | 스킬 | 목적 |
 | --- | --- | --- |
