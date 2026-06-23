@@ -23,6 +23,8 @@
 - 이미 적용된 마이그레이션은 수정하지 않습니다(변경은 새 마이그레이션으로).
 - 파일명은 순차 버전 + snake_case 설명: `V<n>__<설명>.sql`
   (예: `V1__create_user.sql`, `V2__add_user_index.sql`).
+- Spring Modulith event publication registry의 `event_publication` 테이블도 Flyway로
+  관리합니다. 첫 application event 도입 시 함께 추가합니다([아키텍처](architecture.md), [ADR-0001](../adr/0001-modular-monolith-rules.md)).
 
 ## 시간 · 식별자
 
