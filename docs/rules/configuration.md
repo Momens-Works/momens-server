@@ -27,7 +27,7 @@
 
 ### 위치
 
-- `@ConfigurationProperties` 클래스 위치는 모듈/패키지 구조([P1/P2](../pending-decisions.md))
+- `@ConfigurationProperties` 클래스 위치는 모듈/패키지 구조([P2](../pending-decisions.md))
   확정 후 정합니다. 지금은 `momens.*` 네임스페이스 원칙만 둡니다.
 
 ## 시크릿
