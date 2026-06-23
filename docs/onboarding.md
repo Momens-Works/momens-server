@@ -111,9 +111,11 @@ momens-server
 
 ### 브랜치 이름
 
+이슈는 Linear에서 관리합니다. 브랜치 앞에 Linear 이슈 ID를 둡니다.
+
 ```text
-<issue-number>-<type>/<work-description>
-# 예) 15-feat/create-category
+<Linear-이슈ID>-<type>/<work-description>
+# 예) MOM-15-feat/create-category
 ```
 
 ### 커밋 메시지
@@ -153,17 +155,17 @@ docs: 문서 수정
 ## 7. 첫 기여 따라하기
 
 ```bash
-# 1) 이슈 생성 ([Feature]/[Bug]/... 제목 prefix)
-# 2) 작업 브랜치 생성
+# 1) Linear 이슈 생성 → 이슈 ID 확인 (예: MOM-15)
+# 2) 작업 브랜치 생성 (브랜치 앞에 Linear 이슈 ID)
 git switch develop && git pull
-git switch -c 15-feat/create-category
+git switch -c MOM-15-feat/create-category
 
 # 3) 작업 → 포맷 → 커밋
 ./gradlew spotlessApply
 git commit -m "feat (category): 카테고리 생성 API 추가"
 
-# 4) 푸시 후 PR 생성 (base: develop)
-git push -u origin 15-feat/create-category
+# 4) 푸시 후 PR 생성 (base: develop, 본문에 'Fixes MOM-15')
+git push -u origin MOM-15-feat/create-category
 
 # 5) CI(build, pr-format) 통과 + 리뷰 대화 resolve → rebase 머지
 ```
