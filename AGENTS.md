@@ -68,17 +68,6 @@ For multi-step tasks, state a brief plan:
 Strong success criteria let you loop independently. Weak criteria ("make it work")
 require constant clarification.
 
-## Current Phase
-
-The repository is in the initial setup phase.
-
-Do not start domain migration from the legacy Go/Gin `momens-api` yet. The
-current goal is to establish the Spring project foundation: Gradle structure,
-dependencies, CI, local development setup, and conventions.
-
-For detailed setup decisions, read the relevant `docs/` pages instead of adding them
-here.
-
 ## Repository Roles In The Wider System
 
 | Repository | Role |
@@ -96,9 +85,7 @@ here.
 use Gradle multi-module boundaries and Spring Modulith verification to keep
 internal modules explicit.
 
-Do not split into microservices during initial setup.
-
-Do not create domain implementation before the project foundation is stable.
+Do not split into microservices.
 
 Detailed architecture rules live in `docs/rules/architecture.md`.
 

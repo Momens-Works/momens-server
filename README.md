@@ -2,22 +2,7 @@
 
 Momens의 새로운 Java Spring 제품 API 서버입니다.
 
-이 레포는 기존 Go/Gin 기반 `momens-api`를 대체하기 위한 새 서버 기반입니다.
-현재 목표는 도메인 마이그레이션이 아니라 **프로젝트 초기 세팅**입니다.
-
-지금 다루는 범위:
-
-- Spring Boot 4 프로젝트 골격
-- JDK 21 / Gradle Groovy 설정
-- Gradle 멀티모듈 구조
-- Spring Modulith 기반 modular modulith 방향
-- 초기 의존성
-- CI
-- 로컬 개발 환경
-- 팀 컨벤션
-
-`momens-api`의 실제 API/도메인 마이그레이션은 초기 세팅이 안정된 뒤 별도로
-계획합니다.
+이 레포는 기존 Go/Gin 기반 `momens-api`를 대체하는 새 Java Spring 제품 API 서버입니다.
 
 ## 아키텍처 방향
 
@@ -26,7 +11,7 @@ Momens의 새로운 Java Spring 제품 API 서버입니다.
 - 런타임은 하나의 Spring Boot 애플리케이션입니다.
 - 물리 모듈 경계는 Gradle 서브프로젝트(기능/도메인 단위)이며, `app`이 조립·실행합니다.
 - Spring Modulith를 병행해 모듈 간 의존·경계를 검증/문서화합니다.
-- 초기 단계에서 마이크로서비스로 분리하지 않습니다.
+- 마이크로서비스로 분리하지 않습니다.
 - 도메인 모듈 목록은 기능이 추가되며 점진적으로 늘립니다([ADR-0002](docs/adr/0002-gradle-multi-module-boundaries.md)).
 
 ## 기본 스택
@@ -56,31 +41,3 @@ Momens의 새로운 Java Spring 제품 API 서버입니다.
 
 사람이 읽는 `docs/` 문서는 한국어로 작성합니다. AI/에이전트 전용 진입점은
 영어로 작성한 [AGENTS.md](AGENTS.md)이며, 별도 AI 문서 트리는 두지 않습니다.
-
-## 현재 범위
-
-포함:
-
-- Spring Boot 4 skeleton
-- Gradle Groovy 멀티모듈
-- `app` 실행 모듈
-- Flyway / JPA / PostgreSQL
-- Spring Security 의존성
-- Actuator 기본 `/actuator/health`
-- Springdoc OpenAPI
-- `.env` + `spring-dotenv`
-- 로컬 `docker-compose.yml` PostgreSQL
-- Spotless + Google Java Format
-- GitHub Actions CI
-- GitFlow (`develop` 기본 개발 브랜치, `main` 릴리즈 브랜치)
-- CODEOWNERS
-
-제외:
-
-- 전체 API 마이그레이션
-- 도메인 구현
-- Dockerfile
-- LICENSE
-- Kubernetes 배포
-- `momens-worker` 변경
-- `momens-retrieval` 변경

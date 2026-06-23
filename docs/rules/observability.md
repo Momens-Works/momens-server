@@ -2,9 +2,9 @@
 
 WAS 운영 중 요청 흐름을 추적하기 위한 metrics · traces · logs 규칙입니다.
 
-## 초기 범위
+## 적용 범위
 
-초기 세팅 단계에서는 관측성 도입 방향과 설정 원칙만 확정합니다.
+관측성 도입 방향과 설정 원칙입니다.
 
 - Spring Boot Actuator는 기본으로 사용합니다.
 - Spring Boot 4.1의 OpenTelemetry/Micrometer Tracing 지원을 우선 활용합니다.
