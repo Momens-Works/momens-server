@@ -30,6 +30,7 @@ class UserRepositoryIntegrationTest extends AbstractPostgresIntegrationTest {
     User saved = userRepository.save(User.builder().email("a@momens.works").name("규일").build());
 
     assertThat(saved.getId()).isNotNull();
+    assertThat(saved.getId().version()).as("UUID v4 PK").isEqualTo(4);
     assertThat(saved.getCreatedAt()).isNotNull();
     assertThat(saved.getUpdatedAt()).isNotNull();
   }
