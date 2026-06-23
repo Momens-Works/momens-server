@@ -19,6 +19,10 @@ dependencies {
     testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
     testAnnotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
 
+    // 기능/공유 모듈을 조립합니다.
+    implementation project(':common')
+    implementation project(':user')
+
     // Core (Boot BOM 관리, 버전 생략)
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -28,7 +32,9 @@ dependencies {
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     // Persistence / Migration (Boot BOM 관리)
-    implementation 'org.flywaydb:flyway-core'
+    // Boot 4는 Flyway 자동구성을 spring-boot-flyway 모듈로 분리합니다. flyway-core 단독으로는
+    // 자동 마이그레이션이 동작하지 않으므로 starter로 가져옵니다.
+    implementation 'org.springframework.boot:spring-boot-starter-flyway'
     implementation 'org.flywaydb:flyway-database-postgresql'
     runtimeOnly 'org.postgresql:postgresql'
 
@@ -49,6 +55,6 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation "org.springframework.modulith:spring-modulith-starter-test:${springModulithVersion}"
-    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
-    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    // Testcontainers 통합테스트 베이스(common testFixtures)를 재사용합니다.
+    testImplementation testFixtures(project(':common'))
 }

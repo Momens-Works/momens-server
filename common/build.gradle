@@ -1,0 +1,43 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+    id 'java-test-fixtures'
+}
+
+// Spring Modulith는 별도 릴리스 트레인이라 명시적 버전을 둡니다.
+ext {
+    springModulithVersion = '2.1.0'
+}
+
+dependencies {
+    // Boot BOM으로 버전을 관리합니다(boot 플러그인은 app만 적용).
+    api platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testFixturesApi platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // 영속성 베이스(@MappedSuperclass, JPA Auditing, Persistable)는 기능 모듈에 노출합니다.
+    api 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // @ApplicationModule(OPEN) 등 modulith 메타데이터.
+    api "org.springframework.modulith:spring-modulith-starter-core:${springModulithVersion}"
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // 통합테스트 베이스(testFixtures)를 의존 모듈이 재사용합니다.
+    testFixturesApi 'org.springframework.boot:spring-boot-starter-test'
+    // Boot 4는 테스트 슬라이스를 기술별 스타터로 분리합니다(@DataJpaTest 등).
+    testFixturesApi 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    testFixturesApi 'org.testcontainers:testcontainers-junit-jupiter'
+    testFixturesApi 'org.testcontainers:testcontainers-postgresql'
+    // 통합테스트는 실제 PostgreSQL을 쓰므로 JDBC 드라이버가 테스트 런타임에 필요합니다.
+    testFixturesApi 'org.postgresql:postgresql'
+    // 통합테스트 베이스를 쓰는 모듈이 JUnit Platform launcher를 함께 상속합니다.
+    testFixturesApi 'org.junit.platform:junit-platform-launcher'
+
+    // 모듈별 repository 통합테스트가 자기 마이그레이션을 Flyway로 적용하도록 합니다.
+    // Boot 4는 Flyway 자동구성을 별도 모듈로 분리하므로 starter로 가져옵니다.
+    testFixturesApi 'org.springframework.boot:spring-boot-starter-flyway'
+    testFixturesApi 'org.flywaydb:flyway-database-postgresql'
+}
