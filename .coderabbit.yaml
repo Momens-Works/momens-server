@@ -21,8 +21,8 @@ reviews:
   request_changes_workflow: false
 
   path_filters:
-    - "!*.md"
-    - "!.github/**"
+    - "!**/*.md"
+    - "!.github/workflows/**"
     - "!gradle/**"
     - "!**/build/**"
     - "!.idea/**"
