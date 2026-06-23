@@ -20,3 +20,6 @@ application-secret.yml
 application-*-secret.yml
 
 .DS_Store
+
+# 로컬 전용 작업 기록
+docs/progress.md
