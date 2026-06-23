@@ -10,9 +10,11 @@ Git 워크플로는 GitFlow를 따르고, 커밋·브랜치·PR 형식은 아래
 
 ## 브랜치 이름
 
-`<이슈번호>-<타입>/<작업-내용>`
+`<Linear-이슈ID>-<타입>/<작업-내용>`
 
-- 예: `15-feat/create-category`, `23-fix/category-not-found`
+- 예: `MOM-15-feat/create-category`, `MOM-23-fix/category-not-found`
+- 이슈는 Linear(`Momens-backend`, 키 `MOM`)에서 관리합니다. 브랜치 앞에 Linear 이슈
+  ID(`MOM-15`)를 두면 Linear가 브랜치·PR을 해당 이슈에 자동 연결합니다.
 - 브랜치 타입: `feat`, `fix`, `docs`, `refactor`, `chore`
 
 ## 커밋 메시지
@@ -40,6 +42,8 @@ Git 워크플로는 GitFlow를 따르고, 커밋·브랜치·PR 형식은 아래
 `[Feature] / [Bug] / [Refactor] / [Chore] / [Docs] <제목>`
 
 - 예: `[Feature] 카테고리 생성 API 구현`
+- PR 본문에 `Fixes MOM-15`처럼 Linear 이슈 ID를 적으면 머지 시 해당 이슈가 자동으로
+  Done 처리됩니다.
 
 ## 리뷰
 
