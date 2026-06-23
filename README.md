@@ -24,11 +24,10 @@ Momens의 새로운 Java Spring 제품 API 서버입니다.
 `momens-server`는 **modular modulith**를 지향합니다.
 
 - 런타임은 하나의 Spring Boot 애플리케이션입니다.
-- 프로젝트 구조는 Gradle 멀티모듈을 사용합니다.
-- 모듈 경계는 Spring Modulith로 검증합니다.
+- 물리 모듈 경계는 Gradle 서브프로젝트(기능/도메인 단위)이며, `app`이 조립·실행합니다.
+- Spring Modulith를 병행해 모듈 간 의존·경계를 검증/문서화합니다.
 - 초기 단계에서 마이크로서비스로 분리하지 않습니다.
-- 실행 애플리케이션 모듈 이름은 `app`입니다.
-- 나머지 도메인 모듈 목록은 추후 확정합니다.
+- 도메인 모듈 목록은 기능이 추가되며 점진적으로 늘립니다([ADR-0002](docs/adr/0002-gradle-multi-module-boundaries.md)).
 
 ## 기본 스택
 

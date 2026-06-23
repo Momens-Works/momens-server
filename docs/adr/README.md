@@ -7,3 +7,4 @@
 | # | 제목 | 상태 |
 | --- | --- | --- |
 | [0001](0001-modular-monolith-rules.md) | 모듈러 모놀리스 아키텍처 룰 | Accepted |
+| [0002](0002-gradle-multi-module-boundaries.md) | Gradle 멀티모듈을 물리 모듈 경계로 사용 | Accepted |
