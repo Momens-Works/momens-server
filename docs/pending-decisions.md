@@ -11,13 +11,11 @@
 
 | # | 주제 | 맥락 / 선택지 | 상태 |
 | --- | --- | --- | --- |
-| P2 | 도메인 모듈 목록·분리 최종안 | 경계 기준은 capability로 확정([ADR-0001](adr/0001-modular-monolith-rules.md)). 실제 모듈 목록·이름과 분리 최종안은 미정 | 미정 |
 | P4 | 첫 마이그레이션 수직 슬라이스 | 무엇부터? (auth / workspace 등) | 미정 |
 | P6 | 인증/인가 상세 | Google OAuth, JWT, `SecurityFilterChain` 설계, `momens.auth.*` 키 | 구현 시점 |
 | P7 | PR 승인 필수 여부 | 세팅 단계엔 0 유지, 팀 논의 후 재검토(1개 상향 여부) | 보류 |
 | P8 | QueryDSL 도입 시점 | 쿼리 복잡도 필요 시 | 보류 |
 | P9 | Dockerfile / 배포 / K8s | skeleton·CI 안정화 후 | 보류 |
-| P10 | external / persistence 모듈 분리 | 별도 모듈로 둘지 각 도메인에서 다룰지([ADR-0001](adr/0001-modular-monolith-rules.md)) | 미정 |
 | P11 | 이벤트 실패·재처리 정책 | 모듈 간 event 협력 도입 시 실패/재처리 기준 정의 시점 | 보류 |
 
 > 갱신 규칙: 항목이 결정되면 행을 제거하고 커밋 메시지/ADR에 근거를 남깁니다.

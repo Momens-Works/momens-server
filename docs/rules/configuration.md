@@ -27,8 +27,9 @@
 
 ### 위치
 
-- `@ConfigurationProperties` 클래스 위치는 모듈/패키지 구조([P2](../pending-decisions.md))
-  확정 후 정합니다. 지금은 `momens.*` 네임스페이스 원칙만 둡니다.
+- `@ConfigurationProperties` 클래스는 관련 기능 모듈 안에 둡니다(모듈 구조는
+  [ADR-0002](../adr/0002-gradle-multi-module-boundaries.md)). 모듈 내 구체 경로는 해당 모듈을
+  만들며 정하고, 지금은 `momens.*` 네임스페이스 원칙만 둡니다.
 
 ## 시크릿
 

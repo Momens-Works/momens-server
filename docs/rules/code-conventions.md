@@ -65,8 +65,9 @@
 - request/response DTO는 Java record를 기본으로 합니다. class는 다음일 때만 사용합니다:
   기본 생성자 필요 / Jackson·JPA·외부 라이브러리 호환 / 기본값·복잡한 생성 로직.
 - API DTO와 persistence 모델(엔티티)은 분리합니다.
-- request/response DTO는 분리해서 둡니다. 정확한 패키지 경로는 모듈/패키지 구조가
-  정해진 뒤 확정합니다([P2](../pending-decisions.md)).
+- request/response DTO는 분리해서 둡니다. 기능 모듈의 presentation 레이어에 두며(모듈 구조는
+  [ADR-0002](../adr/0002-gradle-multi-module-boundaries.md)), 모듈 내 구체 경로는 해당 모듈을
+  만들며 확정합니다.
 - API 성공 응답에는 전역 wrapper(`success`, `data`)를 두지 않습니다. 응답/에러 코드
   규격은 [서버 명세 > API 응답과 에러 코드](../spec/api-response-error-codes.md)를 따릅니다.
 

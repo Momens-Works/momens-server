@@ -4,10 +4,33 @@
 유지하면서 내부 모듈 경계를 명시적으로 둡니다.
 
 - 하나의 배포 가능한 애플리케이션을 유지합니다(초기 단계에 마이크로서비스로 분리하지 않음).
-- 프로젝트 구조는 Gradle 멀티모듈을 사용합니다. 실행 모듈은 `app`입니다.
-- 모듈 경계는 Spring Modulith 테스트로 검증합니다.
+- **물리 모듈 경계는 Gradle 서브프로젝트**로 둡니다(기능/도메인 단위). 실행 모듈은 `app`입니다.
+- **Spring Modulith는 병행**하며, 패키지 단위로 모듈 간 의존·경계를 검증/문서화합니다.
 
-결정 근거는 [ADR-0001](../adr/0001-modular-monolith-rules.md)에 있습니다.
+Gradle 멀티모듈(빌드 타임 컴파일 격리)과 Spring Modulith(런타임/테스트 패키지 경계 검증)는
+별개의 축이며, 여기서는 둘을 함께 씁니다.
+
+결정 근거는 [ADR-0001](../adr/0001-modular-monolith-rules.md)(모듈러 모놀리스 룰)과
+[ADR-0002](../adr/0002-gradle-multi-module-boundaries.md)(Gradle 멀티모듈을 물리 경계로)에 있습니다.
+
+## 모듈의 물리 구조 (Gradle)
+
+- 물리 모듈 경계는 **Gradle 서브프로젝트**이고, **기능/도메인 단위**로 나눕니다.
+  `controller`/`service`/`repository` 같은 **레이어 단위로 Gradle 모듈을 나누지 않습니다.**
+- `app` 모듈이 각 기능 모듈을 **조립·실행**하는 유일한 실행 가능 모듈입니다. 기능 모듈은
+  라이브러리(`java-library`)로 두고, 실행 jar는 `app`만 만듭니다.
+- `common`/global 모듈은 **최소화**합니다. 공유 코드(예: 영속성 베이스)는 `app`이 아니라
+  기능 모듈이 의존할 수 있는 별도 모듈에 둡니다(`app`에 두면 순환 의존이 생김).
+- 모든 모듈은 같은 base package `works.momens.server.*` 아래 패키지를 써서, `app`
+  클래스패스에서 Spring Modulith가 하나로 조립해 검증할 수 있게 합니다.
+
+```text
+root
+├── app            # 실행·조립
+├── user           # 기능/도메인 모듈
+├── …
+└── common         # 최소화된 공유 모듈
+```
 
 ## 모듈 경계
 
@@ -56,7 +79,9 @@
 ## 패키지
 
 - base package는 `works.momens.server`입니다.
-- 도메인 모듈 목록과 external/persistence 모듈 분리 여부는 아직 미정입니다([P2/P10](../pending-decisions.md)).
+- 분리 방식은 기능/도메인 단위 Gradle 서브프로젝트로 확정했습니다([ADR-0002](../adr/0002-gradle-multi-module-boundaries.md)).
+  공유 코드는 최소화된 `common` 모듈에 둡니다. 구체적인 도메인 모듈 목록은 기능이 추가되며
+  점진적으로 늘립니다.
 
 시스템 맥락(레포 역할)은 [AGENTS.md](../../AGENTS.md)와 [온보딩](../onboarding.md)을
 참고합니다.
