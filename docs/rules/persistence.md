@@ -21,8 +21,12 @@
 
 - Flyway로 관리하고, 위치는 `classpath:db/migration`입니다.
 - 이미 적용된 마이그레이션은 수정하지 않습니다(변경은 새 마이그레이션으로).
-- 파일명은 순차 버전 + snake_case 설명: `V<n>__<설명>.sql`
-  (예: `V1__create_user.sql`, `V2__add_user_index.sql`).
+- 각 Gradle 모듈이 자기 마이그레이션을 소유하고(`<module>/src/main/resources/db/migration`),
+  `app` 클래스패스에서 하나의 Flyway 이력으로 병합됩니다. 공유 확장(`uuid-ossp` 등)은
+  `common`이 소유합니다.
+- 파일명은 타임스탬프 버전 + snake_case 설명: `V<yyyyMMddHHmmss>__<설명>.sql`
+  (예: `V20260624090100__create_user.sql`). 타임스탬프 버전으로 모듈 간 버전 충돌을 피하고
+  병합 시 실행 순서를 보장합니다.
 - Spring Modulith event publication registry의 `event_publication` 테이블도 Flyway로
   관리합니다. 첫 application event 도입 시 함께 추가합니다([아키텍처](architecture.md), [ADR-0001](../adr/0001-modular-monolith-rules.md)).
 
