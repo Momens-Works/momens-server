@@ -137,3 +137,8 @@ Topic-specific docs:
 - `docs/spec/` — server API contracts
 - `docs/adr/` — ADR process and exceptional decision records
 - `docs/design/` — evolving detailed design, added when needed
+
+Agent skills (same skill set per agent, see `docs/onboarding.md` for the workflow):
+
+- `.codex/skills/` — project-local Codex skills (`sync`, `diff-review`, `migrate-slice`)
+- `.claude/skills/` — project-local Claude Code skills (`sync`, `diff-review`, `migrate-slice`)
