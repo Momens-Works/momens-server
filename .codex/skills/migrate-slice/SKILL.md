@@ -25,8 +25,10 @@ than guessing.
 
 ## Legacy Trace
 
-From the repository root, inspect the legacy Go API in sibling `../momens-api` or
-`/Users/kimgyuill/dev/projects/momens/momens-api`.
+From the repository root, inspect the legacy Go API in the sibling `../momens-api`
+checkout. This assumes Momens repos are cloned side by side under a common parent
+(e.g. `momens/momens-server`, `momens/momens-api`). If the legacy checkout lives
+elsewhere, ask for its path instead of guessing.
 
 Trace the feature through:
 
