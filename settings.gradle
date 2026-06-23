@@ -1,5 +1,7 @@
 rootProject.name = 'momens-server'
 
-// 실행 애플리케이션 모듈만 우선 확정합니다.
-// 도메인 모듈 목록은 추후 확정한 뒤 여기에 추가합니다.
+// app: 실행·조립 모듈. common: 공유 영속성 베이스. user: 첫 기능/도메인 모듈.
+// 도메인 모듈 목록은 기능이 추가되며 점진적으로 늘립니다.
 include 'app'
+include 'common'
+include 'user'
