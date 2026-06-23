@@ -83,7 +83,9 @@
 
 - `ApplicationModules.of(Application.class).verify()` 테스트를 추가하고 CI에 포함한다.
 - 다른 모듈의 `internal` package 참조를 금지하고, 모듈 root package를 public API 영역으로 본다.
-- event publication registry는 바로 적용한다.
+- 모듈 간 event 협력에는 persisted event publication registry를 사용하기로 의도를 확정한다
+  (fire-and-forget 아님). 단 registry 인프라(events-jpa 의존성, `event_publication` Flyway
+  마이그레이션, completion 설정)는 첫 application event 도입 시 함께 추가한다.
 - `allowedDependencies`, `NamedInterface`, `@ApplicationModuleTest`, Documenter는 필요
   시점에 점진 도입한다(데모 리팩토링 전까지는 verify만 사용).
 

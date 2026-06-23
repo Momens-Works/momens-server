@@ -44,7 +44,9 @@
 - 모듈 root package를 public API 영역으로 보고, 다른 모듈의 `internal` package 참조를 금지합니다.
 - root package 외 하위 package를 외부 모듈에 공개하지 않습니다. 공개가 필요하면
   `NamedInterface` 도입을 검토합니다.
-- event publication registry는 적용합니다.
+- 모듈 간 event 협력에는 persisted event publication registry를 사용합니다(fire-and-forget
+  아님). registry 인프라(events-jpa 의존성, `event_publication` Flyway 마이그레이션,
+  completion 설정)는 첫 application event 도입 시 함께 추가합니다([데이터](persistence.md)).
 - `allowedDependencies`, `@ApplicationModuleTest`, Documenter는 필요 시점에 점진 도입합니다.
 
 ## Architecture Spike
