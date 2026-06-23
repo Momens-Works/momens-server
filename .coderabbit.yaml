@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit 설정: https://docs.coderabbit.ai/guides/configure-coderabbit
+
+language: ko
+early_access: true
+
+reviews:
+  profile: chill
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - develop
+      - main
+
+  request_changes_workflow: false
+
+  path_filters:
+    - "!*.md"
+    - "!.github/**"
+    - "!gradle/**"
+    - "!**/build/**"
+    - "!.idea/**"
+    - "!*.iml"
+
+  path_instructions:
+    - path: "**/*.java"
+      instructions: >
+        한국어로 리뷰한다. 포맷팅은 Spotless(Google Java Format)가 담당하므로 스타일 지적은 하지 않는다.
+        request/response DTO는 record 기본이며 API DTO와 엔티티(persistence 모델)를 분리한다.
+        Controller는 얇게, Service가 트랜잭션 경계, repository는 캡슐화한다.
+        Spring Modulith 경계를 위반하는 변경(다른 모듈 internal 참조, 순환 의존)을 지적한다.
+        시간은 UTC Instant/timestamptz, PK는 앱에서 생성하는 UUID v4를 따른다.
+    - path: "**/src/main/resources/db/migration/*.sql"
+      instructions: >
+        한국어로 리뷰한다. 이미 적용된 Flyway 마이그레이션 수정 여부,
+        파일명 규칙(V<n>__<설명>.sql), created_at/updated_at NOT NULL 감사 필드를 확인한다.
+
+chat:
+  auto_reply: false
