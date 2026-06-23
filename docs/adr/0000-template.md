@@ -9,6 +9,7 @@ ADR 작성법:
 
 - 상태: Proposed | Accepted | Superseded by ADR-XXXX
 - 날짜: YYYY-MM-DD
+- 작성자: GitHub ID (예: Kimgyuilli)
 
 ## 맥락
 
