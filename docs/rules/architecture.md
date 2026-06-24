@@ -80,8 +80,9 @@ root
 
 - base package는 `works.momens.server`입니다.
 - 분리 방식은 기능/도메인 단위 Gradle 서브프로젝트로 확정했습니다([ADR-0002](../adr/0002-gradle-multi-module-boundaries.md)).
-  공유 코드는 최소화된 `common` 모듈에 둡니다. 구체적인 도메인 모듈 목록은 기능이 추가되며
-  점진적으로 늘립니다.
+  공유 코드는 최소화된 `common` 모듈에 둡니다. 구체적인 도메인 모듈 목록과 책임 경계는
+  [상세설계 > 모듈 맵](../design/module-map.md)을 단일 출처로 두고, 기능이 추가되며 점진적으로
+  갱신합니다.
 
 시스템 맥락(레포 역할)은 [AGENTS.md](../../AGENTS.md)와 [온보딩](../onboarding.md)을
 참고합니다.
