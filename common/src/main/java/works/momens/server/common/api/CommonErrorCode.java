@@ -19,7 +19,9 @@ public enum CommonErrorCode implements ErrorCode {
   AUTH_INVALID_TOKEN(401, "토큰이 유효하지 않습니다."),
   AUTH_FORBIDDEN(403, "권한이 없습니다."),
   COMMON_NOT_FOUND(404, "요청한 리소스를 찾을 수 없습니다."),
+  COMMON_METHOD_NOT_ALLOWED(405, "허용되지 않은 HTTP 메서드입니다."),
   COMMON_CONFLICT(409, "요청이 현재 상태와 충돌합니다."),
+  COMMON_UNSUPPORTED_MEDIA_TYPE(415, "지원하지 않는 미디어 타입입니다."),
   COMMON_INTERNAL_SERVER_ERROR(500, "서버 내부 오류가 발생했습니다."),
   COMMON_BAD_GATEWAY(502, "외부 서비스 호출에 실패했습니다.");
 
