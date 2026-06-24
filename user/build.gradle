@@ -10,14 +10,19 @@ dependencies {
     annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
     testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
 
-    // 공유 영속성 베이스(BaseEntity 등).
+    // 공유 영속성 베이스(BaseEntity 등)와 공유 에러 계약(ErrorCode/BusinessException).
     implementation project(':common')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // /me 컨트롤러(presentation)와 요청 DTO 검증.
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
     // common testFixtures의 Testcontainers 통합테스트 베이스를 재사용합니다.
     testImplementation testFixtures(project(':common'))
+    // 컨트롤러 web 슬라이스 테스트(@WebMvcTest, @MockitoBean).
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 }

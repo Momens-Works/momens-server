@@ -32,7 +32,9 @@ import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.ErrorCode;
 
 /** 전역 예외 핸들러가 예외를 Standard 에러 응답으로 매핑하는지 검증합니다. */
-@WebMvcTest
+// 이 advice 테스트 전용 TestController로 web 슬라이스를 한정합니다. 한정하지 않으면 app 클래스패스의
+// 실제 컨트롤러(예: user의 /me)까지 스캔돼 그 의존성(UserService 등)이 슬라이스에 없어 컨텍스트 로드가 실패합니다.
+@WebMvcTest(controllers = GlobalExceptionHandlerTest.TestController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import({GlobalExceptionHandler.class, GlobalExceptionHandlerTest.TestController.class})
 class GlobalExceptionHandlerTest {
