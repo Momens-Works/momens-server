@@ -15,7 +15,7 @@ interface UserRepository extends JpaRepository<User, UUID> {
    * email 기준 원자적 upsert. 신규면 INSERT, 이미 있으면 name/avatar를 최신값으로 갱신합니다. {@code id}는 신규 행에만 쓰이고 충돌 시
    * 기존 행을 유지합니다. 감사 필드는 스키마 기본값(created_at {@code DEFAULT now()})과 갱신 시 {@code now()}로 채웁니다.
    */
-  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Modifying(flushAutomatically = true)
   @Query(
       value =
           """
