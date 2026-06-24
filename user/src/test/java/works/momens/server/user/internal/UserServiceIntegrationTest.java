@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.persistence.JpaAuditingConfig;
@@ -27,6 +28,7 @@ import works.momens.server.user.UserService;
 class UserServiceIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Autowired private UserService userService;
+  @Autowired private TestEntityManager entityManager;
 
   @Test
   void findOrCreateCreatesNewUser() {
@@ -42,6 +44,11 @@ class UserServiceIntegrationTest extends AbstractPostgresIntegrationTest {
   @Test
   void findOrCreateUpsertsExistingByEmailAndRefreshesProfile() {
     UserProfile first = userService.findOrCreate("same@momens.works", "이전", null);
+
+    // 실제 로그인은 호출마다 별도 트랜잭션이다. 두 번째 조회가 1차 캐시의 이전 엔티티가 아니라
+    // upsert로 갱신된 DB 값을 보도록 영속성 컨텍스트 경계를 명시적으로 끊는다.
+    entityManager.flush();
+    entityManager.clear();
 
     UserProfile second = userService.findOrCreate("same@momens.works", "변경", "https://a/y.png");
 
