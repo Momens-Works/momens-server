@@ -18,9 +18,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -108,6 +111,24 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
+  @DisplayName("미매핑 4xx는 status를 보존하면서 body code는 COMMON_BAD_REQUEST로 떨어진다")
+  void mapsUnmapped4xxToBadRequestCode() throws Exception {
+    mockMvc
+        .perform(get("/test/error-status/422"))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.error.code").value("COMMON_BAD_REQUEST"));
+  }
+
+  @Test
+  @DisplayName("미매핑 5xx는 status를 보존하면서 body code는 COMMON_INTERNAL_SERVER_ERROR로 떨어진다")
+  void mapsUnmapped5xxToInternalCode() throws Exception {
+    mockMvc
+        .perform(get("/test/error-status/503"))
+        .andExpect(status().isServiceUnavailable())
+        .andExpect(jsonPath("$.error.code").value("COMMON_INTERNAL_SERVER_ERROR"));
+  }
+
+  @Test
   @DisplayName("예기치 못한 예외는 500으로 매핑되고 내부 메시지를 노출하지 않는다")
   void rendersInternalServerErrorWithoutLeakingMessage() throws Exception {
     mockMvc
@@ -136,6 +157,11 @@ class GlobalExceptionHandlerTest {
 
     @GetMapping("/test/typed")
     void typed(@RequestParam int value) {}
+
+    @GetMapping("/test/error-status/{status}")
+    void errorStatus(@PathVariable int status) {
+      throw new ErrorResponseException(HttpStatusCode.valueOf(status));
+    }
 
     @GetMapping("/test/boom")
     void boom() {
