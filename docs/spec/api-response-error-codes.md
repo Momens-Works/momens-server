@@ -150,6 +150,12 @@ Standard 모드의 에러 응답은 아래 형태를 사용합니다.
 | 404 | `INVITATION_NOT_FOUND` | 초대를 찾을 수 없음 |
 | 409 | `INVITATION_EXPIRED` | 초대가 만료됨 |
 
+### 구현된 도메인 코드
+
+| HTTP status | Code | 사용 기준 |
+| --- | --- | --- |
+| 404 | `USER_NOT_FOUND` | 사용자를 찾을 수 없음 (`GET/PATCH /me` 등) |
+
 ## Validation details
 
 필드 검증 실패는 가능한 한 `details.fields`에 정리합니다.
