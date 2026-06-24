@@ -19,19 +19,10 @@ class UserServiceImpl implements UserService {
   @Override
   @Transactional
   public UserProfile findOrCreate(String email, String name, String avatarUrl) {
-    User user =
-        userRepository
-            .findByEmail(email)
-            .map(
-                existing -> {
-                  existing.refreshGoogleProfile(name, avatarUrl);
-                  return existing;
-                })
-            .orElseGet(
-                () ->
-                    userRepository.save(
-                        User.builder().email(email).name(name).avatarUrl(avatarUrl).build()));
-    return toProfile(user);
+    // email 기준 원자적 upsert. 같은 신규 email로 동시 최초 로그인이 들어와도 unique 충돌 500 없이 한 행으로 수렴한다
+    // (read-then-insert의 경합 회피). id는 신규 행에만 쓰이고 충돌 시 기존 행을 유지한다.
+    userRepository.upsertByEmail(UUID.randomUUID(), email, name, avatarUrl);
+    return toProfile(userRepository.findByEmail(email).orElseThrow());
   }
 
   @Override

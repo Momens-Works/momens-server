@@ -43,17 +43,7 @@ class User extends BaseEntity {
     this.jobRole = jobRole;
   }
 
-  /** 로그인 시 검증된 Google 프로필(name/avatar)을 최신값으로 갱신합니다. */
-  void refreshGoogleProfile(String name, String avatarUrl) {
-    this.name = name;
-    this.avatarUrl = avatarUrl;
-  }
-
-  /**
-   * 프로필 부분 수정. {@code null} 필드는 변경하지 않습니다.
-   *
-   * <p>레거시는 {@code job_role}을 명시적 null로 비울 수 있었으나(tri-state), v1은 null=무변경으로 단순화합니다.
-   */
+  /** 프로필 부분 수정. {@code null} 필드는 변경하지 않습니다(job_role 비우기는 미지원). */
   void updateProfile(String name, String jobRole) {
     if (name != null) {
       this.name = name;
