@@ -69,7 +69,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
    * 그 외 Spring MVC 표준 예외 공통 처리.
    *
    * <p>프레임워크가 정한 status와 헤더(405의 {@code Allow}, 415의 {@code Accept} 등)는 보존하고 body만 Standard shape로
-   * 교체합니다. 매핑되지 않은 드문 status는 기본적으로 500 코드로 떨어집니다(해당 예외를 던지는 엔드포인트가 생기면 전용 코드를 추가).
+   * 교체합니다. 매핑되지 않은 드문 status는 status 계열에 맞춰 4xx는 {@code COMMON_BAD_REQUEST}, 5xx는 {@code
+   * COMMON_INTERNAL_SERVER_ERROR}로 떨어집니다(해당 예외를 던지는 엔드포인트가 생기면 전용 코드를 추가).
    */
   @Override
   protected ResponseEntity<Object> handleExceptionInternal(
@@ -96,7 +97,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
       case 404 -> CommonErrorCode.COMMON_NOT_FOUND;
       case 405 -> CommonErrorCode.COMMON_METHOD_NOT_ALLOWED;
       case 415 -> CommonErrorCode.COMMON_UNSUPPORTED_MEDIA_TYPE;
-      default -> CommonErrorCode.COMMON_INTERNAL_SERVER_ERROR;
+      // 미매핑 status는 status 계열에 맞춰 폴백(4xx에 서버 오류 코드가 붙는 모순 방지).
+      // 해당 예외를 던지는 엔드포인트가 실제로 생기면 전용 코드를 추가한다.
+      default ->
+          statusCode.is5xxServerError()
+              ? CommonErrorCode.COMMON_INTERNAL_SERVER_ERROR
+              : CommonErrorCode.COMMON_BAD_REQUEST;
     };
   }
 
