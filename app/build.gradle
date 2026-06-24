@@ -29,6 +29,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // 로그 상관관계용 traceId/spanId(MDC 전파). starter가 OTel SDK 자동구성 + Micrometer
+    // Tracing 브리지를 함께 제공합니다(bridge 단독 의존성으론 Tracer 빈이 배선되지 않음).
+    // export 비활성화·collector 등 배경은 docs/rules/observability.md 참고.
+    implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     // Persistence / Migration (Boot BOM 관리)

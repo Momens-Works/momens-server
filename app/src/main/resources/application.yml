@@ -34,9 +34,30 @@ management:
     health:
       probes:
         enabled: true
+  # 로그 상관관계용 trace context(traceId/spanId)는 유지하되, 분산추적/메트릭/로그 OTLP
+  # export는 비활성화합니다. collector endpoint와 sampling은 배포 환경 확정 시(별도 OTel
+  # 티켓) 켭니다 — 그전엔 기본 endpoint(localhost:4318)로 전송을 시도해 연결 오류가 납니다.
+  tracing:
+    export:
+      enabled: false
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false
 
 springdoc:
   api-docs:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+# 공통 baseline 로그 레벨. 프로필이 누락해도 안전한 기본값을 보장합니다.
+# 프로필별 상세 레벨/포맷은 application-<profile>.yml 에서 override 합니다.
+# 요청 상관관계(traceId/spanId)는 Micrometer Tracing 브리지가 자동으로 로그에 채웁니다.
+logging:
+  level:
+    root: INFO

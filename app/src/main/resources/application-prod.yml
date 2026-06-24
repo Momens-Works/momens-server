@@ -17,3 +17,8 @@ logging:
   level:
     root: INFO
     works.momens.server: INFO
+  # 운영은 구조화 JSON 로그(Spring Boot 4.1 내장). 커스텀 appender를 두지 않습니다.
+  # local/test는 사람이 읽는 console 포맷을 유지합니다.
+  structured:
+    format:
+      console: logstash
