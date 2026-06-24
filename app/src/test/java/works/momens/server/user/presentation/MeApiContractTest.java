@@ -65,4 +65,38 @@ class MeApiContractTest {
         .andExpect(jsonPath("$.error.code").value("COMMON_VALIDATION_FAILED"))
         .andExpect(jsonPath("$.error.details.fields[0].field").value("name"));
   }
+
+  @Test
+  @DisplayName("공백 name 요청은 COMMON_VALIDATION_FAILED와 details.fields로 매핑된다")
+  void blankNameFailsValidation() throws Exception {
+    mockMvc
+        .perform(
+            patch("/me")
+                .principal(principal)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"   \"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("COMMON_VALIDATION_FAILED"))
+        .andExpect(jsonPath("$.error.details.fields[0].field").value("name"));
+  }
+
+  @Test
+  @DisplayName("Principal이 없으면 AUTH_UNAUTHORIZED로 매핑된다")
+  void missingPrincipalFailsAsUnauthorized() throws Exception {
+    mockMvc
+        .perform(get("/me"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.error.code").value("AUTH_UNAUTHORIZED"));
+  }
+
+  @Test
+  @DisplayName("Principal 이름이 UUID가 아니면 AUTH_INVALID_TOKEN으로 매핑된다")
+  void invalidPrincipalNameFailsAsInvalidToken() throws Exception {
+    Principal invalidPrincipal = () -> "not-a-uuid";
+
+    mockMvc
+        .perform(get("/me").principal(invalidPrincipal))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.error.code").value("AUTH_INVALID_TOKEN"));
+  }
 }

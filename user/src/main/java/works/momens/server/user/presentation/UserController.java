@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import works.momens.server.common.api.BusinessException;
+import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 
@@ -37,6 +39,13 @@ class UserController {
   }
 
   private static UUID currentUserId(Principal principal) {
-    return UUID.fromString(principal.getName());
+    if (principal == null) {
+      throw new BusinessException(CommonErrorCode.AUTH_UNAUTHORIZED);
+    }
+    try {
+      return UUID.fromString(principal.getName());
+    } catch (IllegalArgumentException | NullPointerException e) {
+      throw new BusinessException(CommonErrorCode.AUTH_INVALID_TOKEN);
+    }
   }
 }
