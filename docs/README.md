@@ -14,6 +14,7 @@ docs/
 ├── rules/                # 기반 규칙 (성격별 폴더)
 ├── adr/                  # 결정 기록 (ADR, 결정마다 파일 하나씩)
 ├── spec/                 # 서버 명세 (API/계약)
+├── design/               # 상세설계 (현재 사실의 단일 출처)
 └── pending-decisions.md  # 추후 결정(열린 결정) 로그
 ```
 
@@ -31,6 +32,7 @@ docs/
 - [기반 규칙](rules/README.md)
 - [ADR](adr/README.md)
 - [서버 명세](spec/README.md)
+- [상세설계 > 모듈 맵](design/module-map.md)
 - [추후 결정 로그](pending-decisions.md)
 
 ## 제품 레벨 문서는 어디에?
