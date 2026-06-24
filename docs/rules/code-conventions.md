@@ -43,6 +43,8 @@
 ### 레이어 책임
 
 - Controller: HTTP 입출력에 집중하고 얇게 유지합니다.
+- OpenAPI 문서화는 [서버 명세 > OpenAPI](../spec/openapi.md)를 따릅니다.
+- 신규/개편 API의 버저닝은 [서버 명세 > API 버저닝](../spec/api-versioning.md)을 따릅니다.
 - Service: 오케스트레이션·교차 엔티티 규칙·트랜잭션 경계.
 - Entity: 자기 상태·불변식 로직(자신을 어떻게 바꿀지)을 담습니다.
 - Repository: DB 접근을 캡슐화합니다(그 뒤로 숨김). 초기 접근은 JPA.
