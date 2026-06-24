@@ -54,9 +54,16 @@ implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
 
 Spring Boot의 기본 로깅은 Logback입니다. OpenTelemetry starter가 Logback을 대체하지 않습니다.
 
-Micrometer Tracing이 활성화되면 Spring Boot는 기본적으로 `traceId`와 `spanId` 기반 correlation
-id를 로그에 포함할 수 있습니다. 별도 request id를 직접 생성하기보다 내부 요청 추적에는
-`traceId`를 우선 사용합니다.
+로그 상관관계를 위해 `spring-boot-starter-opentelemetry`를 포함합니다(OTel SDK 자동구성 +
+Micrometer Tracing 브리지를 함께 제공 — 브리지 단독 의존성으로는 `Tracer` 빈이 배선되지
+않습니다). 그러면 Spring Boot가 `traceId`와 `spanId` 기반 correlation id를 자동으로 로그에
+채웁니다. 별도 request id를 직접 생성하기보다 내부 요청 추적에는 `traceId`를 우선 사용합니다.
+
+starter가 OTLP exporter도 함께 들이므로, collector가 없는 동안 기본 endpoint로 전송을 시도해
+연결 오류가 납니다. 따라서 trace context(로그 상관관계)는 유지하되 export는 기본 비활성화합니다
+(`management.tracing.export.enabled: false`, `management.otlp.metrics.export.enabled: false`,
+`management.logging.export.otlp.enabled: false`). OTLP collector endpoint와 sampling 비율은 배포
+환경이 정해질 때 켭니다(위 [적용 범위](#적용-범위) 참고).
 
 | 목적 | 식별자 |
 | --- | --- |
