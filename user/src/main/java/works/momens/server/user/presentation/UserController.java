@@ -14,9 +14,8 @@ import works.momens.server.user.UserService;
 /**
  * 현재 사용자 프로필 엔드포인트({@code /me}).
  *
- * <p>"현재 사용자"는 {@link Principal} seam으로 받습니다({@code principal.getName()} = userId). 인증 수단(JWT/세션)에
- * 중립이며 user 모듈은 {@code auth}에 의존하지 않습니다. SecurityFilterChain이 SecurityContext를 채우는 배선은 인증 구현
- * 시점(MOM-8)에 추가됩니다.
+ * <p>현재 사용자는 {@link Principal}로 받습니다({@code getName()} = userId). 인증 수단에 중립이며, SecurityContext를 채우는
+ * 배선은 MOM-8(auth)에서 추가됩니다.
  */
 @RestController
 @RequiredArgsConstructor
