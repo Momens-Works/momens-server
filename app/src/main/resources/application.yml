@@ -24,6 +24,10 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+momens:
+  openapi:
+    server-url: ${MOMENS_OPENAPI_SERVER_URL:http://localhost:8080}
+
 # 헬스체크는 Actuator 기본 /actuator/health 만 노출합니다.
 management:
   endpoints:
