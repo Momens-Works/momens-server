@@ -90,6 +90,24 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
+  @DisplayName("허용되지 않은 HTTP 메서드는 405 COMMON_METHOD_NOT_ALLOWED로 매핑된다")
+  void rendersMethodNotAllowed() throws Exception {
+    mockMvc
+        .perform(get("/test/validate"))
+        .andExpect(status().isMethodNotAllowed())
+        .andExpect(jsonPath("$.error.code").value("COMMON_METHOD_NOT_ALLOWED"));
+  }
+
+  @Test
+  @DisplayName("지원하지 않는 Content-Type은 415 COMMON_UNSUPPORTED_MEDIA_TYPE으로 매핑된다")
+  void rendersUnsupportedMediaType() throws Exception {
+    mockMvc
+        .perform(post("/test/validate").contentType(MediaType.TEXT_PLAIN).content("name=x"))
+        .andExpect(status().isUnsupportedMediaType())
+        .andExpect(jsonPath("$.error.code").value("COMMON_UNSUPPORTED_MEDIA_TYPE"));
+  }
+
+  @Test
   @DisplayName("예기치 못한 예외는 500으로 매핑되고 내부 메시지를 노출하지 않는다")
   void rendersInternalServerErrorWithoutLeakingMessage() throws Exception {
     mockMvc

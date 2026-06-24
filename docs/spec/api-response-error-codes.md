@@ -131,7 +131,9 @@ Standard 모드의 에러 응답은 아래 형태를 사용합니다.
 | 401 | `AUTH_INVALID_TOKEN` | 토큰 파싱/검증 실패 |
 | 403 | `AUTH_FORBIDDEN` | 인증은 되었지만 권한 없음 |
 | 404 | `COMMON_NOT_FOUND` | 특정 도메인 코드가 아직 없을 때의 기본 not found |
+| 405 | `COMMON_METHOD_NOT_ALLOWED` | 해당 경로에서 허용되지 않은 HTTP 메서드 |
 | 409 | `COMMON_CONFLICT` | 중복, 상태 충돌 등 기본 conflict |
+| 415 | `COMMON_UNSUPPORTED_MEDIA_TYPE` | 지원하지 않는 요청 Content-Type |
 | 500 | `COMMON_INTERNAL_SERVER_ERROR` | 서버 내부 오류. 상세 원인 노출 금지 |
 | 502 | `COMMON_BAD_GATEWAY` | 외부 서비스 호출 실패 |
 
