@@ -29,6 +29,9 @@ import works.momens.server.user.UserService;
 @AutoConfigureMockMvc
 class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
 
+  private static final String API_VERSION_HEADER = "API-Version";
+  private static final String API_VERSION = "1";
+
   @Autowired private MockMvc mockMvc;
   @Autowired private AccessTokenTestFactory accessTokens;
   @Autowired private UserService userService;
@@ -85,6 +88,7 @@ class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
     mockMvc
         .perform(
             post("/api/auth/refresh")
+                .header(API_VERSION_HEADER, API_VERSION)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"refresh_token\":\"unknown-refresh-token\"}"))
         .andExpect(status().isUnauthorized())
