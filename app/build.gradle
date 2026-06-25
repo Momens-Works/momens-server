@@ -63,4 +63,6 @@ dependencies {
     testImplementation "org.springframework.modulith:spring-modulith-starter-test:${springModulithVersion}"
     // Testcontainers 통합테스트 베이스(common testFixtures)를 재사용합니다.
     testImplementation testFixtures(project(':common'))
+    // 보안 통합테스트용 access token 팩토리(auth public testFixtures). auth.internal 직접 참조를 피합니다.
+    testImplementation testFixtures(project(':auth'))
 }

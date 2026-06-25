@@ -22,6 +22,9 @@ public record AuthProperties(@NotBlank String jwtSecret, Duration accessTtl) {
     if (accessTtl == null) {
       accessTtl = Duration.ofMinutes(15);
     }
+    if (accessTtl.isZero() || accessTtl.isNegative()) {
+      throw new IllegalStateException("momens.auth.access-ttl must be positive");
+    }
     if (jwtSecret != null && jwtSecret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
       throw new IllegalStateException(
           "momens.auth.jwt-secret must be at least " + MIN_SECRET_BYTES + " bytes for HS256");
