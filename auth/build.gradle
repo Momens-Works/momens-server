@@ -2,6 +2,7 @@ import org.springframework.boot.gradle.plugin.SpringBootPlugin
 
 plugins {
     id 'java-library'
+    id 'java-test-fixtures'
 }
 
 dependencies {
@@ -29,6 +30,11 @@ dependencies {
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+
+    // 다른 모듈의 보안 통합테스트가 모듈 경계를 지키며 access token을 만들 수 있도록 제공하는 testFixtures.
+    // internal 토큰 발급/서명을 캡슐화하고 public 팩토리만 노출합니다.
+    testFixturesImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+    testFixturesImplementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
     // common testFixtures의 Testcontainers 통합테스트 베이스를 재사용합니다(refresh store 통합테스트 등).
     testImplementation testFixtures(project(':common'))

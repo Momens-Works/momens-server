@@ -4,12 +4,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
-import works.momens.server.auth.internal.JwtTokenService;
+import works.momens.server.auth.AccessTokenTestFactory;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
@@ -18,20 +19,22 @@ import works.momens.server.user.UserService;
  * SecurityFilterChain(MOM-8) 실배선 통합테스트.
  *
  * <p>auth가 발급한 HS256 access로 보호 엔드포인트(`/api/me`)가 실제로 인증되고 `Principal.name=userId` seam이 동작하는지,
- * 미인증/위조 요청이 Standard 에러 shape의 401을 내는지 확인합니다.
+ * 미인증/위조/만료 요청이 규격대로 401(인증정보 없음=AUTH_UNAUTHORIZED, 토큰 검증 실패=AUTH_INVALID_TOKEN)을 내는지 확인합니다.
+ *
+ * <p>토큰은 auth의 public testFixtures({@link AccessTokenTestFactory})로 만들어 모듈 경계를 지킵니다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Autowired private MockMvc mockMvc;
-  @Autowired private JwtTokenService jwtTokenService;
+  @Autowired private AccessTokenTestFactory accessTokens;
   @Autowired private UserService userService;
 
   @Test
   void returnsProfileWhenAccessTokenValid() throws Exception {
     UserProfile user = userService.findOrCreate("auth-it@momens.works", "규일", null);
-    String token = jwtTokenService.issueAccessToken(user.id());
+    String token = accessTokens.issueAccessToken(user.id());
 
     mockMvc
         .perform(get("/api/me").header("Authorization", "Bearer " + token))
@@ -57,10 +60,20 @@ class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void returnsInvalidTokenWhenSignatureForged() throws Exception {
-    String forged = tamperSignature(jwtTokenService.issueAccessToken(java.util.UUID.randomUUID()));
+    String forged = tamperSignature(accessTokens.issueAccessToken(UUID.randomUUID()));
 
     mockMvc
         .perform(get("/api/me").header("Authorization", "Bearer " + forged))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.error.code").value("AUTH_INVALID_TOKEN"));
+  }
+
+  @Test
+  void returnsInvalidTokenWhenExpired() throws Exception {
+    String expired = accessTokens.issueExpiredAccessToken(UUID.randomUUID());
+
+    mockMvc
+        .perform(get("/api/me").header("Authorization", "Bearer " + expired))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.error.code").value("AUTH_INVALID_TOKEN"));
   }
