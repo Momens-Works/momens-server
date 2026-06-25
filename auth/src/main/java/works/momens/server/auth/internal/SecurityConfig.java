@@ -22,7 +22,13 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 class SecurityConfig {
 
   private static final String[] PUBLIC_PATHS = {
-    "/actuator/health/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"
+    "/actuator/health/**",
+    "/v3/api-docs/**",
+    "/swagger-ui/**",
+    "/swagger-ui.html",
+    "/api/auth/google/token",
+    "/api/auth/refresh",
+    "/api/auth/logout"
   };
 
   @Bean
