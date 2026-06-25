@@ -22,6 +22,9 @@ dependencies {
     // @ApplicationModule(OPEN) 등 modulith 메타데이터.
     api "org.springframework.modulith:spring-modulith-starter-core:${springModulithVersion}"
 
+    // 공유 에러 응답(ErrorResponse)의 @JsonInclude. spring-web 없이 애너테이션만 사용합니다.
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 

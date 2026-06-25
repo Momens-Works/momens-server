@@ -1,4 +1,4 @@
-package works.momens.server.support.api;
+package works.momens.server.common.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -6,7 +6,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * Standard 모드 에러 응답 본문.
  *
  * <p>{@code { "error": { "code": ..., "message": ..., "details"?: ... } }} 형태입니다(규격:
- * docs/spec/api-response-error-codes.md). 이 shape는 전역 핸들러만 생성하므로 공유 모듈이 아닌 {@code app}에 둡니다.
+ * docs/spec/api-response-error-codes.md). 전역 핸들러({@code app})와 SecurityFilterChain의 인증/인가 거부
+ * 핸들러({@code auth})가 같은 shape를 내보내야 하므로 공유 에러 계약과 함께 {@code common}에 둡니다.
  *
  * <p>{@code details}가 없으면 {@link JsonInclude}로 필드 자체를 생략합니다.
  */
