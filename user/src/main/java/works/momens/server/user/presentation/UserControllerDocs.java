@@ -9,6 +9,8 @@ import java.security.Principal;
 import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.user.UserErrorCode;
+import works.momens.server.user.presentation.dto.request.UpdateMeRequest;
+import works.momens.server.user.presentation.dto.response.MeResponse;
 
 /**
  * {@code /api/me} OpenAPI 문서. Swagger 애너테이션을 컨트롤러 구현과 분리합니다(docs/spec/openapi.md).

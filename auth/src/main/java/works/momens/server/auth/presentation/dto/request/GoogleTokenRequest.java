@@ -1,4 +1,4 @@
-package works.momens.server.auth.presentation;
+package works.momens.server.auth.presentation.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -8,7 +8,7 @@ import tools.jackson.databind.annotation.JsonNaming;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "모바일 Google ID 토큰 교환 요청")
-record GoogleTokenRequest(
+public record GoogleTokenRequest(
     @NotBlank
         @Schema(description = "Google Sign-In에서 받은 ID 토큰", example = "eyJhbGciOiJSUzI1NiIs...")
         String idToken,

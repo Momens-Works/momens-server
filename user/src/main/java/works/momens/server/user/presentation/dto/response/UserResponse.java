@@ -1,4 +1,4 @@
-package works.momens.server.user.presentation;
+package works.momens.server.user.presentation.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -16,7 +16,7 @@ import works.momens.server.user.UserProfile;
  */
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "사용자 프로필")
-record UserResponse(
+public record UserResponse(
     @Schema(description = "사용자 식별자", example = "5d2f7f3a-5db1-4f2c-8b9e-13607dd1f5e8") UUID id,
     @Schema(description = "이메일", example = "user@example.com") String email,
     @Schema(description = "이름", example = "규일") String name,
@@ -31,7 +31,7 @@ record UserResponse(
     @Schema(description = "생성 시각(UTC)", example = "2026-06-24T00:00:00Z") Instant createdAt,
     @Schema(description = "수정 시각(UTC)", example = "2026-06-24T00:00:00Z") Instant updatedAt) {
 
-  static UserResponse from(UserProfile p) {
+  public static UserResponse from(UserProfile p) {
     return new UserResponse(
         p.id(), p.email(), p.name(), p.avatarUrl(), p.jobRole(), p.createdAt(), p.updatedAt());
   }

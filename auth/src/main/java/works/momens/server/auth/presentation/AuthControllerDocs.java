@@ -8,6 +8,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import works.momens.server.auth.AuthErrorCode;
+import works.momens.server.auth.presentation.dto.request.GoogleTokenRequest;
+import works.momens.server.auth.presentation.dto.request.LogoutRequest;
+import works.momens.server.auth.presentation.dto.request.RefreshTokenRequest;
+import works.momens.server.auth.presentation.dto.response.AuthMessageResponse;
+import works.momens.server.auth.presentation.dto.response.TokenResponse;
 import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
 

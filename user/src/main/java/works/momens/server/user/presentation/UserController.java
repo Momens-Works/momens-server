@@ -12,6 +12,8 @@ import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
+import works.momens.server.user.presentation.dto.request.UpdateMeRequest;
+import works.momens.server.user.presentation.dto.response.MeResponse;
 
 /**
  * 현재 사용자 프로필 엔드포인트.

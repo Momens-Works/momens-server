@@ -1,4 +1,4 @@
-package works.momens.server.user.presentation;
+package works.momens.server.user.presentation.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Pattern;
@@ -9,7 +9,7 @@ import tools.jackson.databind.annotation.JsonNaming;
 /** 프로필 수정 요청. 부분 수정(PATCH)이라 제공된(non-null) 필드만 갱신합니다. */
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "프로필 수정 요청. 제공된(non-null) 필드만 갱신합니다.")
-record UpdateMeRequest(
+public record UpdateMeRequest(
     @Schema(
             description = "이름. 공백만으로는 설정할 수 없으며 최대 255자입니다.",
             example = "규일",
