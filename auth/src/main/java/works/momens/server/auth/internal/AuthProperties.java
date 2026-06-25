@@ -9,8 +9,8 @@ import org.springframework.validation.annotation.Validated;
 /**
  * auth 모듈 설정(`momens.auth.*`).
  *
- * <p>access token은 단일 발급자(우리 서버)가 발급·검증하므로 대칭키 HS256을 씁니다. 짧은 access TTL이 권한 변경 즉시 반영의 근거이므로 운영에서
- * 조정할 수 있게 설정으로 둡니다. refresh TTL·Google aud 목록은 모바일 로그인 슬라이스(Slice 2)에서 추가합니다.
+ * <p>access token은 단일 발급자(우리 서버)가 발급·검증하므로 대칭키 HS256을 씁니다. 짧은 access TTL은 변경된 권한의 stale 상한이 되므로(늦어도
+ * TTL 안에는 반영) 운영에서 조정할 수 있게 설정으로 둡니다. refresh TTL·Google aud 목록은 모바일 로그인 슬라이스(Slice 2)에서 추가합니다.
  */
 @Validated
 @ConfigurationProperties("momens.auth")

@@ -30,7 +30,7 @@ momens:
   auth:
     # HS256 대칭키(>=32바이트). 실제 값은 .env / 환경변수로 주입하고 커밋하지 않습니다.
     jwt-secret: ${MOMENS_AUTH_JWT_SECRET}
-    # 짧은 access TTL이 권한 변경 즉시 반영의 근거입니다.
+    # access TTL을 짧게 둬 변경된 권한이 늦어도 TTL 안에는 반영되도록 합니다(stale 권한 상한).
     access-ttl: 15m
 
 # 헬스체크는 Actuator 기본 /actuator/health 만 노출합니다.
