@@ -14,20 +14,20 @@ class AuthController implements AuthControllerDocs {
   private final AuthService authService;
 
   @Override
-  @PostMapping("/api/auth/google/token")
+  @PostMapping(path = "/api/auth/google/token", version = "1")
   public TokenResponse loginWithGoogleToken(@Valid @RequestBody GoogleTokenRequest request) {
     return TokenResponse.from(
         authService.loginWithGoogleToken(request.idToken(), request.device()));
   }
 
   @Override
-  @PostMapping("/api/auth/refresh")
+  @PostMapping(path = "/api/auth/refresh", version = "1")
   public TokenResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
     return TokenResponse.from(authService.refresh(request.refreshToken()));
   }
 
   @Override
-  @PostMapping("/api/auth/logout")
+  @PostMapping(path = "/api/auth/logout", version = "1")
   public AuthMessageResponse logout(@Valid @RequestBody LogoutRequest request) {
     authService.logout(request.refreshToken());
     return new AuthMessageResponse("logged out");

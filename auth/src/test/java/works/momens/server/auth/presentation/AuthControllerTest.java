@@ -9,19 +9,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import works.momens.server.auth.internal.application.AuthService;
 import works.momens.server.auth.internal.jwt.TokenPair;
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(AuthController.class)
+@Import({AuthController.class, AuthControllerTest.ApiVersionTestConfig.class})
 class AuthControllerTest {
+
+  private static final String API_VERSION_HEADER = "API-Version";
+  private static final String API_VERSION = "1";
 
   @Autowired private MockMvc mockMvc;
   @MockitoBean private AuthService authService;
@@ -34,6 +40,7 @@ class AuthControllerTest {
     mockMvc
         .perform(
             post("/api/auth/google/token")
+                .header(API_VERSION_HEADER, API_VERSION)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id_token\":\"google-id-token\",\"device\":\"iPhone\"}"))
         .andExpect(status().isOk())
@@ -44,6 +51,17 @@ class AuthControllerTest {
   }
 
   @Test
+  void googleTokenExchangeRejectsUnsupportedApiVersion() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/auth/google/token")
+                .header(API_VERSION_HEADER, "2")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id_token\":\"google-id-token\",\"device\":\"iPhone\"}"))
+        .andExpect(status().is4xxClientError());
+  }
+
+  @Test
   void refreshReturnsRotatedTokenPair() throws Exception {
     when(authService.refresh(eq("old-refresh-token")))
         .thenReturn(new TokenPair("new-access-token", "new-refresh-token", 900));
@@ -51,6 +69,7 @@ class AuthControllerTest {
     mockMvc
         .perform(
             post("/api/auth/refresh")
+                .header(API_VERSION_HEADER, API_VERSION)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"refresh_token\":\"old-refresh-token\"}"))
         .andExpect(status().isOk())
@@ -63,11 +82,24 @@ class AuthControllerTest {
     mockMvc
         .perform(
             post("/api/auth/logout")
+                .header(API_VERSION_HEADER, API_VERSION)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"refresh_token\":\"refresh-token\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value("logged out"));
 
     verify(authService).logout("refresh-token");
+  }
+
+  @TestConfiguration
+  static class ApiVersionTestConfig implements WebMvcConfigurer {
+
+    @Override
+    public void configureApiVersioning(ApiVersionConfigurer configurer) {
+      configurer
+          .useRequestHeader(API_VERSION_HEADER)
+          .addSupportedVersions(API_VERSION)
+          .setVersionRequired(false);
+    }
   }
 }
