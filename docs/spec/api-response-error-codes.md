@@ -154,6 +154,9 @@ Standard 모드의 에러 응답은 아래 형태를 사용합니다.
 
 | HTTP status | Code | 사용 기준 |
 | --- | --- | --- |
+| 401 | `AUTH_GOOGLE_TOKEN_INVALID` | Google ID 토큰 검증 실패 |
+| 401 | `AUTH_GOOGLE_EMAIL_NOT_VERIFIED` | Google 계정 이메일이 검증되지 않음 |
+| 401 | `AUTH_REFRESH_TOKEN_INVALID` | refresh token 형식·해시·만료·폐기 상태가 유효하지 않음 |
 | 404 | `USER_NOT_FOUND` | 사용자를 찾을 수 없음 (`GET/PATCH /me` 등) |
 
 ## Validation details

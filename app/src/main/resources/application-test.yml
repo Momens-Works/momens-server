@@ -12,6 +12,8 @@ spring:
 momens:
   auth:
     jwt-secret: test-only-momens-auth-jwt-secret-0123456789abcdef
+    google:
+      audiences: test-google-client-id.apps.googleusercontent.com
 
 logging:
   level:

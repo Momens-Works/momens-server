@@ -32,6 +32,11 @@ momens:
     jwt-secret: ${MOMENS_AUTH_JWT_SECRET}
     # access TTL을 짧게 둬 변경된 권한이 늦어도 TTL 안에는 반영되도록 합니다(stale 권한 상한).
     access-ttl: 15m
+    # refresh token은 서버 저장형으로 관리합니다(ADR-0005).
+    refresh-ttl: 14d
+    google:
+      # Google ID token aud 허용 목록. web/android/ios client-id를 comma-separated env로 주입합니다.
+      audiences: ${MOMENS_AUTH_GOOGLE_AUDIENCES}
 
 # 헬스체크는 Actuator 기본 /actuator/health 만 노출합니다.
 management:
