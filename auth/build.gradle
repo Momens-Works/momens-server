@@ -1,0 +1,37 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    // Boot BOM으로 버전을 관리합니다(boot 플러그인은 app만 적용).
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // 공유 에러 계약(ErrorCode/ErrorResponse)과 로그인 시 호출할 user public API.
+    implementation project(':common')
+    implementation project(':user')
+
+    // SecurityFilterChain DSL + 서블릿 보안. 코드 소유권은 auth 모듈에 둡니다(docs/design/module-map.md).
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    // 우리 HS256 토큰·Google ID 토큰 검증을 같은 Nimbus(JOSE) 계열로 통일합니다. Bearer 인증을
+    // oauth2ResourceServer로 선언적으로 처리하고, 쿠키 확장(MOM-22)은 BearerTokenResolver 교체로 끝냅니다.
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    // 인증/인가 거부 핸들러의 HttpServletResponse, @ConfigurationProperties 검증.
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // 인증/인가 거부 본문(ErrorResponse) 직렬화용 ObjectMapper.
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    // momens.auth.* 설정 메타데이터 생성.
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // common testFixtures의 Testcontainers 통합테스트 베이스를 재사용합니다(refresh store 통합테스트 등).
+    testImplementation testFixtures(project(':common'))
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+}

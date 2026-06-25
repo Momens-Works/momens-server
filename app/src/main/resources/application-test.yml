@@ -8,6 +8,11 @@ spring:
   flyway:
     enabled: true
 
+# 테스트 전용 고정 secret(실제 secret 아님). HS256 최소 길이(32바이트) 충족.
+momens:
+  auth:
+    jwt-secret: test-only-momens-auth-jwt-secret-0123456789abcdef
+
 logging:
   level:
     org.testcontainers: INFO
