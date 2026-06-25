@@ -78,14 +78,16 @@ class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
         .andExpect(jsonPath("$.error.code").value("AUTH_INVALID_TOKEN"));
   }
 
-  /** 서명 세그먼트의 마지막 문자를 바꿔 구조는 유효하나 서명이 어긋난 토큰을 만듭니다. */
+  /**
+   * 서명 세그먼트의 <b>첫</b> 문자를 바꿔 구조는 유효하나 서명이 어긋난 토큰을 만듭니다.
+   *
+   * <p>마지막 문자는 32바이트 HS256 서명에서 유효 비트가 4개뿐(2비트 미사용)이라 같은 상위 4비트 문자로 바꾸면 디코딩된 서명이 그대로일 수 있습니다. 6비트가
+   * 모두 유효한 첫 문자를 바꿔 변조가 항상 반영되게 합니다.
+   */
   private static String tamperSignature(String jwt) {
-    int lastDot = jwt.lastIndexOf('.');
-    String signature = jwt.substring(lastDot + 1);
-    char last = signature.charAt(signature.length() - 1);
-    char replacement = (last == 'A') ? 'B' : 'A';
-    return jwt.substring(0, lastDot + 1)
-        + signature.substring(0, signature.length() - 1)
-        + replacement;
+    int signatureStart = jwt.lastIndexOf('.') + 1;
+    char first = jwt.charAt(signatureStart);
+    char replacement = (first == 'A') ? 'B' : 'A';
+    return jwt.substring(0, signatureStart) + replacement + jwt.substring(signatureStart + 1);
   }
 }
