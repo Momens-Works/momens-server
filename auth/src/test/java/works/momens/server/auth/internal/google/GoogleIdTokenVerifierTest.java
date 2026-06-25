@@ -1,4 +1,4 @@
-package works.momens.server.auth.internal;
+package works.momens.server.auth.internal.google;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,6 +21,7 @@ import java.util.Date;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import works.momens.server.auth.AuthErrorCode;
+import works.momens.server.auth.internal.config.AuthProperties;
 import works.momens.server.common.api.BusinessException;
 
 class GoogleIdTokenVerifierTest {
@@ -49,6 +50,19 @@ class GoogleIdTokenVerifierTest {
       GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier(properties(jwks.jwkSetUri()));
 
       assertThatThrownBy(() -> verifier.verify(idToken(key, "other-client-id", true)))
+          .isInstanceOfSatisfying(
+              BusinessException.class,
+              e -> assertThat(e.getErrorCode()).isEqualTo(AuthErrorCode.AUTH_GOOGLE_TOKEN_INVALID));
+    }
+  }
+
+  @Test
+  void rejectsMissingAudienceAsInvalidToken() throws Exception {
+    RSAKey key = new RSAKeyGenerator(2048).keyID("test-key").generate();
+    try (JwksServer jwks = JwksServer.start(key)) {
+      GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier(properties(jwks.jwkSetUri()));
+
+      assertThatThrownBy(() -> verifier.verify(idTokenWithoutAudience(key)))
           .isInstanceOfSatisfying(
               BusinessException.class,
               e -> assertThat(e.getErrorCode()).isEqualTo(AuthErrorCode.AUTH_GOOGLE_TOKEN_INVALID));
@@ -92,6 +106,28 @@ class GoogleIdTokenVerifierTest {
             .claim("email_verified", emailVerified)
             .claim("name", "규일")
             .claim("picture", "https://cdn.momens.works/avatar.png")
+            .build();
+    SignedJWT jwt =
+        new SignedJWT(
+            new JWSHeader.Builder(JWSAlgorithm.RS256)
+                .keyID(key.getKeyID())
+                .type(JOSEObjectType.JWT)
+                .build(),
+            claims);
+    jwt.sign(new RSASSASigner(key.toPrivateKey()));
+    return jwt.serialize();
+  }
+
+  private static String idTokenWithoutAudience(RSAKey key) throws Exception {
+    Instant now = Instant.now();
+    JWTClaimsSet claims =
+        new JWTClaimsSet.Builder()
+            .issuer("https://accounts.google.com")
+            .subject("google-sub")
+            .issueTime(Date.from(now))
+            .expirationTime(Date.from(now.plusSeconds(300)))
+            .claim("email", "user@example.com")
+            .claim("email_verified", true)
             .build();
     SignedJWT jwt =
         new SignedJWT(

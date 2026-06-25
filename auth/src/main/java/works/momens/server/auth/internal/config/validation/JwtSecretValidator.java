@@ -1,4 +1,4 @@
-package works.momens.server.auth.internal.validation;
+package works.momens.server.auth.internal.config.validation;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;

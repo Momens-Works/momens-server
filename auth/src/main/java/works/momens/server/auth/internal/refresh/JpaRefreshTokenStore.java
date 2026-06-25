@@ -1,4 +1,4 @@
-package works.momens.server.auth.internal;
+package works.momens.server.auth.internal.refresh;
 
 import java.time.Instant;
 import java.util.Optional;

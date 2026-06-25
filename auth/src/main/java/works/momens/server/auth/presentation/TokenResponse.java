@@ -3,7 +3,7 @@ package works.momens.server.auth.presentation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
-import works.momens.server.auth.internal.TokenPair;
+import works.momens.server.auth.internal.jwt.TokenPair;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "Access/refresh token 응답")

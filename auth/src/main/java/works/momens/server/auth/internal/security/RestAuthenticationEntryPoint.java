@@ -1,8 +1,9 @@
-package works.momens.server.auth.internal;
+package works.momens.server.auth.internal.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -16,13 +17,10 @@ import works.momens.server.common.api.CommonErrorCode;
  * 실패(만료·서명 불일치·형식 오류)는 {@code AUTH_INVALID_TOKEN}으로 분리합니다.
  */
 @Component
+@RequiredArgsConstructor
 class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
   private final SecurityErrorWriter errorWriter;
-
-  RestAuthenticationEntryPoint(SecurityErrorWriter errorWriter) {
-    this.errorWriter = errorWriter;
-  }
 
   @Override
   public void commence(

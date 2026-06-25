@@ -1,4 +1,4 @@
-package works.momens.server.auth.internal;
+package works.momens.server.auth.internal.config;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -8,7 +8,7 @@ import java.util.List;
 import org.hibernate.validator.constraints.time.DurationMin;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
-import works.momens.server.auth.internal.validation.ValidJwtSecret;
+import works.momens.server.auth.internal.config.validation.ValidJwtSecret;
 
 /**
  * auth 모듈 설정(`momens.auth.*`).
