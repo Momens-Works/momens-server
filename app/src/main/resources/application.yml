@@ -27,6 +27,11 @@ server:
 momens:
   openapi:
     server-url: ${MOMENS_OPENAPI_SERVER_URL:http://localhost:8080}
+  auth:
+    # HS256 대칭키(>=32바이트). 실제 값은 .env / 환경변수로 주입하고 커밋하지 않습니다.
+    jwt-secret: ${MOMENS_AUTH_JWT_SECRET}
+    # 짧은 access TTL이 권한 변경 즉시 반영의 근거입니다.
+    access-ttl: 15m
 
 # 헬스체크는 Actuator 기본 /actuator/health 만 노출합니다.
 management:

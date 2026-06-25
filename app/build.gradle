@@ -22,6 +22,7 @@ dependencies {
     // 기능/공유 모듈을 조립합니다.
     implementation project(':common')
     implementation project(':user')
+    implementation project(':auth')
 
     // Core (Boot BOM 관리, 버전 생략)
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
