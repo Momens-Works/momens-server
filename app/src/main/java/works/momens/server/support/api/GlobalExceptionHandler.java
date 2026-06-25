@@ -15,6 +15,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.common.api.ErrorCode;
+import works.momens.server.common.api.ErrorResponse;
 
 /**
  * Standard 모드 에러 응답을 한곳에서 렌더링하는 전역 예외 핸들러.
