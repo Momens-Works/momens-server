@@ -40,6 +40,19 @@ class SwaggerOperationCustomizerTest {
         .containsKey("COMMON_NOT_FOUND");
   }
 
+  @Test
+  void readsApiExceptionsFromInheritedControllerDocsInterface() throws NoSuchMethodException {
+    InheritedInterfaceController controller = new InheritedInterfaceController();
+    Method method = InheritedInterfaceController.class.getMethod("get");
+    HandlerMethod handlerMethod = new HandlerMethod(controller, method);
+
+    Operation operation = customizer.customize(new Operation(), handlerMethod);
+
+    assertThat(
+            operation.getResponses().get("401").getContent().get("application/json").getExamples())
+        .containsKey("AUTH_UNAUTHORIZED");
+  }
+
   private interface InterfaceAnnotatedControllerDocs {
 
     @ApiExceptions({CommonErrorCode.class})
@@ -55,6 +68,17 @@ class SwaggerOperationCustomizerTest {
   private static class MethodAnnotatedController {
 
     @ApiExceptions({CommonErrorCode.class})
+    public void get() {}
+  }
+
+  private interface InheritedControllerDocs extends InterfaceAnnotatedControllerDocs {}
+
+  private abstract static class AbstractInheritedInterfaceController
+      implements InheritedControllerDocs {}
+
+  private static class InheritedInterfaceController extends AbstractInheritedInterfaceController {
+
+    @Override
     public void get() {}
   }
 }

@@ -3,6 +3,8 @@ package works.momens.server.support.openapi;
 import io.swagger.v3.oas.models.Operation;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.core.annotation.AnnotatedElementUtils;
@@ -32,7 +34,7 @@ public class SwaggerOperationCustomizer implements OperationCustomizer {
 
     Method method = handlerMethod.getMethod();
     Class<?> beanType = handlerMethod.getBeanType();
-    return Arrays.stream(beanType.getInterfaces())
+    return interfaceTypes(beanType).stream()
         .map(interfaceType -> findInterfaceMethod(interfaceType, method))
         .filter(interfaceMethod -> interfaceMethod != null)
         .map(
@@ -41,6 +43,24 @@ public class SwaggerOperationCustomizer implements OperationCustomizer {
         .filter(annotation -> annotation != null)
         .findFirst()
         .orElse(null);
+  }
+
+  private Set<Class<?>> interfaceTypes(Class<?> beanType) {
+    Set<Class<?>> interfaceTypes = new LinkedHashSet<>();
+    Class<?> currentType = beanType;
+    while (currentType != null && currentType != Object.class) {
+      collectInterfaces(currentType, interfaceTypes);
+      currentType = currentType.getSuperclass();
+    }
+    return interfaceTypes;
+  }
+
+  private void collectInterfaces(Class<?> type, Set<Class<?>> interfaceTypes) {
+    for (Class<?> interfaceType : type.getInterfaces()) {
+      if (interfaceTypes.add(interfaceType)) {
+        collectInterfaces(interfaceType, interfaceTypes);
+      }
+    }
   }
 
   private Method findInterfaceMethod(Class<?> interfaceType, Method targetMethod) {
