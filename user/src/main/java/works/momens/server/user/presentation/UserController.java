@@ -14,24 +14,27 @@ import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 
 /**
- * 현재 사용자 프로필 엔드포인트({@code /me}).
+ * 현재 사용자 프로필 엔드포인트.
  *
- * <p>현재 사용자는 {@link Principal}로 받습니다({@code getName()} = userId). 인증 수단에 중립이며, SecurityContext를 채우는
- * 배선은 MOM-8(auth)에서 추가됩니다.
+ * <p>공식 path는 {@code /api/me}이고, 레거시 호환 {@code /me}는 같은 handler의
+ * alias입니다(docs/spec/api-versioning.md). 현재 사용자는 {@link Principal}로 받습니다({@code getName()} =
+ * userId). 인증 수단에 중립이며, SecurityContext를 채우는 배선은 MOM-8(auth)에서 추가됩니다.
  */
 @RestController
 @RequiredArgsConstructor
-class UserController {
+class UserController implements UserControllerDocs {
 
   private final UserService userService;
 
-  @GetMapping("/me")
+  @Override
+  @GetMapping({"/api/me", "/me"})
   public MeResponse getMe(Principal principal) {
     UserProfile profile = userService.getProfile(currentUserId(principal));
     return MeResponse.from(profile);
   }
 
-  @PatchMapping("/me")
+  @Override
+  @PatchMapping({"/api/me", "/me"})
   public MeResponse updateMe(Principal principal, @Valid @RequestBody UpdateMeRequest request) {
     UserProfile profile =
         userService.updateProfile(currentUserId(principal), request.name(), request.jobRole());

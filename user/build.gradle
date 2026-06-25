@@ -17,6 +17,9 @@ dependencies {
     // /me 컨트롤러(presentation)와 요청 DTO 검증.
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // OpenAPI 문서화 애너테이션(@Tag/@Operation/@Schema)만 사용합니다. Swagger UI·공통 설정은
+    // 실행·조립 모듈인 app이 springdoc starter로 소유합니다(docs/spec/openapi.md).
+    implementation 'io.swagger.core.v3:swagger-annotations-jakarta:2.2.47'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
