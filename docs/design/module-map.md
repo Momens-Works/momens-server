@@ -79,10 +79,10 @@
 - SecurityFilterChain, 인증 필터, 공개/보호 엔드포인트 분리
 - logout
 
-프로필 조회/수정(`/me`)은 `user`가 소유하고, `auth`는 세션·보안만 책임진다. 인증 전송수단은
-모바일=Bearer 토큰, 웹=HttpOnly 쿠키 하이브리드로 확정한다(공통 access+refresh 모델, refresh
-회전 공유). SecurityFilterChain·토큰 TTL·CSRF 구현 상세는 [P6](../pending-decisions.md)에서 다룬다.
-이 모듈이 공통 기반 Architecture Spike(MOM-8)에 해당한다.
+프로필 조회/수정(`/me`)은 `user`가 소유하고, `auth`는 세션·보안만 책임진다. 인증 세션·전송
+모델(모바일 Bearer / 웹 HttpOnly 쿠키 하이브리드, 공통 access+refresh)은 [ADR-0003](../adr/0003-auth-session-transport-model.md),
+토큰 발급·검증 스택(Resource Server + JOSE)은 [ADR-0004](../adr/0004-token-issuance-verification-stack.md)에
+기록한다. 웹 쿠키·CSRF 구현은 MOM-22가 맡는다. 이 모듈이 공통 기반 Architecture Spike(MOM-8)에 해당한다.
 
 ### workspace
 
@@ -182,6 +182,5 @@ ownership과는 분리한다. 레거시 `slackbot`의 표면(Slack 이벤트 처
 
 ## 열린 항목
 
-- **auth 인증 상세** (토큰 전송 방식·수명, 모바일+웹 하이브리드 여부): [P6](../pending-decisions.md).
 - **`project` 하위 분리** (task/decision/blocker 별도 모듈화): 모델 언어와 변경 이유가
   분리될 때 재검토.
