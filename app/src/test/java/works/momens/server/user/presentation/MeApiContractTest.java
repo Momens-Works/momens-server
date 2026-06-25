@@ -11,6 +11,8 @@ import java.security.Principal;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -38,26 +40,28 @@ class MeApiContractTest {
 
   private final Principal principal = UUID.randomUUID()::toString;
 
-  @Test
-  @DisplayName("USER_NOT_FOUND는 404와 Standard 에러 code로 렌더링된다")
-  void userNotFoundRendersStandardError() throws Exception {
+  @ParameterizedTest(name = "GET {0}")
+  @ValueSource(strings = {"/api/me", "/me"})
+  @DisplayName("USER_NOT_FOUND는 양쪽 path에서 404와 Standard 에러 code로 렌더링된다")
+  void userNotFoundRendersStandardError(String path) throws Exception {
     when(userService.getProfile(any()))
         .thenThrow(new BusinessException(UserErrorCode.USER_NOT_FOUND));
 
     mockMvc
-        .perform(get("/me").principal(principal))
+        .perform(get(path).principal(principal))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.error.code").value("USER_NOT_FOUND"));
   }
 
-  @Test
-  @DisplayName("@Size 초과 요청은 COMMON_VALIDATION_FAILED와 details.fields로 매핑된다")
-  void oversizeFieldFailsValidation() throws Exception {
+  @ParameterizedTest(name = "PATCH {0}")
+  @ValueSource(strings = {"/api/me", "/me"})
+  @DisplayName("@Size 초과 요청은 양쪽 path에서 COMMON_VALIDATION_FAILED와 details.fields로 매핑된다")
+  void oversizeFieldFailsValidation(String path) throws Exception {
     String tooLong = "a".repeat(256);
 
     mockMvc
         .perform(
-            patch("/me")
+            patch(path)
                 .principal(principal)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"" + tooLong + "\"}"))
@@ -80,11 +84,12 @@ class MeApiContractTest {
         .andExpect(jsonPath("$.error.details.fields[0].field").value("name"));
   }
 
-  @Test
-  @DisplayName("Principal이 없으면 AUTH_UNAUTHORIZED로 매핑된다")
-  void missingPrincipalFailsAsUnauthorized() throws Exception {
+  @ParameterizedTest(name = "GET {0}")
+  @ValueSource(strings = {"/api/me", "/me"})
+  @DisplayName("Principal이 없으면 양쪽 path에서 AUTH_UNAUTHORIZED로 매핑된다")
+  void missingPrincipalFailsAsUnauthorized(String path) throws Exception {
     mockMvc
-        .perform(get("/me"))
+        .perform(get(path))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.error.code").value("AUTH_UNAUTHORIZED"));
   }

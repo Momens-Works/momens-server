@@ -10,8 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.security.Principal;
 import java.time.Instant;
 import java.util.UUID;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -21,7 +21,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 
-/** {@code /me} 컨트롤러가 Principal로 현재 사용자를 해석하고 레거시 호환 응답 shape를 내는지 검증합니다. */
+/**
+ * 컨트롤러가 Principal로 현재 사용자를 해석하고 레거시 호환 응답 shape를 내는지 검증합니다. 공식 path {@code /api/me}와 레거시 alias
+ * {@code /me}가 같은 handler로 동일하게 동작하는지 양쪽 path로 확인합니다.
+ */
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class UserControllerTest {
@@ -32,9 +35,9 @@ class UserControllerTest {
   private static final UUID USER_ID = UUID.fromString("5d2f7f3a-5db1-4f2c-8b9e-13607dd1f5e8");
   private final Principal principal = USER_ID::toString;
 
-  @Test
-  @DisplayName("GET /me는 Principal의 userId로 조회해 {\"user\":{...}} snake_case로 응답한다")
-  void getMeReturnsWrappedSnakeCaseProfile() throws Exception {
+  @ParameterizedTest(name = "GET {0}")
+  @ValueSource(strings = {"/api/me", "/me"})
+  void getMeReturnsWrappedSnakeCaseProfile(String path) throws Exception {
     when(userService.getProfile(eq(USER_ID)))
         .thenReturn(
             new UserProfile(
@@ -47,7 +50,7 @@ class UserControllerTest {
                 Instant.parse("2026-06-24T00:00:00Z")));
 
     mockMvc
-        .perform(get("/me").principal(principal))
+        .perform(get(path).principal(principal))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.user.id").value(USER_ID.toString()))
         .andExpect(jsonPath("$.user.email").value("user@example.com"))
@@ -57,9 +60,9 @@ class UserControllerTest {
         .andExpect(jsonPath("$.user.avatar_url").doesNotExist());
   }
 
-  @Test
-  @DisplayName("PATCH /me는 snake_case 본문을 받아 프로필을 수정한다")
-  void patchMeUpdatesProfile() throws Exception {
+  @ParameterizedTest(name = "PATCH {0}")
+  @ValueSource(strings = {"/api/me", "/me"})
+  void patchMeUpdatesProfile(String path) throws Exception {
     when(userService.updateProfile(eq(USER_ID), eq("새이름"), eq("Designer")))
         .thenReturn(
             new UserProfile(
@@ -73,7 +76,7 @@ class UserControllerTest {
 
     mockMvc
         .perform(
-            patch("/me")
+            patch(path)
                 .principal(principal)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"새이름\",\"job_role\":\"Designer\"}"))
