@@ -79,8 +79,9 @@
 - SecurityFilterChain, 인증 필터, 공개/보호 엔드포인트 분리
 - logout
 
-프로필 조회/수정(`/me`)은 `user`가 소유하고, `auth`는 세션·보안만 책임진다. 인증 상세(토큰
-전송 방식·수명 — 모바일+웹 하이브리드 여부 등)는 [P6](../pending-decisions.md)에서 확정한다.
+프로필 조회/수정(`/me`)은 `user`가 소유하고, `auth`는 세션·보안만 책임진다. 인증 전송수단은
+모바일=Bearer 토큰, 웹=HttpOnly 쿠키 하이브리드로 확정한다(공통 access+refresh 모델, refresh
+회전 공유). SecurityFilterChain·토큰 TTL·CSRF 구현 상세는 [P6](../pending-decisions.md)에서 다룬다.
 이 모듈이 공통 기반 Architecture Spike(MOM-8)에 해당한다.
 
 ### workspace
