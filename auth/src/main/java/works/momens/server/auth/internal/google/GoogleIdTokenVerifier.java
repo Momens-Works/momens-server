@@ -1,5 +1,6 @@
-package works.momens.server.auth.internal;
+package works.momens.server.auth.internal.google;
 
+import java.util.List;
 import java.util.Set;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
@@ -11,6 +12,7 @@ import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Service;
 import works.momens.server.auth.AuthErrorCode;
+import works.momens.server.auth.internal.config.AuthProperties;
 import works.momens.server.common.api.BusinessException;
 
 /**
@@ -20,7 +22,7 @@ import works.momens.server.common.api.BusinessException;
  * 캡슐화합니다(ADR-0004).
  */
 @Service
-class GoogleIdTokenVerifier {
+public class GoogleIdTokenVerifier {
 
   private static final Set<String> ALLOWED_ISSUERS =
       Set.of("accounts.google.com", "https://accounts.google.com");
@@ -34,7 +36,7 @@ class GoogleIdTokenVerifier {
     this.decoder = jwtDecoder;
   }
 
-  GoogleUserInfo verify(String idToken) {
+  public GoogleUserInfo verify(String idToken) {
     Jwt jwt;
     try {
       jwt = decoder.decode(idToken);
@@ -64,8 +66,9 @@ class GoogleIdTokenVerifier {
       if (!ALLOWED_ISSUERS.contains(jwt.getIssuer() == null ? null : jwt.getIssuer().toString())) {
         return invalid("invalid_issuer", "Google ID token issuer is invalid");
       }
+      List<String> tokenAudiences = jwt.getAudience();
       for (String audience : audiences) {
-        if (jwt.getAudience().contains(audience)) {
+        if (tokenAudiences != null && tokenAudiences.contains(audience)) {
           return OAuth2TokenValidatorResult.success();
         }
       }

@@ -1,4 +1,4 @@
-package works.momens.server.auth.internal;
+package works.momens.server.auth.internal.jwt;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -9,6 +9,8 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -17,6 +19,10 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.auth.AuthErrorCode;
+import works.momens.server.auth.internal.config.AuthProperties;
+import works.momens.server.auth.internal.refresh.ClientType;
+import works.momens.server.auth.internal.refresh.RefreshToken;
+import works.momens.server.auth.internal.refresh.RefreshTokenStore;
 import works.momens.server.common.api.BusinessException;
 
 /**
@@ -26,6 +32,7 @@ import works.momens.server.common.api.BusinessException;
  * principal은 sub=userId만 신뢰하며, 권한 판단은 추후 workspace public API에서 DB 기준으로 합니다.
  */
 @Service
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class JwtTokenService {
 
   private static final int REFRESH_TOKEN_BYTES = 32;
@@ -35,17 +42,6 @@ public class JwtTokenService {
   private final Clock clock;
   private final RefreshTokenStore refreshTokenStore;
   private final SecureRandom secureRandom = new SecureRandom();
-
-  JwtTokenService(
-      JwtEncoder accessTokenEncoder,
-      AuthProperties properties,
-      Clock clock,
-      RefreshTokenStore refreshTokenStore) {
-    this.accessTokenEncoder = accessTokenEncoder;
-    this.properties = properties;
-    this.clock = clock;
-    this.refreshTokenStore = refreshTokenStore;
-  }
 
   /** userId를 sub로 담은 HS256 access token을 발급합니다. */
   public String issueAccessToken(UUID userId) {

@@ -1,4 +1,4 @@
-package works.momens.server.auth.internal;
+package works.momens.server.auth.internal.refresh;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -17,7 +17,7 @@ import works.momens.server.common.persistence.BaseEntity;
 @Entity
 @Table(name = "refresh_tokens")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-class RefreshToken extends BaseEntity {
+public class RefreshToken extends BaseEntity {
 
   @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
   private UUID userId;
@@ -38,7 +38,7 @@ class RefreshToken extends BaseEntity {
   @Column(name = "revoked_at")
   private Instant revokedAt;
 
-  RefreshToken(
+  public RefreshToken(
       UUID userId, String tokenHash, ClientType clientType, String device, Instant expiresAt) {
     this.userId = userId;
     this.tokenHash = tokenHash;
@@ -47,11 +47,11 @@ class RefreshToken extends BaseEntity {
     this.expiresAt = expiresAt;
   }
 
-  boolean isActive(Instant now) {
+  public boolean isActive(Instant now) {
     return revokedAt == null && expiresAt.isAfter(now);
   }
 
-  void revoke(Instant now) {
+  public void revoke(Instant now) {
     if (revokedAt == null) {
       revokedAt = now;
     }

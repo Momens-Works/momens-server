@@ -1,4 +1,4 @@
-package works.momens.server.auth.internal;
+package works.momens.server.auth.internal.refresh;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

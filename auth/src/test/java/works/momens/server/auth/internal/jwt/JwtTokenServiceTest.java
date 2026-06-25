@@ -1,4 +1,4 @@
-package works.momens.server.auth.internal;
+package works.momens.server.auth.internal.jwt;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -16,6 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtException;
 import works.momens.server.auth.AuthErrorCode;
+import works.momens.server.auth.internal.config.AuthProperties;
+import works.momens.server.auth.internal.refresh.ClientType;
+import works.momens.server.auth.internal.refresh.RefreshToken;
+import works.momens.server.auth.internal.refresh.RefreshTokenStore;
 import works.momens.server.common.api.BusinessException;
 
 /** 우리 access token 발급/검증 round-trip과 거부 경로 단위 검증. */

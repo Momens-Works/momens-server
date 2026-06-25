@@ -9,7 +9,7 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Component;
-import works.momens.server.auth.internal.JwtTokenService;
+import works.momens.server.auth.internal.jwt.JwtTokenService;
 
 /**
  * 보안 통합테스트용 access token 팩토리.

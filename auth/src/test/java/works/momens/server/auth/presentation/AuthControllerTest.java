@@ -15,8 +15,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import works.momens.server.auth.internal.AuthService;
-import works.momens.server.auth.internal.TokenPair;
+import works.momens.server.auth.internal.application.AuthService;
+import works.momens.server.auth.internal.jwt.TokenPair;
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
