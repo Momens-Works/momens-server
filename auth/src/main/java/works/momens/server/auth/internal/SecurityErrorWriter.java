@@ -21,8 +21,8 @@ class SecurityErrorWriter {
 
   private final ObjectMapper objectMapper;
 
-  // 이 앱은 ObjectMapper를 빈으로 노출하지 않습니다(MVC가 컨버터 내부 매퍼로 직렬화). 빈이 있으면 그걸,
-  // 없으면 기본 매퍼를 씁니다. 에러 본문 키는 단순하고 null 생략은 @JsonInclude가 처리하므로 안전합니다.
+  // ObjectMapper 빈이 있으면 재사용하고, 없으면 기본 매퍼로 폴백합니다. 에러 본문은 키가 단순하고 null
+  // 생략은 @JsonInclude가 처리하므로 어느 쪽이든 동일한 결과를 냅니다.
   SecurityErrorWriter(ObjectProvider<ObjectMapper> objectMapperProvider) {
     this.objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
   }

@@ -16,13 +16,13 @@ dependencies {
 
     // SecurityFilterChain DSL + 서블릿 보안. 코드 소유권은 auth 모듈에 둡니다(docs/design/module-map.md).
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    // 우리 HS256 토큰·Google ID 토큰 검증을 같은 Nimbus(JOSE) 계열로 통일합니다. Bearer 인증을
-    // oauth2ResourceServer로 선언적으로 처리하고, 쿠키 확장(MOM-22)은 BearerTokenResolver 교체로 끝냅니다.
+    // Bearer 인증을 oauth2ResourceServer로 선언적 처리. 우리/Google 토큰 검증을 같은 Nimbus 계열로 통일.
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     // 인증/인가 거부 핸들러의 HttpServletResponse, @ConfigurationProperties 검증.
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    // 인증/인가 거부 본문(ErrorResponse) 직렬화용 ObjectMapper.
+    // 인증/인가 거부 본문(ErrorResponse) 직렬화용 Jackson(Boot BOM 관리, 버전 생략). Boot 4 webmvc·json
+    // 스타터가 jackson-databind를 compile classpath로 노출하지 않아 명시합니다.
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     // momens.auth.* 설정 메타데이터 생성.
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'

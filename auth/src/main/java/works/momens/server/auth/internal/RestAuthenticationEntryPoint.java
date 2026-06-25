@@ -4,11 +4,17 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 import works.momens.server.common.api.CommonErrorCode;
 
-/** 미인증 요청(401) 본문을 Standard 에러 shape로 내보냅니다. */
+/**
+ * 401 본문을 Standard 에러 shape로 내보냅니다.
+ *
+ * <p>규격(docs/spec/api-response-error-codes.md)에 따라 인증 정보 없음은 {@code AUTH_UNAUTHORIZED}, 토큰 파싱/검증
+ * 실패(만료·서명 불일치·형식 오류)는 {@code AUTH_INVALID_TOKEN}으로 분리합니다.
+ */
 @Component
 class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
@@ -24,6 +30,10 @@ class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
       HttpServletResponse response,
       AuthenticationException authenticationException)
       throws IOException {
-    errorWriter.write(response, CommonErrorCode.AUTH_UNAUTHORIZED);
+    CommonErrorCode errorCode =
+        (authenticationException instanceof InvalidBearerTokenException)
+            ? CommonErrorCode.AUTH_INVALID_TOKEN
+            : CommonErrorCode.AUTH_UNAUTHORIZED;
+    errorWriter.write(response, errorCode);
   }
 }

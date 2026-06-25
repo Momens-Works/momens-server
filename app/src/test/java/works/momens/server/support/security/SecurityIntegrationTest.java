@@ -48,10 +48,31 @@ class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
-  void returnsStandardUnauthorizedWhenTokenMalformed() throws Exception {
+  void returnsInvalidTokenWhenMalformed() throws Exception {
     mockMvc
         .perform(get("/api/me").header("Authorization", "Bearer not-a-jwt"))
         .andExpect(status().isUnauthorized())
-        .andExpect(jsonPath("$.error.code").value("AUTH_UNAUTHORIZED"));
+        .andExpect(jsonPath("$.error.code").value("AUTH_INVALID_TOKEN"));
+  }
+
+  @Test
+  void returnsInvalidTokenWhenSignatureForged() throws Exception {
+    String forged = tamperSignature(jwtTokenService.issueAccessToken(java.util.UUID.randomUUID()));
+
+    mockMvc
+        .perform(get("/api/me").header("Authorization", "Bearer " + forged))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.error.code").value("AUTH_INVALID_TOKEN"));
+  }
+
+  /** 서명 세그먼트의 마지막 문자를 바꿔 구조는 유효하나 서명이 어긋난 토큰을 만듭니다. */
+  private static String tamperSignature(String jwt) {
+    int lastDot = jwt.lastIndexOf('.');
+    String signature = jwt.substring(lastDot + 1);
+    char last = signature.charAt(signature.length() - 1);
+    char replacement = (last == 'A') ? 'B' : 'A';
+    return jwt.substring(0, lastDot + 1)
+        + signature.substring(0, signature.length() - 1)
+        + replacement;
   }
 }
