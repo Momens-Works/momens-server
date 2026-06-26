@@ -18,7 +18,13 @@ class JpaRefreshTokenStore implements RefreshTokenStore {
   public RefreshToken save(
       UUID userId, String tokenHash, ClientType clientType, String device, Instant expiresAt) {
     return refreshTokenRepository.save(
-        new RefreshToken(userId, tokenHash, clientType, device, expiresAt));
+        RefreshToken.builder()
+            .userId(userId)
+            .tokenHash(tokenHash)
+            .clientType(clientType)
+            .device(device)
+            .expiresAt(expiresAt)
+            .build());
   }
 
   @Override

@@ -8,6 +8,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import works.momens.server.common.persistence.BaseEntity;
@@ -38,7 +39,8 @@ public class RefreshToken extends BaseEntity {
   @Column(name = "revoked_at")
   private Instant revokedAt;
 
-  public RefreshToken(
+  @Builder
+  private RefreshToken(
       UUID userId, String tokenHash, ClientType clientType, String device, Instant expiresAt) {
     this.userId = userId;
     this.tokenHash = tokenHash;
