@@ -51,6 +51,19 @@ class AuthControllerTest {
   }
 
   @Test
+  void googleTokenExchangeAcceptsRequestWithoutApiVersionHeader() throws Exception {
+    when(authService.loginWithGoogleToken(eq("google-id-token"), eq("iPhone")))
+        .thenReturn(new TokenPair("access-token", "refresh-token", 900));
+
+    mockMvc
+        .perform(
+            post("/api/auth/google/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id_token\":\"google-id-token\",\"device\":\"iPhone\"}"))
+        .andExpect(status().isOk());
+  }
+
+  @Test
   void googleTokenExchangeRejectsUnsupportedApiVersion() throws Exception {
     mockMvc
         .perform(
