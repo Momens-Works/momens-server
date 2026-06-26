@@ -95,6 +95,21 @@ class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
         .andExpect(jsonPath("$.error.code").value("AUTH_REFRESH_TOKEN_INVALID"));
   }
 
+  @Test
+  void authEndpointsIgnoreStaleBearerHeaderAndReachController() throws Exception {
+    String expired = accessTokens.issueExpiredAccessToken(UUID.randomUUID());
+
+    mockMvc
+        .perform(
+            post("/api/auth/refresh")
+                .header("Authorization", "Bearer " + expired)
+                .header(API_VERSION_HEADER, API_VERSION)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refresh_token\":\"unknown-refresh-token\"}"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.error.code").value("AUTH_REFRESH_TOKEN_INVALID"));
+  }
+
   /**
    * 서명 세그먼트의 <b>첫</b> 문자를 바꿔 구조는 유효하나 서명이 어긋난 토큰을 만듭니다.
    *
