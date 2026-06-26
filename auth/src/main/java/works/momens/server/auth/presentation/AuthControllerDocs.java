@@ -23,7 +23,11 @@ interface AuthControllerDocs {
       summary = "모바일 Google ID 토큰 교환",
       description = "Google ID 토큰을 검증하고 Momens access/refresh token을 발급합니다.",
       parameters =
-          @Parameter(name = "API-Version", in = ParameterIn.HEADER, required = true, example = "1"))
+          @Parameter(
+              name = "API-Version",
+              in = ParameterIn.HEADER,
+              required = false,
+              example = "1"))
   @ApiResponse(
       responseCode = "200",
       description = "토큰 발급 성공",
@@ -35,7 +39,11 @@ interface AuthControllerDocs {
       summary = "Access token 재발급",
       description = "Refresh token을 회전하고 새 access/refresh token을 발급합니다.",
       parameters =
-          @Parameter(name = "API-Version", in = ParameterIn.HEADER, required = true, example = "1"))
+          @Parameter(
+              name = "API-Version",
+              in = ParameterIn.HEADER,
+              required = false,
+              example = "1"))
   @ApiResponse(
       responseCode = "200",
       description = "토큰 재발급 성공",
@@ -47,7 +55,11 @@ interface AuthControllerDocs {
       summary = "로그아웃",
       description = "Refresh token을 폐기합니다.",
       parameters =
-          @Parameter(name = "API-Version", in = ParameterIn.HEADER, required = true, example = "1"))
+          @Parameter(
+              name = "API-Version",
+              in = ParameterIn.HEADER,
+              required = false,
+              example = "1"))
   @ApiResponse(
       responseCode = "200",
       description = "로그아웃 성공",
