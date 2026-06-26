@@ -26,12 +26,13 @@ class RefreshTokenRepositoryIntegrationTest extends AbstractPostgresIntegrationT
   void savesAndFindsRefreshTokenByHash() {
     RefreshToken saved =
         refreshTokenRepository.save(
-            new RefreshToken(
-                UUID.randomUUID(),
-                "a".repeat(64),
-                ClientType.MOBILE,
-                "iPhone",
-                Instant.now().plusSeconds(3600)));
+            RefreshToken.builder()
+                .userId(UUID.randomUUID())
+                .tokenHash("a".repeat(64))
+                .clientType(ClientType.MOBILE)
+                .device("iPhone")
+                .expiresAt(Instant.now().plusSeconds(3600))
+                .build());
     entityManager.flush();
     entityManager.clear();
 
@@ -50,12 +51,22 @@ class RefreshTokenRepositoryIntegrationTest extends AbstractPostgresIntegrationT
     Instant now = Instant.now();
     RefreshToken target =
         refreshTokenRepository.save(
-            new RefreshToken(
-                userId, "b".repeat(64), ClientType.MOBILE, "iPhone", now.plusSeconds(3600)));
+            RefreshToken.builder()
+                .userId(userId)
+                .tokenHash("b".repeat(64))
+                .clientType(ClientType.MOBILE)
+                .device("iPhone")
+                .expiresAt(now.plusSeconds(3600))
+                .build());
     RefreshToken otherDevice =
         refreshTokenRepository.save(
-            new RefreshToken(
-                userId, "c".repeat(64), ClientType.MOBILE, "iPad", now.plusSeconds(3600)));
+            RefreshToken.builder()
+                .userId(userId)
+                .tokenHash("c".repeat(64))
+                .clientType(ClientType.MOBILE)
+                .device("iPad")
+                .expiresAt(now.plusSeconds(3600))
+                .build());
     entityManager.flush();
 
     refreshTokenRepository.revokeActiveBySessionScope(userId, ClientType.MOBILE, "iPhone", now);
