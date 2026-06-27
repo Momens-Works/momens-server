@@ -38,7 +38,7 @@ class GoogleIdTokenVerifierTest {
       GoogleUserInfo user = verifier.verify(idToken(key, AUDIENCE, true));
 
       assertThat(user.email()).isEqualTo("user@example.com");
-      assertThat(user.name()).isEqualTo("규일");
+      assertThat(user.name()).isEqualTo("홍길동");
       assertThat(user.picture()).isEqualTo("https://cdn.momens.works/avatar.png");
     }
   }
@@ -105,7 +105,7 @@ class GoogleIdTokenVerifierTest {
             .expirationTime(Date.from(now.plusSeconds(300)))
             .claim("email", "user@example.com")
             .claim("email_verified", emailVerified)
-            .claim("name", "규일")
+            .claim("name", "홍길동")
             .claim("picture", "https://cdn.momens.works/avatar.png")
             .build();
     SignedJWT jwt =

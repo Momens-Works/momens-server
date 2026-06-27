@@ -39,7 +39,7 @@ class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void returnsProfileWhenAccessTokenValid() throws Exception {
-    UserProfile user = userService.findOrCreate("auth-it@momens.works", "규일", null);
+    UserProfile user = userService.findOrCreate("auth-it@momens.works", "홍길동", null);
     String token = accessTokens.issueAccessToken(user.id());
 
     mockMvc
@@ -50,7 +50,7 @@ class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void returnsProfileWhenAccessTokenInCookie() throws Exception {
-    UserProfile user = userService.findOrCreate("auth-it-web@momens.works", "규일", null);
+    UserProfile user = userService.findOrCreate("auth-it-web@momens.works", "홍길동", null);
     String token = accessTokens.issueAccessToken(user.id());
 
     mockMvc

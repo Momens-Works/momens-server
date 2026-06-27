@@ -21,11 +21,11 @@ class GoogleOAuthClientTest {
   private static final String TOKEN_BODY = "{\"access_token\":\"google-access-token\"}";
   private static final String VERIFIED_USERINFO =
       "{\"email\":\"user@example.com\",\"email_verified\":true,"
-          + "\"name\":\"규일\",\"picture\":\"https://cdn.momens.works/avatar.png\"}";
+          + "\"name\":\"홍길동\",\"picture\":\"https://cdn.momens.works/avatar.png\"}";
   private static final String UNVERIFIED_USERINFO =
-      "{\"email\":\"user@example.com\",\"email_verified\":false,\"name\":\"규일\"}";
+      "{\"email\":\"user@example.com\",\"email_verified\":false,\"name\":\"홍길동\"}";
   private static final String MISSING_VERIFIED_USERINFO =
-      "{\"email\":\"user@example.com\",\"name\":\"규일\"}";
+      "{\"email\":\"user@example.com\",\"name\":\"홍길동\"}";
 
   @Test
   void exchangeCodeReturnsGoogleAccessToken() throws Exception {
@@ -46,7 +46,7 @@ class GoogleOAuthClientTest {
       GoogleUserInfo user = client.fetchUserInfo("google-access-token");
 
       assertThat(user.email()).isEqualTo("user@example.com");
-      assertThat(user.name()).isEqualTo("규일");
+      assertThat(user.name()).isEqualTo("홍길동");
       assertThat(user.picture()).isEqualTo("https://cdn.momens.works/avatar.png");
     }
   }
