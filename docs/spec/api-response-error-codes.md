@@ -176,6 +176,20 @@ JSON 에러 본문을 쓰지 않습니다. 콜백 실패는 브라우저에 JSON
 
 성공 시 access/refresh를 HttpOnly 쿠키로 설정하고 `success-uri`로 리다이렉트합니다.
 
+### 웹 쿠키 세션 갱신·로그아웃 계약
+
+웹은 access 만료 시 refresh 쿠키로 회전 재발급하고 로그아웃 시 세션 쿠키를 정리합니다. 두 경로 모두
+`/api/auth` 하위라 refresh 쿠키(`Path=/api/auth`)가 전송되며, same-domain 배포라 CSRF는 SameSite로
+충족합니다(별도 토큰 없음). 토큰이 HttpOnly 쿠키에 있어 본문은 없습니다.
+
+| 메서드·경로 | 성공 | 실패 |
+| --- | --- | --- |
+| `POST /api/auth/web/refresh` | `204` + `Set-Cookie`로 access/refresh 회전 | refresh 쿠키 없음·무효 → `401` `AUTH_REFRESH_TOKEN_INVALID` |
+| `POST /api/auth/web/logout` | `204` + access/refresh 쿠키 정리(`Max-Age=0`) | 없음(쿠키 유무·상태와 무관하게 `204`, 멱등) |
+
+모바일 JSON 계약(`POST /api/auth/refresh`·`/api/auth/logout`, body의 `refresh_token`)은 그대로
+유지됩니다.
+
 ## Validation details
 
 필드 검증 실패는 가능한 한 `details.fields`에 정리합니다.
