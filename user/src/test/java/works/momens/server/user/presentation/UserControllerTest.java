@@ -43,7 +43,7 @@ class UserControllerTest {
             new UserProfile(
                 USER_ID,
                 "user@example.com",
-                "규일",
+                "홍길동",
                 "Engineer",
                 null,
                 Instant.parse("2026-06-24T00:00:00Z"),

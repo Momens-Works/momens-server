@@ -32,11 +32,11 @@ class UserServiceIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void findOrCreateCreatesNewUser() {
-    UserProfile created = userService.findOrCreate("new@momens.works", "규일", "https://a/x.png");
+    UserProfile created = userService.findOrCreate("new@momens.works", "홍길동", "https://a/x.png");
 
     assertThat(created.id()).isNotNull();
     assertThat(created.email()).isEqualTo("new@momens.works");
-    assertThat(created.name()).isEqualTo("규일");
+    assertThat(created.name()).isEqualTo("홍길동");
     assertThat(created.avatarUrl()).isEqualTo("https://a/x.png");
     assertThat(created.jobRole()).isNull();
   }
