@@ -157,7 +157,24 @@ Standard 모드의 에러 응답은 아래 형태를 사용합니다.
 | 401 | `AUTH_GOOGLE_TOKEN_INVALID` | Google ID 토큰 검증 실패 |
 | 401 | `AUTH_GOOGLE_EMAIL_NOT_VERIFIED` | Google 계정 이메일이 검증되지 않음 |
 | 401 | `AUTH_REFRESH_TOKEN_INVALID` | refresh token 형식·해시·만료·폐기 상태가 유효하지 않음 |
+| 400 | `AUTH_OAUTH_STATE_INVALID` | 웹 OAuth 콜백의 state 불일치·누락 또는 code 누락 |
+| 502 | `AUTH_OAUTH_EXCHANGE_FAILED` | 웹 OAuth code 교환·userinfo 조회 실패 |
 | 404 | `USER_NOT_FOUND` | 사용자를 찾을 수 없음 (`GET/PATCH /me` 등) |
+
+### 웹 Google 로그인(Authorization Code) 리다이렉트 계약
+
+`GET /api/auth/google/login`·`GET /api/auth/google/callback`은 브라우저 리다이렉트(302)로 동작하므로
+JSON 에러 본문을 쓰지 않습니다. 콜백 실패는 브라우저에 JSON을 노출하지 않도록 `failure-uri`로
+리다이렉트하며 `?error=`에 다음 값 중 하나를 싣습니다(민감정보 미포함).
+
+| `?error=` | 의미 | 매핑 에러 코드 |
+| --- | --- | --- |
+| `invalid_state` | state 불일치·누락 또는 code 누락 | `AUTH_OAUTH_STATE_INVALID` |
+| `email_not_verified` | Google 이메일 미검증 | `AUTH_GOOGLE_EMAIL_NOT_VERIFIED` |
+| `google_error` | code 교환·userinfo 실패 | `AUTH_OAUTH_EXCHANGE_FAILED` |
+| `server_error` | 그 외 예기치 못한 오류 | (기타) |
+
+성공 시 access/refresh를 HttpOnly 쿠키로 설정하고 `success-uri`로 리다이렉트합니다.
 
 ## Validation details
 
