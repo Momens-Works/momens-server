@@ -37,6 +37,17 @@ momens:
     google:
       # Google ID token aud 허용 목록. web/android/ios client-id를 comma-separated env로 주입합니다.
       audiences: ${MOMENS_AUTH_GOOGLE_AUDIENCES}
+    # 웹 Authorization Code 플로우(서버 주도 code 교환 + HttpOnly 쿠키 전송, MOM-22).
+    web:
+      google-oauth:
+        # client-secret은 secret이므로 .env / 환경변수로 주입하고 커밋하지 않습니다.
+        client-id: ${MOMENS_AUTH_GOOGLE_CLIENT_ID}
+        client-secret: ${MOMENS_AUTH_GOOGLE_CLIENT_SECRET}
+        redirect-uri: ${MOMENS_AUTH_GOOGLE_REDIRECT_URI}
+      # 로그인 성공/실패 후 브라우저를 보낼 momens-fe URL.
+      redirect:
+        success-uri: ${MOMENS_AUTH_WEB_SUCCESS_REDIRECT_URI}
+        failure-uri: ${MOMENS_AUTH_WEB_FAILURE_REDIRECT_URI}
 
 # 헬스체크는 Actuator 기본 /actuator/health 만 노출합니다.
 management:

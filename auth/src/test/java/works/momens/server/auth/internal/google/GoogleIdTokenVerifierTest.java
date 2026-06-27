@@ -89,7 +89,8 @@ class GoogleIdTokenVerifierTest {
         SECRET,
         Duration.ofMinutes(15),
         Duration.ofDays(14),
-        new AuthProperties.Google(List.of(AUDIENCE), jwkSetUri));
+        new AuthProperties.Google(List.of(AUDIENCE), jwkSetUri),
+        null);
   }
 
   private static String idToken(RSAKey key, String audience, boolean emailVerified)
