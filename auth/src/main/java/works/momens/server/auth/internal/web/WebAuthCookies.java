@@ -22,7 +22,9 @@ public class WebAuthCookies {
 
   private static final Duration HANDSHAKE_TTL = Duration.ofMinutes(10);
   private static final String ACCESS_PATH = "/";
-  private static final String AUTH_PATH = "/api/auth";
+  private static final String REFRESH_PATH = "/api/auth";
+  // handshake 쿠키는 콜백에서만 읽으므로 경로를 콜백으로 좁혀 다른 인증 엔드포인트로 전송되지 않게 합니다.
+  private static final String CALLBACK_PATH = "/api/auth/google/callback";
 
   private final AuthProperties properties;
 
@@ -31,23 +33,23 @@ public class WebAuthCookies {
   }
 
   public ResponseCookie refreshToken(String value) {
-    return base(cookie().refreshName(), value, AUTH_PATH, properties.refreshTtl()).build();
+    return base(cookie().refreshName(), value, REFRESH_PATH, properties.refreshTtl()).build();
   }
 
   public ResponseCookie state(String value) {
-    return base(STATE_COOKIE, value, AUTH_PATH, HANDSHAKE_TTL).build();
+    return base(STATE_COOKIE, value, CALLBACK_PATH, HANDSHAKE_TTL).build();
   }
 
   public ResponseCookie pkceVerifier(String value) {
-    return base(PKCE_VERIFIER_COOKIE, value, AUTH_PATH, HANDSHAKE_TTL).build();
+    return base(PKCE_VERIFIER_COOKIE, value, CALLBACK_PATH, HANDSHAKE_TTL).build();
   }
 
   public ResponseCookie clearState() {
-    return base(STATE_COOKIE, "", AUTH_PATH, Duration.ZERO).build();
+    return base(STATE_COOKIE, "", CALLBACK_PATH, Duration.ZERO).build();
   }
 
   public ResponseCookie clearPkceVerifier() {
-    return base(PKCE_VERIFIER_COOKIE, "", AUTH_PATH, Duration.ZERO).build();
+    return base(PKCE_VERIFIER_COOKIE, "", CALLBACK_PATH, Duration.ZERO).build();
   }
 
   private ResponseCookie.ResponseCookieBuilder base(
