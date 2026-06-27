@@ -12,7 +12,7 @@ import tools.jackson.databind.annotation.JsonNaming;
 public record UpdateMeRequest(
     @Schema(
             description = "이름. 공백만으로는 설정할 수 없으며 최대 255자입니다.",
-            example = "규일",
+            example = "홍길동",
             maxLength = 255,
             nullable = true)
         @Size(max = 255)
