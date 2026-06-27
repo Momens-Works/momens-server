@@ -19,7 +19,7 @@ import works.momens.server.user.UserProfile;
 public record UserResponse(
     @Schema(description = "사용자 식별자", example = "5d2f7f3a-5db1-4f2c-8b9e-13607dd1f5e8") UUID id,
     @Schema(description = "이메일", example = "user@example.com") String email,
-    @Schema(description = "이름", example = "규일") String name,
+    @Schema(description = "이름", example = "홍길동") String name,
     @JsonInclude(JsonInclude.Include.NON_NULL)
         @Schema(
             description = "아바타 URL. 미설정 시 응답에서 생략됩니다.",
