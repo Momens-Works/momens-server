@@ -7,11 +7,13 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import works.momens.server.auth.AuthErrorCode;
 import works.momens.server.auth.internal.google.GoogleOAuthClient;
 import works.momens.server.auth.internal.google.GoogleUserInfo;
 import works.momens.server.auth.internal.jwt.JwtTokenService;
 import works.momens.server.auth.internal.jwt.TokenPair;
 import works.momens.server.auth.internal.refresh.ClientType;
+import works.momens.server.common.api.BusinessException;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 
@@ -39,12 +41,29 @@ public class WebAuthService {
     return new LoginRedirect(authorizationUrl, state, codeVerifier);
   }
 
-  /** 콜백의 code를 교환·검증하고 WEB 세션 토큰을 발급합니다. */
-  public TokenPair completeLogin(String code, String codeVerifier) {
+  /**
+   * 콜백의 state/PKCE 핸드셰이크를 검증하고 code를 교환해 WEB 세션 토큰을 발급합니다. state는 쿠키에 보관한 값과 상수시간 비교하며, 불일치·누락은
+   * {@link AuthErrorCode#AUTH_OAUTH_STATE_INVALID}로 막습니다.
+   */
+  public TokenPair completeLogin(
+      String code, String state, String stateCookie, String codeVerifier) {
+    requireValidHandshake(code, state, stateCookie, codeVerifier);
     String googleAccessToken = googleOAuthClient.exchangeCode(code, codeVerifier);
     GoogleUserInfo user = googleOAuthClient.fetchUserInfo(googleAccessToken);
     UserProfile profile = userService.findOrCreate(user.email(), displayName(user), user.picture());
     return jwtTokenService.issueTokenPair(profile.id(), ClientType.WEB, null);
+  }
+
+  private static void requireValidHandshake(
+      String code, String state, String stateCookie, String codeVerifier) {
+    if (code == null
+        || state == null
+        || stateCookie == null
+        || codeVerifier == null
+        || !MessageDigest.isEqual(
+            state.getBytes(StandardCharsets.UTF_8), stateCookie.getBytes(StandardCharsets.UTF_8))) {
+      throw new BusinessException(AuthErrorCode.AUTH_OAUTH_STATE_INVALID);
+    }
   }
 
   /** 모바일과 같은 코어로 refresh token을 회전합니다(전송수단만 쿠키). */

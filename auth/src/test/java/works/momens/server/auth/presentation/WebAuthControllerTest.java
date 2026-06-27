@@ -88,7 +88,8 @@ class WebAuthControllerTest {
 
   @Test
   void googleCallbackIssuesSessionCookiesAndRedirectsOnSuccess() throws Exception {
-    when(webAuthService.completeLogin(eq("auth-code"), eq("verifier-xyz")))
+    when(webAuthService.completeLogin(
+            eq("auth-code"), eq("state-xyz"), eq("state-xyz"), eq("verifier-xyz")))
         .thenReturn(new TokenPair("access-jwt", "refresh-token", 900));
 
     MvcResult result =
@@ -112,7 +113,12 @@ class WebAuthControllerTest {
   }
 
   @Test
-  void googleCallbackRedirectsToFailureOnStateMismatch() throws Exception {
+  void googleCallbackRedirectsToInvalidStateWhenHandshakeRejected() throws Exception {
+    // 핸드셰이크 검증은 WebAuthService로 옮겨졌고(WebAuthServiceTest에서 검증), 컨트롤러는 그 도메인 에러를
+    // failure-uri의 ?error=invalid_state로 매핑하는 책임만 진다.
+    when(webAuthService.completeLogin(any(), any(), any(), any()))
+        .thenThrow(new BusinessException(AuthErrorCode.AUTH_OAUTH_STATE_INVALID));
+
     mockMvc
         .perform(
             get("/api/auth/google/callback")
@@ -122,28 +128,12 @@ class WebAuthControllerTest {
                 .cookie(new Cookie("oauth_state", "state-xyz")))
         .andExpect(status().isFound())
         .andExpect(redirectedUrlPattern(FAILURE_URI + "*error=invalid_state*"));
-
-    verify(webAuthService, never()).completeLogin(any(), any());
-  }
-
-  @Test
-  void googleCallbackRedirectsToInvalidStateWhenPkceVerifierMissing() throws Exception {
-    mockMvc
-        .perform(
-            get("/api/auth/google/callback")
-                .header(API_VERSION_HEADER, API_VERSION)
-                .param("code", "auth-code")
-                .param("state", "state-xyz")
-                .cookie(new Cookie("oauth_state", "state-xyz")))
-        .andExpect(status().isFound())
-        .andExpect(redirectedUrlPattern(FAILURE_URI + "*error=invalid_state*"));
-
-    verify(webAuthService, never()).completeLogin(any(), any());
   }
 
   @Test
   void googleCallbackRedirectsToServerErrorOnUnexpectedException() throws Exception {
-    when(webAuthService.completeLogin(eq("auth-code"), eq("verifier-xyz")))
+    when(webAuthService.completeLogin(
+            eq("auth-code"), eq("state-xyz"), eq("state-xyz"), eq("verifier-xyz")))
         .thenThrow(new IllegalStateException("boom"));
 
     mockMvc
@@ -161,7 +151,8 @@ class WebAuthControllerTest {
 
   @Test
   void googleCallbackRedirectsToFailureWhenEmailNotVerified() throws Exception {
-    when(webAuthService.completeLogin(eq("auth-code"), eq("verifier-xyz")))
+    when(webAuthService.completeLogin(
+            eq("auth-code"), eq("state-xyz"), eq("state-xyz"), eq("verifier-xyz")))
         .thenThrow(new BusinessException(AuthErrorCode.AUTH_GOOGLE_EMAIL_NOT_VERIFIED));
 
     mockMvc
