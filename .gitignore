@@ -23,3 +23,7 @@ application-*-secret.yml
 
 # 로컬 전용 작업 기록
 docs/progress.md
+
+# jinsu 개인 학습 자료와 그 작성 스킬 (로컬 전용, 레포에 올리지 않는다)
+docs/study/
+.claude/skills/study-note/
