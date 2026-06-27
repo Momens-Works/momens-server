@@ -108,6 +108,32 @@ class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  void webRefreshIsPermitAllAndReturnsStandardErrorWhenRefreshCookieInvalid() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/auth/web/refresh")
+                .header(API_VERSION_HEADER, API_VERSION)
+                .cookie(new Cookie("refresh_token", "unknown-refresh-token")))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.error.code").value("AUTH_REFRESH_TOKEN_INVALID"));
+  }
+
+  @Test
+  void webRefreshReturnsStandardErrorWhenNoRefreshCookie() throws Exception {
+    mockMvc
+        .perform(post("/api/auth/web/refresh").header(API_VERSION_HEADER, API_VERSION))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.error.code").value("AUTH_REFRESH_TOKEN_INVALID"));
+  }
+
+  @Test
+  void webLogoutIsPermitAllAndReturns204WhenNoRefreshCookie() throws Exception {
+    mockMvc
+        .perform(post("/api/auth/web/logout").header(API_VERSION_HEADER, API_VERSION))
+        .andExpect(status().isNoContent());
+  }
+
+  @Test
   void authEndpointsIgnoreStaleBearerHeaderAndReachController() throws Exception {
     String expired = accessTokens.issueExpiredAccessToken(UUID.randomUUID());
 
