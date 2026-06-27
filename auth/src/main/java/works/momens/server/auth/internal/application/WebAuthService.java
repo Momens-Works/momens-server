@@ -56,14 +56,18 @@ public class WebAuthService {
 
   private static void requireValidHandshake(
       String code, String state, String stateCookie, String codeVerifier) {
-    if (code == null
-        || state == null
-        || stateCookie == null
-        || codeVerifier == null
+    if (isBlank(code)
+        || isBlank(state)
+        || isBlank(stateCookie)
+        || isBlank(codeVerifier)
         || !MessageDigest.isEqual(
             state.getBytes(StandardCharsets.UTF_8), stateCookie.getBytes(StandardCharsets.UTF_8))) {
       throw new BusinessException(AuthErrorCode.AUTH_OAUTH_STATE_INVALID);
     }
+  }
+
+  private static boolean isBlank(String value) {
+    return value == null || value.isBlank();
   }
 
   /** 모바일과 같은 코어로 refresh token을 회전합니다(전송수단만 쿠키). */

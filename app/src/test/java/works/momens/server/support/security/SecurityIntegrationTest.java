@@ -134,6 +134,28 @@ class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  void webEndpointsIgnoreStaleBearerHeaderAndReachController() throws Exception {
+    // 만료된 Authorization 헤더가 붙어도 웹 쿠키 경로가 자원서버보다 먼저 매칭돼 컨트롤러까지 도달해야 합니다.
+    String expired = accessTokens.issueExpiredAccessToken(UUID.randomUUID());
+
+    mockMvc
+        .perform(
+            post("/api/auth/web/refresh")
+                .header("Authorization", "Bearer " + expired)
+                .header(API_VERSION_HEADER, API_VERSION)
+                .cookie(new Cookie("refresh_token", "unknown-refresh-token")))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.error.code").value("AUTH_REFRESH_TOKEN_INVALID"));
+
+    mockMvc
+        .perform(
+            post("/api/auth/web/logout")
+                .header("Authorization", "Bearer " + expired)
+                .header(API_VERSION_HEADER, API_VERSION))
+        .andExpect(status().isNoContent());
+  }
+
+  @Test
   void authEndpointsIgnoreStaleBearerHeaderAndReachController() throws Exception {
     String expired = accessTokens.issueExpiredAccessToken(UUID.randomUUID());
 
