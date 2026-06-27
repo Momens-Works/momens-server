@@ -52,3 +52,13 @@
   "세션 폐기 의존 기능"을 계약으로 약속하지 않는다.
 - 웹 컷오버 전까지는 웹이 레거시 `momens-api`와 병행 운영될 수 있다(R6).
 - 이 모델을 구현하는 토큰 발급·검증 스택은 [ADR-0004](0004-token-issuance-verification-stack.md)에서 정한다.
+
+## 보강 (MOM-22, 2026-06-27)
+
+웹 구현 착수 시 `momens-fe` TL과 **프런트와 API 서버를 same-domain(same-site)으로 배포**하기로
+확정했다. 따라서 웹 쿠키 인증의 CSRF는 별도 토큰 없이 **`SameSite` 쿠키 속성으로 충족**한다.
+
+이 확정은 위 결정 2의 "교차 도메인 시 CSRF 토큰"과 결정 5의 "CSRF 재활성화"를 same-domain 전제로
+**대체**한다(원문은 MOM-8 시점의 계획 기록으로 그대로 둔다). 구현은 `BearerTokenResolver`를 access
+쿠키도 읽도록 교체하되 CSRF 필터는 재활성화하지 않는다. 교차 도메인으로 배포 형태가 바뀌면 CSRF
+토큰을 다시 도입해야 한다.
