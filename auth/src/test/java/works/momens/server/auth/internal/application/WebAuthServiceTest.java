@@ -72,6 +72,11 @@ class WebAuthServiceTest {
     assertHandshakeRejected("auth-code", "state-xyz", "state-xyz", null);
   }
 
+  @Test
+  void completeLoginRejectsWhenInputsBlank() {
+    assertHandshakeRejected("  ", "state-xyz", "state-xyz", "verifier");
+  }
+
   private void assertHandshakeRejected(
       String code, String state, String stateCookie, String codeVerifier) {
     assertThatThrownBy(() -> service.completeLogin(code, state, stateCookie, codeVerifier))

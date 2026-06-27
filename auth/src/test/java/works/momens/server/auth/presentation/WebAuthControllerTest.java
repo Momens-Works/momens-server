@@ -183,8 +183,18 @@ class WebAuthControllerTest {
             .andReturn();
 
     List<String> setCookies = result.getResponse().getHeaders("Set-Cookie");
-    assertThat(setCookies).anyMatch(c -> c.startsWith("access_token=new-access-jwt"));
-    assertThat(setCookies).anyMatch(c -> c.startsWith("refresh_token=new-refresh-token"));
+    assertThat(setCookies)
+        .anyMatch(
+            c ->
+                c.startsWith("access_token=new-access-jwt")
+                    && c.contains("HttpOnly")
+                    && c.contains("Path=/;"));
+    assertThat(setCookies)
+        .anyMatch(
+            c ->
+                c.startsWith("refresh_token=new-refresh-token")
+                    && c.contains("HttpOnly")
+                    && c.contains("Path=/api/auth"));
   }
 
   @Test
@@ -200,8 +210,20 @@ class WebAuthControllerTest {
 
     verify(webAuthService).logout("web-refresh");
     List<String> setCookies = result.getResponse().getHeaders("Set-Cookie");
-    assertThat(setCookies).anyMatch(c -> c.startsWith("access_token=") && c.contains("Max-Age=0"));
-    assertThat(setCookies).anyMatch(c -> c.startsWith("refresh_token=") && c.contains("Max-Age=0"));
+    assertThat(setCookies)
+        .anyMatch(
+            c ->
+                c.startsWith("access_token=")
+                    && c.contains("Max-Age=0")
+                    && c.contains("HttpOnly")
+                    && c.contains("Path=/;"));
+    assertThat(setCookies)
+        .anyMatch(
+            c ->
+                c.startsWith("refresh_token=")
+                    && c.contains("Max-Age=0")
+                    && c.contains("HttpOnly")
+                    && c.contains("Path=/api/auth"));
   }
 
   @Test
@@ -214,8 +236,20 @@ class WebAuthControllerTest {
 
     verify(webAuthService, never()).logout(any());
     List<String> setCookies = result.getResponse().getHeaders("Set-Cookie");
-    assertThat(setCookies).anyMatch(c -> c.startsWith("access_token=") && c.contains("Max-Age=0"));
-    assertThat(setCookies).anyMatch(c -> c.startsWith("refresh_token=") && c.contains("Max-Age=0"));
+    assertThat(setCookies)
+        .anyMatch(
+            c ->
+                c.startsWith("access_token=")
+                    && c.contains("Max-Age=0")
+                    && c.contains("HttpOnly")
+                    && c.contains("Path=/;"));
+    assertThat(setCookies)
+        .anyMatch(
+            c ->
+                c.startsWith("refresh_token=")
+                    && c.contains("Max-Age=0")
+                    && c.contains("HttpOnly")
+                    && c.contains("Path=/api/auth"));
   }
 
   @Test
@@ -234,8 +268,20 @@ class WebAuthControllerTest {
             .andReturn();
 
     List<String> setCookies = result.getResponse().getHeaders("Set-Cookie");
-    assertThat(setCookies).anyMatch(c -> c.startsWith("access_token=") && c.contains("Max-Age=0"));
-    assertThat(setCookies).anyMatch(c -> c.startsWith("refresh_token=") && c.contains("Max-Age=0"));
+    assertThat(setCookies)
+        .anyMatch(
+            c ->
+                c.startsWith("access_token=")
+                    && c.contains("Max-Age=0")
+                    && c.contains("HttpOnly")
+                    && c.contains("Path=/;"));
+    assertThat(setCookies)
+        .anyMatch(
+            c ->
+                c.startsWith("refresh_token=")
+                    && c.contains("Max-Age=0")
+                    && c.contains("HttpOnly")
+                    && c.contains("Path=/api/auth"));
   }
 
   @TestConfiguration
