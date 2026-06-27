@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import jakarta.servlet.http.Cookie;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,17 @@ class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
 
     mockMvc
         .perform(get("/api/me").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.user.id").value(user.id().toString()));
+  }
+
+  @Test
+  void returnsProfileWhenAccessTokenInCookie() throws Exception {
+    UserProfile user = userService.findOrCreate("auth-it-web@momens.works", "규일", null);
+    String token = accessTokens.issueAccessToken(user.id());
+
+    mockMvc
+        .perform(get("/api/me").cookie(new Cookie("access_token", token)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.user.id").value(user.id().toString()));
   }

@@ -1,5 +1,6 @@
 package works.momens.server.auth.internal.security;
 
+import jakarta.servlet.http.Cookie;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -12,6 +13,7 @@ import org.springframework.security.oauth2.server.resource.web.DefaultBearerToke
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import works.momens.server.auth.internal.config.AuthProperties;
 
 /**
  * 전역 SecurityFilterChain. 코드 소유권은 auth 모듈에 둡니다(docs/design/module-map.md).
@@ -19,7 +21,8 @@ import org.springframework.security.web.access.AccessDeniedHandler;
  * <p>두 개의 체인으로 나눕니다. 공개 경로(인증 엔드포인트·health·swagger)는 자원서버 필터를 태우지 않는 별도 체인으로 처리합니다. 그렇지 않으면 클라이언트가
  * 만료된 access token을 {@code Authorization} 헤더에 그대로 붙여 보낼 때(예: 토큰 갱신 직전 refresh 호출) 자원서버 필터가
  * permitAll 평가 전에 401을 내버려 갱신 흐름이 막힙니다. 보호 API 체인은 우리 HS256 디코더로 access를 검증하고, 거부 본문은 Standard 에러
- * shape로 통일합니다. 웹 쿠키 인증(MOM-22)은 {@link BearerTokenResolver} 교체와 CSRF 재활성화만으로 보호 체인 위에 얹습니다.
+ * shape로 통일합니다. 웹 쿠키 인증(MOM-22)은 {@link BearerTokenResolver}가 access 쿠키도 읽도록 교체해 보호 체인 위에 얹습니다.
+ * same-domain 배포라 CSRF는 SameSite 쿠키 속성으로 막습니다(ADR-0003).
  */
 @Configuration
 class SecurityConfig {
@@ -30,6 +33,8 @@ class SecurityConfig {
     "/swagger-ui/**",
     "/swagger-ui.html",
     "/api/auth/google/token",
+    "/api/auth/google/login",
+    "/api/auth/google/callback",
     "/api/auth/refresh",
     "/api/auth/logout"
   };
@@ -60,7 +65,7 @@ class SecurityConfig {
       throws Exception {
     http.sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        // 무상태 Bearer API. 웹 쿠키 인증(MOM-22) 도입 시 쿠키 요청에 한해 CSRF를 재활성화합니다.
+        // 무상태 Bearer/쿠키 API. same-domain 배포라 CSRF는 SameSite 쿠키 속성으로 막습니다(ADR-0003).
         .csrf(AbstractHttpConfigurer::disable)
         .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
         .oauth2ResourceServer(
@@ -78,11 +83,26 @@ class SecurityConfig {
   }
 
   /**
-   * Bearer 토큰 추출 seam. 현재는 Authorization 헤더만 읽습니다(기본 동작). 웹 쿠키 인증(MOM-22)은 여기서 HttpOnly 쿠키 분기를 한 곳에
-   * 추가합니다.
+   * Bearer 토큰 추출. 모바일은 Authorization 헤더, 웹은 access HttpOnly 쿠키로 보냅니다. 헤더를 먼저 보고 없으면 access 쿠키에서
+   * 읽습니다. 쿠키 이름은 설정({@code momens.auth.web.cookie.access-name})을 따릅니다.
    */
   @Bean
-  BearerTokenResolver bearerTokenResolver() {
-    return new DefaultBearerTokenResolver();
+  BearerTokenResolver bearerTokenResolver(AuthProperties properties) {
+    String accessCookieName = properties.web().cookie().accessName();
+    DefaultBearerTokenResolver headerResolver = new DefaultBearerTokenResolver();
+    return request -> {
+      String fromHeader = headerResolver.resolve(request);
+      if (fromHeader != null) {
+        return fromHeader;
+      }
+      if (request.getCookies() != null) {
+        for (Cookie cookie : request.getCookies()) {
+          if (accessCookieName.equals(cookie.getName())) {
+            return cookie.getValue();
+          }
+        }
+      }
+      return null;
+    };
   }
 }
