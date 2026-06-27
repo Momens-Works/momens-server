@@ -36,7 +36,9 @@ class SecurityConfig {
     "/api/auth/google/login",
     "/api/auth/google/callback",
     "/api/auth/refresh",
-    "/api/auth/logout"
+    "/api/auth/logout",
+    "/api/auth/web/refresh",
+    "/api/auth/web/logout"
   };
 
   /**

@@ -1,16 +1,23 @@
 package works.momens.server.auth.presentation;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.springframework.http.ResponseEntity;
+import works.momens.server.auth.AuthErrorCode;
+import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.CommonErrorCode;
 
 /**
- * 웹 Google 로그인(Authorization Code) OpenAPI 문서.
+ * 웹 인증(Authorization Code 로그인 + 쿠키 세션) OpenAPI 문서.
  *
- * <p>두 엔드포인트 모두 브라우저 리다이렉트(302)라 JSON 본문이 없습니다. 실패도 JSON 대신 failure-uri로 리다이렉트하므로 표준 에러 응답
- * (@ApiExceptions)을 쓰지 않습니다.
+ * <p>로그인({@code google/login}·{@code google/callback})은 브라우저 리다이렉트(302)라 JSON 본문이 없고 실패도
+ * failure-uri로 리다이렉트합니다. 세션 갱신·로그아웃({@code web/refresh}·{@code web/logout})은 FE의 fetch 호출이라 토큰을
+ * HttpOnly 쿠키로 주고받으며 본문 없이 204를 반환합니다(refresh 무효 시 표준 JSON 에러).
  */
 @Tag(name = "Auth", description = "인증 API")
 interface WebAuthControllerDocs {
@@ -35,4 +42,17 @@ interface WebAuthControllerDocs {
       String codeVerifier,
       HttpServletResponse response)
       throws IOException;
+
+  @Operation(
+      summary = "웹 세션 갱신",
+      description = "refresh 쿠키를 회전해 새 access/refresh HttpOnly 쿠키를 설정합니다. 본문은 없습니다.")
+  @ApiResponse(responseCode = "204", description = "갱신 성공(Set-Cookie로 access/refresh 회전)")
+  @ApiExceptions({AuthErrorCode.class, CommonErrorCode.class})
+  ResponseEntity<Void> webRefresh(@Parameter(hidden = true) HttpServletRequest request);
+
+  @Operation(
+      summary = "웹 로그아웃",
+      description = "refresh 쿠키를 폐기하고 access/refresh 쿠키를 정리합니다. 쿠키 유무·상태와 무관하게 204를 반환합니다(멱등).")
+  @ApiResponse(responseCode = "204", description = "로그아웃 성공(access/refresh 쿠키 정리)")
+  ResponseEntity<Void> webLogout(@Parameter(hidden = true) HttpServletRequest request);
 }

@@ -1,6 +1,7 @@
 package works.momens.server.auth.presentation;
 
 import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -8,8 +9,10 @@ import java.security.MessageDigest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -87,6 +90,37 @@ class WebAuthController implements WebAuthControllerDocs {
       redirectUri = failureUri("server_error");
     }
     response.sendRedirect(redirectUri);
+  }
+
+  @Override
+  @PostMapping(path = "/api/auth/web/refresh", version = "1")
+  public ResponseEntity<Void> webRefresh(@Parameter(hidden = true) HttpServletRequest request) {
+    String refreshToken = cookies.readRefreshToken(request).orElse(null);
+    TokenPair tokens = webAuthService.refresh(refreshToken);
+    HttpHeaders headers = new HttpHeaders();
+    headers.add(HttpHeaders.SET_COOKIE, cookies.accessToken(tokens.accessToken()).toString());
+    headers.add(HttpHeaders.SET_COOKIE, cookies.refreshToken(tokens.refreshToken()).toString());
+    return ResponseEntity.noContent().headers(headers).build();
+  }
+
+  @Override
+  @PostMapping(path = "/api/auth/web/logout", version = "1")
+  public ResponseEntity<Void> webLogout(@Parameter(hidden = true) HttpServletRequest request) {
+    cookies
+        .readRefreshToken(request)
+        .ifPresent(
+            refreshToken -> {
+              try {
+                webAuthService.logout(refreshToken);
+              } catch (BusinessException e) {
+                // 이미 무효·폐기된 refresh라도 로그아웃은 쿠키를 정리하고 성공으로 끝냅니다(멱등).
+                log.debug("web logout with inactive refresh: code={}", e.getErrorCode().code());
+              }
+            });
+    HttpHeaders headers = new HttpHeaders();
+    headers.add(HttpHeaders.SET_COOKIE, cookies.clearAccessToken().toString());
+    headers.add(HttpHeaders.SET_COOKIE, cookies.clearRefreshToken().toString());
+    return ResponseEntity.noContent().headers(headers).build();
   }
 
   private static void requireValidHandshake(
