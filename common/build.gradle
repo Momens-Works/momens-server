@@ -28,6 +28,10 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
+    // common 자체 순수 로직(CurrentUser 등) 단위 테스트.
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
     // 통합테스트 베이스(testFixtures)를 의존 모듈이 재사용합니다.
     testFixturesApi 'org.springframework.boot:spring-boot-starter-test'
     // Boot 4는 테스트 슬라이스를 기술별 스타터로 분리합니다(@DataJpaTest 등).
