@@ -3,10 +3,12 @@ package works.momens.server.auth.presentation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -173,6 +175,76 @@ class WebAuthControllerTest {
                     new Cookie("oauth_pkce_verifier", "verifier-xyz")))
         .andExpect(status().isFound())
         .andExpect(redirectedUrlPattern(FAILURE_URI + "*error=email_not_verified*"));
+  }
+
+  @Test
+  void webRefreshRotatesSessionCookiesAndReturns204() throws Exception {
+    when(webAuthService.refresh(eq("old-web-refresh")))
+        .thenReturn(new TokenPair("new-access-jwt", "new-refresh-token", 900));
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                post("/api/auth/web/refresh")
+                    .header(API_VERSION_HEADER, API_VERSION)
+                    .cookie(new Cookie("refresh_token", "old-web-refresh")))
+            .andExpect(status().isNoContent())
+            .andReturn();
+
+    List<String> setCookies = result.getResponse().getHeaders("Set-Cookie");
+    assertThat(setCookies).anyMatch(c -> c.startsWith("access_token=new-access-jwt"));
+    assertThat(setCookies).anyMatch(c -> c.startsWith("refresh_token=new-refresh-token"));
+  }
+
+  @Test
+  void webLogoutRevokesRefreshAndClearsCookies() throws Exception {
+    MvcResult result =
+        mockMvc
+            .perform(
+                post("/api/auth/web/logout")
+                    .header(API_VERSION_HEADER, API_VERSION)
+                    .cookie(new Cookie("refresh_token", "web-refresh")))
+            .andExpect(status().isNoContent())
+            .andReturn();
+
+    verify(webAuthService).logout("web-refresh");
+    List<String> setCookies = result.getResponse().getHeaders("Set-Cookie");
+    assertThat(setCookies).anyMatch(c -> c.startsWith("access_token=") && c.contains("Max-Age=0"));
+    assertThat(setCookies).anyMatch(c -> c.startsWith("refresh_token=") && c.contains("Max-Age=0"));
+  }
+
+  @Test
+  void webLogoutClearsCookiesAndReturns204WhenNoRefreshCookie() throws Exception {
+    MvcResult result =
+        mockMvc
+            .perform(post("/api/auth/web/logout").header(API_VERSION_HEADER, API_VERSION))
+            .andExpect(status().isNoContent())
+            .andReturn();
+
+    verify(webAuthService, never()).logout(any());
+    List<String> setCookies = result.getResponse().getHeaders("Set-Cookie");
+    assertThat(setCookies).anyMatch(c -> c.startsWith("access_token=") && c.contains("Max-Age=0"));
+    assertThat(setCookies).anyMatch(c -> c.startsWith("refresh_token=") && c.contains("Max-Age=0"));
+  }
+
+  @Test
+  void webLogoutClearsCookiesEvenWhenRefreshAlreadyInactive() throws Exception {
+    doThrow(new BusinessException(AuthErrorCode.AUTH_REFRESH_TOKEN_INVALID))
+        .when(webAuthService)
+        .logout("stale-refresh");
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                post("/api/auth/web/logout")
+                    .header(API_VERSION_HEADER, API_VERSION)
+                    .cookie(new Cookie("refresh_token", "stale-refresh")))
+            .andExpect(status().isNoContent())
+            .andReturn();
+
+    List<String> setCookies = result.getResponse().getHeaders("Set-Cookie");
+    assertThat(setCookies).anyMatch(c -> c.startsWith("access_token=") && c.contains("Max-Age=0"));
+    assertThat(setCookies).anyMatch(c -> c.startsWith("refresh_token=") && c.contains("Max-Age=0"));
   }
 
   @TestConfiguration

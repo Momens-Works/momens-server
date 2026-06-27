@@ -47,6 +47,16 @@ public class WebAuthService {
     return jwtTokenService.issueTokenPair(profile.id(), ClientType.WEB, null);
   }
 
+  /** 모바일과 같은 코어로 refresh token을 회전합니다(전송수단만 쿠키). */
+  public TokenPair refresh(String refreshToken) {
+    return jwtTokenService.refresh(refreshToken);
+  }
+
+  /** refresh token을 폐기합니다. */
+  public void logout(String refreshToken) {
+    jwtTokenService.revoke(refreshToken);
+  }
+
   private String randomToken() {
     byte[] bytes = new byte[TOKEN_BYTES];
     secureRandom.nextBytes(bytes);

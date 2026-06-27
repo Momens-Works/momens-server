@@ -1,6 +1,9 @@
 package works.momens.server.auth.internal.web;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
@@ -34,6 +37,28 @@ public class WebAuthCookies {
 
   public ResponseCookie refreshToken(String value) {
     return base(cookie().refreshName(), value, REFRESH_PATH, properties.refreshTtl()).build();
+  }
+
+  public ResponseCookie clearAccessToken() {
+    return base(cookie().accessName(), "", ACCESS_PATH, Duration.ZERO).build();
+  }
+
+  public ResponseCookie clearRefreshToken() {
+    return base(cookie().refreshName(), "", REFRESH_PATH, Duration.ZERO).build();
+  }
+
+  /** 설정된 refresh 쿠키 이름으로 요청에서 refresh token 값을 읽습니다(쿠키명 지식을 한곳에 둡니다). */
+  public Optional<String> readRefreshToken(HttpServletRequest request) {
+    if (request.getCookies() == null) {
+      return Optional.empty();
+    }
+    String name = cookie().refreshName();
+    for (Cookie cookie : request.getCookies()) {
+      if (name.equals(cookie.getName())) {
+        return Optional.of(cookie.getValue());
+      }
+    }
+    return Optional.empty();
   }
 
   public ResponseCookie state(String value) {
