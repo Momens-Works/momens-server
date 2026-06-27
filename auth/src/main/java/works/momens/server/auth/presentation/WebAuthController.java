@@ -4,8 +4,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -17,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
-import works.momens.server.auth.AuthErrorCode;
 import works.momens.server.auth.internal.application.WebAuthService;
 import works.momens.server.auth.internal.config.AuthProperties;
 import works.momens.server.auth.internal.jwt.TokenPair;
@@ -76,8 +73,7 @@ class WebAuthController implements WebAuthControllerDocs {
     clearHandshakeCookies(response);
     String redirectUri;
     try {
-      requireValidHandshake(code, state, stateCookie, codeVerifier);
-      TokenPair tokens = webAuthService.completeLogin(code, codeVerifier);
+      TokenPair tokens = webAuthService.completeLogin(code, state, stateCookie, codeVerifier);
       response.addHeader(
           HttpHeaders.SET_COOKIE, cookies.accessToken(tokens.accessToken()).toString());
       response.addHeader(
@@ -123,18 +119,6 @@ class WebAuthController implements WebAuthControllerDocs {
     headers.add(HttpHeaders.SET_COOKIE, cookies.clearAccessToken().toString());
     headers.add(HttpHeaders.SET_COOKIE, cookies.clearRefreshToken().toString());
     return ResponseEntity.noContent().headers(headers).build();
-  }
-
-  private static void requireValidHandshake(
-      String code, String state, String stateCookie, String codeVerifier) {
-    if (code == null
-        || state == null
-        || stateCookie == null
-        || codeVerifier == null
-        || !MessageDigest.isEqual(
-            state.getBytes(StandardCharsets.UTF_8), stateCookie.getBytes(StandardCharsets.UTF_8))) {
-      throw new BusinessException(AuthErrorCode.AUTH_OAUTH_STATE_INVALID);
-    }
   }
 
   private void clearHandshakeCookies(HttpServletResponse response) {
