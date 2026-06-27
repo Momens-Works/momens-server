@@ -104,7 +104,7 @@ class JwtTokenServiceTest {
   }
 
   private static AuthProperties properties(String secret) {
-    return new AuthProperties(secret, ACCESS_TTL, Duration.ofDays(14), GOOGLE);
+    return new AuthProperties(secret, ACCESS_TTL, Duration.ofDays(14), GOOGLE, null);
   }
 
   private static class InMemoryRefreshTokenStore implements RefreshTokenStore {
