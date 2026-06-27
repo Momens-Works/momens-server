@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -32,6 +33,7 @@ import works.momens.server.common.api.ErrorCode;
  */
 @Slf4j
 @RestController
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 class WebAuthController implements WebAuthControllerDocs {
 
@@ -40,7 +42,7 @@ class WebAuthController implements WebAuthControllerDocs {
   private final AuthProperties properties;
 
   @Override
-  @GetMapping(path = "/api/auth/google/login", version = "1")
+  @GetMapping(path = "/google/login", version = "1")
   public void googleLogin(@Parameter(hidden = true) HttpServletResponse response)
       throws IOException {
     String redirectUri;
@@ -59,7 +61,7 @@ class WebAuthController implements WebAuthControllerDocs {
   }
 
   @Override
-  @GetMapping(path = "/api/auth/google/callback", version = "1")
+  @GetMapping(path = "/google/callback", version = "1")
   public void googleCallback(
       @RequestParam(name = "code", required = false) String code,
       @RequestParam(name = "state", required = false) String state,
@@ -93,7 +95,7 @@ class WebAuthController implements WebAuthControllerDocs {
   }
 
   @Override
-  @PostMapping(path = "/api/auth/web/refresh", version = "1")
+  @PostMapping(path = "/web/refresh", version = "1")
   public ResponseEntity<Void> webRefresh(@Parameter(hidden = true) HttpServletRequest request) {
     String refreshToken = cookies.readRefreshToken(request).orElse(null);
     TokenPair tokens = webAuthService.refresh(refreshToken);
@@ -104,7 +106,7 @@ class WebAuthController implements WebAuthControllerDocs {
   }
 
   @Override
-  @PostMapping(path = "/api/auth/web/logout", version = "1")
+  @PostMapping(path = "/web/logout", version = "1")
   public ResponseEntity<Void> webLogout(@Parameter(hidden = true) HttpServletRequest request) {
     cookies
         .readRefreshToken(request)
