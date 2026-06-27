@@ -62,6 +62,66 @@
 
 - Spring Security 의존성은 초기부터 포함하되, 보안 설정 클래스는 인증/인가 구현 시점에 만듭니다.
 
+## 보호 API (인증 · 현재 사용자)
+
+도메인 모듈이 보호 API를 작성할 때 auth 내부(JWT 디코더·쿠키·필터)를 알 필요가 없도록, 아래 계약만 따릅니다.
+
+### 현재 사용자 식별자
+
+- 컨트롤러는 `java.security.Principal`을 받아 `CurrentUser.id(principal)`(`common.api`)로 userId(UUID)를 얻습니다.
+- `Principal.getName()`이 userId라는 계약과 인증 수단(Bearer/쿠키) 중립성은 auth가 보장합니다. 컨트롤러는 토큰·쿠키를
+  직접 다루지 않습니다.
+- `principal`이 null이면 `AUTH_UNAUTHORIZED`, 이름이 UUID가 아니면 `AUTH_INVALID_TOKEN`을 `CurrentUser.id`가 던집니다.
+
+### 기본 보호 · 공개 경로
+
+- 보호 체인이 `anyRequest().authenticated()`라 **새 엔드포인트는 기본으로 보호**됩니다. 인증된 요청만 컨트롤러에 도달합니다.
+- 공개로 열어야 하는 경로는 auth의 `SecurityConfig.PUBLIC_PATHS`에 추가합니다(= auth 소유). 도메인 모듈에서 보안 설정을
+  만들지 않습니다.
+
+### 401 · 403
+
+- 인증/인가 거부 본문은 필터가 Standard 에러 shape로 자동 emit합니다. 컨트롤러는 401/403을 직접 처리하지 않습니다.
+  - 인증 정보 없음 → `AUTH_UNAUTHORIZED` (401)
+  - 토큰 무효·만료·형식 오류 → `AUTH_INVALID_TOKEN` (401)
+  - 인가 거부 → `AUTH_FORBIDDEN` (403)
+- 권한(RBAC) 검사는 service에서 workspace public API로 합니다(현재 사용자 = userId만 신뢰). 세부는 MOM-31 후속.
+
+### 테스트 인증 주입
+
+- 슬라이스(`@WebMvcTest(addFilters = false)`): 보안 필터가 없으니 `Principal`을 직접 주입합니다.
+
+  ```java
+  private final Principal principal = USER_ID::toString; // getName() = userId
+  mockMvc.perform(get("/api/things").principal(principal));
+  ```
+
+- 통합(`@SpringBootTest` + `AbstractPostgresIntegrationTest`): auth의 public testFixtures `AccessTokenTestFactory`로
+  실토큰을 발급해 헤더/쿠키로 보냅니다.
+
+  ```java
+  @Autowired AccessTokenTestFactory accessTokens;
+  String token = accessTokens.issueAccessToken(userId);
+  mockMvc.perform(get("/api/things").header("Authorization", "Bearer " + token));
+  ```
+
+### 예제 (보호 컨트롤러)
+
+```java
+@RestController
+@RequiredArgsConstructor
+class ThingController {
+
+  private final ThingService thingService;
+
+  @GetMapping("/api/things/{id}")
+  ThingResponse get(Principal principal, @PathVariable UUID id) {
+    UUID userId = CurrentUser.id(principal); // 인증 수단 중립, auth 내부 무관
+    return ThingResponse.from(thingService.get(userId, id));
+  }
+}
+```
+
 ## DTO
 
 - request/response DTO는 Java record를 기본으로 합니다. class는 다음일 때만 사용합니다:
