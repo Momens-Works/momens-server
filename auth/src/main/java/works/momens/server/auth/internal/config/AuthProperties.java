@@ -3,6 +3,7 @@ package works.momens.server.auth.internal.config;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
 import java.time.Duration;
 import java.util.List;
 import org.hibernate.validator.constraints.time.DurationMin;
@@ -105,20 +106,27 @@ public record AuthProperties(
 
     /** access/refresh HttpOnly 쿠키 속성. same-domain 배포라 CSRF는 SameSite로 충족합니다(MOM-22). */
     public record Cookie(
-        Boolean secure, String sameSite, String accessName, String refreshName, String domain) {
+        Boolean secure,
+        @Pattern(regexp = "Strict|Lax|None") String sameSite,
+        @NotBlank String accessName,
+        @NotBlank String refreshName,
+        String domain) {
 
       public Cookie {
         if (secure == null) {
           secure = Boolean.TRUE;
         }
-        if (sameSite == null) {
+        if (sameSite == null || sameSite.isBlank()) {
           sameSite = "Lax";
         }
-        if (accessName == null) {
+        if (accessName == null || accessName.isBlank()) {
           accessName = "access_token";
         }
-        if (refreshName == null) {
+        if (refreshName == null || refreshName.isBlank()) {
           refreshName = "refresh_token";
+        }
+        if (domain != null && domain.isBlank()) {
+          domain = null;
         }
       }
     }

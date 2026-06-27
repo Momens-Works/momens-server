@@ -24,6 +24,8 @@ class GoogleOAuthClientTest {
           + "\"name\":\"규일\",\"picture\":\"https://cdn.momens.works/avatar.png\"}";
   private static final String UNVERIFIED_USERINFO =
       "{\"email\":\"user@example.com\",\"email_verified\":false,\"name\":\"규일\"}";
+  private static final String MISSING_VERIFIED_USERINFO =
+      "{\"email\":\"user@example.com\",\"name\":\"규일\"}";
 
   @Test
   void exchangeCodeReturnsGoogleAccessToken() throws Exception {
@@ -60,6 +62,19 @@ class GoogleOAuthClientTest {
               e ->
                   assertThat(e.getErrorCode())
                       .isEqualTo(AuthErrorCode.AUTH_GOOGLE_EMAIL_NOT_VERIFIED));
+    }
+  }
+
+  @Test
+  void fetchUserInfoTreatsMissingEmailVerifiedAsExchangeFailure() throws Exception {
+    try (GoogleServer server = GoogleServer.start(TOKEN_BODY, MISSING_VERIFIED_USERINFO)) {
+      GoogleOAuthClient client = client(server);
+
+      assertThatThrownBy(() -> client.fetchUserInfo("google-access-token"))
+          .isInstanceOfSatisfying(
+              BusinessException.class,
+              e ->
+                  assertThat(e.getErrorCode()).isEqualTo(AuthErrorCode.AUTH_OAUTH_EXCHANGE_FAILED));
     }
   }
 

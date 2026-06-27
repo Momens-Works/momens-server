@@ -75,6 +75,16 @@ class WebAuthControllerTest {
   }
 
   @Test
+  void googleLoginRedirectsToServerErrorWhenStartFails() throws Exception {
+    when(webAuthService.startLogin()).thenThrow(new IllegalStateException("boom"));
+
+    mockMvc
+        .perform(get("/api/auth/google/login").header(API_VERSION_HEADER, API_VERSION))
+        .andExpect(status().isFound())
+        .andExpect(redirectedUrlPattern(FAILURE_URI + "*error=server_error*"));
+  }
+
+  @Test
   void googleCallbackIssuesSessionCookiesAndRedirectsOnSuccess() throws Exception {
     when(webAuthService.completeLogin(eq("auth-code"), eq("verifier-xyz")))
         .thenReturn(new TokenPair("access-jwt", "refresh-token", 900));

@@ -40,11 +40,19 @@ class WebAuthController implements WebAuthControllerDocs {
   @GetMapping(path = "/api/auth/google/login", version = "1")
   public void googleLogin(@Parameter(hidden = true) HttpServletResponse response)
       throws IOException {
-    WebAuthService.LoginRedirect redirect = webAuthService.startLogin();
-    response.addHeader(HttpHeaders.SET_COOKIE, cookies.state(redirect.state()).toString());
-    response.addHeader(
-        HttpHeaders.SET_COOKIE, cookies.pkceVerifier(redirect.codeVerifier()).toString());
-    response.sendRedirect(redirect.authorizationUrl());
+    String redirectUri;
+    try {
+      WebAuthService.LoginRedirect redirect = webAuthService.startLogin();
+      response.addHeader(HttpHeaders.SET_COOKIE, cookies.state(redirect.state()).toString());
+      response.addHeader(
+          HttpHeaders.SET_COOKIE, cookies.pkceVerifier(redirect.codeVerifier()).toString());
+      redirectUri = redirect.authorizationUrl();
+    } catch (RuntimeException e) {
+      // 콜백과 동일하게 브라우저에는 기본 에러 대신 failure-uri로 보냅니다.
+      log.error("web oauth login start failed", e);
+      redirectUri = failureUri("server_error");
+    }
+    response.sendRedirect(redirectUri);
   }
 
   @Override

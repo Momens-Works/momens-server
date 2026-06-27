@@ -85,7 +85,11 @@ public class GoogleOAuthClient {
     } catch (RestClientException e) {
       throw new BusinessException(AuthErrorCode.AUTH_OAUTH_EXCHANGE_FAILED);
     }
-    if (response == null || response.email() == null || response.email().isBlank()) {
+    // email_verified 누락은 정상 응답이 아니므로 미검증이 아니라 교환 실패로 분류합니다.
+    if (response == null
+        || response.email() == null
+        || response.email().isBlank()
+        || response.emailVerified() == null) {
       throw new BusinessException(AuthErrorCode.AUTH_OAUTH_EXCHANGE_FAILED);
     }
     if (!response.emailVerified()) {
@@ -98,7 +102,7 @@ public class GoogleOAuthClient {
 
   private record UserInfoResponse(
       String email,
-      @JsonProperty("email_verified") boolean emailVerified,
+      @JsonProperty("email_verified") Boolean emailVerified,
       String name,
       String picture) {}
 }
