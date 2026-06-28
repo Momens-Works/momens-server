@@ -16,7 +16,7 @@ public record UpdateMeRequest(
             maxLength = 255,
             nullable = true)
         @Size(max = 255)
-        @Pattern(regexp = ".*\\S.*")
+        @Pattern(regexp = "(?U).*\\S.*")
         String name,
     @Schema(description = "직무. 최대 255자입니다.", example = "Engineer", maxLength = 255, nullable = true)
         @Size(max = 255)

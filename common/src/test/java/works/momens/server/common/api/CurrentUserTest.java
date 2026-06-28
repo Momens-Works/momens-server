@@ -35,4 +35,14 @@ class CurrentUserTest {
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(CommonErrorCode.AUTH_INVALID_TOKEN);
   }
+
+  @Test
+  void throwsInvalidTokenWhenPrincipalNameNull() {
+    Principal principal = () -> null;
+
+    assertThatThrownBy(() -> CurrentUser.id(principal))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).getErrorCode())
+        .isEqualTo(CommonErrorCode.AUTH_INVALID_TOKEN);
+  }
 }

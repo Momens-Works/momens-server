@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.security.Principal;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,12 +69,13 @@ class MeApiContractTest {
         .andExpect(jsonPath("$.error.details.fields[0].field").value("name"));
   }
 
-  @Test
-  @DisplayName("공백 name 요청은 COMMON_VALIDATION_FAILED와 details.fields로 매핑된다")
-  void blankNameFailsValidation() throws Exception {
+  @ParameterizedTest(name = "PATCH {0}")
+  @ValueSource(strings = {"/api/me", "/me"})
+  @DisplayName("공백 name 요청은 양쪽 path에서 COMMON_VALIDATION_FAILED와 details.fields로 매핑된다")
+  void blankNameFailsValidation(String path) throws Exception {
     mockMvc
         .perform(
-            patch("/me")
+            patch(path)
                 .principal(principal)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"   \"}"))
@@ -94,13 +94,14 @@ class MeApiContractTest {
         .andExpect(jsonPath("$.error.code").value("AUTH_UNAUTHORIZED"));
   }
 
-  @Test
-  @DisplayName("Principal 이름이 UUID가 아니면 AUTH_INVALID_TOKEN으로 매핑된다")
-  void invalidPrincipalNameFailsAsInvalidToken() throws Exception {
+  @ParameterizedTest(name = "GET {0}")
+  @ValueSource(strings = {"/api/me", "/me"})
+  @DisplayName("Principal 이름이 UUID가 아니면 양쪽 path에서 AUTH_INVALID_TOKEN으로 매핑된다")
+  void invalidPrincipalNameFailsAsInvalidToken(String path) throws Exception {
     Principal invalidPrincipal = () -> "not-a-uuid";
 
     mockMvc
-        .perform(get("/me").principal(invalidPrincipal))
+        .perform(get(path).principal(invalidPrincipal))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.error.code").value("AUTH_INVALID_TOKEN"));
   }
