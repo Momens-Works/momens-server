@@ -145,8 +145,8 @@ docs: 문서 수정
 - **rebase 머지로 통일**(머지 커밋 없음, 선형 히스토리).
 - `develop`/`main`은 **PR로만** 변경(직접 push 차단), 리뷰 대화는 모두 resolve 후 머지.
 - 머지된 브랜치는 자동 삭제됩니다.
-- 현재 **승인(approval)은 필수가 아닙니다**. 단, CODEOWNERS(`@Momens-Works/momens-backend`)에
-  리뷰 요청이 자동으로 갑니다 — 리뷰는 권장입니다.
+- 머지하려면 **최소 1명의 승인이 필요합니다**(`protected-branches` ruleset 강제). CODEOWNERS
+  (`@Momens-Works/momens-backend`)에 리뷰 요청이 자동으로 갑니다.
 
 머지 정책 전체는 [기반 규칙 > Git > 머지](rules/git.md#머지)에 있습니다.
 
@@ -167,7 +167,7 @@ git commit -m "feat (category): 카테고리 생성 API 추가"
 # 4) 푸시 후 PR 생성 (base: develop, 본문에 'Fixes MOM-15')
 git push -u origin MOM-15-feat/create-category
 
-# 5) CI(build, pr-format) 통과 + 리뷰 대화 resolve → rebase 머지
+# 5) CI(build, pr-format) 통과 + 승인 1 + 리뷰 대화 resolve → rebase 머지
 ```
 
 ---
