@@ -22,6 +22,9 @@ indent_size = 2
 [*.{sh,properties}]
 indent_size = 2
 
+[*.bat]
+end_of_line = crlf
+
 # Markdown: 줄 끝 공백 2칸이 줄바꿈 의미를 가지므로 trim 하지 않음
 [*.md]
 trim_trailing_whitespace = false
