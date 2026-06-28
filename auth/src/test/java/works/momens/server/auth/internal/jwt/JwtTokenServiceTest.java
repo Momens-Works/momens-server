@@ -103,6 +103,38 @@ class JwtTokenServiceTest {
             e -> assertThat(e.getErrorCode()).isEqualTo(AuthErrorCode.AUTH_REFRESH_TOKEN_INVALID));
   }
 
+  @Test
+  void revokeTreatsMissingOrInactiveRefreshTokenAsNoOp() {
+    JwtConfig config = new JwtConfig(properties(SECRET));
+    InMemoryRefreshTokenStore store = new InMemoryRefreshTokenStore();
+    JwtTokenService service =
+        new JwtTokenService(
+            config.accessTokenEncoder(), properties(SECRET), Clock.systemUTC(), store);
+    TokenPair tokenPair = service.issueTokenPair(UUID.randomUUID(), ClientType.MOBILE, "iPhone");
+
+    service.revoke(tokenPair.refreshToken());
+
+    service.revoke(tokenPair.refreshToken());
+    service.revoke("missing-refresh-token");
+  }
+
+  @Test
+  void issueTokenPairTruncatesDeviceToColumnLength() {
+    JwtConfig config = new JwtConfig(properties(SECRET));
+    InMemoryRefreshTokenStore store = new InMemoryRefreshTokenStore();
+    JwtTokenService service =
+        new JwtTokenService(
+            config.accessTokenEncoder(), properties(SECRET), Clock.systemUTC(), store);
+    String longDevice = "x".repeat(300);
+
+    service.issueTokenPair(UUID.randomUUID(), ClientType.MOBILE, longDevice);
+
+    assertThat(store.tokens.values())
+        .singleElement()
+        .extracting(RefreshToken::getDevice)
+        .satisfies(device -> assertThat((String) device).hasSize(255));
+  }
+
   private static AuthProperties properties(String secret) {
     return new AuthProperties(secret, ACCESS_TTL, Duration.ofDays(14), GOOGLE, null);
   }

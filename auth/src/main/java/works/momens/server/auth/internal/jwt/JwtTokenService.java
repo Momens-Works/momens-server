@@ -8,6 +8,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ import works.momens.server.common.api.BusinessException;
 public class JwtTokenService {
 
   private static final int REFRESH_TOKEN_BYTES = 32;
+  private static final int MAX_DEVICE_LENGTH = 255;
 
   private final JwtEncoder accessTokenEncoder;
   private final AuthProperties properties;
@@ -93,11 +95,9 @@ public class JwtTokenService {
   @Transactional
   public void revoke(String refreshToken) {
     Instant now = clock.instant();
-    RefreshToken current = findRefreshToken(refreshToken);
-    if (!current.isActive(now)) {
-      throw new BusinessException(AuthErrorCode.AUTH_REFRESH_TOKEN_INVALID);
-    }
-    refreshTokenStore.revoke(current, now);
+    findRefreshTokenIfPresent(refreshToken)
+        .filter(current -> current.isActive(now))
+        .ifPresent(current -> refreshTokenStore.revoke(current, now));
   }
 
   private RefreshToken findRefreshToken(String refreshToken) {
@@ -107,6 +107,13 @@ public class JwtTokenService {
     return refreshTokenStore
         .findByTokenHash(hashRefreshToken(refreshToken))
         .orElseThrow(() -> new BusinessException(AuthErrorCode.AUTH_REFRESH_TOKEN_INVALID));
+  }
+
+  private Optional<RefreshToken> findRefreshTokenIfPresent(String refreshToken) {
+    if (refreshToken == null || refreshToken.isBlank()) {
+      return Optional.empty();
+    }
+    return refreshTokenStore.findByTokenHash(hashRefreshToken(refreshToken));
   }
 
   private String generateRefreshToken() {
@@ -130,6 +137,10 @@ public class JwtTokenService {
     if (device == null || device.isBlank()) {
       return null;
     }
-    return device.strip();
+    String normalized = device.strip();
+    if (normalized.length() <= MAX_DEVICE_LENGTH) {
+      return normalized;
+    }
+    return normalized.substring(0, MAX_DEVICE_LENGTH);
   }
 }
