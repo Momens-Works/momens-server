@@ -39,7 +39,7 @@ echo
 echo "== Sensitive-looking diff lines =="
 git diff "${BASE}...HEAD" -- \
   ':!gradle/wrapper/gradle-wrapper.jar' \
-  | grep -nEi '(^\+.*"?(password|passwd|secret|token|api[_-]?key|private[_-]?key|credential)"?[[:space:]]*[:=][[:space:]]*.+)|(^\+.*BEGIN ((RSA|OPENSSH|EC) )?PRIVATE KEY)' || true
+  | grep -nEi '(^\+.*"?(password|passwd|secret|token|api[_-]?key|private[_-]?key|credential)"?[[:space:]]*(:[[:space:]]*[^[:space:]:].*|=[^=].*))|(^\+.*BEGIN ((RSA|OPENSSH|EC) )?PRIVATE KEY)' || true
 
 echo
 echo "== Unsettled decision markers in diff =="
