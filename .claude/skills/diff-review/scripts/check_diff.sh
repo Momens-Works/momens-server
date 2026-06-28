@@ -32,7 +32,7 @@ git diff --name-status "${BASE}...HEAD"
 echo
 echo "== Untracked sensitive-looking files =="
 git status --short --ignored --untracked-files=all \
-  | awk '/^(\?\?|!!)/ {print $2}' \
+  | awk '/^(\?\?|!!)/ {print substr($0, 4)}' \
   | grep -E '(^|/)(\.env|application-.*secret\.ya?ml|.*\.pem|.*\.key|.*secret.*|.*credential.*)$' || true
 
 echo
