@@ -17,6 +17,6 @@ public record ErrorResponse(Body error) {
     return new ErrorResponse(new Body(code, message, details));
   }
 
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public record Body(String code, String message, Object details) {}
+  public record Body(
+      String code, String message, @JsonInclude(JsonInclude.Include.NON_NULL) Object details) {}
 }
