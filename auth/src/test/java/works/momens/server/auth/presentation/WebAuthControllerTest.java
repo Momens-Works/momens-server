@@ -71,8 +71,11 @@ class WebAuthControllerTest {
             .andReturn();
 
     List<String> setCookies = result.getResponse().getHeaders("Set-Cookie");
-    assertThat(setCookies).anyMatch(c -> c.startsWith("oauth_state=state-xyz"));
-    assertThat(setCookies).anyMatch(c -> c.startsWith("oauth_pkce_verifier=verifier-xyz"));
+    assertThat(setCookies)
+        .anyMatch(c -> c.startsWith("oauth_state=state-xyz") && c.contains("SameSite=Lax"));
+    assertThat(setCookies)
+        .anyMatch(
+            c -> c.startsWith("oauth_pkce_verifier=verifier-xyz") && c.contains("SameSite=Lax"));
     assertThat(setCookies).allMatch(c -> c.contains("HttpOnly"));
   }
 
@@ -110,6 +113,8 @@ class WebAuthControllerTest {
     assertThat(setCookies).anyMatch(c -> c.startsWith("access_token=access-jwt"));
     assertThat(setCookies).anyMatch(c -> c.startsWith("refresh_token=refresh-token"));
     assertThat(setCookies).anyMatch(c -> c.startsWith("oauth_state=") && c.contains("Max-Age=0"));
+    assertThat(setCookies)
+        .anyMatch(c -> c.startsWith("oauth_pkce_verifier=") && c.contains("Max-Age=0"));
   }
 
   @Test
@@ -305,7 +310,7 @@ class WebAuthControllerTest {
                   null,
                   null,
                   null),
-              new AuthProperties.Web.Cookie(false, "Lax", "access_token", "refresh_token", null),
+              new AuthProperties.Web.Cookie(false, "Strict", "access_token", "refresh_token", null),
               new AuthProperties.Web.Redirect(SUCCESS_URI, FAILURE_URI)));
     }
   }

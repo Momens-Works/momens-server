@@ -24,6 +24,7 @@ public class WebAuthCookies {
   public static final String PKCE_VERIFIER_COOKIE = "oauth_pkce_verifier";
 
   private static final Duration HANDSHAKE_TTL = Duration.ofMinutes(10);
+  private static final String HANDSHAKE_SAME_SITE = "Lax";
   private static final String ACCESS_PATH = "/";
   private static final String REFRESH_PATH = "/api/auth";
   // handshake 쿠키는 콜백에서만 읽으므로 경로를 콜백으로 좁혀 다른 인증 엔드포인트로 전송되지 않게 합니다.
@@ -62,19 +63,19 @@ public class WebAuthCookies {
   }
 
   public ResponseCookie state(String value) {
-    return base(STATE_COOKIE, value, CALLBACK_PATH, HANDSHAKE_TTL).build();
+    return handshakeBase(STATE_COOKIE, value, HANDSHAKE_TTL).build();
   }
 
   public ResponseCookie pkceVerifier(String value) {
-    return base(PKCE_VERIFIER_COOKIE, value, CALLBACK_PATH, HANDSHAKE_TTL).build();
+    return handshakeBase(PKCE_VERIFIER_COOKIE, value, HANDSHAKE_TTL).build();
   }
 
   public ResponseCookie clearState() {
-    return base(STATE_COOKIE, "", CALLBACK_PATH, Duration.ZERO).build();
+    return handshakeBase(STATE_COOKIE, "", Duration.ZERO).build();
   }
 
   public ResponseCookie clearPkceVerifier() {
-    return base(PKCE_VERIFIER_COOKIE, "", CALLBACK_PATH, Duration.ZERO).build();
+    return handshakeBase(PKCE_VERIFIER_COOKIE, "", Duration.ZERO).build();
   }
 
   private ResponseCookie.ResponseCookieBuilder base(
@@ -91,6 +92,11 @@ public class WebAuthCookies {
       builder.domain(cfg.domain());
     }
     return builder;
+  }
+
+  private ResponseCookie.ResponseCookieBuilder handshakeBase(
+      String name, String value, Duration maxAge) {
+    return base(name, value, CALLBACK_PATH, maxAge).sameSite(HANDSHAKE_SAME_SITE);
   }
 
   private AuthProperties.Web.Cookie cookie() {
