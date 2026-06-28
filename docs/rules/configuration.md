@@ -15,7 +15,7 @@
 
 ### 프로필
 
-- 프로필: `local`(기본) / `test` / `prod`. 활성화는 `SPRING_PROFILES_ACTIVE` 또는
+- 프로필: `local` / `test` / `prod`. 활성화는 `SPRING_PROFILES_ACTIVE` 또는
   `--spring.profiles.active`.
 - `application.yml`(공통) + `application-<profile>.yml`(환경별). 민감값은 env placeholder.
 

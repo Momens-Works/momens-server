@@ -1,10 +1,14 @@
 version: 2
 updates:
-  # Gradle 의존성 (root + app 모듈)
+  # Gradle 의존성 (root + app/feature 모듈)
   - package-ecosystem: "gradle"
     directories:
       - "/"
       - "/app"
+      - "/common"
+      - "/user"
+      - "/auth"
+      - "/workspace"
     schedule:
       interval: "weekly"
       day: "monday"

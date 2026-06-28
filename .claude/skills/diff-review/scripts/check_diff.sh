@@ -31,13 +31,15 @@ git diff --name-status "${BASE}...HEAD"
 
 echo
 echo "== Untracked sensitive-looking files =="
-git status --short | awk '/^\?\?/ {print $2}' | grep -E '(^|/)(\.env|application-.*secret\.ya?ml|.*\.pem|.*\.key|.*secret.*|.*credential.*)$' || true
+git status --short --ignored --untracked-files=all \
+  | awk '/^(\?\?|!!)/ {print $2}' \
+  | grep -E '(^|/)(\.env|application-.*secret\.ya?ml|.*\.pem|.*\.key|.*secret.*|.*credential.*)$' || true
 
 echo
 echo "== Sensitive-looking diff lines =="
 git diff "${BASE}...HEAD" -- \
   ':!gradle/wrapper/gradle-wrapper.jar' \
-  | grep -nE '(^\+.*(password|passwd|secret|token|api[_-]?key|private[_-]?key|credential).*=)|(^\+.*BEGIN ((RSA|OPENSSH|EC) )?PRIVATE KEY)' || true
+  | grep -nEi '(^\+.*"?(password|passwd|secret|token|api[_-]?key|private[_-]?key|credential)"?[[:space:]]*[:=][[:space:]]*.+)|(^\+.*BEGIN ((RSA|OPENSSH|EC) )?PRIVATE KEY)' || true
 
 echo
 echo "== Unsettled decision markers in diff =="
