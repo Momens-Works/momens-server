@@ -14,9 +14,10 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
+    # 릴리즈 PR(develop -> main)은 누적 diff가 다시 리뷰되어 노이즈가 커지므로
+    # 기능/수정 PR이 들어오는 develop 대상 PR에서만 자동 리뷰를 실행한다.
     base_branches:
       - develop
-      - main
 
   request_changes_workflow: false
 
