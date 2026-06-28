@@ -8,6 +8,12 @@ spring:
     password: ${DATABASE_PASSWORD}
   jpa:
     show-sql: false
+  # 전환기 공유 Neon DB의 스키마는 레거시 momens-api가 단일 소유합니다. 새 서버는 운영에서
+  # 스키마를 만들거나 바꾸지 않고 검증만 합니다(conformer). 따라서 prod 에서는 Flyway 를 끄고
+  # ddl-auto=validate(공통)로 매핑만 검증합니다. 진짜 신규 테이블은 별도 레거시 마이그레이션으로
+  # 추가합니다(이관 전략 결정①). local/test 는 새 서버 Flyway 가 그대로 소유합니다(별도 DB).
+  flyway:
+    enabled: false
 
 springdoc:
   api-docs:

@@ -29,6 +29,11 @@
   병합 시 실행 순서를 보장합니다.
 - Spring Modulith event publication registry의 `event_publication` 테이블도 Flyway로
   관리합니다. 첫 application event 도입 시 함께 추가합니다([아키텍처](architecture.md), [ADR-0001](../adr/0001-modular-monolith-rules.md)).
+- 운영(`prod`)에서는 레거시 `momens-api`와 **공유 DB를 함께 쓰는 전환기** 동안 Flyway를 끄고
+  (`spring.flyway.enabled=false`) `ddl-auto=validate`로 매핑만 검증합니다(conformer). 공유 운영
+  스키마는 레거시가 단일 소유하며, 새 서버는 운영에서 스키마를 만들거나 바꾸지 않습니다. 진짜
+  신규 테이블은 별도 레거시 마이그레이션으로 추가합니다. `local`/`test`는 새 서버 Flyway가 그대로
+  소유합니다(별도 DB라 충돌 없음).
 
 ## 시간 · 식별자
 
