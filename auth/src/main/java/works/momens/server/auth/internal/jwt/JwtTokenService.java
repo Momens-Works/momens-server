@@ -138,9 +138,10 @@ public class JwtTokenService {
       return null;
     }
     String normalized = device.strip();
-    if (normalized.length() <= MAX_DEVICE_LENGTH) {
+    if (normalized.codePointCount(0, normalized.length()) <= MAX_DEVICE_LENGTH) {
       return normalized;
     }
-    return normalized.substring(0, MAX_DEVICE_LENGTH);
+    int endIndex = normalized.offsetByCodePoints(0, MAX_DEVICE_LENGTH);
+    return normalized.substring(0, endIndex);
   }
 }
