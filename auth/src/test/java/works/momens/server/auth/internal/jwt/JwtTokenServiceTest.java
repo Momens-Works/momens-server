@@ -115,6 +115,8 @@ class JwtTokenServiceTest {
     service.revoke(tokenPair.refreshToken());
 
     service.revoke(tokenPair.refreshToken());
+    service.revoke(null);
+    service.revoke("   ");
     service.revoke("missing-refresh-token");
   }
 
@@ -125,14 +127,19 @@ class JwtTokenServiceTest {
     JwtTokenService service =
         new JwtTokenService(
             config.accessTokenEncoder(), properties(SECRET), Clock.systemUTC(), store);
-    String longDevice = "x".repeat(300);
+    String longDevice = "😀".repeat(300);
 
     service.issueTokenPair(UUID.randomUUID(), ClientType.MOBILE, longDevice);
 
     assertThat(store.tokens.values())
         .singleElement()
         .extracting(RefreshToken::getDevice)
-        .satisfies(device -> assertThat((String) device).hasSize(255));
+        .satisfies(
+            device -> {
+              String storedDevice = (String) device;
+              assertThat(storedDevice.codePointCount(0, storedDevice.length())).isEqualTo(255);
+              assertThat(storedDevice).endsWith("😀");
+            });
   }
 
   private static AuthProperties properties(String secret) {
