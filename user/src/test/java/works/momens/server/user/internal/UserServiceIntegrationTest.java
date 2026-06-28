@@ -28,6 +28,7 @@ import works.momens.server.user.UserService;
 class UserServiceIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Autowired private UserService userService;
+  @Autowired private UserRepository userRepository;
 
   @Test
   void findOrCreateCreatesNewUser() {
@@ -55,6 +56,11 @@ class UserServiceIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(second.id()).isEqualTo(first.id());
     assertThat(second.name()).isEqualTo("변경");
     assertThat(second.avatarUrl()).isEqualTo("https://a/y.png");
+
+    userRepository.deleteById(second.id());
+    TestTransaction.flagForCommit();
+    TestTransaction.end();
+    TestTransaction.start();
   }
 
   @Test
