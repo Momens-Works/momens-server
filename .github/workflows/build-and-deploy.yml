@@ -1,0 +1,61 @@
+name: Build and deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+# 같은 ref 의 이전 실행은 취소합니다(불필요한 중복 빌드 방지).
+concurrency:
+  group: build-momens-server-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/momens-works/momens-server
+
+jobs:
+  build-and-dispatch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # k8s 레포에 배포를 요청합니다. deploy-momens-server 핸들러와
+      # K8S_REPO_DISPATCH_TOKEN secret 이 있어야 동작합니다(배포 담당자 조율).
+      - name: Request production deploy
+        env:
+          GH_TOKEN: ${{ secrets.K8S_REPO_DISPATCH_TOKEN }}
+        run: |
+          curl -fsS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            https://api.github.com/repos/Momens-Works/k8s/dispatches \
+            -d "{\"event_type\":\"deploy-momens-server\",\"client_payload\":{\"image_tag\":\"${{ github.sha }}\"}}"
