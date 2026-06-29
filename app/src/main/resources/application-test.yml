@@ -10,6 +10,8 @@ spring:
 
 # 테스트 전용 고정 secret(실제 secret 아님). HS256 최소 길이(32바이트) 충족.
 momens:
+  cors:
+    allowed-origins: http://localhost:3000
   auth:
     jwt-secret: test-only-momens-auth-jwt-secret-0123456789abcdef
     google:
