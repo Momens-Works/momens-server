@@ -10,23 +10,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.security.Principal;
 import java.time.Instant;
 import java.util.UUID;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 
 /**
- * 컨트롤러가 Principal로 현재 사용자를 해석하고 레거시 호환 응답 shape를 내는지 검증합니다. 공식 path {@code /api/me}와 레거시 alias
- * {@code /me}가 같은 handler로 동일하게 동작하는지 양쪽 path로 확인합니다.
+ * 컨트롤러가 Principal로 현재 사용자를 해석하고 레거시 호환 응답 shape를 내는지 검증합니다. path는 {@code /api/me} 단일 경로이며 {@code
+ * API-Version: 1} 헤더로 분기합니다(레거시 alias 없음). versioning은 모듈 경계상 app 설정을 못 가져오므로 슬라이스 안에서 동일하게 구성합니다.
  */
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(UserControllerTest.ApiVersioningTestConfig.class)
 class UserControllerTest {
 
   @Autowired private MockMvc mockMvc;
@@ -35,9 +39,8 @@ class UserControllerTest {
   private static final UUID USER_ID = UUID.fromString("5d2f7f3a-5db1-4f2c-8b9e-13607dd1f5e8");
   private final Principal principal = USER_ID::toString;
 
-  @ParameterizedTest(name = "GET {0}")
-  @ValueSource(strings = {"/api/me", "/me"})
-  void getMeReturnsWrappedSnakeCaseProfile(String path) throws Exception {
+  @Test
+  void getMeReturnsWrappedSnakeCaseProfile() throws Exception {
     when(userService.getProfile(eq(USER_ID)))
         .thenReturn(
             new UserProfile(
@@ -50,7 +53,7 @@ class UserControllerTest {
                 Instant.parse("2026-06-24T00:00:00Z")));
 
     mockMvc
-        .perform(get(path).principal(principal))
+        .perform(get("/api/me").principal(principal).header("API-Version", "1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.user.id").value(USER_ID.toString()))
         .andExpect(jsonPath("$.user.email").value("user@example.com"))
@@ -60,9 +63,8 @@ class UserControllerTest {
         .andExpect(jsonPath("$.user.avatar_url").doesNotExist());
   }
 
-  @ParameterizedTest(name = "PATCH {0}")
-  @ValueSource(strings = {"/api/me", "/me"})
-  void patchMeUpdatesProfile(String path) throws Exception {
+  @Test
+  void patchMeUpdatesProfile() throws Exception {
     when(userService.updateProfile(eq(USER_ID), eq("새이름"), eq("Designer")))
         .thenReturn(
             new UserProfile(
@@ -76,12 +78,21 @@ class UserControllerTest {
 
     mockMvc
         .perform(
-            patch(path)
+            patch("/api/me")
                 .principal(principal)
+                .header("API-Version", "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"새이름\",\"job_role\":\"Designer\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.user.name").value("새이름"))
         .andExpect(jsonPath("$.user.job_role").value("Designer"));
+  }
+
+  @TestConfiguration
+  static class ApiVersioningTestConfig implements WebMvcConfigurer {
+    @Override
+    public void configureApiVersioning(ApiVersionConfigurer configurer) {
+      configurer.useRequestHeader("API-Version").addSupportedVersions("1").setDefaultVersion("1");
+    }
   }
 }
