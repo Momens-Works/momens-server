@@ -10,8 +10,9 @@ spring:
 
 momens:
   cors:
-    # 로컬 웹 프론트(momens-fe) origin.
-    allowed-origins: http://localhost:3000
+    # 로컬 웹 프론트(momens-fe) origin. 레거시처럼 localhost 와 127.0.0.1 둘 다 허용합니다.
+    # 새 FE 는 3000 포트라(auth redirect 기준) 레거시 5173 대신 3000 을 씁니다.
+    allowed-origins: http://localhost:3000,http://127.0.0.1:3000
   auth:
     web:
       cookie:
