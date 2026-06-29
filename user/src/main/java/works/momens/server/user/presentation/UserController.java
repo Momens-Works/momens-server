@@ -16,8 +16,8 @@ import works.momens.server.user.presentation.dto.response.MeResponse;
 /**
  * 현재 사용자 프로필 엔드포인트.
  *
- * <p>공식 path는 {@code /api/me}이고, 레거시 호환 {@code /me}는 같은 handler의
- * alias입니다(docs/spec/api-versioning.md). 현재 사용자는 {@link CurrentUser#id(Principal)}로 읽습니다({@code
+ * <p>path는 {@code /api/me} 단일 경로이며 {@code version = "1"} mapping을 둡니다(레거시 path alias 없음,
+ * docs/spec/api-versioning.md). 현재 사용자는 {@link CurrentUser#id(Principal)}로 읽습니다({@code
  * Principal.getName()} = userId). 인증 수단에 중립이며, SecurityContext를 채우는 배선은 auth(MOM-8)가 담당합니다.
  */
 @RestController
@@ -27,14 +27,14 @@ class UserController implements UserControllerDocs {
   private final UserService userService;
 
   @Override
-  @GetMapping({"/api/me", "/me"})
+  @GetMapping(path = "/api/me", version = "1")
   public MeResponse getMe(Principal principal) {
     UserProfile profile = userService.getProfile(CurrentUser.id(principal));
     return MeResponse.from(profile);
   }
 
   @Override
-  @PatchMapping({"/api/me", "/me"})
+  @PatchMapping(path = "/api/me", version = "1")
   public MeResponse updateMe(Principal principal, @Valid @RequestBody UpdateMeRequest request) {
     UserProfile profile =
         userService.updateProfile(CurrentUser.id(principal), request.name(), request.jobRole());

@@ -8,8 +8,7 @@
 - 성공 응답에는 전역 wrapper(`success`, `data`)를 만들지 않습니다.
 - 실패 응답 예시는 [API 응답과 에러 코드](api-response-error-codes.md)의 응답 모드를 따릅니다.
 - Swagger/OpenAPI 문서화는 실제 public contract를 설명합니다. 내부 구현 세부사항을 노출하지 않습니다.
-- 레거시 호환 alias path가 있으면 Swagger/OpenAPI에는 `/api` prefix가 붙은 공식 path를 기본으로
-  문서화합니다.
+- 모든 path는 `/api` prefix로 문서화합니다. 레거시 path alias는 두지 않습니다.
 
 ## 구성 위치
 
@@ -54,15 +53,14 @@ interface UserControllerDocs {
 class UserController implements UserControllerDocs {
 
   @Override
-  @GetMapping({"/api/me", "/me"})
+  @GetMapping(path = "/api/me", version = "1")
   public MeResponse getMe(Principal principal) {
     // ...
   }
 }
 ```
 
-`/me`처럼 기존 path를 함께 제공하는 경우에도 Swagger/OpenAPI의 공식 path는 `/api/me`입니다. 기존 path는
-legacy compatible alias로 보고, 문서 노출 여부는 구현 시점에 별도로 조정합니다.
+path는 `/api/me` 단일 경로이며 `version = "1"` mapping을 둡니다. 레거시 path alias는 두지 않습니다.
 
 ## 성공 응답
 
@@ -119,10 +117,8 @@ Request/response DTO는 `record`를 기본으로 하고 `@Schema`로 문서화�
 
 ## API Version Header
 
-[API 버저닝](api-versioning.md)이 적용되는 신규/개편 API는 `API-Version` request header를 문서화합니다.
-
-레거시 호환 API에는 전역으로 `API-Version` header를 강제 표시하지 않습니다. 버전 header는 실제로 Spring
-API versioning이 적용된 operation에만 표시합니다.
+모든 엔드포인트는 [API 버저닝](api-versioning.md)이 적용되므로 `API-Version` request header를 문서화합니다.
+초기 버전은 `1`입니다.
 
 ## 구현 체크리스트
 
@@ -130,5 +126,5 @@ API versioning이 적용된 operation에만 표시합니다.
 - 성공 응답은 실제 DTO shape 그대로 문서화합니다.
 - 주요 실패 응답은 `@ApiExceptions`로 선언합니다.
 - `@ApiExceptions`가 너무 넓은 공통 에러를 노출하지 않는지 확인합니다.
-- 신규/개편 API는 `API-Version` header를 문서화합니다.
-- 레거시 alias path가 있으면 `/api` prefix 공식 path와 호환 alias 정책을 구분합니다.
+- 모든 엔드포인트는 `API-Version` header를 문서화합니다.
+- 모든 path를 `/api` prefix 단일 경로로 문서화하고, 레거시 alias path를 두지 않습니다.

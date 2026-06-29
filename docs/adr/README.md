@@ -11,3 +11,4 @@
 | [0003](0003-auth-session-transport-model.md) | 인증 세션·전송 모델: 모바일/웹 하이브리드 | Accepted |
 | [0004](0004-token-issuance-verification-stack.md) | 토큰 발급·검증 스택: Resource Server + JOSE | Accepted |
 | [0005](0005-refresh-token-storage-model.md) | Refresh token 저장 모델: 서버 저장형 + PostgreSQL 원장 | Accepted |
+| [0006](0006-api-path-and-versioning-policy.md) | API path·버저닝 정책: `/api` 단일화 + 전 엔드포인트 버저닝 | Accepted |
