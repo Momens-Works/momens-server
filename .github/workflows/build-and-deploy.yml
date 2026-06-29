@@ -21,10 +21,13 @@ env:
 jobs:
   build-and-dispatch:
     runs-on: ubuntu-latest
+    # step if 에서 참조하려면 job 레벨 env 여야 합니다.
+    env:
+      K8S_DISPATCH_TOKEN: ${{ secrets.K8S_REPO_DISPATCH_TOKEN }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -50,12 +53,12 @@ jobs:
 
       # k8s 레포에 배포를 요청합니다. deploy-momens-server 핸들러와
       # K8S_REPO_DISPATCH_TOKEN secret 이 있어야 동작합니다(배포 담당자 조율).
+      # 토큰이 없으면 이 스텝을 건너뛰어, 이미지 push 까지만 돌고 워크플로는 성공으로 남습니다.
       - name: Request production deploy
-        env:
-          GH_TOKEN: ${{ secrets.K8S_REPO_DISPATCH_TOKEN }}
+        if: ${{ env.K8S_DISPATCH_TOKEN != '' }}
         run: |
           curl -fsS -X POST \
             -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Authorization: Bearer $K8S_DISPATCH_TOKEN" \
             https://api.github.com/repos/Momens-Works/k8s/dispatches \
             -d "{\"event_type\":\"deploy-momens-server\",\"client_payload\":{\"image_tag\":\"${{ github.sha }}\"}}"
