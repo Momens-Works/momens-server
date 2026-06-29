@@ -1,7 +1,9 @@
 package works.momens.server.support.security;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -168,6 +170,45 @@ class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
                 .content("{\"refresh_token\":\"unknown-refresh-token\"}"))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.error.code").value("AUTH_REFRESH_TOKEN_INVALID"));
+  }
+
+  @Test
+  void preflightFromAllowedOriginEchoesCorsHeaders() throws Exception {
+    // 허용된 웹 origin의 preflight(OPTIONS)는 자원서버보다 먼저 CORS 필터가 처리해 헤더를 echo 합니다.
+    mockMvc
+        .perform(
+            options("/api/me")
+                .header("Origin", "http://localhost:3000")
+                .header("Access-Control-Request-Method", "GET"))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
+        .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+  }
+
+  @Test
+  void preflightFromDisallowedOriginIsRejected() throws Exception {
+    mockMvc
+        .perform(
+            options("/api/me")
+                .header("Origin", "https://evil.example")
+                .header("Access-Control-Request-Method", "GET"))
+        .andExpect(status().isForbidden())
+        .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+  }
+
+  @Test
+  void actualRequestFromAllowedOriginKeepsAuthAndAddsCorsHeader() throws Exception {
+    UserProfile user = userService.findOrCreate("auth-it-cors@momens.works", "홍길동", null);
+    String token = accessTokens.issueAccessToken(user.id());
+
+    mockMvc
+        .perform(
+            get("/api/me")
+                .header("Origin", "http://localhost:3000")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
+        .andExpect(jsonPath("$.user.id").value(user.id().toString()));
   }
 
   /**
