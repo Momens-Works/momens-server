@@ -12,8 +12,8 @@ import org.springframework.validation.annotation.Validated;
  * CORS 헤더를 내려줘야 합니다. 모바일은 Authorization 헤더로 호출하는 네이티브 클라이언트라 브라우저 origin이 없어 CORS 대상이 아닙니다.
  *
  * <p>웹 HttpOnly 쿠키 인증을 cross-origin에서 살리려면 {@code allowCredentials=true}가 필요하고, 그때는 와일드카드 origin을 쓸
- * 수 없어 {@code allowedOrigins}로 허용 origin을 명시합니다. 운영에서는 {@code MOMENS_CORS_ALLOWED_ORIGINS} 환경 변수로
- * 주입합니다.
+ * 수 없어 {@code allowedOrigins}로 허용 origin을 명시합니다. 운영에서는 레거시 momens-api와 같은 {@code
+ * CORS_ALLOWED_ORIGINS} 환경 변수로 주입합니다(배포 설정 재사용).
  */
 @Validated
 @ConfigurationProperties("momens.cors")
