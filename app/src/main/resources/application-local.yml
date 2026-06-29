@@ -9,6 +9,9 @@ spring:
     show-sql: true
 
 momens:
+  cors:
+    # 로컬 웹 프론트(momens-fe) origin.
+    allowed-origins: http://localhost:3000
   auth:
     web:
       cookie:

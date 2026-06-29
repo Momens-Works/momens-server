@@ -4,6 +4,7 @@ import jakarta.servlet.http.Cookie;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -13,6 +14,7 @@ import org.springframework.security.oauth2.server.resource.web.DefaultBearerToke
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.web.cors.CorsConfigurationSource;
 import works.momens.server.auth.internal.config.AuthProperties;
 
 /**
@@ -23,6 +25,10 @@ import works.momens.server.auth.internal.config.AuthProperties;
  * permitAll 평가 전에 401을 내버려 갱신 흐름이 막힙니다. 보호 API 체인은 우리 HS256 디코더로 access를 검증하고, 거부 본문은 Standard 에러
  * shape로 통일합니다. 웹 쿠키 인증(MOM-22)은 {@link BearerTokenResolver}가 access 쿠키도 읽도록 교체해 보호 체인 위에 얹습니다.
  * same-domain 배포라 CSRF는 SameSite 쿠키 속성으로 막습니다(ADR-0003).
+ *
+ * <p>웹 프론트는 API와 origin이 달라, 두 체인 모두 {@link CorsConfigurationSource}를 물려 CORS를 처리합니다(MOM-55). 쿠키를
+ * 실은 cross-origin 요청을 허용하려면 credentials를 켜고 origin을 명시해야 합니다. {@code /api/auth/web/*}는 공개 체인이라 여기에도
+ * CORS가 필요하고, preflight(OPTIONS)는 Spring Security의 CORS 필터가 인증 전에 처리합니다.
  */
 @Configuration
 class SecurityConfig {
@@ -48,7 +54,9 @@ class SecurityConfig {
   @Bean
   @Order(1)
   SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) throws Exception {
+    // CorsConfigurationSource 빈(corsConfigurationSource)을 이름으로 찾아 적용합니다.
     http.securityMatcher(PUBLIC_PATHS)
+        .cors(Customizer.withDefaults())
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .csrf(AbstractHttpConfigurer::disable)
@@ -65,7 +73,8 @@ class SecurityConfig {
       AuthenticationEntryPoint authenticationEntryPoint,
       AccessDeniedHandler accessDeniedHandler)
       throws Exception {
-    http.sessionManagement(
+    http.cors(Customizer.withDefaults())
+        .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         // 무상태 Bearer/쿠키 API. same-domain 배포라 CSRF는 SameSite 쿠키 속성으로 막습니다(ADR-0003).
         .csrf(AbstractHttpConfigurer::disable)
