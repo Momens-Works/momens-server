@@ -88,6 +88,26 @@ class UserControllerTest {
         .andExpect(jsonPath("$.user.job_role").value("Designer"));
   }
 
+  @Test
+  void getMeWithoutVersionHeaderRoutesToV1() throws Exception {
+    when(userService.getProfile(eq(USER_ID)))
+        .thenReturn(
+            new UserProfile(
+                USER_ID,
+                "user@example.com",
+                "홍길동",
+                "Engineer",
+                null,
+                Instant.parse("2026-06-24T00:00:00Z"),
+                Instant.parse("2026-06-24T00:00:00Z")));
+
+    // API-Version 헤더가 없어도 setDefaultVersion("1") 덕에 v1으로 라우팅된다(전이 구간 계약).
+    mockMvc
+        .perform(get("/api/me").principal(principal))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.user.id").value(USER_ID.toString()));
+  }
+
   @TestConfiguration
   static class ApiVersioningTestConfig implements WebMvcConfigurer {
     @Override
