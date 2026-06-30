@@ -197,6 +197,19 @@ class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  void preflightOnPublicChainEchoesCorsHeaders() throws Exception {
+    // 공개 체인(/api/auth/web/*)에도 CORS를 얹었으므로, 인증 전에 preflight(OPTIONS)가 처리돼 헤더를 echo 합니다.
+    mockMvc
+        .perform(
+            options("/api/auth/web/refresh")
+                .header("Origin", "http://localhost:3000")
+                .header("Access-Control-Request-Method", "POST"))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
+        .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+  }
+
+  @Test
   void actualRequestFromAllowedOriginKeepsAuthAndAddsCorsHeader() throws Exception {
     UserProfile user = userService.findOrCreate("auth-it-cors@momens.works", "홍길동", null);
     String token = accessTokens.issueAccessToken(user.id());
