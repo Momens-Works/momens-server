@@ -161,6 +161,18 @@ Standard 모드의 에러 응답은 아래 형태를 사용합니다.
 | 502 | `AUTH_OAUTH_EXCHANGE_FAILED` | 웹 OAuth code 교환·userinfo 조회 실패 |
 | 404 | `USER_NOT_FOUND` | 사용자를 찾을 수 없음 (`GET/PATCH /api/me` 등) |
 
+### 모바일 MVP 예정 도메인 코드
+
+모바일 MVP API를 구현할 때는 다음 도메인 코드를 추가한다.
+
+| HTTP status | Code | 사용 기준 |
+| --- | --- | --- |
+| 404 | `PROJECT_NOT_FOUND` | 프로젝트를 찾을 수 없음 |
+| 404 | `SIGNAL_NOT_FOUND` | Signal을 찾을 수 없음 |
+| 409 | `SIGNAL_INVALID_STATE` | 현재 Signal 상태에서 요청한 action을 수행할 수 없음 |
+| 404 | `TASK_NOT_FOUND` | 태스크를 찾을 수 없음 |
+| 404 | `TASK_CHECKLIST_ITEM_NOT_FOUND` | 태스크 체크리스트 항목을 찾을 수 없음 |
+
 ### 웹 Google 로그인(Authorization Code) 리다이렉트 계약
 
 `GET /api/auth/google/login`·`GET /api/auth/google/callback`은 브라우저 리다이렉트(302)로 동작하므로
