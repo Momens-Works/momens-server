@@ -260,7 +260,7 @@ Refresh token을 폐기합니다.
   },
   "type": "risk",
   "status": "needs_action",
-  "status_label": "Needs action",
+  "status_label": "확인 필요",
   "title": "Android 13+ 권한 요청 플로우에서 이탈 가능성 발견",
   "impact": "MVP 완료율과 온보딩 품질에 영향을 줄 수 있습니다.",
   "evidence": [
@@ -326,12 +326,33 @@ Refresh token을 폐기합니다.
 }
 ```
 
+#### Response 200 (이미 처리된 신호 재요청)
+
+같은 신호에 같은 액션을 재요청하면 새 task를 만들지 않고 기존 결과를 그대로 반환합니다(멱등).
+
+```json
+{
+  "task": {
+    "id": "existing-task-uuid",
+    "title": "Android 13+ 권한 요청 플로우 점검",
+    "status": "todo"
+  },
+  "signal": {
+    "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
+    "status": "completed"
+  }
+}
+```
+
 #### Errors
 
 - `SIGNAL_NOT_FOUND`
 - `SIGNAL_INVALID_STATE`
 - `COMMON_VALIDATION_FAILED`
 - `AUTH_FORBIDDEN`
+
+`SIGNAL_INVALID_STATE`(409)는 처리 이력이 없는데 현재 상태에서 전환할 수 없는 경우에만 반환합니다.
+이미 전환된 신호의 재요청은 위 `200` 멱등 응답으로 처리합니다.
 
 ## 브리프
 
@@ -364,10 +385,10 @@ Refresh token을 폐기합니다.
   "signal_summary": {
     "selected_filter": "all",
     "filters": [
-      { "key": "all", "label": "All", "count": 4 },
-      { "key": "decisions", "label": "Decisions", "count": 2 },
-      { "key": "risks", "label": "Risks", "count": 1 },
-      { "key": "questions", "label": "Questions", "count": 1 }
+      { "key": "all", "label": "전체", "count": 4 },
+      { "key": "decisions", "label": "결정", "count": 2 },
+      { "key": "risks", "label": "리스크", "count": 1 },
+      { "key": "questions", "label": "질문", "count": 1 }
     ],
     "items": [
       {
@@ -390,6 +411,10 @@ Refresh token을 폐기합니다.
   ]
 }
 ```
+
+`signal_summary`는 `change`(VOC) 신호를 노출하지 않고 필터는 `all`, `decisions`, `risks`, `questions`만 둡니다.
+`review_summary`는 worker/Minsu 산출물 후보로 MVP backing source가 없으면 `null`(또는 내부 값이 빈 상태)로
+반환합니다(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
 
 #### Errors
 
@@ -517,6 +542,10 @@ Refresh token을 폐기합니다.
 ```
 
 `materials[].source_url`은 관련자료에서 원본 문서로 이동할 때 사용합니다.
+
+`materials`는 `source_refs`와 `entity_relations`(task ↔ source_ref)로 합성하며, 연결된 자료가 없으면 `[]`,
+`material_count`는 `0`입니다. `open_questions`, `next_action`은 MVP에서 backing source가 없으면 각각 `[]`,
+`null`로 반환합니다. 서버는 근거 없는 값을 임의 생성하지 않습니다(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
 
 #### Errors
 
