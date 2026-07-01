@@ -1,0 +1,342 @@
+# 모바일 MVP 서버 요구사항 명세
+
+작성일: 2026-07-01
+
+상태: Draft
+
+이 문서는 Momens Mobile MVP를 지원하기 위해 `momens-server`가 제공해야 하는 서버 요구사항을
+정리한다. 목적은 구현 상세설계가 아니라, 제품 범위와 서버 책임 경계를 합의 가능한 수준으로
+명확히 하는 것이다.
+
+## 출처
+
+- `teams/docs/prd/momens-mobile.md`
+- `teams/docs/glossary/momens-ubiquitous-language.md`
+- Notion `momens-server 모바일 우선 이관 공유 패키지`
+- Notion `이관 결정사항과 전체 진행 순서`
+- Notion `모바일 최소 이관 범위와 API 계약`
+- Notion `api-server 구현 작업 범위`
+- Notion `모바일 API 명세서`
+- Figma `MOMENS-Design`
+  - 로그인: node `733:7378`
+  - 시그널: node `733:7379`
+  - 브리프: node `779:7631`
+  - 태스크 보드/생성: node `733:7684`
+  - 태스크 상세: node `838:13017`
+- 이 저장소의 `docs/spec/`, `docs/rules/`, `docs/design/module-map.md`
+
+## 배경
+
+Momens Mobile은 기존 웹 기능을 축소 이식하는 앱이 아니다. 모바일 MVP의 중심은 Project Owner가
+프로젝트에 영향을 줄 수 있는 중요한 신호를 확인하고, 근거를 검토한 뒤, 실행 가능한 액션으로
+닫는 경험이다.
+
+모바일 MVP는 다음 3개 탭을 중심으로 한다.
+
+- 신호
+- 브리프
+- 프로젝트
+
+## 목표
+
+- Project Owner가 오늘 확인해야 할 신호를 모바일에서 파악할 수 있어야 한다.
+- Project Owner가 신호의 근거와 민수 제안을 확인할 수 있어야 한다.
+- Project Owner가 신호를 태스크 등록으로 처리할 수 있어야 한다.
+- 처리 결과는 Signal의 프로젝트 단위 상태와 프로젝트 맥락에 반영되어야 한다.
+- Project Owner가 프로젝트 태스크를 생성하고, 상세를 확인하고, 체크리스트를 토글하고, 기본 정보를
+  수정할 수 있어야 한다.
+- 태스크 생성 이후 retrieval projection은 api-server가 직접 쓰지 않고 worker가 처리할 수 있어야 한다.
+
+## Non-goals
+
+모바일 MVP 범위에서 다음은 제외한다.
+
+- 기존 웹 기능 전체 이관
+- Linear/Jira 수준의 태스크 보드
+- Notion 수준의 문서 편집
+- 모바일에서 소스 연결과 권한 설정을 완결하는 기능
+- 범용 민수 AI 챗봇
+- 모든 원천 도구 알림을 그대로 모은 활동 피드
+- Share
+- Ask Owner
+- Push notification
+- Keep Watching
+- Signal record-decision 액션
+- Signal resolve 액션
+- Signal snooze 액션
+- 관련자료 상세 전용 API
+- worker 내부 재시도/DLQ 저장 방식 상세설계
+- DB 컬럼, index, FK, Java public API, 패키지 구조 등 구현 상세설계
+
+## 용어
+
+| 용어 | 의미 |
+| --- | --- |
+| Signal / 신호 | 프로젝트 목표, 일정, 범위, 품질, 의사결정, 실행 흐름에 영향을 줄 수 있어 사람이 검토해야 하는 변화 |
+| Evidence / 근거 | 신호 판단을 뒷받침하는 출처 기반 정보 |
+| Minsu draft | 민수가 생성한 사용자 확정 액션용 초안. 최종 task/decision이 아니다 |
+| Minsu suggestion | 신호를 바탕으로 민수가 제안하는 다음 행동 |
+| Brief / 브리프 | 프로젝트 상태와 최근 맥락을 짧게 요약한 화면 단위 |
+| Task / 태스크 | 담당자와 상태를 가지고 진행되는 실행 항목 |
+| Decision / 결정 | 근거와 함께 보존되는 프로젝트 선택 |
+| VOC | 독립 Signal type이 아니라 `change` 신호의 하위 성격으로 표현한다 |
+
+## 시스템 책임
+
+### api-server
+
+api-server는 사용자 확정 액션의 transactional owner다.
+
+api-server는 다음을 책임진다.
+
+- 모바일 조회 API 제공
+- worker가 생성한 Signal과 Minsu draft 조회
+- 사용자 확정 액션 처리
+- 최종 task 생성
+- 프로젝트 단위 Signal 처리 상태 반영
+- projection 처리를 위한 outbox 이벤트 발행
+- outbox 이벤트 멱등키 생성
+
+api-server는 다음을 직접 수행하지 않는다.
+
+- Signal 생성/감지
+- Minsu draft 생성
+- `retrieval_documents` 직접 write
+- `retrieval_events` 직접 write
+- retrieval 서버 직접 호출
+- worker 재시도/DLQ 정책 결정
+
+### worker
+
+worker는 Signal 생성과 후속 projection 처리를 책임진다.
+
+worker는 다음을 책임진다.
+
+- 원천 이벤트 기반 Signal 생성
+- Minsu draft 생성
+- api-server가 발행한 outbox 이벤트 소비
+- retrieval projection write
+- projection write 재시도
+- DLQ 또는 실패 이벤트 관리
+
+worker의 내부 소비 상태, 재시도 정책, DLQ 저장 위치는 worker 담당 팀과 후속 확정한다.
+
+### retrieval
+
+retrieval은 `retrieval_events`를 polling하고 indexing한다.
+
+api-server는 retrieval 서버를 직접 호출하지 않는다.
+
+## 공통 API 요구사항
+
+- 모바일 기능 API는 `/api/mobile/*` 경로를 사용해야 한다.
+- 모바일 인증은 기존 `/api/auth/*` Bearer 기반 인증 API를 재사용해야 한다.
+- 모든 모바일 기능 API는 인증된 사용자만 호출할 수 있어야 한다.
+- 모바일 클라이언트는 `Authorization: Bearer {accessToken}` 헤더를 전송해야 한다.
+- 모바일 클라이언트는 `API-Version: 1` 헤더를 전송해야 한다.
+- 성공 응답에는 공통 wrapper를 두지 않는다.
+- 실패 응답은 Standard 에러 응답을 사용한다.
+- 응답 필드 이름은 `snake_case`를 사용한다.
+- API path와 versioning은 이 저장소의 `docs/spec/api-versioning.md`와 ADR-0006을 따른다.
+
+## 공통 에러 요구사항
+
+모바일 API는 최소 다음 에러 코드를 문서화해야 한다.
+
+| 상황 | HTTP status | Code |
+| --- | --- | --- |
+| 인증 정보 없음 | 401 | `AUTH_UNAUTHORIZED` |
+| 토큰 무효 또는 만료 | 401 | `AUTH_INVALID_TOKEN` |
+| 권한 없음 | 403 | `AUTH_FORBIDDEN` |
+| 요청 값 검증 실패 | 400 | `COMMON_VALIDATION_FAILED` |
+| 프로젝트 없음 | 404 | `PROJECT_NOT_FOUND` |
+| 신호 없음 | 404 | `SIGNAL_NOT_FOUND` |
+| 태스크 없음 | 404 | `TASK_NOT_FOUND` |
+| 태스크 체크리스트 항목 없음 | 404 | `TASK_CHECKLIST_ITEM_NOT_FOUND` |
+| 현재 상태에서 수행할 수 없는 신호 액션 | 409 | `SIGNAL_INVALID_STATE` |
+
+Notion 문서에 남아 있는 `AUTH_UNAUTHENTICATED`, `COMMON_VALIDATION` 표기는 이 저장소 기준과
+맞지 않으므로 사용하지 않는다.
+
+## 모바일 조회 요구사항
+
+### R-READ-000. 모바일 부트스트랩 조회
+
+서버는 로그인 후 모바일 앱 진입에 필요한 기본 컨텍스트를 조회할 수 있어야 한다.
+
+- 경로: `GET /api/mobile/bootstrap`
+- 응답은 내 사용자 정보, 기본 project id, 접근 가능한 project 목록을 포함해야 한다.
+- 로그인 응답에는 project context를 포함하지 않고 별도 API로 조회한다.
+- 접근 가능한 project가 없을 때의 응답 정책은 구현 전 확정한다.
+
+### R-READ-001. 신호 목록 조회
+
+서버는 프로젝트 단위 신호 목록을 조회할 수 있어야 한다.
+
+- 경로: `GET /api/mobile/projects/{projectId}/signals`
+- 신호 목록은 프로젝트 스코프를 기준으로 한다.
+- `needs_action`, `completed` 필터를 지원해야 한다.
+- 기본 필터는 `needs_action`이다.
+- 목록 응답은 신호 카드 렌더링에 필요한 정보를 포함해야 한다.
+- 목록 응답은 필터별 개수를 포함해야 한다.
+- 목록 응답은 type, title, impact, Minsu suggestion, 처리 상태를 표현할 수 있어야 한다.
+
+### R-READ-002. 신호 상세 조회
+
+서버는 신호 1건의 상세를 조회할 수 있어야 한다.
+
+- 경로: `GET /api/mobile/signals/{signalId}`
+- 상세 응답은 신호 본문, 근거 목록, Minsu suggestion, `convert-to-task` primary action, 현재 처리
+  상태를 표현할 수 있어야 한다.
+- 근거는 원천 도구를 모두 열지 않아도 사용자가 판단할 수 있는 형태로 제공되어야 한다.
+
+### R-READ-003. 프로젝트 브리프 조회
+
+서버는 프로젝트 브리프를 조회할 수 있어야 한다.
+
+- 경로: `GET /api/mobile/projects/{projectId}/brief`
+- 브리프는 모바일 홈 역할을 한다.
+- 응답은 프로젝트 스냅샷, 리뷰 요약, signal summary filter/dropdown, 우선순위를 표현할 수 있어야 한다.
+
+### R-READ-004. 프로젝트 태스크 목록 조회
+
+서버는 프로젝트 태스크 목록을 상태별로 조회할 수 있어야 한다.
+
+- 경로: `GET /api/mobile/projects/{projectId}/tasks`
+- 응답은 태스크를 `todo`, `in_progress`, `done` 그룹으로 표현할 수 있어야 한다.
+- 태스크 카드에는 제목, role, priority, 관련자료 개수를 표현할 수 있어야 한다.
+
+### R-READ-005. 태스크 상세 조회
+
+서버는 태스크 상세를 조회할 수 있어야 한다.
+
+- 경로: `GET /api/mobile/tasks/{taskId}`
+- 응답은 태스크 기본 정보, role, 담당자, 우선순위, 목적, 체크리스트, 관련자료 축약본, 열린 질문,
+  다음 액션을 표현할 수 있어야 한다.
+- 관련자료 bottom sheet는 태스크 상세 응답의 관련자료 축약본으로 구성할 수 있어야 한다.
+- 원본 문서 이동은 관련자료의 `source_url`을 사용한다.
+- 기존 데이터에서 합성할 수 없는 값은 MVP 응답 정책에 따라 빈 값으로 표현할 수 있어야 한다.
+
+### R-READ-006. 프로젝트 멤버 조회
+
+서버는 태스크 담당자 선택에 사용할 프로젝트 멤버 목록을 조회할 수 있어야 한다.
+
+- 경로: `GET /api/mobile/projects/{projectId}/members`
+- 검색어가 전달되면 이름 기준으로 필터링할 수 있어야 한다.
+- 응답은 담당자 선택 bottom sheet에서 사용할 사용자 id, 이름, 프로필 이미지를 표현할 수 있어야 한다.
+
+## 모바일 액션 요구사항
+
+### R-ACTION-001. 신호를 태스크로 전환
+
+서버는 신호를 태스크로 전환할 수 있어야 한다.
+
+- 경로: `POST /api/mobile/signals/{signalId}/actions/convert-to-task`
+- 서버는 최종 task를 생성해야 한다.
+- 서버는 Signal 처리 상태를 `completed`로 반영해야 한다.
+- 서버는 projection 처리를 위한 outbox 이벤트를 발행해야 한다.
+- task 생성, Signal 처리 상태 반영, outbox 이벤트 발행은 사용자 관점에서 일관되게 처리되어야 한다.
+- 같은 신호에 대한 같은 액션 재시도는 중복 task를 만들지 않아야 한다.
+
+### R-ACTION-002. 일반 태스크 생성
+
+서버는 태스크 탭의 플로팅 버튼에서 일반 태스크를 생성할 수 있어야 한다.
+
+- 경로: `POST /api/mobile/projects/{projectId}/tasks`
+- MVP 생성 범위는 `title`, `role`, `priority`다.
+- 담당자, 설명, 체크리스트는 1차 생성 요청에 포함하지 않는다.
+- 생성된 task는 기본적으로 `todo` 그룹에 표시되어야 한다.
+- Signal에서 task를 생성하는 `convert-to-task`와 구분해야 한다.
+
+### R-ACTION-003. 태스크 수정
+
+서버는 태스크 상세 상단 연필 아이콘에서 태스크를 수정할 수 있어야 한다.
+
+- 경로: `PATCH /api/mobile/tasks/{taskId}`
+- MVP 수정 범위는 제목, role, 담당자, 우선순위, 목적, 완료기준이다.
+- 보내지 않은 필드는 변경하지 않아야 한다.
+- 담당자 제거는 `assignee_id: null`로 표현한다.
+- 완료기준 수정은 기존 항목 제목 수정, 새 항목 추가, 기존 항목 삭제를 처리할 수 있어야 한다.
+
+### R-ACTION-004. 태스크 체크리스트 토글
+
+서버는 태스크 상세의 체크박스 완료 상태를 변경할 수 있어야 한다.
+
+- 경로: `PATCH /api/mobile/tasks/{taskId}/checklist-items/{itemId}`
+- `itemId`는 `taskId`에 속한 항목이어야 한다.
+- 완료 수와 전체 수를 함께 반환해 상세 화면 카운트를 즉시 갱신할 수 있어야 한다.
+
+## Signal 요구사항
+
+- Signal은 모바일 API가 안정적으로 조회하고 액션 대상으로 참조할 수 있는 형태로 저장되어야 한다.
+- Signal 생성과 Minsu draft 생성은 worker가 담당해야 한다.
+- Signal type은 `risk`, `decision`, `change`, `question`을 지원해야 한다.
+- VOC는 MVP에서 독립 Signal type으로 두지 않고 `change`의 하위 성격으로 표현해야 한다.
+- Signal은 사용자가 어떤 검토를 해야 하는지 표현할 수 있어야 한다.
+- Signal은 프로젝트 단위 처리 상태를 가질 수 있어야 한다.
+- Signal 처리 상태는 사용자별이 아니라 프로젝트 단위로 반영되어야 한다.
+- 모바일 MVP의 Signal 처리 상태는 최소 `needs_action`, `completed`를 표현할 수 있어야 한다.
+- Signal 상세는 하나 이상의 근거를 표현할 수 있어야 한다.
+- Signal은 Minsu draft를 가질 수 있어야 한다.
+
+## Minsu draft 요구사항
+
+- Minsu draft는 최종 task/decision이 아니라 사용자 확정 액션용 초안이다.
+- Minsu draft는 `convert-to-task` 실행 시 기본값으로 사용될 수 있어야 한다.
+- 사용자의 확정 액션이 있기 전까지 Minsu draft는 프로젝트의 확정된 기억이나 실행 항목으로 간주하지 않는다.
+
+## Outbox 요구사항
+
+- api-server는 projection write를 직접 수행하지 않고 outbox 이벤트를 발행해야 한다.
+- outbox 이벤트는 task 생성 같은 사용자 확정 액션의 결과를 worker가 처리할 수 있게 해야 한다.
+- api-server는 outbox 이벤트 멱등키를 서버에서 생성해야 한다.
+- 클라이언트는 모바일 MVP에서 `Idempotency-Key` 헤더를 보낼 필요가 없다.
+- 멱등키는 같은 Signal에 대한 같은 액션이 중복 처리되지 않도록 생성되어야 한다.
+- MVP에서 필요한 이벤트는 최소 `mobile.signal.task_created`다.
+- worker의 소비 상태, 재시도, DLQ 저장 방식은 이 문서에서 확정하지 않는다.
+
+## 권한 요구사항
+
+- 모든 모바일 기능 API는 인증된 사용자만 접근할 수 있어야 한다.
+- 프로젝트 리소스 접근은 프로젝트 또는 워크스페이스 멤버십/RBAC 기준으로 제한되어야 한다.
+- 인증/인가 실패 응답은 이 저장소의 Standard 에러 응답 규격을 따라야 한다.
+
+## 보류 항목
+
+다음 항목은 요구사항 명세 단계에서 확정하지 않는다.
+
+- `Keep Watching` 액션의 사용자 플로우와 API 포함 여부
+- `record-decision`, `resolve`, `snooze`의 후속 모바일 사용자 플로우와 API 포함 여부
+- Signal 처리 상태의 상세 저장 구조
+- Signal 저장 테이블의 상세 스키마
+- Signal evidence 저장 테이블의 상세 스키마
+- Outbox 테이블의 상세 스키마
+- worker outbox 소비 상태, 재시도, DLQ 설계
+- 태스크 상세 확장 필드가 비어 있을 때의 구체 응답 값 정책
+- 접근 가능한 project가 없을 때의 bootstrap 응답 정책
+- 모바일 화면 재현용 테스트 데이터 세트
+
+## 문서 정합성 메모
+
+- Notion 일부 문서에는 `/me`를 새 서버로 라우팅한다고 남아 있으나, 현재 저장소의 ADR-0006 기준은
+  `/me` alias 폐기와 `/api` 단일화다. 이 문서는 저장소 기준을 따른다.
+- Notion 일부 문서에는 모바일 Signal 액션 API가 여러 개 남아 있으나, 최신 Figma 기준 MVP Signal
+  액션은 `convert-to-task` 하나다. `record-decision`, `resolve`, `snooze`, `keep-watching`은 MVP에서
+  제외한다.
+- Notion 일부 문서에는 projection write를 api-server 트랜잭션에 포함하는 표현이 있으나, 최신 합의는
+  api-server가 outbox 이벤트를 발행하고 worker가 projection write를 담당하는 구조다.
+
+## Proto 정합성 메모
+
+- `momens-proto`에는 현재 Signal 전용 proto message/service가 없다. MVP에서 worker가 생성한 Signal을
+  api-server가 조회·액션 대상으로 참조해야 하므로, Signal을 proto 기반 cross-service contract로
+  교환할지, 공유 DB schema와 HTTP API 계약으로만 다룰지는 후속 설계에서 확정해야 한다.
+- `momens.retrieval.v1.RetrievalEvent`는 worker가 publish하고 retrieval이 polling하는 dedicated
+  read-model event로 정의되어 있다. api-server가 projection write를 직접 하지 않고 outbox를 통해
+  worker에 넘기는 최신 책임 경계와 충돌하지 않는다.
+- 현재 `RetrievalDocumentType`과 `RetrievalEventType`에는 task 전용 값은 있지만 decision 전용 값은
+  없다. decision 기록을 retrieval에 반영할 때 기존 `MemoryType.DECISION` / memory document 흐름으로
+  표현할지, decision 전용 retrieval proto 값을 추가할지는 후속 설계에서 확정해야 한다.
+- 제품 문서에는 Analytics, CRM, API 출처가 등장하지만 현재 `SourceType` proto enum에는 Slack, Notion,
+  Linear, Figma, GitHub, Momens task/internal 중심 값만 있다. Analytics/CRM/API를 typed source로
+  노출하려면 proto enum 확장 또는 기존 source type으로의 매핑 정책이 필요하다.
