@@ -43,7 +43,19 @@
 | --- | --- |
 | `group_key` | `todo`, `in_progress`, `done` |
 | `priority` | `high`, `medium`, `low` |
-| `role` | `pm`, `design`, `backend`, `frontend`, `android`, `qa` |
+| `roles[]` | `pm`, `design`, `backend`, `frontend`, `android`, `qa` |
+
+### Membership
+
+| 이름 | 값 |
+| --- | --- |
+| `role` | `owner`, `admin`, `member` |
+
+### Material
+
+| 이름 | 값 |
+| --- | --- |
+| `kind` | `doc`, `node`, `msg` |
 
 ## 인증
 
@@ -269,7 +281,7 @@ Refresh token을 폐기합니다.
     "suggestion": "내용이 들어갈 공간입니다",
     "task_draft": {
       "title": "Android 13+ 권한 요청 플로우 점검",
-      "role": "android",
+      "roles": ["android"],
       "priority": "medium"
     }
   },
@@ -293,7 +305,7 @@ Refresh token을 폐기합니다.
 ```json
 {
   "title": "Android 13+ 권한 요청 플로우 점검",
-  "role": "android",
+  "roles": ["android"],
   "priority": "medium"
 }
 ```
@@ -405,7 +417,7 @@ Refresh token을 폐기합니다.
         {
           "id": "27afd507-9c7f-4f0d-a2be-fcdab2477b19",
           "title": "1차 와이어프레임",
-          "role": "android",
+          "roles": ["android"],
           "priority": "low",
           "material_count": 2
         }
@@ -431,7 +443,7 @@ Refresh token을 폐기합니다.
 ```json
 {
   "title": "Write",
-  "role": "pm",
+  "roles": ["pm"],
   "priority": "medium"
 }
 ```
@@ -444,7 +456,7 @@ Refresh token을 폐기합니다.
     "id": "new-task-uuid",
     "project_id": "30d9e9fe-f43b-4097-a88e-dc19f0a5b025",
     "title": "Write",
-    "role": "pm",
+    "roles": ["pm"],
     "priority": "medium",
     "status": "todo"
   }
@@ -489,8 +501,8 @@ Refresh token을 폐기합니다.
       "id": "m-01",
       "title": "회원가입 에러 메시지 정책 초안",
       "summary": "회원가입의 MVP 완료율과 온보딩 품질에 영향을 줄 수 있습니다.",
-      "role": "pm",
-      "kind": "copy_policy",
+      "roles": ["pm"],
+      "kind": "doc",
       "source_url": "https://..."
     }
   ],
