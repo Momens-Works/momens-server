@@ -8,23 +8,6 @@
 정리한다. 목적은 구현 상세설계가 아니라, 제품 범위와 서버 책임 경계를 합의 가능한 수준으로
 명확히 하는 것이다.
 
-## 출처
-
-- `teams/docs/prd/momens-mobile.md`
-- `teams/docs/glossary/momens-ubiquitous-language.md`
-- Notion `momens-server 모바일 우선 이관 공유 패키지`
-- Notion `이관 결정사항과 전체 진행 순서`
-- Notion `모바일 최소 이관 범위와 API 계약`
-- Notion `api-server 구현 작업 범위`
-- Notion `모바일 API 명세서`
-- Figma `MOMENS-Design`
-  - 로그인: node `733:7378`
-  - 시그널: node `733:7379`
-  - 브리프: node `779:7631`
-  - 태스크 보드/생성: node `733:7684`
-  - 태스크 상세: node `838:13017`
-- 이 저장소의 `docs/spec/`, `docs/rules/`, `docs/design/module-map.md`
-
 ## 배경
 
 Momens Mobile은 기존 웹 기능을 축소 이식하는 앱이 아니다. 모바일 MVP의 중심은 Project Owner가
@@ -158,6 +141,29 @@ api-server는 retrieval 서버를 직접 호출하지 않는다.
 Notion 문서에 남아 있는 `AUTH_UNAUTHENTICATED`, `COMMON_VALIDATION` 표기는 이 저장소 기준과
 맞지 않으므로 사용하지 않는다.
 
+## 기능 범위와 우선순위
+
+우선순위는 다음 3계층으로 나눈다. `선택`은 모바일 MVP 안에서 억지로 만들지 않고, 로드맵상
+MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
+
+| 우선순위 | 의미 |
+| --- | --- |
+| MVP | 모바일 MVP의 핵심 사용자 경험에 직접 연결되는 기능. 신호 확인, 근거 확인, 태스크 전환, 브리프, 태스크 흐름을 포함한다. |
+| 필수 | 모바일 MVP를 실제 앱에서 사용하기 위해 반드시 필요한 API/계약/인증/에러 처리. 모바일 API 전체와 계약 안정화를 포함한다. |
+| 선택 | 모바일 MVP 이후 단계의 이관 후보. 기존 웹 API 전체 이관, 레거시 기능 확장, 레거시 서버 폐기 준비는 여기에 둔다. |
+
+| 영역 | 기능 | 우선순위 | 1차 범위 | 비고 |
+| --- | --- | --- | --- | --- |
+| Mobile Signal | Signal 목록/상세 조회, convert-to-task | MVP | 포함 | 최신 Figma 기준 핵심 흐름 |
+| Mobile Brief | 프로젝트 브리프 조회 | MVP | 포함 | 모바일 홈 역할 |
+| Mobile Task | 태스크 보드/생성/상세/수정/체크리스트 토글 | MVP | 포함 | 프로젝트 탭 핵심 흐름 |
+| Mobile API Contract | `/api/mobile/*`, API-Version, 표준 에러, snake_case, no wrapper | 필수 | 포함 | 모바일팀 병렬 개발을 위한 계약 |
+| Auth / Bootstrap | 기존 인증 API 재사용, 모바일 bootstrap | 필수 | 포함 | 앱 진입 필수 |
+| Projection / Outbox | convert-to-task 이후 worker projection 연계 | 필수 | 포함 | api-server 직접 retrieval write 금지 |
+| Web API Migration | workspace/project/milestone/task/decision/blocker 등 기존 웹 API 이관 | 선택 | 제외 | 로드맵 단계 C |
+| Legacy Retirement | 레거시 서버 폐기, DB schema ownership 이전 | 선택 | 제외 | 로드맵 단계 D |
+| 후속 Signal 액션 | record-decision, resolve, snooze, keep-watching | 선택 | 제외 | 로드맵에는 남아 있으나 최신 MVP에서는 제외 |
+
 ## 모바일 조회 요구사항
 
 ### R-READ-000. 모바일 부트스트랩 조회
@@ -197,6 +203,7 @@ Notion 문서에 남아 있는 `AUTH_UNAUTHENTICATED`, `COMMON_VALIDATION` 표�
 - 경로: `GET /api/mobile/projects/{projectId}/brief`
 - 브리프는 모바일 홈 역할을 한다.
 - 응답은 프로젝트 스냅샷, 리뷰 요약, signal summary filter/dropdown, 우선순위를 표현할 수 있어야 한다.
+- 브리프 signal summary는 `change`(VOC) 신호를 노출하지 않는다. 필터는 `all`, `decisions`, `risks`, `questions`만 둔다.
 
 ### R-READ-004. 프로젝트 태스크 목록 조회
 
@@ -237,6 +244,8 @@ Notion 문서에 남아 있는 `AUTH_UNAUTHENTICATED`, `COMMON_VALIDATION` 표�
 - 서버는 projection 처리를 위한 outbox 이벤트를 발행해야 한다.
 - task 생성, Signal 처리 상태 반영, outbox 이벤트 발행은 사용자 관점에서 일관되게 처리되어야 한다.
 - 같은 신호에 대한 같은 액션 재시도는 중복 task를 만들지 않아야 한다.
+- 이미 처리된 신호에 같은 액션을 재요청하면 `200`으로 기존 task 결과를 멱등하게 반환해야 한다.
+- `SIGNAL_INVALID_STATE`(409)는 처리 이력이 없는데 현재 상태에서 액션을 수행할 수 없는 경우에만 사용한다.
 
 ### R-ACTION-002. 일반 태스크 생성
 
@@ -265,6 +274,22 @@ Notion 문서에 남아 있는 `AUTH_UNAUTHENTICATED`, `COMMON_VALIDATION` 표�
 - 경로: `PATCH /api/mobile/tasks/{taskId}/checklist-items/{itemId}`
 - `itemId`는 `taskId`에 속한 항목이어야 한다.
 - 완료 수와 전체 수를 함께 반환해 상세 화면 카운트를 즉시 갱신할 수 있어야 한다.
+
+## 합성/파생 필드 응답 정책
+
+모바일 MVP 응답에는 기존 레거시 테이블에서 직접 조회되는 필드와, 여러 데이터를 조합해 만드는
+파생 필드가 함께 포함된다.
+
+| 필드 | Source | 값이 없을 때 |
+| --- | --- | --- |
+| `materials[]` | `source_refs` + `entity_relations`(task ↔ source_ref) | `[]` |
+| `material_count` | `materials[]` 개수 | `0` |
+| `open_questions[]` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `[]` |
+| `next_action` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `null` |
+| `review_summary` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `null` |
+
+서버는 backing source 또는 확정된 합성 규칙이 없는 값을 임의 생성하지 않는다. 후속 버전에서
+worker 산출물 저장 구조가 확정되면 backing source를 별도 설계한다.
 
 ## Signal 요구사항
 
@@ -300,6 +325,8 @@ Notion 문서에 남아 있는 `AUTH_UNAUTHENTICATED`, `COMMON_VALIDATION` 표�
 - 모든 모바일 기능 API는 인증된 사용자만 접근할 수 있어야 한다.
 - 프로젝트 리소스 접근은 프로젝트 또는 워크스페이스 멤버십/RBAC 기준으로 제한되어야 한다.
 - 인증/인가 실패 응답은 이 저장소의 Standard 에러 응답 규격을 따라야 한다.
+- 프로젝트 단위 role(`bootstrap`의 `projects[].role`, 멤버 조회 응답)은 별도 project 멤버 테이블 없이
+  소속 workspace 멤버십 role로 매핑한다.
 
 ## 보류 항목
 
