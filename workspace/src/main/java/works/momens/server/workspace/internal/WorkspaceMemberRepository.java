@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember, WorkspaceMemberId> {
 
   List<WorkspaceMember> findByWorkspaceId(UUID workspaceId);
+
+  boolean existsByWorkspaceIdAndUserId(UUID workspaceId, UUID userId);
 }
