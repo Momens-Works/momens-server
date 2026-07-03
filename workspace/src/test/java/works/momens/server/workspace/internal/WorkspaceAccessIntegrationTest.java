@@ -66,6 +66,22 @@ class WorkspaceAccessIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(workspaceAccess.listMemberships(workspaceId)).isEmpty();
   }
 
+  @Test
+  void listWorkspaceIdsReturnsOnlyWorkspacesUserBelongsTo() {
+    UUID first = saveWorkspace("momens-first").getId();
+    UUID second = saveWorkspace("momens-second").getId();
+    UUID others = saveWorkspace("momens-others").getId();
+    UUID user = insertUser("multi@momens.works");
+    UUID otherUser = insertUser("other@momens.works");
+    addMember(first, user, "owner");
+    addMember(second, user, "member");
+    addMember(others, otherUser, "owner");
+    entityManager.flush();
+
+    assertThat(workspaceAccess.listWorkspaceIds(user)).containsExactlyInAnyOrder(first, second);
+    assertThat(workspaceAccess.listWorkspaceIds(UUID.randomUUID())).isEmpty();
+  }
+
   private Workspace saveWorkspace(String slug) {
     return workspaceRepository.saveAndFlush(Workspace.builder().name("모멘스").slug(slug).build());
   }
