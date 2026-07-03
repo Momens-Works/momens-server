@@ -148,6 +148,12 @@ Refresh token을 폐기합니다.
 
 로그인 후 앱 진입에 필요한 사용자 정보와 프로젝트 목록을 조회합니다.
 
+- `projects`는 접근 가능한 프로젝트를 생성 최신순으로 담습니다. `role`은 소속 workspace 멤버십 role입니다.
+- `default_project_id`는 접근 가능한 프로젝트 중 가장 최근에 만든 것입니다(2026-07-04 가결정,
+  기획 확인 후 확정).
+- 접근 가능한 프로젝트가 없으면 `200`으로 `default_project_id`는 `null`, `projects`는 빈 배열을
+  반환하고, 빈 화면 처리는 앱이 담당합니다(2026-07-04 가결정, 기획 확인 후 확정).
+
 #### Response 200
 
 ```json
@@ -165,6 +171,20 @@ Refresh token을 폐기합니다.
       "role": "member"
     }
   ]
+}
+```
+
+#### Response 200 (접근 가능한 프로젝트 없음)
+
+```json
+{
+  "me": {
+    "id": "user-uuid",
+    "name": "김민지",
+    "avatar_url": null
+  },
+  "default_project_id": null,
+  "projects": []
 }
 ```
 
