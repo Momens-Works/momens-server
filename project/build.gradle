@@ -12,7 +12,7 @@ dependencies {
 
     // 공유 영속성 베이스(BaseEntity, JPA Auditing)와 공유 에러 계약.
     implementation project(':common')
-    // 접근 가능한 project 목록 조회가 workspace public API(WorkspaceAccess.listWorkspaceIds)를
+    // 접근 가능한 project 목록 조회가 workspace public API(WorkspaceAccess.listUserMemberships)를
     // 사용합니다(module-map 의존 방향). workspaces 테이블 마이그레이션도 이 의존으로 테스트
     // 클래스패스에 올라갑니다(projects.workspace_id FK).
     implementation project(':workspace')

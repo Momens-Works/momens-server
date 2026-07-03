@@ -20,6 +20,7 @@ import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.ProjectSnapshot;
+import works.momens.server.workspace.UserWorkspaceMembership;
 import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceMembership;
 
@@ -42,17 +43,20 @@ class ProjectReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     }
   }
 
-  /** 멤버십 조회를 대신하는 스텁. 테스트가 grant로 넣은 workspace id만 돌려줍니다. */
+  /** 멤버십 조회를 대신하는 스텁. 테스트가 grant로 넣은 workspace 멤버십만 돌려줍니다. */
   static class StubWorkspaceAccess implements WorkspaceAccess {
-    private final Map<UUID, List<UUID>> workspaceIdsByUser = new HashMap<>();
+    private final Map<UUID, List<UserWorkspaceMembership>> membershipsByUser = new HashMap<>();
 
     void grant(UUID userId, UUID workspaceId) {
-      workspaceIdsByUser.computeIfAbsent(userId, ignored -> new ArrayList<>()).add(workspaceId);
+      membershipsByUser
+          .computeIfAbsent(userId, ignored -> new ArrayList<>())
+          .add(new UserWorkspaceMembership(workspaceId, "member"));
     }
 
     @Override
     public boolean isMember(UUID workspaceId, UUID userId) {
-      return workspaceIdsByUser.getOrDefault(userId, List.of()).contains(workspaceId);
+      return membershipsByUser.getOrDefault(userId, List.of()).stream()
+          .anyMatch(membership -> membership.workspaceId().equals(workspaceId));
     }
 
     @Override
@@ -61,8 +65,8 @@ class ProjectReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     }
 
     @Override
-    public List<UUID> listWorkspaceIds(UUID userId) {
-      return workspaceIdsByUser.getOrDefault(userId, List.of());
+    public List<UserWorkspaceMembership> listUserMemberships(UUID userId) {
+      return membershipsByUser.getOrDefault(userId, List.of());
     }
   }
 

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.ProjectSnapshot;
+import works.momens.server.workspace.UserWorkspaceMembership;
 import works.momens.server.workspace.WorkspaceAccess;
 
 @Service
@@ -34,7 +35,10 @@ class ProjectReaderImpl implements ProjectReader {
   @Override
   @Transactional(readOnly = true)
   public List<ProjectSnapshot> listAccessible(UUID userId) {
-    List<UUID> workspaceIds = workspaceAccess.listWorkspaceIds(userId);
+    List<UUID> workspaceIds =
+        workspaceAccess.listUserMemberships(userId).stream()
+            .map(UserWorkspaceMembership::workspaceId)
+            .toList();
     if (workspaceIds.isEmpty()) {
       return List.of();
     }
