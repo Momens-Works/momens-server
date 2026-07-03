@@ -28,4 +28,12 @@ class WorkspaceAccessImpl implements WorkspaceAccess {
         .map(member -> new WorkspaceMembership(member.getUserId(), member.getRole()))
         .toList();
   }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<UUID> listWorkspaceIds(UUID userId) {
+    return workspaceMemberRepository.findByUserId(userId).stream()
+        .map(WorkspaceMember::getWorkspaceId)
+        .toList();
+  }
 }

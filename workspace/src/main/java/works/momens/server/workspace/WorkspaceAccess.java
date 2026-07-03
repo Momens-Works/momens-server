@@ -17,4 +17,7 @@ public interface WorkspaceAccess {
 
   /** workspaceId에 속한 멤버십을 모두 조회합니다. 프로젝트 멤버 목록 조회에 사용합니다(MOM-61). */
   List<WorkspaceMembership> listMemberships(UUID workspaceId);
+
+  /** userId가 멤버인 workspace id를 모두 조회합니다. 접근 가능한 project 목록 조회에 사용합니다(MOM-59). */
+  List<UUID> listWorkspaceIds(UUID userId);
 }
