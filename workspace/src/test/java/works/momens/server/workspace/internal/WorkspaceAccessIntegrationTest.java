@@ -12,6 +12,7 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.workspace.UserWorkspaceMembership;
 import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceMembership;
 
@@ -67,7 +68,7 @@ class WorkspaceAccessIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
-  void listWorkspaceIdsReturnsOnlyWorkspacesUserBelongsTo() {
+  void listUserMembershipsReturnsOnlyWorkspacesUserBelongsToWithRoles() {
     UUID first = saveWorkspace("momens-first").getId();
     UUID second = saveWorkspace("momens-second").getId();
     UUID others = saveWorkspace("momens-others").getId();
@@ -78,8 +79,11 @@ class WorkspaceAccessIntegrationTest extends AbstractPostgresIntegrationTest {
     addMember(others, otherUser, "owner");
     entityManager.flush();
 
-    assertThat(workspaceAccess.listWorkspaceIds(user)).containsExactlyInAnyOrder(first, second);
-    assertThat(workspaceAccess.listWorkspaceIds(UUID.randomUUID())).isEmpty();
+    assertThat(workspaceAccess.listUserMemberships(user))
+        .containsExactlyInAnyOrder(
+            new UserWorkspaceMembership(first, "owner"),
+            new UserWorkspaceMembership(second, "member"));
+    assertThat(workspaceAccess.listUserMemberships(UUID.randomUUID())).isEmpty();
   }
 
   private Workspace saveWorkspace(String slug) {

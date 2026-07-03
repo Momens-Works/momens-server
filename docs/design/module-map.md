@@ -115,8 +115,8 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   `project_owners`는 웹 이관(MOM-35 계열)에서 추가한다.
 - 조회 public API는 `ProjectReader`(workspaceIdOf, findSnapshot, listAccessible)와
   `ProjectSnapshot`이다. projectId가 속한 workspace를 찾는 책임은 이 모듈이 소유한다.
-- 접근 가능한 project 목록은 `workspace`의 `WorkspaceAccess.listWorkspaceIds(userId)`로
-  workspace 스코프를 얻은 뒤 자기 테이블에서 조회한다.
+- 접근 가능한 project 목록은 `workspace`의 `WorkspaceAccess.listUserMemberships(userId)`로
+  workspace 스코프를 가져온 뒤 자기 테이블에서 조회한다.
 - project CRUD API는 아직 없다(MOM-35).
 
 ### memory

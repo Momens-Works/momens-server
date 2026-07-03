@@ -5,6 +5,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import works.momens.server.workspace.UserWorkspaceMembership;
 import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceMembership;
 
@@ -31,9 +32,9 @@ class WorkspaceAccessImpl implements WorkspaceAccess {
 
   @Override
   @Transactional(readOnly = true)
-  public List<UUID> listWorkspaceIds(UUID userId) {
+  public List<UserWorkspaceMembership> listUserMemberships(UUID userId) {
     return workspaceMemberRepository.findByUserId(userId).stream()
-        .map(WorkspaceMember::getWorkspaceId)
+        .map(member -> new UserWorkspaceMembership(member.getWorkspaceId(), member.getRole()))
         .toList();
   }
 }
