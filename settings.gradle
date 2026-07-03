@@ -1,9 +1,10 @@
 rootProject.name = 'momens-server'
 
-// app: 실행·조립 모듈. common: 공유 영속성 베이스. user/auth/workspace: 기능/도메인 모듈.
+// app: 실행·조립 모듈. common: 공유 영속성 베이스. user/auth/workspace/project: 기능/도메인 모듈.
 // 도메인 모듈 목록은 기능이 추가되며 점진적으로 늘립니다.
 include 'app'
 include 'common'
 include 'user'
 include 'auth'
 include 'workspace'
+include 'project'

@@ -1,0 +1,57 @@
+package works.momens.server.project.internal;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import works.momens.server.project.ProjectReader;
+import works.momens.server.project.ProjectSnapshot;
+import works.momens.server.workspace.WorkspaceAccess;
+
+@Service
+@RequiredArgsConstructor
+class ProjectReaderImpl implements ProjectReader {
+
+  private final ProjectRepository projectRepository;
+  private final WorkspaceAccess workspaceAccess;
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<UUID> workspaceIdOf(UUID projectId) {
+    return projectRepository.findByIdAndDeletedAtIsNull(projectId).map(Project::getWorkspaceId);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<ProjectSnapshot> findSnapshot(UUID projectId) {
+    return projectRepository
+        .findByIdAndDeletedAtIsNull(projectId)
+        .map(ProjectReaderImpl::toSnapshot);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<ProjectSnapshot> listAccessible(UUID userId) {
+    List<UUID> workspaceIds = workspaceAccess.listWorkspaceIds(userId);
+    if (workspaceIds.isEmpty()) {
+      return List.of();
+    }
+    return projectRepository
+        .findByWorkspaceIdInAndDeletedAtIsNullOrderByCreatedAtDesc(workspaceIds)
+        .stream()
+        .map(ProjectReaderImpl::toSnapshot)
+        .toList();
+  }
+
+  private static ProjectSnapshot toSnapshot(Project project) {
+    return new ProjectSnapshot(
+        project.getId(),
+        project.getWorkspaceId(),
+        project.getName(),
+        project.getTargetDate(),
+        project.getProgress(),
+        project.getSummary());
+  }
+}
