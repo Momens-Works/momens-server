@@ -60,3 +60,13 @@ Git 워크플로는 GitFlow를 따르고, 커밋·브랜치·PR 형식은 아래
 - 위 머지 규칙은 GitHub ruleset(`protected-branches`)으로 강제됩니다. 현재 ruleset은
   `main`/`develop`에 active 상태이며, rebase merge만 허용하고 필수 체크(`build`,
   `pr-format`)와 리뷰 대화 resolve를 요구합니다.
+
+## 릴리즈 노트
+
+- 릴리즈 노트의 기준은 GitHub Release입니다. 배포 워크플로와는 분리해 운영합니다.
+- 릴리즈 PR은 `develop` → `main`으로 올리고, 머지 후 GitHub Release를 발행합니다.
+- 최초 릴리즈 태그는 `v0.1.0`입니다.
+- GitHub Release 발행 시 `Generate release notes`를 사용합니다. 릴리즈 노트 카테고리는
+  `.github/release.yml`을 따릅니다.
+- GitHub Release가 `published`되면 `release-notes-slack` 워크플로가
+  `SLACK_RELEASE_WEBHOOK_URL` secret의 Incoming Webhook으로 릴리즈 노트를 Slack에 공유합니다.

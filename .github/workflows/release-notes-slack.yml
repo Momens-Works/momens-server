@@ -1,0 +1,57 @@
+name: Release notes Slack notification
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_RELEASE_WEBHOOK_URL }}
+      RELEASE_NAME: ${{ github.event.release.name }}
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      RELEASE_URL: ${{ github.event.release.html_url }}
+      RELEASE_BODY: ${{ github.event.release.body }}
+
+    steps:
+      - name: Post release notes to Slack
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        run: |
+          set -euo pipefail
+
+          title="${RELEASE_NAME:-$RELEASE_TAG}"
+          notes="${RELEASE_BODY:-릴리즈 노트 본문이 비어 있습니다.}"
+
+          jq -n \
+            --arg title "$title" \
+            --arg tag "$RELEASE_TAG" \
+            --arg url "$RELEASE_URL" \
+            --arg notes "$notes" \
+            '{
+              text: ("momens-server " + $tag + " 릴리즈 노트"),
+              blocks: [
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: ("*momens-server " + $title + "*\n<" + $url + "|GitHub Release 보기>")
+                  }
+                },
+                { type: "divider" },
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: (($notes | if length > 2900 then .[0:2900] + "\n\n... 자세한 내용은 GitHub Release에서 확인하세요." else . end))
+                  }
+                }
+              ]
+            }' \
+            | curl -fsS -X POST \
+                -H 'Content-Type: application/json' \
+                --data @- \
+                "$SLACK_WEBHOOK_URL"
