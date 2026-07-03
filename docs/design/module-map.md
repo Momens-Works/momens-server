@@ -108,6 +108,17 @@ repository를 직접 참조하지 않는다.
 이들은 프로젝트 실행/운영 맥락 안에서 함께 움직이고, task/decision/blocker는 retrieval
 projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 때 하위 모듈 분리를 재검토한다.
 
+모듈은 모바일 read 기반(MOM-59)으로 시작했다. 현재 사실:
+
+- `projects` 테이블은 레거시 초기 형상에 모바일 스냅샷 컬럼(target_date, progress, summary)을
+  더한 범위만 만들었다. 제외한 레거시 컬럼(health_status, 카운트 컬럼, metadata, label)과
+  `project_owners`는 웹 이관(MOM-35 계열)에서 추가한다.
+- 조회 public API는 `ProjectReader`(workspaceIdOf, findSnapshot, listAccessible)와
+  `ProjectSnapshot`이다. projectId가 속한 workspace를 찾는 책임은 이 모듈이 소유한다.
+- 접근 가능한 project 목록은 `workspace`의 `WorkspaceAccess.listWorkspaceIds(userId)`로
+  workspace 스코프를 얻은 뒤 자기 테이블에서 조회한다.
+- project CRUD API는 아직 없다(MOM-35).
+
 ### memory
 
 제품 기억 lifecycle을 담당한다.
