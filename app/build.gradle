@@ -25,6 +25,7 @@ dependencies {
     implementation project(':auth')
     implementation project(':workspace')
     implementation project(':project')
+    implementation project(':mobile')
 
     // Core (Boot BOM 관리, 버전 생략)
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'

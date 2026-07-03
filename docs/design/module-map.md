@@ -19,6 +19,7 @@
 | `auth` | OAuth 로그인·JWT·SecurityFilterChain·logout | `auth` |
 | `workspace` | workspace·멤버·초대·RBAC·label 발급 (중심 모듈) | `workspace`·`access`·`label` |
 | `project` | project·milestone·task·decision·blocker 운영 흐름 | 동명 5개 패키지 |
+| `mobile` | 모바일 진입 API. 도메인 public API 조합(얇은 orchestration) | 없음 (신규 표면) |
 | `memory` | 메모리 후보 검토·confirmed memory lifecycle | `memory` |
 | `source` | 외부 연결 lifecycle·provider OAuth·source-ref verify | `source` |
 | `context` | task-memory/source-ref 연결·context API (얇은 orchestration) | `relation` |
@@ -32,6 +33,8 @@
 - `auth` → `user` public API (로그인 시 FindOrCreate·프로필).
 - `workspace`는 RBAC·label을 public API로 제공하고 `project`·`memory`·`source`·`minsu`가 사용한다.
 - `context`는 `project`·`memory`·`source`의 public API와 식별자를 조합하는 얇은 capability다.
+- `mobile`은 `user`, `project`, `workspace`의 public API만 조합한다(bootstrap). 도메인 정책을
+  소유하지 않는다.
 - `retrieval`은 `project`·`memory`의 도메인 write 이후 발행(event 또는 public API)을 받는다.
 - 다른 모듈의 `internal` package 참조와 순환 의존은 금지한다.
 
@@ -118,6 +121,17 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 - 접근 가능한 project 목록은 `workspace`의 `WorkspaceAccess.listUserMemberships(userId)`로
   workspace 스코프를 가져온 뒤 자기 테이블에서 조회한다.
 - project CRUD API는 아직 없다(MOM-35).
+
+### mobile
+
+모바일 앱 진입 API를 담당하는 얇은 orchestration 모듈이다([아키텍처 > 모듈 경계](../rules/architecture.md)).
+
+- `GET /api/mobile/bootstrap`: 내 정보(user), 접근 가능한 project 목록(project), 멤버십
+  role 매핑(workspace)을 조합해 진입 컨텍스트를 내린다(MOM-60).
+- 도메인 정책과 영속성을 소유하지 않는다. 엔티티, repository, 마이그레이션이 없다.
+- 어느 한 도메인의 capability가 아닌 모바일 조합 표면(진입처럼 여러 모듈을 가로지르는 조회)이
+  이 모듈에 온다. 모바일 API 전부를 모으는 곳은 아니며, 도메인 스코프가 분명한 모바일 API(신호,
+  브리프, 태스크)의 소유 모듈은 해당 이슈에서 결정한다.
 
 ### memory
 
