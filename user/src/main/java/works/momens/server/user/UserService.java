@@ -1,5 +1,7 @@
 package works.momens.server.user;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -20,6 +22,13 @@ public interface UserService {
 
   /** 사용자 프로필 조회. 없으면 {@link UserErrorCode#USER_NOT_FOUND}. */
   UserProfile getProfile(UUID userId);
+
+  /**
+   * 여러 사용자의 프로필을 한 번에 조회합니다. 멤버 목록처럼 다른 모듈이 가진 userId 목록에 프로필을 결합할 때 사용합니다(MOM-61).
+   *
+   * <p>없는 id는 에러 없이 결과에서 빠지고(반환 크기는 입력 이하), 반환 순서는 보장되지 않습니다. 순서가 필요하면 호출하는 쪽에서 정렬합니다.
+   */
+  List<UserProfile> getProfiles(Collection<UUID> userIds);
 
   /** 프로필 부분 수정. {@code null} 필드는 변경하지 않습니다. 없으면 {@link UserErrorCode#USER_NOT_FOUND}. */
   UserProfile updateProfile(UUID userId, String name, String jobRole);
