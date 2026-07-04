@@ -149,8 +149,8 @@ Refresh token을 폐기합니다.
 로그인 후 앱 진입에 필요한 사용자 정보와 프로젝트 목록을 조회합니다.
 
 - `projects`는 접근 가능한 프로젝트를 생성 최신순으로 담습니다. `role`은 소속 workspace 멤버십 role입니다.
-- `default_project_id`는 접근 가능한 프로젝트 중 가장 최근에 만든 것입니다(2026-07-04 가결정,
-  기획 확인 후 확정).
+- `default_project_id`는 임의의 프로젝트 1개면 충분하다고 기획이 확인했고(2026-07-04), 서버는
+  접근 가능한 프로젝트 중 가장 최근에 만든 것을 선택합니다.
 - 접근 가능한 프로젝트가 없으면 `200`으로 `default_project_id`는 `null`, `projects`는 빈 배열을
   반환하고, 빈 화면 처리는 앱이 담당합니다(2026-07-04 가결정, 기획 확인 후 확정).
 
@@ -191,6 +191,8 @@ Refresh token을 폐기합니다.
 #### Errors
 
 - `AUTH_UNAUTHORIZED`
+- `AUTH_INVALID_TOKEN`
+- `USER_NOT_FOUND` (유효한 토큰이지만 사용자가 삭제된 경우. `GET /api/me`와 같은 동작)
 
 ## 프로젝트
 
