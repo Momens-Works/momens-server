@@ -49,9 +49,11 @@ class ProjectMemberServiceTest {
   }
 
   @Test
-  void listThrowsForbiddenWhenCallerIsNotWorkspaceMember() {
+  void listThrowsForbiddenWhenCallerIsNotInMembershipSnapshot() {
+    // 접근 검사는 별도 isMember 조회가 아니라 응답에 쓸 멤버십 스냅샷 안에서 판단한다.
     when(projectReader.workspaceIdOf(PROJECT_ID)).thenReturn(Optional.of(WORKSPACE_ID));
-    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(false);
+    when(workspaceAccess.listMemberships(WORKSPACE_ID))
+        .thenReturn(List.of(new WorkspaceMembership(UUID.randomUUID(), "owner")));
 
     assertThatThrownBy(() -> projectMemberService.list(PROJECT_ID, CALLER_ID, null))
         .isInstanceOf(BusinessException.class)
@@ -70,7 +72,7 @@ class ProjectMemberServiceTest {
         profile(secondGyuil, "김규일", "https://a/2.png"),
         profile(firstGyuil, "김규일", "https://a/1.png"));
 
-    List<ProjectMember> members = projectMemberService.list(PROJECT_ID, CALLER_ID, null);
+    List<ProjectMember> members = projectMemberService.list(PROJECT_ID, jinsu, null);
 
     assertThat(members)
         .containsExactly(
@@ -86,19 +88,20 @@ class ProjectMemberServiceTest {
     stubMembers(profile(jinsu, "신진수", null), profile(gyuil, "Gyuil Kim", null));
 
     // 앞뒤 공백은 trim하고, 대소문자를 무시한 부분 일치로 거른다(2026-07-04 가결정).
-    assertThat(projectMemberService.list(PROJECT_ID, CALLER_ID, " gYuIl "))
+    assertThat(projectMemberService.list(PROJECT_ID, jinsu, " gYuIl "))
         .extracting(ProjectMember::id)
         .containsExactly(gyuil);
-    assertThat(projectMemberService.list(PROJECT_ID, CALLER_ID, "진수"))
+    assertThat(projectMemberService.list(PROJECT_ID, jinsu, "진수"))
         .extracting(ProjectMember::id)
         .containsExactly(jinsu);
   }
 
   @Test
   void listReturnsAllMembersForBlankQuery() {
-    stubMembers(profile(UUID.randomUUID(), "신진수", null), profile(UUID.randomUUID(), "김규일", null));
+    UUID jinsu = UUID.randomUUID();
+    stubMembers(profile(jinsu, "신진수", null), profile(UUID.randomUUID(), "김규일", null));
 
-    assertThat(projectMemberService.list(PROJECT_ID, CALLER_ID, "   ")).hasSize(2);
+    assertThat(projectMemberService.list(PROJECT_ID, jinsu, "   ")).hasSize(2);
   }
 
   @Test
@@ -106,7 +109,6 @@ class ProjectMemberServiceTest {
     UUID existing = UUID.randomUUID();
     UUID missing = UUID.randomUUID();
     when(projectReader.workspaceIdOf(PROJECT_ID)).thenReturn(Optional.of(WORKSPACE_ID));
-    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
     when(workspaceAccess.listMemberships(WORKSPACE_ID))
         .thenReturn(
             List.of(
@@ -116,14 +118,14 @@ class ProjectMemberServiceTest {
     when(userService.getProfiles(List.of(existing, missing)))
         .thenReturn(List.of(profile(existing, "신진수", null)));
 
-    assertThat(projectMemberService.list(PROJECT_ID, CALLER_ID, null))
+    assertThat(projectMemberService.list(PROJECT_ID, existing, null))
         .extracting(ProjectMember::id)
         .containsExactly(existing);
   }
 
+  /** profiles를 workspace 멤버로 stub한다. 접근 검사가 이 스냅샷 기준이라 호출자도 profiles 중 하나여야 한다. */
   private void stubMembers(UserProfile... profiles) {
     when(projectReader.workspaceIdOf(PROJECT_ID)).thenReturn(Optional.of(WORKSPACE_ID));
-    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
     List<UUID> memberIds = List.of(profiles).stream().map(UserProfile::id).toList();
     when(workspaceAccess.listMemberships(WORKSPACE_ID))
         .thenReturn(memberIds.stream().map(id -> new WorkspaceMembership(id, "member")).toList());

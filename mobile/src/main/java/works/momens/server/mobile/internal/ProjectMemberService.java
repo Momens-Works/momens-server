@@ -41,16 +41,17 @@ public class ProjectMemberService {
                     new BusinessException(
                         ProjectErrorCode.PROJECT_NOT_FOUND,
                         Map.of("project_id", projectId.toString())));
-    if (!workspaceAccess.isMember(workspaceId, userId)) {
+    // 멤버십은 여기서 한 번만 읽고, 접근 검사와 응답 목록을 같은 스냅샷으로 판단한다(bootstrap의
+    // role 누락 경합과 같은 원칙). isMember로 따로 검사하면 READ_COMMITTED에서는 문장마다 최신
+    // 커밋을 봐서, 검사와 목록 조회 사이에 멤버십이 회수된 사용자가 목록을 받아 갈 수 있다.
+    List<WorkspaceMembership> memberships = workspaceAccess.listMemberships(workspaceId);
+    boolean callerIsMember =
+        memberships.stream().anyMatch(membership -> membership.userId().equals(userId));
+    if (!callerIsMember) {
       throw new BusinessException(
           CommonErrorCode.AUTH_FORBIDDEN, Map.of("project_id", projectId.toString()));
     }
-    // 멤버십은 여기서 한 번만 읽고, 프로필도 이 스냅샷의 userId 목록으로 조회한다(bootstrap의 role 누락
-    // 경합과 같은 원칙). 응답은 프로필 목록 기준이라 두 조회 사이의 불일치로 빈 필드가 생길 구조가 없다.
-    List<UUID> memberIds =
-        workspaceAccess.listMemberships(workspaceId).stream()
-            .map(WorkspaceMembership::userId)
-            .toList();
+    List<UUID> memberIds = memberships.stream().map(WorkspaceMembership::userId).toList();
     // 검색은 이름 부분 일치에 대소문자 무시, 정렬은 이름 오름차순(같으면 id 보조)이다. 명세에 없는 세부라
     // 2026-07-04 가결정으로 구현했고 규칙은 docs/spec/mobile-api.md 프로젝트 멤버 절에 적었다.
     String needle = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
