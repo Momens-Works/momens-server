@@ -31,13 +31,16 @@ public class BootstrapService {
   @Transactional(readOnly = true)
   public BootstrapContext load(UUID userId) {
     UserProfile me = userService.getProfile(userId);
+    // 멤버십은 여기서 한 번만 읽고, project 목록도 이 스냅샷의 workspace id로 조회합니다. 멤버십을
+    // 두 번 읽으면 READ_COMMITTED에서는 문장마다 최신 커밋을 봐서, 두 조회 사이에 멤버십이 회수될
+    // 때 role을 못 찾는 project가 생길 수 있습니다(PR #42 리뷰 반영).
     Map<UUID, String> roleByWorkspaceId =
         workspaceAccess.listUserMemberships(userId).stream()
             .collect(
                 Collectors.toMap(
                     UserWorkspaceMembership::workspaceId, UserWorkspaceMembership::role));
     List<AccessibleProject> projects =
-        projectReader.listAccessible(userId).stream()
+        projectReader.listByWorkspaceIds(roleByWorkspaceId.keySet()).stream()
             .map(
                 snapshot ->
                     new AccessibleProject(
@@ -45,8 +48,9 @@ public class BootstrapService {
                         snapshot.name(),
                         roleByWorkspaceId.get(snapshot.workspaceId())))
             .toList();
-    // 기본 project는 가장 최근에 만든 것(2026-07-04 가결정, 기획 확인 후 확정). listAccessible이
-    // 생성 최신순 정렬을 보장하므로 첫 번째를 쓰고, 하나도 없으면 null과 빈 목록을 그대로 내립니다.
+    // 기본 project는 임의의 1개면 충분하다고 기획이 확인했고(2026-07-04), 구현은 가장 최근에 만든
+    // 것을 선택합니다. listByWorkspaceIds가 생성 최신순 정렬을 보장하므로 첫 번째를 쓰고, 하나도
+    // 없으면 null과 빈 목록을 그대로 내립니다(0개 응답은 2026-07-04 가결정, 기획 확인 후 확정).
     UUID defaultProjectId = projects.isEmpty() ? null : projects.getFirst().id();
     return new BootstrapContext(me, defaultProjectId, projects);
   }
