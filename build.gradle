@@ -34,6 +34,12 @@ subprojects {
         mavenCentral()
     }
 
+    // Spring MVC가 @PathVariable 같은 핸들러 인자 이름을 리플렉션으로 읽을 수 있게 합니다.
+    // Boot 플러그인이 붙는 app은 자동 적용되지만 feature 모듈은 java 플러그인만 써서 명시가 필요합니다.
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs << '-parameters'
+    }
+
     tasks.named('test') {
         useJUnitPlatform()
     }
