@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,8 +46,9 @@ class BootstrapServiceTest {
             List.of(
                 new UserWorkspaceMembership(ownedWorkspace, "owner"),
                 new UserWorkspaceMembership(joinedWorkspace, "member")));
-    // listAccessible은 생성 최신순 정렬을 보장한다(MOM-59). 조합 서비스는 그 순서를 그대로 신뢰한다.
-    when(projectReader.listAccessible(USER_ID))
+    // 멤버십 스냅샷의 workspace id로 project를 조회한다. listByWorkspaceIds는 생성 최신순 정렬을
+    // 보장하고(MOM-59), 조합 서비스는 그 순서를 그대로 신뢰한다.
+    when(projectReader.listByWorkspaceIds(Set.of(ownedWorkspace, joinedWorkspace)))
         .thenReturn(
             List.of(
                 snapshot(newer, joinedWorkspace, "newer"),
@@ -66,11 +68,11 @@ class BootstrapServiceTest {
   void loadReturnsNullDefaultAndEmptyProjectsForUserWithoutProjects() {
     when(userService.getProfile(USER_ID)).thenReturn(profile());
     when(workspaceAccess.listUserMemberships(USER_ID)).thenReturn(List.of());
-    when(projectReader.listAccessible(USER_ID)).thenReturn(List.of());
+    when(projectReader.listByWorkspaceIds(Set.of())).thenReturn(List.of());
 
     BootstrapContext context = bootstrapService.load(USER_ID);
 
-    // 프로젝트가 하나도 없으면 200 응답 재료로 null과 빈 목록을 내린다(2026-07-04 가결정, 기획 확인 후 확정).
+    // 프로젝트가 하나도 없으면 200 응답 재료로 null과 빈 목록을 내린다(0개 응답은 2026-07-04 가결정, 기획 확인 후 확정).
     assertThat(context.defaultProjectId()).isNull();
     assertThat(context.projects()).isEmpty();
   }

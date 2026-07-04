@@ -25,7 +25,8 @@ import works.momens.server.user.UserService;
  *
  * <p>실토큰(auth public testFixtures)과 실제 PostgreSQL로 보안 체인부터 조합 서비스, 응답 shape까지 끝까지 확인합니다. 사용자는 user
  * public API로 만들고, workspace/멤버십/project는 아직 생성 public API가 없어 소유 스키마에 SQL로 시드합니다. 기본 project 선정(가장
- * 최근 생성)과 프로젝트 0개 정책(200, null, 빈 배열)은 2026-07-04 가결정안이며 기획 확인 후 확정합니다.
+ * 최근 생성)은 기획이 임의의 1개면 충분하다고 확인해 준 조건(2026-07-04) 안의 구현 선택이고, 프로젝트 0개 정책(200, null, 빈 배열)은
+ * 2026-07-04 가결정안이며 기획 확인 후 확정합니다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
