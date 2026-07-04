@@ -2,7 +2,9 @@ package works.momens.server.user.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,6 +76,19 @@ class UserServiceIntegrationTest extends AbstractPostgresIntegrationTest {
     UserProfile nameKept = userService.updateProfile(id, null, "Designer");
     assertThat(nameKept.name()).isEqualTo("새이름");
     assertThat(nameKept.jobRole()).isEqualTo("Designer");
+  }
+
+  @Test
+  void getProfilesReturnsOnlyExistingUsers() {
+    UUID kim = userService.findOrCreate("kim@momens.works", "김민지", "https://a/kim.png").id();
+    UUID lee = userService.findOrCreate("lee@momens.works", "이서준", null).id();
+
+    List<UserProfile> profiles = userService.getProfiles(List.of(kim, lee, UUID.randomUUID()));
+
+    // 없는 id는 에러 없이 빠진다(반환 크기는 입력 이하, CrudRepository.findAllById 계약).
+    assertThat(profiles)
+        .extracting(UserProfile::id, UserProfile::name)
+        .containsExactlyInAnyOrder(tuple(kim, "김민지"), tuple(lee, "이서준"));
   }
 
   @Test

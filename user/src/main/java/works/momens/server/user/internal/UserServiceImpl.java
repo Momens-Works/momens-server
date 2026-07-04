@@ -1,5 +1,7 @@
 package works.momens.server.user.internal;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,12 @@ class UserServiceImpl implements UserService {
         .findById(userId)
         .map(UserServiceImpl::toProfile)
         .orElseThrow(() -> notFound(userId));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<UserProfile> getProfiles(Collection<UUID> userIds) {
+    return userRepository.findAllById(userIds).stream().map(UserServiceImpl::toProfile).toList();
   }
 
   @Override
