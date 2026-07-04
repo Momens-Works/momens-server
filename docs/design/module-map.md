@@ -33,8 +33,8 @@
 - `auth` → `user` public API (로그인 시 FindOrCreate·프로필).
 - `workspace`는 RBAC·label을 public API로 제공하고 `project`·`memory`·`source`·`minsu`가 사용한다.
 - `context`는 `project`·`memory`·`source`의 public API와 식별자를 조합하는 얇은 capability다.
-- `mobile`은 `user`, `project`, `workspace`의 public API만 조합한다(bootstrap). 도메인 정책을
-  소유하지 않는다.
+- `mobile`은 `user`, `project`, `workspace`의 public API만 조합한다(bootstrap, 멤버 조회).
+  도메인 정책을 소유하지 않는다.
 - `retrieval`은 `project`·`memory`의 도메인 write 이후 발행(event 또는 public API)을 받는다.
 - 다른 모듈의 `internal` package 참조와 순환 의존은 금지한다.
 
@@ -68,6 +68,8 @@
 - user repository
 - `/me` 프로필 조회/수정
 - FindOrCreate·프로필 read/update public API (로그인 시 `auth`가 사용)
+- 프로필 벌크 조회 public API (`getProfiles`, 멤버 목록처럼 다른 모듈의 userId 목록에 프로필을
+  결합할 때 사용. MOM-61)
 
 `user`와 `auth`는 별도 모듈로 둔다. 레거시는 `auth`가 User 영속을 직접 소유했지만, 신규
 구조에서는 `user`가 엔티티·프로필·public API를 소유하고 `auth`는 그 public API에 의존한다.
@@ -130,6 +132,9 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 
 - `GET /api/mobile/bootstrap`: 내 정보(user), 접근 가능한 project 목록(project), 멤버십
   role 매핑(workspace)을 조합해 진입 컨텍스트를 내린다(MOM-60).
+- `GET /api/mobile/projects/{projectId}/members`: project의 workspace 해석(project), 멤버십
+  스냅샷(workspace), 프로필 결합(user)을 조합해 담당자 선택용 멤버 목록을 내린다. 검색과
+  정렬은 조합 규칙이라 이 모듈이 소유한다(MOM-61).
 - 도메인 정책과 영속성을 소유하지 않는다. 엔티티, repository, 마이그레이션이 없다.
 - 어느 한 도메인의 capability가 아닌 모바일 조합 표면(진입처럼 여러 모듈을 가로지르는 조회)이
   이 모듈에 온다. 모바일 API 전부를 모으는 곳은 아니며, 도메인 스코프가 분명한 모바일 API(신호,

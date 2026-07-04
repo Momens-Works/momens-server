@@ -200,6 +200,15 @@ Refresh token을 폐기합니다.
 
 태스크 담당자 선택에 사용할 프로젝트 멤버 목록을 조회합니다.
 
+- `members`의 범위는 project가 속한 workspace의 멤버십입니다. 별도 project 멤버 테이블을 두지
+  않는 권한 요구사항과 같은 기준입니다.
+- 정렬은 이름 오름차순이고, 같은 이름은 id 오름차순으로 순서를 고정합니다(2026-07-04 가결정).
+- `query`는 앞뒤 공백을 지운 뒤 이름 부분 일치로 거르고 대소문자를 무시합니다. 없거나 공백이면
+  전체 멤버를 반환합니다(2026-07-04 가결정).
+- `avatar_url`은 값이 없어도 `null`로 항상 포함합니다(bootstrap과 동일).
+- 레거시 `GET /workspaces/:id/members`와 달리 email, role, 시각을 내리지 않습니다. 담당자 선택
+  bottom sheet가 쓰는 값(id, 이름, 아바타)만 담는 신규 계약입니다(의도된 차이).
+
 #### Query
 
 | 이름 | 필수 | 설명 |
@@ -222,8 +231,10 @@ Refresh token을 폐기합니다.
 
 #### Errors
 
-- `PROJECT_NOT_FOUND`
-- `AUTH_FORBIDDEN`
+- `AUTH_UNAUTHORIZED`
+- `AUTH_INVALID_TOKEN`
+- `PROJECT_NOT_FOUND` (project가 없거나 삭제된 경우)
+- `AUTH_FORBIDDEN` (project는 있지만 요청 사용자가 소속 workspace의 멤버가 아닌 경우)
 
 ## 시그널
 
