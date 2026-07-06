@@ -1,0 +1,8 @@
+package works.momens.server.mobile.internal;
+
+import java.util.List;
+import java.util.UUID;
+
+/** 보드 카드 한 장. {@code priority}는 모바일 표기(urgent를 high로)로 정규화된 값이다. */
+public record MobileTaskCard(
+    UUID id, String title, List<String> roles, String priority, int materialCount) {}

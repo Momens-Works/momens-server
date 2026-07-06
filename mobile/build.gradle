@@ -22,6 +22,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     // 조합 서비스의 @Transactional(readOnly). 이 모듈은 엔티티가 없어 data-jpa 대신 tx만 둡니다.
     implementation 'org.springframework:spring-tx'
+    // 태스크 생성 요청 body 검증(@Valid, @NotBlank, @Pattern). 검증 실패는 app의 예외 핸들러가
+    // COMMON_VALIDATION_FAILED로 변환합니다(MOM-62).
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
     // OpenAPI 문서화 애너테이션(@Tag/@Operation/@Schema)만 사용합니다. Swagger UI와 공통 설정은
     // 실행과 조립을 맡는 app 모듈이 springdoc starter로 소유합니다(docs/spec/openapi.md).
     implementation 'io.swagger.core.v3:swagger-annotations-jakarta:2.2.52'
