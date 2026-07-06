@@ -1,4 +1,4 @@
-package works.momens.server.workspace.internal;
+package works.momens.server.workspace.label;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
@@ -22,6 +23,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.workspace.LabelAllocator;
+import works.momens.server.workspace.WorkspaceSeedSql;
 
 /**
  * 라벨 발급 동작 검증.
@@ -35,12 +37,12 @@ import works.momens.server.workspace.LabelAllocator;
 class LabelAllocatorIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Autowired private LabelAllocator labelAllocator;
-  @Autowired private WorkspaceRepository workspaceRepository;
   @Autowired private PlatformTransactionManager transactionManager;
+  @Autowired private TestEntityManager entityManager;
 
   @Test
   void allocatesSequentialMomLabelsPerWorkspace() {
-    UUID workspaceId = saveWorkspace("momens-seq").getId();
+    UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-seq");
 
     assertThat(labelAllocator.allocateMomLabel(workspaceId)).isEqualTo("MOM-0001");
     assertThat(labelAllocator.allocateMomLabel(workspaceId)).isEqualTo("MOM-0002");
@@ -49,8 +51,8 @@ class LabelAllocatorIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void keepsSequencesIndependentAcrossWorkspaces() {
-    UUID first = saveWorkspace("momens-a").getId();
-    UUID second = saveWorkspace("momens-b").getId();
+    UUID first = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-a");
+    UUID second = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-b");
 
     assertThat(labelAllocator.allocateMomLabel(first)).isEqualTo("MOM-0001");
     assertThat(labelAllocator.allocateMomLabel(second)).isEqualTo("MOM-0001");
@@ -67,7 +69,8 @@ class LabelAllocatorIntegrationTest extends AbstractPostgresIntegrationTest {
   void allocatesWithoutDuplicatesUnderConcurrency() throws Exception {
     int threads = 20;
     TransactionTemplate tx = new TransactionTemplate(transactionManager);
-    UUID workspaceId = tx.execute(status -> saveWorkspace("momens-concurrent").getId());
+    UUID workspaceId =
+        tx.execute(status -> WorkspaceSeedSql.insertWorkspace(entityManager, "momens-concurrent"));
 
     ExecutorService pool = Executors.newFixedThreadPool(threads);
     try {
@@ -101,11 +104,13 @@ class LabelAllocatorIntegrationTest extends AbstractPostgresIntegrationTest {
       assertThat(labels.stream().sorted().toList()).isEqualTo(expected);
     } finally {
       pool.shutdownNow();
-      tx.executeWithoutResult(status -> workspaceRepository.deleteById(workspaceId));
+      tx.executeWithoutResult(
+          status ->
+              entityManager
+                  .getEntityManager()
+                  .createNativeQuery("DELETE FROM workspaces WHERE id = ?1")
+                  .setParameter(1, workspaceId)
+                  .executeUpdate());
     }
-  }
-
-  private Workspace saveWorkspace(String slug) {
-    return workspaceRepository.saveAndFlush(Workspace.builder().name("모멘스").slug(slug).build());
   }
 }

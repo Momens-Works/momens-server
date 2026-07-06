@@ -7,7 +7,7 @@ import java.util.UUID;
  *
  * <p>{@code project} 모듈이 task를 만들 때 이 인터페이스로 {@code MOM} 라벨을 발급받습니다(MOM-37). 동기 반환값이 필요한 협력이라
  * application event가 아니라 public API 직접 참조로 둡니다(docs/rules/architecture.md). 발급 카운터 테이블과 repository는
- * 모듈 {@code internal}에 숨깁니다.
+ * 하위 도메인 {@code label}에 숨깁니다.
  *
  * <p>지금은 {@code MOM}만 발급합니다. {@code SUG}/{@code MEM}은 memory 모듈 작업이라 그때 별도 메서드로 엽니다.
  */

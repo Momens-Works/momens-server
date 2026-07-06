@@ -1,4 +1,4 @@
-package works.momens.server.workspace.internal;
+package works.momens.server.workspace.access;
 
 import java.util.List;
 import java.util.UUID;

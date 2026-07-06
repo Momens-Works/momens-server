@@ -1,4 +1,4 @@
-package works.momens.server.workspace.internal;
+package works.momens.server.workspace.label;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
