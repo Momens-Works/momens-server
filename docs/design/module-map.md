@@ -19,6 +19,7 @@
 | `auth` | OAuth 로그인·JWT·SecurityFilterChain·logout | `auth` |
 | `workspace` | workspace·멤버·초대·RBAC·label 발급 (중심 모듈) | `workspace`·`access`·`label` |
 | `project` | project·milestone·task·decision·blocker 운영 흐름 | 동명 5개 패키지 |
+| `signal` | 모바일 Signal 원본 조회·사용자 action ledger·Signal action outbox | 신규 |
 | `mobile` | 모바일 진입 API. 도메인 public API 조합(얇은 orchestration) | 없음 (신규 표면) |
 | `memory` | 메모리 후보 검토·confirmed memory lifecycle | `memory` |
 | `source` | 외부 연결 lifecycle·provider OAuth·source-ref verify | `source` |
@@ -35,6 +36,8 @@
 - `context`는 `project`·`memory`·`source`의 public API와 식별자를 조합하는 얇은 capability다.
 - `mobile`은 `user`, `project`, `workspace`의 public API만 조합한다(bootstrap, 멤버 조회).
   도메인 정책을 소유하지 않는다.
+- `signal`은 `project`의 project/workspace 해석 public API와 `workspace`의 RBAC public API를 사용한다.
+  Signal을 task로 수용할 때는 `project`의 task 생성 public API를 사용한다.
 - `retrieval`은 `project`·`memory`의 도메인 write 이후 발행(event 또는 public API)을 받는다.
 - 다른 모듈의 `internal` package 참조와 순환 의존은 금지한다.
 
@@ -157,8 +160,23 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   매핑(urgent를 high로 반환), material_count 기본값도 조합 규칙이라 이 모듈이 소유한다(MOM-62).
 - 도메인 정책과 영속성을 소유하지 않는다. 엔티티, repository, 마이그레이션이 없다.
 - 어느 한 도메인의 capability가 아닌 모바일 조합 표면(진입처럼 여러 모듈을 가로지르는 조회)이
-  이 모듈에 온다. 모바일 API 전부를 모으는 곳은 아니며, 도메인 스코프가 분명한 모바일 API(신호,
-  브리프, 태스크)의 소유 모듈은 해당 이슈에서 결정한다.
+  이 모듈에 온다. 모바일 API 전부를 모으는 곳은 아니며, 도메인 스코프가 분명한 모바일 API는
+  해당 도메인 모듈이 소유한다. Signal API는 `signal` 모듈이 소유한다.
+
+### signal
+
+모바일 Signal 원본과 사용자 처리 흐름을 담당한다.
+
+- `signals` 조회 모델: worker가 생성한 Signal 원본을 프로젝트 스코프로 조회한다.
+- `signal_evidence`: Signal과 `source_refs`의 근거 연결을 읽어 모바일 상세 응답을 조립한다.
+- `signal_actions`: 사용자의 `convert-to-task`, `dismiss` 처리 기록과 멱등성을 소유한다.
+- Signal 목록/상세 및 action API를 소유한다. 경로가 `/api/mobile/*`여도 Signal 도메인 정책과
+  영속성은 `mobile`이 아니라 이 모듈에 둔다.
+- Signal action 결과 outbox 발행 계약을 소유한다. outbox 소비 상태, 재시도, DLQ는 worker 책임이고,
+  retrieval indexing 상태는 retrieval 책임이다.
+
+신규 Signal backing은 `memory_candidates`와 분리한다. 이유와 결과는
+[ADR-0007](../adr/0007-signal-backing-and-module-boundary.md)에 기록한다.
 
 ### memory
 
@@ -221,6 +239,7 @@ ownership과는 분리한다. 레거시 `slackbot`의 표면(Slack 이벤트 처
 | `auth` | `auth`의 세션·로그인·보안 |
 | `workspace` | `workspace`, `access`(RBAC), `label` |
 | `project` | `project`, `milestone`, `task`, `decision`, `blocker` |
+| `signal` | 신규 |
 | `memory` | `memory` |
 | `source` | `source` |
 | `context` | `relation` |

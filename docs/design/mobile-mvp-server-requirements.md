@@ -25,10 +25,11 @@ Momens Mobile은 기존 웹 기능을 축소 이식하는 앱이 아니다. 모�
 - Project Owner가 오늘 확인해야 할 신호를 모바일에서 파악할 수 있어야 한다.
 - Project Owner가 신호의 근거와 민수 제안을 확인할 수 있어야 한다.
 - Project Owner가 신호를 태스크 등록으로 처리할 수 있어야 한다.
-- 처리 결과는 Signal의 프로젝트 단위 상태와 프로젝트 맥락에 반영되어야 한다.
+- 처리 결과는 Signal의 프로젝트 단위 처리 이력과 프로젝트 맥락에 반영되어야 한다.
 - Project Owner가 프로젝트 태스크를 생성하고, 상세를 확인하고, 체크리스트를 토글하고, 기본 정보를
   수정할 수 있어야 한다.
 - 태스크 생성 이후 retrieval projection은 api-server가 직접 쓰지 않고 worker가 처리할 수 있어야 한다.
+- Signal 발생 시 모바일 사용자가 알 수 있도록 push notification을 보낼 수 있어야 한다.
 
 ## Non-goals
 
@@ -42,12 +43,13 @@ Momens Mobile은 기존 웹 기능을 축소 이식하는 앱이 아니다. 모�
 - 모든 원천 도구 알림을 그대로 모은 활동 피드
 - Share
 - Ask Owner
-- Push notification
+- Signal 발생 외 push notification
 - Keep Watching
 - Signal record-decision 액션
 - Signal resolve 액션
 - Signal snooze 액션
 - 관련자료 상세 전용 API
+- task 생성, Signal 삭제(dismiss), task 상태 변경 push notification
 - worker 내부 재시도/DLQ 저장 방식 상세설계
 - DB 컬럼, index, FK, Java public API, 패키지 구조 등 구현 상세설계
 
@@ -56,6 +58,7 @@ Momens Mobile은 기존 웹 기능을 축소 이식하는 앱이 아니다. 모�
 | 용어 | 의미 |
 | --- | --- |
 | Signal / 신호 | 프로젝트 목표, 일정, 범위, 품질, 의사결정, 실행 흐름에 영향을 줄 수 있어 사람이 검토해야 하는 변화 |
+| Signal 표시 라벨 | 화면에서 Signal type을 묶어 보여주는 라벨. `risk`/`change`는 `Needs action`, `decision`은 `Needs review`, `question`은 `Needs decision`으로 표현한다. 처리 상태나 목록 필터가 아니다 |
 | Evidence / 근거 | 신호 판단을 뒷받침하는 출처 기반 정보 |
 | Minsu draft | 민수가 생성한 사용자 확정 액션용 초안. 최종 task/decision이 아니다 |
 | Minsu suggestion | 신호를 바탕으로 민수가 제안하는 다음 행동 |
@@ -73,17 +76,17 @@ api-server는 사용자 확정 액션의 transactional owner다.
 api-server는 다음을 책임진다.
 
 - 모바일 조회 API 제공
-- worker가 생성한 Signal과 Minsu draft 조회
+- worker가 생성한 Signal 조회와 convert 기본값 제공
 - 사용자 확정 액션 처리
 - 최종 task 생성
-- 프로젝트 단위 Signal 처리 상태 반영
+- 프로젝트 단위 Signal 처리 이력 반영
 - projection 처리를 위한 outbox 이벤트 발행
-- outbox 이벤트 멱등키 생성
+- api-server가 발행하는 outbox 이벤트 멱등키 생성
 
 api-server는 다음을 직접 수행하지 않는다.
 
 - Signal 생성/감지
-- Minsu draft 생성
+- 풍부한 Minsu suggestion/draft 생성
 - `retrieval_documents` 직접 write
 - `retrieval_events` 직접 write
 - retrieval 서버 직접 호출
@@ -96,7 +99,7 @@ worker는 Signal 생성과 후속 projection 처리를 책임진다.
 worker는 다음을 책임진다.
 
 - 원천 이벤트 기반 Signal 생성
-- Minsu draft 생성
+- 풍부한 Minsu suggestion/draft 생성
 - api-server가 발행한 outbox 이벤트 소비
 - retrieval projection write
 - projection write 재시도
@@ -154,15 +157,16 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 
 | 영역 | 기능 | 우선순위 | 1차 범위 | 비고 |
 | --- | --- | --- | --- | --- |
-| Mobile Signal | Signal 목록/상세 조회, convert-to-task | MVP | 포함 | 최신 Figma 기준 핵심 흐름 |
+| Mobile Signal | Signal 목록/상세 조회, convert-to-task, dismiss | MVP | 포함 | 최신 Figma 기준 핵심 흐름 |
 | Mobile Brief | 프로젝트 브리프 조회 | MVP | 포함 | 모바일 홈 역할 |
 | Mobile Task | 태스크 보드/생성/상세/수정/체크리스트 토글 | MVP | 포함 | 프로젝트 탭 핵심 흐름 |
 | Mobile API Contract | `/api/mobile/*`, API-Version, 표준 에러, snake_case, no wrapper | 필수 | 포함 | 모바일팀 병렬 개발을 위한 계약 |
 | Auth / Bootstrap | 기존 인증 API 재사용, 모바일 bootstrap | 필수 | 포함 | 앱 진입 필수 |
-| Projection / Outbox | convert-to-task 이후 worker projection 연계 | 필수 | 포함 | api-server 직접 retrieval write 금지 |
+| Projection / Outbox | Signal action 이후 worker projection/후속 처리 연계 | 필수 | 포함 | api-server 직접 retrieval write 금지 |
+| Notification | Signal 발생 push notification | 필수 | 포함 | task 생성/Signal 삭제/task 상태 변경 알림은 MVP 이후 |
 | Web API Migration | workspace/project/milestone/task/decision/blocker 등 기존 웹 API 이관 | 선택 | 제외 | 로드맵 단계 C |
 | Legacy Retirement | 레거시 서버 폐기, DB schema ownership 이전 | 선택 | 제외 | 로드맵 단계 D |
-| 후속 Signal 액션 | record-decision, resolve, snooze, keep-watching | 선택 | 제외 | 로드맵에는 남아 있으나 최신 MVP에서는 제외 |
+| 후속 Signal 흐름 | 처리된 Signal inbox, record-decision, resolve, snooze, keep-watching | 선택 | 제외 | 삭제 처리한 Signal 다시 보기와 후속 액션은 MVP 이후 |
 
 ## 모바일 조회 요구사항
 
@@ -184,19 +188,22 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 
 - 경로: `GET /api/mobile/projects/{projectId}/signals`
 - 신호 목록은 프로젝트 스코프를 기준으로 한다.
-- `needs_action`, `completed` 필터를 지원해야 한다.
-- 기본 필터는 `needs_action`이다.
+- MVP 목록은 아직 처리되지 않은 Signal만 반환한다.
+- 처리된 Signal(`convert-to-task` 또는 `dismiss`)을 다시 조회하거나 필터링하는 흐름은 MVP에서 제공하지 않는다.
 - 목록 응답은 신호 카드 렌더링에 필요한 정보를 포함해야 한다.
-- 목록 응답은 필터별 개수를 포함해야 한다.
-- 목록 응답은 type, title, impact, Minsu suggestion, 처리 상태를 표현할 수 있어야 한다.
+- 목록 응답은 type, title, impact, Minsu suggestion을 표현할 수 있어야 한다.
+- impact와 Minsu suggestion은 worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있다.
+- 화면의 `Needs action`, `Needs review`, `Needs decision` 라벨은 Signal type에서 파생한다.
 
 ### R-READ-002. 신호 상세 조회
 
 서버는 신호 1건의 상세를 조회할 수 있어야 한다.
 
 - 경로: `GET /api/mobile/signals/{signalId}`
-- 상세 응답은 신호 본문, 근거 목록, Minsu suggestion, `convert-to-task` primary action, 현재 처리
-  상태를 표현할 수 있어야 한다.
+- 상세 응답은 신호 본문(description), 근거 목록, Minsu suggestion, 가능한 action(`convert-to-task`, `dismiss`)을
+  표현할 수 있어야 한다.
+- 상세 응답의 impact와 Minsu suggestion은 worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있다.
+- 상세 화면의 `Needs action` 등 상단 라벨은 처리 상태가 아니라 Signal type 기반 표시 라벨이다.
 - 근거는 원천 도구를 모두 열지 않아도 사용자가 판단할 수 있는 형태로 제공되어야 한다.
 
 ### R-READ-003. 프로젝트 브리프 조회
@@ -243,14 +250,27 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 
 - 경로: `POST /api/mobile/signals/{signalId}/actions/convert-to-task`
 - 서버는 최종 task를 생성해야 한다.
-- 서버는 Signal 처리 상태를 `completed`로 반영해야 한다.
+- 서버는 Signal이 처리되었음을 기록하고, 이후 MVP Signal 목록에서 제외해야 한다.
 - 서버는 projection 처리를 위한 outbox 이벤트를 발행해야 한다.
-- task 생성, Signal 처리 상태 반영, outbox 이벤트 발행은 사용자 관점에서 일관되게 처리되어야 한다.
+- task 생성, Signal 처리 이력 반영, outbox 이벤트 발행은 사용자 관점에서 일관되게 처리되어야 한다.
 - 같은 신호에 대한 같은 액션 재시도는 중복 task를 만들지 않아야 한다.
 - 이미 처리된 신호에 같은 액션을 재요청하면 `200`으로 기존 task 결과를 멱등하게 반환해야 한다.
-- `SIGNAL_INVALID_STATE`(409)는 처리 이력이 없는데 현재 상태에서 액션을 수행할 수 없는 경우에만 사용한다.
+- 이미 다른 action으로 처리된 신호에 요청하면 `SIGNAL_INVALID_STATE`(409)를 반환한다.
 
-### R-ACTION-002. 일반 태스크 생성
+### R-ACTION-002. 신호 삭제(dismiss)
+
+서버는 사용자가 제안된 Signal을 MVP 흐름에서 수용하지 않겠다고 표시할 수 있어야 한다.
+
+- 경로: `POST /api/mobile/signals/{signalId}/actions/dismiss`
+- 모바일 화면의 버튼 라벨은 `삭제`지만, 서버 action 이름은 `dismiss`다.
+- 서버는 Signal이 처리되었음을 기록하고, 이후 MVP Signal 목록에서 제외해야 한다.
+- dismiss는 물리 삭제가 아니며 Signal 자체가 잘못됐다고 확정하는 것도 아니다. 현재 사용자가 이 Signal을
+  task로 전환하지 않고 MVP 목록에서 삭제 처리하는 액션이다.
+- 같은 신호에 대한 같은 dismiss 재시도는 멱등하게 `200`으로 처리한다.
+- 이미 다른 action으로 처리된 신호에 요청하면 `SIGNAL_INVALID_STATE`(409)를 반환한다.
+- 삭제 처리한 Signal을 다시 보는 inbox 흐름은 MVP 이후 요구사항이다.
+
+### R-ACTION-003. 일반 태스크 생성
 
 서버는 태스크 탭의 플로팅 버튼에서 일반 태스크를 생성할 수 있어야 한다.
 
@@ -260,7 +280,7 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 - 생성된 task는 기본적으로 `todo` 그룹에 표시되어야 한다.
 - Signal에서 task를 생성하는 `convert-to-task`와 구분해야 한다.
 
-### R-ACTION-003. 태스크 수정
+### R-ACTION-004. 태스크 수정
 
 서버는 태스크 상세 상단 연필 아이콘에서 태스크를 수정할 수 있어야 한다.
 
@@ -270,7 +290,7 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 - 담당자 제거는 `assignee_id: null`로 표현한다.
 - 완료기준 수정은 기존 항목 제목 수정, 새 항목 추가, 기존 항목 삭제를 처리할 수 있어야 한다.
 
-### R-ACTION-004. 태스크 체크리스트 토글
+### R-ACTION-005. 태스크 체크리스트 토글
 
 서버는 태스크 상세의 체크박스 완료 상태를 변경할 수 있어야 한다.
 
@@ -297,13 +317,21 @@ worker 산출물 저장 구조가 확정되면 backing source를 별도 설계�
 ## Signal 요구사항
 
 - Signal은 모바일 API가 안정적으로 조회하고 액션 대상으로 참조할 수 있는 형태로 저장되어야 한다.
-- Signal 생성과 Minsu draft 생성은 worker가 담당해야 한다.
+- Signal 생성은 worker가 담당해야 한다.
+- 풍부한 Minsu suggestion/draft 생성은 worker/Minsu 산출물로 후속 확장하되, MVP convert 기본값은
+  Signal title 기반 최소 초안으로 제공할 수 있어야 한다.
 - Signal type은 `risk`, `decision`, `change`, `question`을 지원해야 한다.
 - VOC는 MVP에서 독립 Signal type으로 두지 않고 `change`의 하위 성격으로 표현해야 한다.
 - Signal은 사용자가 어떤 검토를 해야 하는지 표현할 수 있어야 한다.
-- Signal은 프로젝트 단위 처리 상태를 가질 수 있어야 한다.
-- Signal 처리 상태는 사용자별이 아니라 프로젝트 단위로 반영되어야 한다.
-- 모바일 MVP의 Signal 처리 상태는 최소 `needs_action`, `completed`를 표현할 수 있어야 한다.
+- Signal description은 상세 화면의 본문으로 제공되어야 한다.
+- 화면 표시 라벨은 Signal type에서 파생한다. `risk`/`change`는 `Needs action`, `decision`은
+  `Needs review`, `question`은 `Needs decision`이다.
+- Signal 표시 라벨은 처리 상태가 아니며, MVP 목록 필터로 제공하지 않는다.
+- Signal은 프로젝트 단위 처리 이력을 가질 수 있어야 한다.
+- Signal 처리 여부는 사용자별이 아니라 프로젝트 단위로 반영되어야 한다.
+- 모바일 MVP의 Signal 목록은 처리되지 않은 Signal만 반환하며, 처리된 Signal을 다시 보는 흐름은 제공하지 않는다.
+- MVP에서 Signal을 처리하는 action은 `convert-to-task`와 `dismiss`다. 화면의 `삭제` 버튼은 `dismiss` action으로
+  처리한다.
 - Signal 상세는 하나 이상의 근거를 표현할 수 있어야 한다.
 - Signal은 Minsu draft를 가질 수 있어야 한다.
 
@@ -311,17 +339,34 @@ worker 산출물 저장 구조가 확정되면 backing source를 별도 설계�
 
 - Minsu draft는 최종 task/decision이 아니라 사용자 확정 액션용 초안이다.
 - Minsu draft는 `convert-to-task` 실행 시 기본값으로 사용될 수 있어야 한다.
+- worker/Minsu가 풍부한 draft를 아직 생산하지 않으면 서버는 Signal title 기반 최소 초안(`roles: []`,
+  `priority: medium`)을 제공할 수 있다.
 - 사용자의 확정 액션이 있기 전까지 Minsu draft는 프로젝트의 확정된 기억이나 실행 항목으로 간주하지 않는다.
 
 ## Outbox 요구사항
 
 - api-server는 projection write를 직접 수행하지 않고 outbox 이벤트를 발행해야 한다.
 - outbox 이벤트는 task 생성 같은 사용자 확정 액션의 결과를 worker가 처리할 수 있게 해야 한다.
-- api-server는 outbox 이벤트 멱등키를 서버에서 생성해야 한다.
+- api-server는 자신이 발행하는 outbox 이벤트의 멱등키를 서버에서 생성해야 한다.
 - 클라이언트는 모바일 MVP에서 `Idempotency-Key` 헤더를 보낼 필요가 없다.
 - 멱등키는 같은 Signal에 대한 같은 액션이 중복 처리되지 않도록 생성되어야 한다.
-- MVP에서 필요한 이벤트는 최소 `mobile.signal.task_created`다.
+- MVP에서 필요한 이벤트는 최소 다음 4개다.
+  - `signal.created`: Signal 발생. producer=worker, `aggregate_type=signal`, `aggregate_id=signal_id`,
+    payload `{}`.
+  - `task.created`: task 생성. producer=api-server, `aggregate_type=task`, `aggregate_id=task_id`, payload
+    `{ "origin_type": "manual|signal", "origin_signal_id": null|"<signal_id>" }`.
+  - `signal.converted_to_task`: Signal을 task로 수용. producer=api-server, `aggregate_type=signal`,
+    `aggregate_id=signal_id`, payload `{ "task_id": "<task_id>" }`.
+  - `signal.dismissed`: Signal 삭제(dismiss). producer=api-server, `aggregate_type=signal`, `aggregate_id=signal_id`,
+    payload `{}`.
 - worker의 소비 상태, 재시도, DLQ 저장 방식은 이 문서에서 확정하지 않는다.
+
+## Push notification 요구사항
+
+- MVP에서 push notification은 Signal 발생 알림까지만 포함한다.
+- task 생성, Signal 삭제(dismiss), task 상태 변경에 대한 push notification은 MVP 이후 요구사항이다.
+- Signal 발생 알림은 worker가 Signal backing을 생성한 뒤 사용할 수 있는 이벤트를 기준으로 한다.
+- 모바일 앱에서 이미 처리된 Signal을 다시 보는 inbox 흐름은 MVP 이후 요구사항이다.
 
 ## 권한 요구사항
 
@@ -337,10 +382,10 @@ worker 산출물 저장 구조가 확정되면 backing source를 별도 설계�
 
 - `Keep Watching` 액션의 사용자 플로우와 API 포함 여부
 - `record-decision`, `resolve`, `snooze`의 후속 모바일 사용자 플로우와 API 포함 여부
-- Signal 처리 상태의 상세 저장 구조
-- Signal 저장 테이블의 상세 스키마
-- Signal evidence 저장 테이블의 상세 스키마
-- Outbox 테이블의 상세 스키마
+- Signal 처리 이력의 내부 저장 구조
+- Signal 저장 테이블의 상세 스키마(이 문서는 제품/API 요구사항만 다루며, DB 상세 스키마는 별도 설계 산출물에서 관리한다)
+- Signal evidence 저장 테이블의 상세 스키마(이 문서는 제품/API 요구사항만 다루며, DB 상세 스키마는 별도 설계 산출물에서 관리한다)
+- Outbox 테이블의 상세 스키마(이 문서는 제품/API 요구사항만 다루며, DB 상세 스키마는 별도 설계 산출물에서 관리한다)
 - worker outbox 소비 상태, 재시도, DLQ 설계
 - 태스크 상세 확장 필드가 비어 있을 때의 구체 응답 값 정책
 - bootstrap의 project 0개 응답 정책의 확정(R-READ-000의 2026-07-04 가결정안으로 구현했고, 기획
@@ -351,17 +396,16 @@ worker 산출물 저장 구조가 확정되면 backing source를 별도 설계�
 
 - Notion 일부 문서에는 `/me`를 새 서버로 라우팅한다고 남아 있으나, 현재 저장소의 ADR-0006 기준은
   `/me` alias 폐기와 `/api` 단일화다. 이 문서는 저장소 기준을 따른다.
-- Notion 일부 문서에는 모바일 Signal 액션 API가 여러 개 남아 있으나, 최신 Figma 기준 MVP Signal
-  액션은 `convert-to-task` 하나다. `record-decision`, `resolve`, `snooze`, `keep-watching`은 MVP에서
+- Notion 일부 문서에는 모바일 Signal 액션 API가 여러 개 남아 있으나, 최신 MVP Signal 액션은
+  `convert-to-task`와 `dismiss`다. `record-decision`, `resolve`, `snooze`, `keep-watching`은 MVP에서
   제외한다.
 - Notion 일부 문서에는 projection write를 api-server 트랜잭션에 포함하는 표현이 있으나, 최신 합의는
   api-server가 outbox 이벤트를 발행하고 worker가 projection write를 담당하는 구조다.
 
 ## Proto 정합성 메모
 
-- `momens-proto`에는 현재 Signal 전용 proto message/service가 없다. MVP에서 worker가 생성한 Signal을
-  api-server가 조회·액션 대상으로 참조해야 하므로, Signal을 proto 기반 cross-service contract로
-  교환할지, 공유 DB schema와 HTTP API 계약으로만 다룰지는 후속 설계에서 확정해야 한다.
+- `momens-proto`에는 현재 Signal 전용 proto message/service가 없다. 내부 서버 간 도메인 계약 정의가
+  필요하면 proto 정의를 두고, PR 단위로 `@server` 리뷰 후 관련 서버가 최신화한다.
 - `momens.retrieval.v1.RetrievalEvent`는 worker가 publish하고 retrieval이 polling하는 dedicated
   read-model event로 정의되어 있다. api-server가 projection write를 직접 하지 않고 outbox를 통해
   worker에 넘기는 최신 책임 경계와 충돌하지 않는다.

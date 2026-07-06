@@ -33,9 +33,20 @@
 | 이름 | 값 |
 | --- | --- |
 | `type` | `risk`, `decision`, `change`, `question` |
-| `status` | `needs_action`, `completed` |
-| `filter` | `needs_action`, `completed` |
+| `action_command` | `convert-to-task`, `dismiss` |
+| `action` | `convert_to_task`, `dismiss` |
 | `primary_action` | `convert-to-task` |
+
+`action_command`는 상세 응답의 `actions[]`와 path segment에 쓰는 명령 값입니다. `action`은 action 처리 결과와
+저장 ledger의 enum 값입니다.
+
+Signal type 기반 화면 라벨은 앱이 다음처럼 파생합니다. 이 라벨은 처리 상태나 목록 필터가 아닙니다.
+
+| type | 화면 라벨 |
+| --- | --- |
+| `risk`, `change` | `Needs action` |
+| `decision` | `Needs review` |
+| `question` | `Needs decision` |
 
 ### Task
 
@@ -242,11 +253,14 @@ Refresh token을 폐기합니다.
 
 프로젝트의 시그널 목록을 조회합니다.
 
-#### Query
+MVP에서는 아직 처리되지 않은 시그널만 반환합니다. `convert-to-task` 또는 `dismiss`로 처리된 시그널을
+다시 보는 inbox/필터 흐름은 MVP 이후로 둡니다.
 
-| 이름 | 필수 | 설명 |
-| --- | --- | --- |
-| `filter` | 아니오 | `needs_action`, `completed`. 기본값은 `needs_action` |
+카드의 `Needs action`, `Needs review`, `Needs decision` 라벨은 응답의 `type`에서 앱이 파생합니다. 서버가
+별도 처리 상태 필드를 내려주지 않습니다.
+
+`impact`, `minsu_suggestion`은 worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. 서버는 근거 없는
+문구를 임의 생성하지 않습니다.
 
 #### Response 200
 
@@ -254,17 +268,11 @@ Refresh token을 폐기합니다.
 {
   "title": "오늘 확인해야 할 시그널",
   "description": "프로젝트의 의사결정에 영향을 줄 수 있는 변화입니다.",
-  "selected_filter": "needs_action",
-  "filters": [
-    { "key": "needs_action", "label": "확인 필요", "count": 4 },
-    { "key": "completed", "label": "확인 완료", "count": 2 }
-  ],
   "signals": [
     {
       "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
       "project_id": "30d9e9fe-f43b-4097-a88e-dc19f0a5b025",
       "type": "risk",
-      "status": "needs_action",
       "title": "Android 13+ 권한 요청 플로우에서 이탈 가능성 발견",
       "impact": "MVP 완료율과 온보딩 품질에 영향을 줄 수 있습니다.",
       "minsu_suggestion": "내용이 들어갈 공간입니다"
@@ -275,12 +283,16 @@ Refresh token을 폐기합니다.
 
 #### Errors
 
+- `AUTH_UNAUTHORIZED`
+- `AUTH_INVALID_TOKEN`
 - `PROJECT_NOT_FOUND`
 - `AUTH_FORBIDDEN`
 
 ### GET /api/mobile/signals/{signalId}
 
 시그널 상세 bottom sheet에 필요한 정보를 조회합니다.
+
+상세 상단의 `Needs action` 등 라벨은 Signal type 기반 표시 라벨이며, 처리 상태가 아닙니다.
 
 #### Response 200
 
@@ -292,9 +304,8 @@ Refresh token을 폐기합니다.
     "name": "Q2 Activation Readiness"
   },
   "type": "risk",
-  "status": "needs_action",
-  "status_label": "확인 필요",
   "title": "Android 13+ 권한 요청 플로우에서 이탈 가능성 발견",
+  "description": "Android 13 이상에서 권한 요청 타이밍이 늦어져 사용자가 기능 가치를 이해하기 전에 이탈할 수 있습니다.",
   "impact": "MVP 완료율과 온보딩 품질에 영향을 줄 수 있습니다.",
   "evidence": [
     {
@@ -318,12 +329,19 @@ Refresh token을 폐기합니다.
       "priority": "medium"
     }
   },
+  "actions": ["convert-to-task", "dismiss"],
   "primary_action": "convert-to-task"
 }
 ```
 
+`description`은 Signal 상세 본문입니다. `impact`와 `minsu.suggestion`은 worker/Minsu가 아직 생산하지 않았으면
+`null`일 수 있습니다. `minsu.task_draft`는 worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안을
+제공할 수 있습니다.
+
 #### Errors
 
+- `AUTH_UNAUTHORIZED`
+- `AUTH_INVALID_TOKEN`
 - `SIGNAL_NOT_FOUND`
 - `AUTH_FORBIDDEN`
 
@@ -354,7 +372,7 @@ Refresh token을 폐기합니다.
   },
   "signal": {
     "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
-    "status": "completed"
+    "action": "convert_to_task"
   }
 }
 ```
@@ -372,20 +390,61 @@ Refresh token을 폐기합니다.
   },
   "signal": {
     "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
-    "status": "completed"
+    "action": "convert_to_task"
   }
 }
 ```
 
 #### Errors
 
+- `AUTH_UNAUTHORIZED`
+- `AUTH_INVALID_TOKEN`
 - `SIGNAL_NOT_FOUND`
 - `SIGNAL_INVALID_STATE`
 - `COMMON_VALIDATION_FAILED`
 - `AUTH_FORBIDDEN`
 
-`SIGNAL_INVALID_STATE`(409)는 처리 이력이 없는데 현재 상태에서 전환할 수 없는 경우에만 반환합니다.
-이미 전환된 신호의 재요청은 위 `200` 멱등 응답으로 처리합니다.
+### POST /api/mobile/signals/{signalId}/actions/dismiss
+
+제안된 시그널을 MVP 흐름에서 수용하지 않고 목록에서 삭제 처리합니다. 모바일 화면의 버튼 라벨은 `삭제`지만
+서버 action 이름은 `dismiss`입니다. 이 액션은 물리 삭제가 아니고 시그널이 잘못됐다고 확정하는 것도 아니라,
+사용자가 현재 시그널을 task로 전환하지 않겠다는 처리 기록입니다. 삭제 처리한 시그널을 다시 보는 inbox
+흐름은 MVP 이후로 둡니다.
+
+#### Response 200
+
+```json
+{
+  "signal": {
+    "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
+    "action": "dismiss"
+  }
+}
+```
+
+#### Response 200 (이미 같은 액션으로 처리된 신호 재요청)
+
+같은 신호에 dismiss를 재요청하면 같은 결과를 멱등하게 반환합니다.
+
+```json
+{
+  "signal": {
+    "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
+    "action": "dismiss"
+  }
+}
+```
+
+#### Errors
+
+- `AUTH_UNAUTHORIZED`
+- `AUTH_INVALID_TOKEN`
+- `SIGNAL_NOT_FOUND`
+- `SIGNAL_INVALID_STATE`
+- `AUTH_FORBIDDEN`
+
+`SIGNAL_INVALID_STATE`(409)는 이미 다른 액션으로 처리된 Signal에 요청하거나, 현재 상태에서 요청한 액션을
+수행할 수 없는 경우에 반환합니다. 같은 액션 재요청은 위 `200` 멱등 응답으로 처리합니다.
 
 ## 브리프
 
