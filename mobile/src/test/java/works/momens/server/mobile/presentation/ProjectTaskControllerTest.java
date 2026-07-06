@@ -124,6 +124,25 @@ class ProjectTaskControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"title\":\"제목\",\"roles\":[\"pm\"]}"))
         .andExpect(status().isBadRequest());
+
+    // 빈 배열은 @NotEmpty, null 원소는 @NotBlank로 걸러 400을 반환한다(DB NOT NULL로 넘겨 500이 나지 않게).
+    mockMvc
+        .perform(
+            post("/api/mobile/projects/{projectId}/tasks", PROJECT_ID)
+                .principal(principal)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"제목\",\"roles\":[],\"priority\":\"medium\"}"))
+        .andExpect(status().isBadRequest());
+
+    mockMvc
+        .perform(
+            post("/api/mobile/projects/{projectId}/tasks", PROJECT_ID)
+                .principal(principal)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"제목\",\"roles\":[null],\"priority\":\"medium\"}"))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
