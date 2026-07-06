@@ -41,7 +41,7 @@ public record TaskBoardResponse(
       @Schema(description = "제목") String title,
       @Schema(description = "역할 목록") List<String> roles,
       @Schema(description = "우선순위. low/medium/high", example = "low") String priority,
-      @Schema(description = "관련자료 수") int materialCount) {}
+      @Schema(description = "관련 자료 수") int materialCount) {}
 
   public static TaskBoardResponse from(List<MobileTaskGroup> groups) {
     return new TaskBoardResponse(

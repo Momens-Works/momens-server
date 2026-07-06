@@ -26,7 +26,7 @@ import works.momens.server.project.TaskReader;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
- * 태스크 보드 조회와 생성 조합 규칙 검증. 도메인 모듈 public API는 mock으로 두고, 조합 규칙(권한 검사 순서, 그룹 구성, priority 표기,
+ * 태스크 보드 조회와 생성 조합 규칙 검증. 도메인 모듈 public API는 mock으로 두고, 조합 규칙(권한 검사 순서, 그룹 구성, priority 매핑,
  * material_count 기본값, 생성 command 전달)만 확인합니다.
  */
 @ExtendWith(MockitoExtension.class)
