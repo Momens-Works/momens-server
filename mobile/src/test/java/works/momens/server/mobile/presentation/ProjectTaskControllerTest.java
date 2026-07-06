@@ -167,6 +167,20 @@ class ProjectTaskControllerTest {
         .andExpect(status().isBadRequest());
   }
 
+  @Test
+  void createTaskRejectsDuplicateRoles() throws Exception {
+    // 생성 화면 역할 칩이 중복 선택 불가라, 같은 role이 두 번 오면 400으로 막는다.
+    mockMvc
+        .perform(
+            post("/api/mobile/projects/{projectId}/tasks", PROJECT_ID)
+                .principal(principal)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"title\":\"제목\",\"roles\":[\"android\",\"android\"],\"priority\":\"medium\"}"))
+        .andExpect(status().isBadRequest());
+  }
+
   @TestConfiguration
   static class ApiVersioningTestConfig implements WebMvcConfigurer {
     @Override

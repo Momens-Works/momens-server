@@ -525,7 +525,7 @@ Refresh token을 폐기합니다.
 }
 ```
 
-title, roles, priority 모두 필수입니다(2026-07-06 기획 확정). roles는 하나 이상 선택해야 하고 각 값은 pm, design, backend, frontend, android, qa 중 하나입니다. priority는 low, medium, high 중 하나입니다. 셋 중 하나라도 비면 COMMON_VALIDATION_FAILED로 응답합니다. 생성한 태스크는 todo 그룹에서 시작합니다. roles는 레거시 tasks에 없는 신규 속성이라 별도 테이블 task_roles에 저장합니다.
+title, roles, priority 모두 필수입니다(2026-07-06 기획 확정). roles는 하나 이상 선택해야 하고 각 값은 pm, design, backend, frontend, android, qa 중 하나이며 중복은 허용하지 않습니다(생성 화면 역할 칩이 중복 선택 불가). priority는 low, medium, high 중 하나입니다. 셋 중 하나라도 비거나 roles에 중복이 있으면 COMMON_VALIDATION_FAILED로 응답합니다. 생성한 태스크는 todo 그룹에서 시작합니다. roles는 레거시 tasks에 없는 신규 속성이라 별도 테이블 task_roles에 저장합니다.
 
 #### Errors
 
