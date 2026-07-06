@@ -3,6 +3,7 @@ package works.momens.server.mobile.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -68,7 +69,7 @@ class ProjectTaskServiceTest {
     stubMember();
     UUID todoId = UUID.randomUUID();
     UUID inProgressId = UUID.randomUUID();
-    when(taskReader.listBoardTasks(PROJECT_ID))
+    when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
         .thenReturn(
             List.of(
                 new BoardTask(todoId, "투두 태스크", "todo", "low", List.of("android")),
@@ -77,8 +78,8 @@ class ProjectTaskServiceTest {
     List<MobileTaskGroup> groups = projectTaskService.getBoard(PROJECT_ID, CALLER_ID);
 
     assertThat(groups)
-        .extracting(MobileTaskGroup::groupKey)
-        .containsExactly("todo", "in_progress", "done");
+        .extracting(MobileTaskGroup::status)
+        .containsExactly(BoardStatus.TODO, BoardStatus.IN_PROGRESS, BoardStatus.DONE);
     assertThat(groups.get(0).tasks()).extracting(MobileTaskCard::id).containsExactly(todoId);
     assertThat(groups.get(1).tasks()).extracting(MobileTaskCard::id).containsExactly(inProgressId);
     assertThat(groups.get(2).tasks()).isEmpty();
@@ -88,7 +89,7 @@ class ProjectTaskServiceTest {
   void getBoardMapsUrgentToHighAndZeroMaterialCount() {
     stubMember();
     UUID taskId = UUID.randomUUID();
-    when(taskReader.listBoardTasks(PROJECT_ID))
+    when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
         .thenReturn(List.of(new BoardTask(taskId, "긴급 태스크", "todo", "urgent", List.of("pm"))));
 
     MobileTaskCard card = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(0).tasks().get(0);

@@ -1,5 +1,6 @@
 package works.momens.server.project;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -11,8 +12,8 @@ import java.util.UUID;
 public interface TaskReader {
 
   /**
-   * 보드에 노출할 태스크를 조회합니다. 보드가 다루는 상태(todo, in_progress, done)만 담고, 레거시의 backlog와 cancelled는 제외합니다.
-   * 소프트 삭제된 태스크는 제외하며, 정렬은 생성 시각 내림차순(같으면 id 내림차순)입니다.
+   * 주어진 상태에 해당하는 태스크를 조회합니다. 어떤 상태를 보일지는 호출하는 표면이 정합니다(모바일 보드는 backlog와 cancelled를 넘기지 않습니다). 소프트
+   * 삭제된 태스크는 제외하며, 정렬은 생성 시각 내림차순이고 같으면 id 내림차순입니다.
    */
-  List<BoardTask> listBoardTasks(UUID projectId);
+  List<BoardTask> listTasksByStatus(UUID projectId, Collection<String> statuses);
 }

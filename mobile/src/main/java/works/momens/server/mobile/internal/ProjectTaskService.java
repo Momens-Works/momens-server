@@ -1,5 +1,6 @@
 package works.momens.server.mobile.internal;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,9 +29,6 @@ import works.momens.server.workspace.WorkspaceAccess;
 @RequiredArgsConstructor
 public class ProjectTaskService {
 
-  /** 보드에 노출하는 그룹과 순서. 레거시 backlog와 cancelled는 taskReader가 이미 제외한다. */
-  private static final List<String> BOARD_GROUP_ORDER = List.of("todo", "in_progress", "done");
-
   private final ProjectReader projectReader;
   private final WorkspaceAccess workspaceAccess;
   private final TaskReader taskReader;
@@ -39,14 +37,16 @@ public class ProjectTaskService {
   @Transactional(readOnly = true)
   public List<MobileTaskGroup> getBoard(UUID projectId, UUID userId) {
     requireProjectMember(projectId, userId);
-    Map<String, List<MobileTaskCard>> cardsByGroup =
-        taskReader.listBoardTasks(projectId).stream()
+    Map<String, List<MobileTaskCard>> cardsByStatus =
+        taskReader.listTasksByStatus(projectId, BoardStatus.keys()).stream()
             .collect(
                 Collectors.groupingBy(
                     BoardTask::status,
                     Collectors.mapping(ProjectTaskService::toCard, Collectors.toList())));
-    return BOARD_GROUP_ORDER.stream()
-        .map(group -> new MobileTaskGroup(group, cardsByGroup.getOrDefault(group, List.of())))
+    return Arrays.stream(BoardStatus.values())
+        .map(
+            status ->
+                new MobileTaskGroup(status, cardsByStatus.getOrDefault(status.key(), List.of())))
         .toList();
   }
 

@@ -2,7 +2,6 @@ package works.momens.server.mobile.presentation.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
@@ -23,8 +22,6 @@ public record TaskBoardResponse(
 
   private static final String BOARD_TITLE = "프로젝트 태스크";
   private static final String BOARD_DESCRIPTION = "업무를 한눈에 확인하고 상세 내용을 확인하세요.";
-  private static final Map<String, String> GROUP_LABELS =
-      Map.of("todo", "투두", "in_progress", "진행중", "done", "완료");
 
   @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "상태 그룹")
@@ -60,7 +57,6 @@ public record TaskBoardResponse(
                         card.priority(),
                         card.materialCount()))
             .toList();
-    return new GroupResponse(
-        group.groupKey(), GROUP_LABELS.get(group.groupKey()), cards.size(), cards);
+    return new GroupResponse(group.status().key(), group.status().label(), cards.size(), cards);
   }
 }

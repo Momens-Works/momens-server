@@ -22,6 +22,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import works.momens.server.mobile.internal.BoardStatus;
 import works.momens.server.mobile.internal.MobileTaskCard;
 import works.momens.server.mobile.internal.MobileTaskGroup;
 import works.momens.server.mobile.internal.ProjectTaskService;
@@ -50,10 +51,10 @@ class ProjectTaskControllerTest {
         .thenReturn(
             List.of(
                 new MobileTaskGroup(
-                    "todo",
+                    BoardStatus.TODO,
                     List.of(new MobileTaskCard(taskId, "투두 태스크", List.of("android"), "low", 2))),
-                new MobileTaskGroup("in_progress", List.of()),
-                new MobileTaskGroup("done", List.of())));
+                new MobileTaskGroup(BoardStatus.IN_PROGRESS, List.of()),
+                new MobileTaskGroup(BoardStatus.DONE, List.of())));
 
     mockMvc
         .perform(

@@ -1,5 +1,6 @@
 package works.momens.server.project.internal;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -12,17 +13,13 @@ import works.momens.server.project.TaskReader;
 @RequiredArgsConstructor
 class TaskReaderImpl implements TaskReader {
 
-  /** 보드가 다루는 상태. 레거시 backlog와 cancelled는 보드에 노출하지 않는다(task.md 와이어프레임). */
-  private static final List<String> BOARD_STATUSES = List.of("todo", "in_progress", "done");
-
   private final TaskRepository taskRepository;
 
   @Override
   @Transactional(readOnly = true)
-  public List<BoardTask> listBoardTasks(UUID projectId) {
+  public List<BoardTask> listTasksByStatus(UUID projectId, Collection<String> statuses) {
     return taskRepository
-        .findByProjectIdAndStatusInAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(
-            projectId, BOARD_STATUSES)
+        .findByProjectIdAndStatusInAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(projectId, statuses)
         .stream()
         .map(TaskReaderImpl::toBoardTask)
         .toList();
