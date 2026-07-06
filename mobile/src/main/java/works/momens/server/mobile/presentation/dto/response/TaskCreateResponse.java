@@ -15,7 +15,12 @@ public record TaskCreateResponse(@Schema(description = "생성된 태스크") Ta
   @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "생성된 태스크")
   public record TaskResponse(
-      UUID id, UUID projectId, String title, List<String> roles, String priority, String status) {}
+      @Schema(description = "태스크 식별자") UUID id,
+      @Schema(description = "프로젝트 식별자") UUID projectId,
+      @Schema(description = "제목") String title,
+      @Schema(description = "역할 목록") List<String> roles,
+      @Schema(description = "우선순위. low/medium/high", example = "medium") String priority,
+      @Schema(description = "상태", example = "todo") String status) {}
 
   public static TaskCreateResponse from(CreatedTask created) {
     return new TaskCreateResponse(

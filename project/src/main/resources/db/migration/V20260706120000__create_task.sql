@@ -21,7 +21,7 @@ CREATE TABLE tasks (
 
 CREATE INDEX idx_tasks_project_id ON tasks(project_id) WHERE deleted_at IS NULL;
 CREATE UNIQUE INDEX idx_tasks_workspace_label ON tasks(workspace_id, label)
-    WHERE workspace_id IS NOT NULL AND label IS NOT NULL;
+    WHERE label IS NOT NULL;
 
 CREATE TABLE task_roles (
     task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,

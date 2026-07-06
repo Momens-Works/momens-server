@@ -76,8 +76,11 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     UUID workspaceId = insertWorkspace("order");
     UUID projectId = insertProject(workspaceId, ownerId);
 
-    saveTask(workspaceId, projectId, "먼저", "todo", "high", Set.of("qa", "pm"));
-    saveTask(workspaceId, projectId, "나중", "todo", "high", Set.of("android"));
+    UUID earlier = saveTask(workspaceId, projectId, "먼저", "todo", "high", Set.of("qa", "pm"));
+    UUID later = saveTask(workspaceId, projectId, "나중", "todo", "high", Set.of("android"));
+    // 두 태스크의 created_at이 같으면 id 보조 정렬로 순서가 흔들리므로, 생성 시각을 다르게 고정해 정렬을 결정적으로 만든다.
+    setCreatedAt(earlier, "2026-07-06T00:00:00Z");
+    setCreatedAt(later, "2026-07-06T00:00:01Z");
 
     List<BoardTask> board = taskReader.listTasksByStatus(projectId, BOARD_STATUSES);
 
@@ -110,6 +113,16 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
         .getEntityManager()
         .createNativeQuery("UPDATE tasks SET deleted_at = NOW() WHERE id = ?1")
         .setParameter(1, taskId)
+        .executeUpdate();
+    entityManager.clear();
+  }
+
+  private void setCreatedAt(UUID taskId, String isoInstant) {
+    entityManager
+        .getEntityManager()
+        .createNativeQuery("UPDATE tasks SET created_at = CAST(?1 AS timestamptz) WHERE id = ?2")
+        .setParameter(1, isoInstant)
+        .setParameter(2, taskId)
         .executeUpdate();
     entityManager.clear();
   }
