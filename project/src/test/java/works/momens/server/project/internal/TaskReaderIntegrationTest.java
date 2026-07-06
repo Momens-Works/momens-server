@@ -17,22 +17,24 @@ import works.momens.server.project.BoardTask;
 import works.momens.server.project.TaskReader;
 
 /**
- * task 보드 조회 public API 검증.
+ * task 조회 public API 검증.
  *
- * <p>실제 PostgreSQL(Testcontainers) 환경에서 보드 상태 필터(backlog/cancelled 제외), 소프트 삭제 제외, 정렬(생성 시각 내림차순),
- * roles 결합을 확인합니다. workspaces/users/projects는 다른 모듈 소유 테이블이라 FK 대상 행만 네이티브 SQL로 만듭니다.
+ * <p>실제 PostgreSQL(Testcontainers) 환경에서 상태 필터, 소프트 삭제 제외, 정렬(생성 시각 내림차순), roles 결합을 확인합니다.
+ * workspaces/users/projects는 다른 모듈 소유 테이블이라 FK 대상 행만 네이티브 SQL로 만듭니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({JpaAuditingConfig.class, TaskReaderImpl.class})
 class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
 
+  private static final List<String> BOARD_STATUSES = List.of("todo", "in_progress", "done");
+
   @Autowired private TaskReader taskReader;
   @Autowired private TaskRepository taskRepository;
   @Autowired private TestEntityManager entityManager;
 
   @Test
-  void listBoardTasksReturnsOnlyBoardStatuses() {
+  void listTasksByStatusReturnsOnlyGivenStatuses() {
     UUID ownerId = insertUser("board-owner@momens.works");
     UUID workspaceId = insertWorkspace("board");
     UUID projectId = insertProject(workspaceId, ownerId);
@@ -43,7 +45,7 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     saveTask(workspaceId, projectId, "완료", "done", "medium", Set.of());
     saveTask(workspaceId, projectId, "취소", "cancelled", "medium", Set.of());
 
-    List<BoardTask> board = taskReader.listBoardTasks(projectId);
+    List<BoardTask> board = taskReader.listTasksByStatus(projectId, BOARD_STATUSES);
 
     assertThat(board)
         .extracting(BoardTask::status)
@@ -52,7 +54,7 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
-  void listBoardTasksExcludesSoftDeletedAndOtherProjects() {
+  void listTasksByStatusExcludesSoftDeletedAndOtherProjects() {
     UUID ownerId = insertUser("filter-owner@momens.works");
     UUID workspaceId = insertWorkspace("filter");
     UUID projectId = insertProject(workspaceId, ownerId);
@@ -63,13 +65,13 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     softDelete(deleted);
     saveTask(workspaceId, otherProjectId, "다른 프로젝트", "todo", "medium", Set.of());
 
-    List<BoardTask> board = taskReader.listBoardTasks(projectId);
+    List<BoardTask> board = taskReader.listTasksByStatus(projectId, BOARD_STATUSES);
 
     assertThat(board).extracting(BoardTask::title).containsExactly("살아있음");
   }
 
   @Test
-  void listBoardTasksReturnsSortedRolesAndNewestFirst() {
+  void listTasksByStatusReturnsSortedRolesAndNewestFirst() {
     UUID ownerId = insertUser("order-owner@momens.works");
     UUID workspaceId = insertWorkspace("order");
     UUID projectId = insertProject(workspaceId, ownerId);
@@ -77,7 +79,7 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     saveTask(workspaceId, projectId, "먼저", "todo", "high", Set.of("qa", "pm"));
     saveTask(workspaceId, projectId, "나중", "todo", "high", Set.of("android"));
 
-    List<BoardTask> board = taskReader.listBoardTasks(projectId);
+    List<BoardTask> board = taskReader.listTasksByStatus(projectId, BOARD_STATUSES);
 
     assertThat(board).extracting(BoardTask::title).containsExactly("나중", "먼저");
     assertThat(board.get(1).roles()).containsExactly("pm", "qa");

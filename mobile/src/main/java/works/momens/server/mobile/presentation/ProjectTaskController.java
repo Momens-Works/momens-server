@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.CurrentUser;
@@ -24,20 +25,21 @@ import works.momens.server.mobile.presentation.dto.response.TaskCreateResponse;
  * CurrentUser#id(Principal)}로 읽습니다(docs/rules/code-conventions.md 보호 API).
  */
 @RestController
+@RequestMapping("/api/mobile")
 @RequiredArgsConstructor
 class ProjectTaskController implements ProjectTaskControllerDocs {
 
   private final ProjectTaskService projectTaskService;
 
   @Override
-  @GetMapping(path = "/api/mobile/projects/{projectId}/tasks", version = "1")
+  @GetMapping(path = "/projects/{projectId}/tasks", version = "1")
   public TaskBoardResponse getBoard(@PathVariable UUID projectId, Principal principal) {
     return TaskBoardResponse.from(
         projectTaskService.getBoard(projectId, CurrentUser.id(principal)));
   }
 
   @Override
-  @PostMapping(path = "/api/mobile/projects/{projectId}/tasks", version = "1")
+  @PostMapping(path = "/projects/{projectId}/tasks", version = "1")
   @ResponseStatus(HttpStatus.CREATED)
   public TaskCreateResponse createTask(
       @PathVariable UUID projectId,
