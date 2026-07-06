@@ -1,4 +1,4 @@
-package works.momens.server.project.internal;
+package works.momens.server.project.task;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

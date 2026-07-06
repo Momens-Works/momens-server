@@ -142,6 +142,14 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   의존한다(MOM-62 이전에는 테스트 스코프의 FK 마이그레이션 의존만 있었다).
 - project CRUD API는 아직 없다(MOM-35).
 
+내부는 도메인 하위 경계로 논리 분리했다(MOM-71).
+
+- 태스크(`task`)는 Spring Modulith nested 논리 모듈이고, 프로젝트 코어는 `internal`에 둔다.
+  공개 계약은 모듈 root의 public API 그대로다.
+- 하위 도메인마다 aggregate가 하나씩이고(`Project`, `Task`) 트랜잭션은 자기 aggregate 안에
+  닫힌다. 예외는 태스크 생성 트랜잭션에 참여하는 라벨 발급 한 곳이고, 위 workspace 절에
+  문서화했다. `Task`는 `Project`를 엔티티 연관이 아니라 projectId로만 참조한다.
+
 ### mobile
 
 모바일 앱 진입 API를 담당하는 얇은 orchestration 모듈이다([아키텍처 > 모듈 경계](../rules/architecture.md)).
