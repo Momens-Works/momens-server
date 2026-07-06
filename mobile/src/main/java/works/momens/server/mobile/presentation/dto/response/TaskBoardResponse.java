@@ -9,7 +9,7 @@ import tools.jackson.databind.annotation.JsonNaming;
 import works.momens.server.mobile.internal.MobileTaskGroup;
 
 /**
- * {@code GET /api/mobile/projects/{projectId}/tasks} 응답. shape는 docs/spec/mobile-api.md 태스크 절을
+ * {@code GET /api/mobile/projects/{projectId}/tasks} 응답. 응답 형식은 docs/spec/mobile-api.md 태스크 절을
  * 따릅니다.
  *
  * <p>제목과 안내 문구는 화면 고정값이고, 그룹은 todo, in_progress, done 순서로 항상 셋을 포함합니다.
