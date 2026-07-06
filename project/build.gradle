@@ -12,10 +12,10 @@ dependencies {
 
     // 공유 영속성 베이스(BaseEntity, JPA Auditing)와 공유 에러 계약.
     implementation project(':common')
-    // project는 workspace를 런타임에 의존하지 않습니다. 접근 범위(workspace 스코프)는 호출하는
-    // 쪽이 멤버십을 한 번 조회해 workspace id 목록으로 넘깁니다(PR #42 리뷰 반영). 이 의존은
-    // projects.workspace_id FK 때문에 workspace 마이그레이션을 테스트 클래스패스에 올리는 용도입니다.
-    testImplementation project(':workspace')
+    // task 생성 시 workspace 범위 MOM 라벨을 LabelAllocator public API로 발급받습니다(MOM-62/MOM-37).
+    // 접근 범위(workspace 스코프) 자체는 여전히 호출하는 쪽이 멤버십을 한 번 조회해 넘깁니다(PR #42
+    // 리뷰). 이 런타임 의존은 projects/tasks 의 workspace FK 마이그레이션도 테스트 클래스패스에 올립니다.
+    implementation project(':workspace')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 

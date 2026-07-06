@@ -1,0 +1,152 @@
+package works.momens.server.project.internal;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
+import org.springframework.context.annotation.Import;
+import works.momens.server.common.persistence.JpaAuditingConfig;
+import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.project.BoardTask;
+import works.momens.server.project.TaskReader;
+
+/**
+ * task 보드 조회 public API 검증.
+ *
+ * <p>실제 PostgreSQL(Testcontainers) 환경에서 보드 상태 필터(backlog/cancelled 제외), 소프트 삭제 제외, 정렬(생성 시각 내림차순),
+ * roles 결합을 확인합니다. workspaces/users/projects는 다른 모듈 소유 테이블이라 FK 대상 행만 네이티브 SQL로 만듭니다.
+ */
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import({JpaAuditingConfig.class, TaskReaderImpl.class})
+class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
+
+  @Autowired private TaskReader taskReader;
+  @Autowired private TaskRepository taskRepository;
+  @Autowired private TestEntityManager entityManager;
+
+  @Test
+  void listBoardTasksReturnsOnlyBoardStatuses() {
+    UUID ownerId = insertUser("board-owner@momens.works");
+    UUID workspaceId = insertWorkspace("board");
+    UUID projectId = insertProject(workspaceId, ownerId);
+
+    saveTask(workspaceId, projectId, "백로그", "backlog", "medium", Set.of());
+    saveTask(workspaceId, projectId, "투두", "todo", "medium", Set.of());
+    saveTask(workspaceId, projectId, "진행중", "in_progress", "medium", Set.of());
+    saveTask(workspaceId, projectId, "완료", "done", "medium", Set.of());
+    saveTask(workspaceId, projectId, "취소", "cancelled", "medium", Set.of());
+
+    List<BoardTask> board = taskReader.listBoardTasks(projectId);
+
+    assertThat(board)
+        .extracting(BoardTask::status)
+        .containsExactlyInAnyOrder("todo", "in_progress", "done");
+    assertThat(board).extracting(BoardTask::title).doesNotContain("백로그", "취소");
+  }
+
+  @Test
+  void listBoardTasksExcludesSoftDeletedAndOtherProjects() {
+    UUID ownerId = insertUser("filter-owner@momens.works");
+    UUID workspaceId = insertWorkspace("filter");
+    UUID projectId = insertProject(workspaceId, ownerId);
+    UUID otherProjectId = insertProject(workspaceId, ownerId);
+
+    saveTask(workspaceId, projectId, "살아있음", "todo", "medium", Set.of());
+    UUID deleted = saveTask(workspaceId, projectId, "삭제됨", "todo", "medium", Set.of());
+    softDelete(deleted);
+    saveTask(workspaceId, otherProjectId, "다른 프로젝트", "todo", "medium", Set.of());
+
+    List<BoardTask> board = taskReader.listBoardTasks(projectId);
+
+    assertThat(board).extracting(BoardTask::title).containsExactly("살아있음");
+  }
+
+  @Test
+  void listBoardTasksReturnsSortedRolesAndNewestFirst() {
+    UUID ownerId = insertUser("order-owner@momens.works");
+    UUID workspaceId = insertWorkspace("order");
+    UUID projectId = insertProject(workspaceId, ownerId);
+
+    saveTask(workspaceId, projectId, "먼저", "todo", "high", Set.of("qa", "pm"));
+    saveTask(workspaceId, projectId, "나중", "todo", "high", Set.of("android"));
+
+    List<BoardTask> board = taskReader.listBoardTasks(projectId);
+
+    assertThat(board).extracting(BoardTask::title).containsExactly("나중", "먼저");
+    assertThat(board.get(1).roles()).containsExactly("pm", "qa");
+  }
+
+  private UUID saveTask(
+      UUID workspaceId,
+      UUID projectId,
+      String title,
+      String status,
+      String priority,
+      Set<String> roles) {
+    return taskRepository
+        .saveAndFlush(
+            Task.builder()
+                .workspaceId(workspaceId)
+                .projectId(projectId)
+                .title(title)
+                .status(status)
+                .priority(priority)
+                .roles(roles)
+                .build())
+        .getId();
+  }
+
+  private void softDelete(UUID taskId) {
+    entityManager
+        .getEntityManager()
+        .createNativeQuery("UPDATE tasks SET deleted_at = NOW() WHERE id = ?1")
+        .setParameter(1, taskId)
+        .executeUpdate();
+    entityManager.clear();
+  }
+
+  private UUID insertUser(String email) {
+    UUID id = UUID.randomUUID();
+    entityManager
+        .getEntityManager()
+        .createNativeQuery("INSERT INTO users (id, email, name) VALUES (?1, ?2, ?3)")
+        .setParameter(1, id)
+        .setParameter(2, email)
+        .setParameter(3, "이름")
+        .executeUpdate();
+    return id;
+  }
+
+  private UUID insertWorkspace(String slug) {
+    UUID id = UUID.randomUUID();
+    entityManager
+        .getEntityManager()
+        .createNativeQuery("INSERT INTO workspaces (id, name, slug) VALUES (?1, ?2, ?3)")
+        .setParameter(1, id)
+        .setParameter(2, "모멘스")
+        .setParameter(3, slug)
+        .executeUpdate();
+    return id;
+  }
+
+  private UUID insertProject(UUID workspaceId, UUID ownerId) {
+    UUID id = UUID.randomUUID();
+    entityManager
+        .getEntityManager()
+        .createNativeQuery(
+            "INSERT INTO projects (id, workspace_id, name, owner_id) VALUES (?1, ?2, ?3, ?4)")
+        .setParameter(1, id)
+        .setParameter(2, workspaceId)
+        .setParameter(3, "프로젝트")
+        .setParameter(4, ownerId)
+        .executeUpdate();
+    return id;
+  }
+}
