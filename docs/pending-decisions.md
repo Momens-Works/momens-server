@@ -15,5 +15,7 @@
 | P8 | QueryDSL 도입 시점 | 쿼리 복잡도 필요 시 | 보류 |
 | P9 | 배포 / K8s 매니페스트 | Dockerfile 은 MOM-54 로 추가됨. 배포 파이프라인과 K8s 매니페스트는 이관 Phase 0 진행에 맞춰 결정 | 보류 |
 | P11 | 이벤트 실패·재처리 정책 | 모듈 간 event 협력 도입 시 실패/재처리 기준 정의 시점 | 보류 |
+| P12 | task_roles 공유 스키마 반영 | roles는 레거시 tasks에 없는 신규 속성이라 부가 테이블 task_roles로 구현(MOM-62, local/test Flyway). 기존 tasks는 바꾸지 않는다. prod 공유 스키마 반영을 컷오버 때 레거시 마이그레이션으로 추가할지 규일과 조율 | 미정 |
+| P13 | 모바일 priority urgent 표기 | 레거시 priority 4종(urgent 포함)과 모바일 3종이 어긋난다. 생성은 low/medium/high만 받고 보드 조회는 저장된 urgent를 high로 표기(MOM-62 가결정). 규일과 최종 확인 | 가결정 |
 
 > 갱신 규칙: 항목이 결정되면 행을 제거하고 커밋 메시지/ADR에 근거를 남깁니다.

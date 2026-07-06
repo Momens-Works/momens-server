@@ -487,8 +487,12 @@ Refresh token을 폐기합니다.
 }
 ```
 
+보드는 todo, in_progress, done 세 그룹만 노출하고, 레거시 상태인 backlog와 cancelled는 담지 않습니다. 세 그룹은 태스크가 없어도 항상 포함하며 그때 tasks는 빈 배열입니다. priority는 low, medium, high로 내려가고, 저장된 값이 레거시 전용인 urgent이면 high로 표기합니다(2026-07-06 가결정). material_count는 관련자료 연결 데이터가 아직 없어 0으로 고정합니다(합성 필드 정책).
+
 #### Errors
 
+- `AUTH_UNAUTHORIZED`
+- `AUTH_INVALID_TOKEN`
 - `PROJECT_NOT_FOUND`
 - `AUTH_FORBIDDEN`
 
@@ -521,8 +525,12 @@ Refresh token을 폐기합니다.
 }
 ```
 
+title, roles, priority 모두 필수입니다(2026-07-06 기획 확정). roles는 하나 이상 선택해야 하고 각 값은 pm, design, backend, frontend, android, qa 중 하나입니다. priority는 low, medium, high 중 하나입니다. 셋 중 하나라도 비면 COMMON_VALIDATION_FAILED로 응답합니다. 생성한 태스크는 todo 그룹에서 시작합니다. roles는 레거시 tasks에 없는 신규 속성이라 별도 테이블 task_roles에 저장합니다.
+
 #### Errors
 
+- `AUTH_UNAUTHORIZED`
+- `AUTH_INVALID_TOKEN`
 - `PROJECT_NOT_FOUND`
 - `COMMON_VALIDATION_FAILED`
 - `AUTH_FORBIDDEN`
