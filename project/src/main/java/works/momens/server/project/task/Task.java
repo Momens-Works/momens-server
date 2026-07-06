@@ -1,4 +1,4 @@
-package works.momens.server.project.internal;
+package works.momens.server.project.task;
 
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -25,7 +25,7 @@ import works.momens.server.common.persistence.BaseEntity;
  * <p>레거시 {@code momens-api}의 {@code tasks} 테이블과 호환됩니다. 모바일 보드/생성(MOM-62)이 읽고 쓰는 컬럼만 매핑하고, 나머지 레거시
  * 컬럼(milestone_id, description, assignee_id, due_date)은 태스크 상세/수정(MOM-63)과 웹 이관에서 추가합니다.
  *
- * <p>{@code status}와 {@code priority}는 {@link Project}와 같은 기준으로 문자열로 둡니다. DB CHECK 제약이 각각 레거시
+ * <p>{@code status}와 {@code priority}는 {@code Project}와 같은 기준으로 문자열로 둡니다. DB CHECK 제약이 각각 레거시
  * 5종/4종만 허용합니다. {@code roles}는 레거시 {@code tasks}에 없는 신규 속성이라, 기존 테이블을 바꾸지 않고 부가 테이블 {@code
  * task_roles}에 값 컬렉션으로 저장합니다.
  */

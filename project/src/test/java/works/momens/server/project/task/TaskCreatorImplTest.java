@@ -1,4 +1,4 @@
-package works.momens.server.project.internal;
+package works.momens.server.project.task;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
