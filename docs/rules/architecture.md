@@ -48,6 +48,10 @@ root
   - domain: 핵심 비즈니스 규칙, entity, value object, domain service
   - infrastructure: JPA, Redis, 외부 API client, messaging adapter 등 기술 의존 구현
 - 작은 모듈은 `internal` 아래 단순 package-private 구조를 허용합니다.
+- 하나의 Gradle 모듈 안에서 도메인이 여러 개로 나뉘면 하위 도메인을 Spring Modulith nested
+  application module로 논리 분리합니다(물리 분리를 먼저 두고, 모듈이 커지면 논리 분리로
+  정리하는 순서). 트랜잭션 단위는 같은 도메인(aggregate)에 닫고, 모듈 경계를 넘는 트랜잭션
+  참여는 최소화합니다.
 - 다른 모듈·외부 시스템 의존이 application/domain을 오염시키면 port/adapter를 도입합니다.
 - 모든 모듈에 hexagonal/clean architecture를 일괄 강제하지 않습니다.
 - 레이어 책임(controller 얇게·service 트랜잭션·repository 캡슐화)은

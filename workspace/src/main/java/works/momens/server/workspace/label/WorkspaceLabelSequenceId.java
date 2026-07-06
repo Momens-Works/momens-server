@@ -1,4 +1,4 @@
-package works.momens.server.workspace.internal;
+package works.momens.server.workspace.label;
 
 import java.io.Serializable;
 import java.util.Objects;

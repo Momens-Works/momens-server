@@ -1,4 +1,4 @@
-package works.momens.server.workspace.internal;
+package works.momens.server.workspace.access;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -15,6 +15,7 @@ import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.workspace.UserWorkspaceMembership;
 import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceMembership;
+import works.momens.server.workspace.WorkspaceSeedSql;
 
 /**
  * 멤버십 조회 public API 검증.
@@ -28,15 +29,14 @@ import works.momens.server.workspace.WorkspaceMembership;
 class WorkspaceAccessIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Autowired private WorkspaceAccess workspaceAccess;
-  @Autowired private WorkspaceRepository workspaceRepository;
   @Autowired private WorkspaceMemberRepository workspaceMemberRepository;
   @Autowired private TestEntityManager entityManager;
 
   @Test
   void isMemberDistinguishesMemberFromNonMember() {
-    UUID workspaceId = saveWorkspace("momens-access").getId();
-    UUID member = insertUser("member@momens.works");
-    UUID stranger = insertUser("stranger@momens.works");
+    UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-access");
+    UUID member = WorkspaceSeedSql.insertUser(entityManager, "member@momens.works");
+    UUID stranger = WorkspaceSeedSql.insertUser(entityManager, "stranger@momens.works");
     addMember(workspaceId, member, "member");
     entityManager.flush();
 
@@ -46,9 +46,9 @@ class WorkspaceAccessIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void listMembershipsReturnsMembersWithRoles() {
-    UUID workspaceId = saveWorkspace("momens-team").getId();
-    UUID owner = insertUser("owner@momens.works");
-    UUID member = insertUser("member2@momens.works");
+    UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-team");
+    UUID owner = WorkspaceSeedSql.insertUser(entityManager, "owner@momens.works");
+    UUID member = WorkspaceSeedSql.insertUser(entityManager, "member2@momens.works");
     addMember(workspaceId, owner, "owner");
     addMember(workspaceId, member, "member");
     entityManager.flush();
@@ -62,18 +62,18 @@ class WorkspaceAccessIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void listMembershipsIsEmptyForWorkspaceWithoutMembers() {
-    UUID workspaceId = saveWorkspace("momens-empty").getId();
+    UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-empty");
 
     assertThat(workspaceAccess.listMemberships(workspaceId)).isEmpty();
   }
 
   @Test
   void listUserMembershipsReturnsOnlyWorkspacesUserBelongsToWithRoles() {
-    UUID first = saveWorkspace("momens-first").getId();
-    UUID second = saveWorkspace("momens-second").getId();
-    UUID others = saveWorkspace("momens-others").getId();
-    UUID user = insertUser("multi@momens.works");
-    UUID otherUser = insertUser("other@momens.works");
+    UUID first = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-first");
+    UUID second = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-second");
+    UUID others = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-others");
+    UUID user = WorkspaceSeedSql.insertUser(entityManager, "multi@momens.works");
+    UUID otherUser = WorkspaceSeedSql.insertUser(entityManager, "other@momens.works");
     addMember(first, user, "owner");
     addMember(second, user, "member");
     addMember(others, otherUser, "owner");
@@ -86,25 +86,8 @@ class WorkspaceAccessIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(workspaceAccess.listUserMemberships(UUID.randomUUID())).isEmpty();
   }
 
-  private Workspace saveWorkspace(String slug) {
-    return workspaceRepository.saveAndFlush(Workspace.builder().name("모멘스").slug(slug).build());
-  }
-
   private void addMember(UUID workspaceId, UUID userId, String role) {
     workspaceMemberRepository.save(
         WorkspaceMember.builder().workspaceId(workspaceId).userId(userId).role(role).build());
-  }
-
-  /** workspace_members.user_id FK를 만족하도록 사용자 데이터를 네이티브 SQL로 삽입합니다. */
-  private UUID insertUser(String email) {
-    UUID id = UUID.randomUUID();
-    entityManager
-        .getEntityManager()
-        .createNativeQuery("INSERT INTO users (id, email, name) VALUES (?1, ?2, ?3)")
-        .setParameter(1, id)
-        .setParameter(2, email)
-        .setParameter(3, "이름")
-        .executeUpdate();
-    return id;
   }
 }

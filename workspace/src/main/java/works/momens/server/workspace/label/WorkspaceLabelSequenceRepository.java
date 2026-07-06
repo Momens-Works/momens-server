@@ -1,4 +1,4 @@
-package works.momens.server.workspace.internal;
+package works.momens.server.workspace.label;
 
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;

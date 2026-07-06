@@ -103,6 +103,16 @@ project나 task가 속한 workspace를 찾는 책임은 해당 리소스를 소�
 권한 확인·라벨 발급이 필요할 때 `workspace`의 public API를 사용하고, `workspace` 내부
 repository를 직접 참조하지 않는다.
 
+내부는 도메인 하위 경계로 논리 분리했다(MOM-70).
+
+- 멤버십(`access`)과 라벨 발급(`label`)은 Spring Modulith nested 논리 모듈이고, 워크스페이스
+  코어는 `internal`에 둔다. 공개 계약은 모듈 root의 public API 그대로다.
+- 하위 도메인마다 aggregate가 하나씩이고(`WorkspaceMember`, `WorkspaceLabelSequence`,
+  `Workspace`) 트랜잭션은 자기 aggregate 안에 닫힌다. 예외는 라벨 발급 한 곳으로, 발급이
+  단일 문장(UPSERT)으로 호출자 트랜잭션에 참여한다(MANDATORY). 라벨이 INSERT되는 행에 동기
+  반환값으로 들어가고 실패 시 번호가 함께 되돌아가야 해서이고, 레거시 `BEFORE INSERT` 트리거와
+  같은 시맨틱을 유지하는 의도된 예외다.
+
 ### project
 
 프로젝트 운영 흐름을 하나의 capability로 시작한다.

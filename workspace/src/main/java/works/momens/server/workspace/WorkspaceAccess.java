@@ -8,7 +8,7 @@ import java.util.UUID;
  *
  * <p>{@code project}/{@code task} 같은 다른 모듈이 workspace 내부 repository를 직접 참조하지 않고도 접근 권한을 확인할 수 있도록
  * 합니다 (docs/rules/code-conventions.md 보호 API). 이 API는 workspaceId를 받아 멤버십만 확인하고 조회하며, project나
- * task가 어느 workspace에 속하는지는 이 API의 책임이 아닙니다. 멤버십 저장소는 모듈 {@code internal}에 숨깁니다.
+ * task가 어느 workspace에 속하는지는 이 API의 책임이 아닙니다. 멤버십 저장소는 하위 도메인 {@code access}에 숨깁니다.
  */
 public interface WorkspaceAccess {
 
