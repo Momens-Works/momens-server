@@ -120,10 +120,16 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   `project_owners`는 웹 이관(MOM-35 계열)에서 추가한다.
 - 조회 public API는 `ProjectReader`(workspaceIdOf, findSnapshot, listByWorkspaceIds)와
   `ProjectSnapshot`이다. projectId가 속한 workspace를 찾는 책임은 이 모듈이 소유한다.
+- 태스크 도메인은 MOM-62에서 시작했다. `tasks` 테이블은 레거시와 호환되는 범위(모바일 보드와
+  생성이 쓰는 컬럼)만 만들었고, roles는 레거시 tasks에 없는 신규 속성이라 부가 테이블
+  `task_roles`로 둔다. 보드 조회 public API는 `TaskReader`(listBoardTasks, backlog와 cancelled
+  제외), 생성 public API는 `TaskCreator`(create)이고, 생성 시 workspace의 `LabelAllocator`로 MOM
+  라벨을 발급한다.
 - project 목록 조회는 호출하는 쪽이 멤버십 조회(`WorkspaceAccess.listUserMemberships`)로
   확정한 workspace id 목록을 받아 자기 테이블에서 조회한다. 멤버십을 이 모듈이 다시 읽지
-  않아서 호출 쪽 멤버십 스냅샷과 목록 기준이 항상 같고, workspace 런타임 의존도 없다(테스트
-  스코프의 FK 마이그레이션 의존만 있다).
+  않아서 호출 쪽 멤버십 스냅샷과 목록 기준이 항상 같다. 접근 범위(멤버십)는 여전히 호출 쪽이
+  넘기지만, task 생성이 `LabelAllocator`를 쓰면서 project는 workspace public API에 런타임으로
+  의존한다(MOM-62 이전에는 테스트 스코프의 FK 마이그레이션 의존만 있었다).
 - project CRUD API는 아직 없다(MOM-35).
 
 ### mobile
@@ -135,6 +141,9 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 - `GET /api/mobile/projects/{projectId}/members`: project의 workspace 해석(project), 멤버십
   스냅샷(workspace), 프로필 결합(user)을 조합해 담당자 선택용 멤버 목록을 내린다. 검색과
   정렬은 조합 규칙이라 이 모듈이 소유한다(MOM-61).
+- `GET`과 `POST /api/mobile/projects/{projectId}/tasks`: project의 태스크 도메인(보드 조회, 생성)과
+  workspace 멤버십을 조합한다. 보드 그룹 구성, priority 표기(urgent를 high로), material_count
+  기본값은 조합 규칙이라 이 모듈이 소유한다(MOM-62).
 - 도메인 정책과 영속성을 소유하지 않는다. 엔티티, repository, 마이그레이션이 없다.
 - 어느 한 도메인의 capability가 아닌 모바일 조합 표면(진입처럼 여러 모듈을 가로지르는 조회)이
   이 모듈에 온다. 모바일 API 전부를 모으는 곳은 아니며, 도메인 스코프가 분명한 모바일 API(신호,
