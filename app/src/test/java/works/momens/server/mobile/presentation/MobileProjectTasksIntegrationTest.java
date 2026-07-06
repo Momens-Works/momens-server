@@ -21,11 +21,11 @@ import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 
 /**
- * {@code /api/mobile/projects/{projectId}/tasks} 보드 조회와 생성 실배선 통합 테스트.
+ * {@code /api/mobile/projects/{projectId}/tasks} 보드 조회와 생성을 실제 Spring 컨텍스트로 확인하는 통합 테스트입니다.
  *
- * <p>실토큰(auth public testFixtures)과 실제 PostgreSQL로 보안 체인부터 권한 검사, 보드 그룹 구성, 생성과 라벨 발급, 응답 shape까지
- * 끝까지 확인합니다. 사용자는 user public API로 만들고, workspace/멤버십/project/task는 아직 생성 public API가 없거나(workspace
- * 계열) 시드 편의를 위해 소유 스키마에 SQL로 넣습니다.
+ * <p>실제 토큰(auth 모듈이 제공하는 test fixture)과 실제 PostgreSQL을 사용해 보안 필터부터 권한 검사, 보드 그룹 구성, 라벨 발급, 응답 형태까지
+ * 검증합니다. 사용자는 user public API로 생성합니다. workspace와 멤버십, project, task는 아직 생성 public API가
+ * 없거나(workspace 쪽) 시드를 간단히 하려고 각 모듈 스키마에 SQL로 직접 넣습니다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

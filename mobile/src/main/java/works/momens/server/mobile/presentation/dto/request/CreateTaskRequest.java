@@ -9,7 +9,7 @@ import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
 
 /**
- * 일반 태스크 생성 요청. shape는 docs/spec/mobile-api.md 태스크 절을 따릅니다.
+ * 일반 태스크 생성 요청. 요청 형식은 docs/spec/mobile-api.md 태스크 절을 따릅니다.
  *
  * <p>title, roles, priority 모두 필수입니다(2026-07-06 기획 확정). roles는 하나 이상 선택해야 하고, 각 값은
  * pm/design/backend/frontend/android/qa 중 하나입니다. priority는 low/medium/high 중 하나입니다.

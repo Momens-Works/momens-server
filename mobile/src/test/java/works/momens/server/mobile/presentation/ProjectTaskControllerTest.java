@@ -28,8 +28,8 @@ import works.momens.server.mobile.internal.ProjectTaskService;
 import works.momens.server.project.CreatedTask;
 
 /**
- * 컨트롤러가 경로 변수와 요청 body, Principal을 조합 서비스에 전달하고 명세의 snake_case 응답 shape를 내는지 검증합니다. 검증 실패의 에러 응답
- * shape는 app 예외 핸들러 몫이라 여기서는 상태 코드까지만 봅니다. versioning은 모듈 경계상 슬라이스 안에서 동일하게 구성합니다.
+ * 컨트롤러가 경로 변수와 요청 body, Principal을 조합 서비스에 전달하고 명세의 snake_case 응답 형식을 내는지 검증합니다. 검증 실패의 에러 응답 형식은
+ * app 예외 핸들러가 담당하므로 여기서는 상태 코드까지만 봅니다. versioning은 모듈 경계상 슬라이스 안에서 동일하게 구성합니다.
  */
 @WebMvcTest(ProjectTaskController.class)
 @AutoConfigureMockMvc(addFilters = false)
