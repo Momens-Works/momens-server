@@ -142,7 +142,7 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   스냅샷(workspace), 프로필 결합(user)을 조합해 담당자 선택용 멤버 목록을 내린다. 검색과
   정렬은 조합 규칙이라 이 모듈이 소유한다(MOM-61).
 - `GET`과 `POST /api/mobile/projects/{projectId}/tasks`: project의 태스크 도메인(보드 조회, 생성)과
-  workspace 멤버십을 조합한다. 보드 그룹 구성, priority 표기(urgent를 high로), material_count
+  workspace 멤버십을 조합한다. 보드 그룹 구성, priority 매핑(urgent를 high로 반환), material_count
   기본값은 조합 규칙이라 이 모듈이 소유한다(MOM-62).
 - 도메인 정책과 영속성을 소유하지 않는다. 엔티티, repository, 마이그레이션이 없다.
 - 어느 한 도메인의 capability가 아닌 모바일 조합 표면(진입처럼 여러 모듈을 가로지르는 조회)이

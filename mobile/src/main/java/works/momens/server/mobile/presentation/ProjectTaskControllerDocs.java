@@ -39,7 +39,8 @@ interface ProjectTaskControllerDocs {
 
   @Operation(
       summary = "일반 태스크 생성",
-      description = "제목과 역할, 우선순위로 일반 태스크를 생성합니다. 생성된 태스크는 todo 그룹에서 시작합니다.")
+      description =
+          "제목과 역할, 우선순위로 일반 태스크를 생성합니다. 세 필드 모두 필수이고 역할은 하나 이상입니다. 생성된 태스크는 todo 그룹에서 시작합니다.")
   @ApiResponse(
       responseCode = "201",
       description = "생성 성공",
