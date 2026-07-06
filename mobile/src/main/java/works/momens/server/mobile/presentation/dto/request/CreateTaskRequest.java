@@ -22,7 +22,7 @@ public record CreateTaskRequest(
             description = "역할. 하나 이상 선택. pm/design/backend/frontend/android/qa",
             example = "[\"android\"]")
         @NotEmpty
-        List<@Pattern(regexp = "pm|design|backend|frontend|android|qa") String> roles,
+        List<@NotBlank @Pattern(regexp = "pm|design|backend|frontend|android|qa") String> roles,
     @Schema(description = "우선순위. low/medium/high", example = "medium")
         @NotBlank
         @Pattern(regexp = "low|medium|high")
