@@ -16,14 +16,18 @@ import works.momens.server.project.CreatedTask;
 import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.TaskCreator;
+import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
+import works.momens.server.user.UserProfile;
+import works.momens.server.user.UserService;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
- * 프로젝트 태스크 보드 조회와 생성 조합 서비스. project(태스크 도메인)와 workspace(멤버십) public API를 조합하고 도메인 정책을 소유하지 않습니다.
+ * 모바일 태스크 표면(보드 조회, 생성, 상세 조회)의 조합 서비스. project(태스크 도메인), workspace(멤버십), user(프로필) public API를
+ * 조합하고 도메인 정책을 소유하지 않습니다.
  *
- * <p>보드 그룹 구성과 모바일 priority 매핑(urgent를 high로 반환), material_count 기본값은 모바일 조합 규칙이라 이 서비스가 소유합니다. 보드
- * 조회는 read-only 트랜잭션에 두고, 생성은 라벨 발급과 저장이 한 트랜잭션으로 묶이도록 쓰기 트랜잭션에 둡니다.
+ * <p>보드 그룹 구성과 모바일 priority 매핑(urgent를 high로 반환), material_count 기본값, 상세의 purpose 개명은 모바일 조합 규칙이라 이
+ * 서비스가 소유합니다. 조회는 read-only 트랜잭션에 두고, 생성은 라벨 발급과 저장이 한 트랜잭션으로 묶이도록 쓰기 트랜잭션에 둡니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,6 +37,7 @@ public class ProjectTaskService {
   private final WorkspaceAccess workspaceAccess;
   private final TaskReader taskReader;
   private final TaskCreator taskCreator;
+  private final UserService userService;
 
   @Transactional(readOnly = true)
   public List<MobileTaskGroup> getBoard(UUID projectId, UUID userId) {
@@ -56,6 +61,42 @@ public class ProjectTaskService {
     UUID workspaceId = requireProjectMember(projectId, userId);
     return taskCreator.create(
         new CreateTaskCommand(projectId, workspaceId, title, roles, priority));
+  }
+
+  @Transactional(readOnly = true)
+  public MobileTaskDetail getTaskDetail(UUID taskId, UUID userId) {
+    TaskDetail detail =
+        taskReader
+            .findDetail(taskId)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        ProjectErrorCode.TASK_NOT_FOUND, Map.of("task_id", taskId.toString())));
+    // 태스크가 속한 workspace는 상세가 들고 있으므로(레거시 WorkspaceForTask와 같은 해석) 멤버십만 확인한다.
+    if (!workspaceAccess.isMember(detail.workspaceId(), userId)) {
+      throw new BusinessException(
+          CommonErrorCode.AUTH_FORBIDDEN, Map.of("task_id", taskId.toString()));
+    }
+    return new MobileTaskDetail(
+        detail.id(),
+        detail.projectId(),
+        detail.title(),
+        detail.status(),
+        detail.roles(),
+        toAssignee(detail.assigneeId()),
+        mapPriority(detail.priority()),
+        detail.description(),
+        detail.checklistItems());
+  }
+
+  private MobileTaskDetail.Assignee toAssignee(UUID assigneeId) {
+    if (assigneeId == null) {
+      return null;
+    }
+    // assignee_id는 users FK(ON DELETE SET NULL)라 값이 있으면 항상 해석된다. 불변식이 깨지면 조용히
+    // 담당자 없음으로 만들지 않고 getProfile의 USER_NOT_FOUND로 크게 실패한다.
+    UserProfile profile = userService.getProfile(assigneeId);
+    return new MobileTaskDetail.Assignee(profile.id(), profile.name());
   }
 
   private UUID requireProjectMember(UUID projectId, UUID userId) {

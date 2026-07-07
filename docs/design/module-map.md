@@ -170,6 +170,11 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   workspace 멤버십을 조합한다. 보드에 노출할 상태와 순서, 라벨은 `BoardStatus` enum 한곳에 모아
   이 모듈이 소유하고(backlog와 cancelled 제외), project 조회에는 그 상태 목록을 넘긴다. priority
   매핑(urgent를 high로 반환), material_count 기본값도 조합 규칙이라 이 모듈이 소유한다(MOM-62).
+- `GET /api/mobile/tasks/{taskId}`: project의 태스크 상세(`TaskReader.findDetail`)와 workspace
+  멤버십(태스크가 속한 workspace 기준), user 프로필(담당자 이름)을 조합한다. purpose 개명
+  (도메인 description), priority 매핑, 빈 값 고정(materials와 open_questions는 빈 배열,
+  next_action은 null)은 조합 규칙이라 이 모듈이 소유한다(MOM-63). 수정 계열은 MOM-75가 같은
+  `/tasks/*` 표면에 추가한다.
 - 도메인 정책과 영속성을 소유하지 않는다. 엔티티, repository, 마이그레이션이 없다.
 - 어느 한 도메인의 capability가 아닌 모바일 조합 표면(진입처럼 여러 모듈을 가로지르는 조회)이
   이 모듈에 온다. 모바일 API 전부를 모으는 곳은 아니며, 도메인 스코프가 분명한 모바일 API는
