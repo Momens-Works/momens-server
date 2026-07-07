@@ -1,9 +1,7 @@
 package works.momens.server.project.task;
 
 import jakarta.persistence.CascadeType;
-import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
@@ -11,16 +9,12 @@ import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.BatchSize;
 import works.momens.server.common.persistence.BaseEntity;
 
 /**
@@ -31,8 +25,10 @@ import works.momens.server.common.persistence.BaseEntity;
  * assignee_id는 다른 모듈(user) 소유 리소스라 엔티티 연관 없이 식별자로만 참조합니다(projectId와 같은 기준).
  *
  * <p>{@code status}와 {@code priority}는 {@code Project}와 같은 기준으로 문자열로 둡니다. DB CHECK 제약이 각각 레거시
- * 5종/4종만 허용합니다. {@code roles}는 레거시 {@code tasks}에 없는 신규 속성이라, 기존 테이블을 바꾸지 않고 부가 테이블 {@code
- * task_roles}에 값 컬렉션으로 저장합니다.
+ * 5종/4종만 허용합니다. {@code role}은 레거시 {@code tasks}에 없는 신규 속성이지만 단일 값이라 부가 테이블 없이 문자열 컬럼으로 두고,
+ * priority와 같은 CHECK 제약 방식을 씁니다(MOM-76, 역할은 다중 선택이 아니라 단일 선택입니다). status/priority와 달리 레거시 DB
+ * DEFAULT가 없고 null 기본값도 두지 않습니다. mobile의 {@code @NotBlank} 검증이 항상 값을 보장하므로, 불변식이 깨지면 조용히 기본 역할로 채우는
+ * 대신 DB {@code NOT NULL} 제약으로 크게 실패합니다.
  */
 @Getter
 @Entity
@@ -62,11 +58,8 @@ class Task extends BaseEntity {
   @Column(name = "assignee_id", columnDefinition = "uuid")
   private UUID assigneeId;
 
-  @ElementCollection
-  @CollectionTable(name = "task_roles", joinColumns = @JoinColumn(name = "task_id"))
-  @Column(name = "role", nullable = false)
-  @BatchSize(size = 100)
-  private Set<String> roles = new HashSet<>();
+  @Column(nullable = false)
+  private String role;
 
   /**
    * 완료기준 항목. 자식 엔티티의 전체 생명주기를 이 aggregate가 소유하므로 cascade ALL과 orphanRemoval로 컬렉션 변경이 곧 저장 변경이 되게
@@ -89,7 +82,7 @@ class Task extends BaseEntity {
       String title,
       String status,
       String priority,
-      Collection<String> roles) {
+      String role) {
     this.workspaceId = workspaceId;
     this.projectId = projectId;
     this.label = label;
@@ -97,11 +90,6 @@ class Task extends BaseEntity {
     // INSERT 시 엔티티 값이 DB DEFAULT 보다 우선하므로, 레거시 기본값을 앱 생성에서도 보장한다.
     this.status = status != null ? status : "backlog";
     this.priority = priority != null ? priority : "medium";
-    this.roles = roles != null ? new HashSet<>(roles) : new HashSet<>();
-  }
-
-  /** roles를 결정적 순서(정렬)로 반환한다. 보드 응답과 생성 응답의 순서를 한곳에서 고정한다. */
-  List<String> sortedRoles() {
-    return roles.stream().sorted().toList();
+    this.role = role;
   }
 }

@@ -31,14 +31,14 @@ class TaskCreatorImpl implements TaskCreator {
             .title(command.title())
             .status(INITIAL_STATUS)
             .priority(command.priority())
-            .roles(command.roles())
+            .role(command.role())
             .build();
     taskRepository.save(task);
     return new CreatedTask(
         task.getId(),
         task.getProjectId(),
         task.getTitle(),
-        task.sortedRoles(),
+        task.getRole(),
         task.getPriority(),
         task.getStatus());
   }

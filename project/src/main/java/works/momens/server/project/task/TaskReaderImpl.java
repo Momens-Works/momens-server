@@ -30,13 +30,13 @@ class TaskReaderImpl implements TaskReader {
   @Override
   @Transactional(readOnly = true)
   public Optional<TaskDetail> findDetail(UUID taskId) {
-    // roles와 checklistItems는 LAZY 컬렉션이라 이 트랜잭션 안에서 각각 보조 SELECT로 초기화된다.
+    // checklistItems는 LAZY 컬렉션이라 이 트랜잭션 안에서 보조 SELECT로 초기화된다.
     return taskRepository.findByIdAndDeletedAtIsNull(taskId).map(TaskReaderImpl::toDetail);
   }
 
   private static BoardTask toBoardTask(Task task) {
     return new BoardTask(
-        task.getId(), task.getTitle(), task.getStatus(), task.getPriority(), task.sortedRoles());
+        task.getId(), task.getTitle(), task.getStatus(), task.getPriority(), task.getRole());
   }
 
   private static TaskDetail toDetail(Task task) {
@@ -53,7 +53,7 @@ class TaskReaderImpl implements TaskReader {
         task.getTitle(),
         task.getStatus(),
         task.getPriority(),
-        task.sortedRoles(),
+        task.getRole(),
         task.getAssigneeId(),
         task.getDescription(),
         checklistItems);

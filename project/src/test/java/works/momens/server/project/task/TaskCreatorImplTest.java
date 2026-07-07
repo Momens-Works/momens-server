@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,8 +36,7 @@ class TaskCreatorImplTest {
     when(labelAllocator.allocateMomLabel(workspaceId)).thenReturn("MOM-0001");
 
     CreatedTask created =
-        taskCreator.create(
-            new CreateTaskCommand(projectId, workspaceId, "권한 요청 점검", List.of("qa", "pm"), "high"));
+        taskCreator.create(new CreateTaskCommand(projectId, workspaceId, "권한 요청 점검", "qa", "high"));
 
     ArgumentCaptor<Task> captor = ArgumentCaptor.forClass(Task.class);
     verify(taskRepository).save(captor.capture());
@@ -49,25 +47,25 @@ class TaskCreatorImplTest {
     assertThat(saved.getProjectId()).isEqualTo(projectId);
     assertThat(saved.getTitle()).isEqualTo("권한 요청 점검");
     assertThat(saved.getPriority()).isEqualTo("high");
-    assertThat(saved.getRoles()).containsExactlyInAnyOrder("pm", "qa");
+    assertThat(saved.getRole()).isEqualTo("qa");
 
     assertThat(created.id()).isEqualTo(saved.getId());
     assertThat(created.projectId()).isEqualTo(projectId);
     assertThat(created.status()).isEqualTo("todo");
     assertThat(created.priority()).isEqualTo("high");
-    assertThat(created.roles()).containsExactly("pm", "qa");
+    assertThat(created.role()).isEqualTo("qa");
   }
 
   @Test
-  void createDefaultsPriorityToMediumAndRolesToEmptyWhenAbsent() {
+  void createDefaultsPriorityToMediumWhenAbsent() {
     UUID workspaceId = UUID.randomUUID();
     when(labelAllocator.allocateMomLabel(any())).thenReturn("MOM-0002");
 
     CreatedTask created =
-        taskCreator.create(new CreateTaskCommand(UUID.randomUUID(), workspaceId, "제목", null, null));
+        taskCreator.create(new CreateTaskCommand(UUID.randomUUID(), workspaceId, "제목", "pm", null));
 
     assertThat(created.priority()).isEqualTo("medium");
-    assertThat(created.roles()).isEmpty();
+    assertThat(created.role()).isEqualTo("pm");
     assertThat(created.status()).isEqualTo("todo");
   }
 }
