@@ -65,7 +65,7 @@ Momens Mobile은 기존 웹 기능을 축소 이식하는 앱이 아니다. 모�
 | Brief / 브리프 | 프로젝트 상태와 최근 맥락을 짧게 요약한 화면 단위 |
 | Task / 태스크 | 담당자와 상태를 가지고 진행되는 실행 항목 |
 | Decision / 결정 | 근거와 함께 보존되는 프로젝트 선택 |
-| VOC | 독립 Signal type이 아니라 `change` 신호의 하위 성격으로 표현한다 |
+| VOC | 독립 Signal type이 아니라 `change` 신호의 화면 표시명으로 표현한다 |
 
 ## 시스템 책임
 
@@ -321,11 +321,13 @@ worker 산출물 저장 구조가 확정되면 backing source를 별도 설계�
 - 풍부한 Minsu suggestion/draft 생성은 worker/Minsu 산출물로 후속 확장하되, MVP convert 기본값은
   Signal title 기반 최소 초안으로 제공할 수 있어야 한다.
 - Signal type은 `risk`, `decision`, `change`, `question`을 지원해야 한다.
-- VOC는 MVP에서 독립 Signal type으로 두지 않고 `change`의 하위 성격으로 표현해야 한다.
+- VOC는 MVP에서 독립 Signal type으로 두지 않고 `change`의 화면 표시명으로 표현해야 한다.
 - Signal은 사용자가 어떤 검토를 해야 하는지 표현할 수 있어야 한다.
 - Signal description은 상세 화면의 본문으로 제공되어야 한다.
 - 화면 표시 라벨은 Signal type에서 파생한다. `risk`/`change`는 `Needs action`, `decision`은
   `Needs review`, `question`은 `Needs decision`이다.
+- 화면설계서의 카테고리 표시는 Signal type에서 파생한다. `risk`는 `Risk`, `decision`은 `Decision`,
+  `change`는 `VOC`, `question`은 `Question`으로 표시한다.
 - Signal 표시 라벨은 처리 상태가 아니며, MVP 목록 필터로 제공하지 않는다.
 - Signal은 프로젝트 단위 처리 이력을 가질 수 있어야 한다.
 - Signal 처리 여부는 사용자별이 아니라 프로젝트 단위로 반영되어야 한다.
@@ -366,6 +368,9 @@ worker 산출물 저장 구조가 확정되면 backing source를 별도 설계�
 - MVP에서 push notification은 Signal 발생 알림까지만 포함한다.
 - task 생성, Signal 삭제(dismiss), task 상태 변경에 대한 push notification은 MVP 이후 요구사항이다.
 - Signal 발생 알림은 worker가 Signal backing을 생성한 뒤 사용할 수 있는 이벤트를 기준으로 한다.
+- Signal 발생 알림은 Signal type을 함께 참조해 앱이 `Risk`, `Decision`, `VOC`, `Question` 카테고리 태그를
+  표시할 수 있어야 한다.
+- FCM 디바이스 토큰 등록/해제 HTTP API 계약은 Signal 발생 알림 구현 전 별도 확정해야 한다.
 - 모바일 앱에서 이미 처리된 Signal을 다시 보는 inbox 흐름은 MVP 이후 요구사항이다.
 
 ## 권한 요구사항
@@ -387,6 +392,8 @@ worker 산출물 저장 구조가 확정되면 backing source를 별도 설계�
 - Signal evidence 저장 테이블의 상세 스키마(이 문서는 제품/API 요구사항만 다루며, DB 상세 스키마는 별도 설계 산출물에서 관리한다)
 - Outbox 테이블의 상세 스키마(이 문서는 제품/API 요구사항만 다루며, DB 상세 스키마는 별도 설계 산출물에서 관리한다)
 - worker outbox 소비 상태, 재시도, DLQ 설계
+- FCM 디바이스 토큰 등록/해제 API 계약(경로, 요청 body, 토큰 회전/중복/폐기 정책)
+- Signal 목록/상세 텍스트 글자 수 제한의 책임 경계(서버/worker 생성 제한인지, 앱 표시 truncation 규칙인지)
 - 태스크 상세 확장 필드가 비어 있을 때의 구체 응답 값 정책
 - bootstrap의 project 0개 응답 정책의 확정(R-READ-000의 2026-07-04 가결정안으로 구현했고, 기획
   확인 후 확정한다. 기본 project 선정 규칙은 2026-07-04에 기획이 임의 1개로 확인해 줬다)
