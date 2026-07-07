@@ -7,11 +7,13 @@ import works.momens.server.common.api.ErrorCode;
  * project 도메인 에러 코드.
  *
  * <p>공통 코드를 재사용하지 않고 도메인 의미가 드러나는 코드를 모듈이 소유합니다(docs/spec/api-response-error-codes.md). 코드·status는
- * spec 코드표와 맞춥니다. {@link ProjectReader}는 Optional만 반환하므로, 이 코드를 던질지는 호출하는 쪽이 결정합니다.
+ * spec 코드표와 맞춥니다. {@link ProjectReader}와 {@link TaskReader}는 Optional만 반환하므로, 이 코드를 던질지는 호출하는 쪽이
+ * 결정합니다.
  */
 @RequiredArgsConstructor
 public enum ProjectErrorCode implements ErrorCode {
-  PROJECT_NOT_FOUND(404, "프로젝트를 찾을 수 없습니다.");
+  PROJECT_NOT_FOUND(404, "프로젝트를 찾을 수 없습니다."),
+  TASK_NOT_FOUND(404, "태스크를 찾을 수 없습니다.");
 
   private final int status;
   private final String defaultMessage;

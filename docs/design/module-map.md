@@ -134,10 +134,14 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 - 조회 public API는 `ProjectReader`(workspaceIdOf, findSnapshot, listByWorkspaceIds)와
   `ProjectSnapshot`이다. projectId가 속한 workspace를 찾는 책임은 이 모듈이 소유한다.
 - 태스크 도메인은 MOM-62에서 시작했다. `tasks` 테이블은 레거시와 호환되는 범위(모바일 보드와
-  생성이 쓰는 컬럼)만 만들었고, roles는 레거시 tasks에 없는 신규 속성이라 부가 테이블
-  `task_roles`로 둔다. 조회 public API는 `TaskReader`(listTasksByStatus, 호출 쪽이 넘긴 상태로만
-  필터하는 일반 쿼리)이고, 어떤 상태를 보일지는 표면이 정한다. 생성 public API는
-  `TaskCreator`(create)이고, 생성 시 workspace의 `LabelAllocator`로 MOM 라벨을 발급한다.
+  생성이 쓰는 컬럼)로 시작했고, 상세(MOM-63)가 읽는 레거시 컬럼(description, assignee_id)을
+  더했다. 모바일이 안 쓰는 레거시 컬럼(milestone_id, due_date)은 웹 이관에서 추가한다. roles는
+  레거시 tasks에 없는 신규 속성이라 부가 테이블 `task_roles`로 둔다. 완료기준은 레거시에 없는
+  신규 테이블 `task_checklist_items`이고, Task aggregate 내부 자식이라 별도 repository 없이
+  Task를 통해서만 접근한다(prod 공유 스키마 반영은 task_roles처럼 컷오버 때 조율, P12). 조회
+  public API는 `TaskReader`(listTasksByStatus, findDetail)와 `BoardTask`, `TaskDetail`이고, 어떤
+  상태를 보일지와 표기 매핑은 표면이 정한다. 생성 public API는 `TaskCreator`(create)이고, 생성
+  시 workspace의 `LabelAllocator`로 MOM 라벨을 발급한다.
 - project 목록 조회는 호출하는 쪽이 멤버십 조회(`WorkspaceAccess.listUserMemberships`)로
   확정한 workspace id 목록을 받아 자기 테이블에서 조회한다. 멤버십을 이 모듈이 다시 읽지
   않아서 호출 쪽 멤버십 스냅샷과 목록 기준이 항상 같다. 접근 범위(멤버십)는 여전히 호출 쪽이
