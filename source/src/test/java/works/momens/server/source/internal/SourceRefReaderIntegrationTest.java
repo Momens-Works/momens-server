@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -24,12 +25,14 @@ import works.momens.server.source.SourceRefView;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(SourceRefReaderImpl.class)
+@DisplayName("SourceRefReader 통합 테스트")
 class SourceRefReaderIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Autowired private SourceRefReader sourceRefReader;
   @Autowired private TestEntityManager entityManager;
 
   @Test
+  @DisplayName("id 목록 조회는 살아있는 source_ref만 반환하고 삭제·미존재 항목은 제외한다")
   void findByIdsReturnsLiveRefsAndSkipsDeletedAndUnknown() {
     UUID workspaceId = UUID.randomUUID();
     UUID live = insertSourceRef(workspaceId, "figma", "권한 요청 화면 v2", "설명 문구 변경", null);
@@ -42,11 +45,13 @@ class SourceRefReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("빈 id 목록이면 DB 조회 없이 빈 결과를 반환한다")
   void findByIdsIsEmptyForEmptyIds() {
     assertThat(sourceRefReader.findByIds(List.of())).isEmpty();
   }
 
   @Test
+  @DisplayName("source_refs 컬럼을 Signal evidence 카드에 필요한 SourceRefView 필드로 매핑한다")
   void findByIdsMapsEvidenceCardFields() {
     UUID workspaceId = UUID.randomUUID();
     Instant occurredAt = Instant.parse("2026-06-28T00:48:00Z");
