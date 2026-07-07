@@ -65,7 +65,7 @@ Signal type 기반 화면 라벨은 앱이 다음처럼 파생합니다. 이 라
 | --- | --- |
 | `group_key` | `todo`, `in_progress`, `done` |
 | `priority` | `high`, `medium`, `low` |
-| `roles[]` | `pm`, `design`, `backend`, `frontend`, `android`, `qa` |
+| `role` | `pm`, `design`, `backend`, `frontend`, `android`, `qa` (하나만 선택) |
 
 ### Membership
 
@@ -340,7 +340,7 @@ worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. 서
     "suggestion": "내용이 들어갈 공간입니다",
     "task_draft": {
       "title": "Android 13+ 권한 요청 플로우 점검",
-      "roles": ["android"],
+      "role": "android",
       "priority": "medium"
     }
   },
@@ -371,7 +371,7 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
 ```json
 {
   "title": "Android 13+ 권한 요청 플로우 점검",
-  "roles": ["android"],
+  "role": "android",
   "priority": "medium"
 }
 ```
@@ -549,7 +549,7 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
         {
           "id": "27afd507-9c7f-4f0d-a2be-fcdab2477b19",
           "title": "1차 와이어프레임",
-          "roles": ["android"],
+          "role": "android",
           "priority": "low",
           "material_count": 2
         }
@@ -579,7 +579,7 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
 ```json
 {
   "title": "Write",
-  "roles": ["pm"],
+  "role": "pm",
   "priority": "medium"
 }
 ```
@@ -592,14 +592,14 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
     "id": "new-task-uuid",
     "project_id": "30d9e9fe-f43b-4097-a88e-dc19f0a5b025",
     "title": "Write",
-    "roles": ["pm"],
+    "role": "pm",
     "priority": "medium",
     "status": "todo"
   }
 }
 ```
 
-title, roles, priority 모두 필수입니다(2026-07-06 기획 확정). roles는 하나 이상 선택해야 하고 각 값은 pm, design, backend, frontend, android, qa 중 하나이며 중복은 허용하지 않습니다(생성 화면 역할 칩이 중복 선택 불가). priority는 low, medium, high 중 하나입니다. 셋 중 하나라도 비거나 roles에 중복이 있으면 COMMON_VALIDATION_FAILED로 응답합니다. 생성한 태스크는 todo 그룹에서 시작합니다. roles는 레거시 tasks에 없는 신규 속성이라 별도 테이블 task_roles에 저장합니다.
+title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-07 역할은 하나만 선택하는 단일 값으로 재확정). role은 pm, design, backend, frontend, android, qa 중 하나입니다(생성 화면 역할 칩은 단일 선택). priority는 low, medium, high 중 하나입니다. 셋 중 하나라도 비면 COMMON_VALIDATION_FAILED로 응답합니다. 생성한 태스크는 todo 그룹에서 시작합니다. role은 레거시 tasks에 없는 신규 속성이라 CHECK 제약을 둔 문자열 컬럼으로 저장합니다.
 
 #### Errors
 
@@ -621,7 +621,7 @@ title, roles, priority 모두 필수입니다(2026-07-06 기획 확정). roles�
   "project_id": "30d9e9fe-f43b-4097-a88e-dc19f0a5b025",
   "title": "1차 와이어프레임",
   "status": "todo",
-  "roles": ["pm", "android"],
+  "role": "pm",
   "assignee": {
     "id": "b9b1...e7",
     "name": "김민지"
@@ -681,7 +681,7 @@ title, roles, priority 모두 필수입니다(2026-07-06 기획 확정). roles�
 ```json
 {
   "title": "1차 와이어프레임",
-  "roles": ["pm", "android"],
+  "role": "pm",
   "assignee_id": "user-uuid",
   "priority": "medium",
   "purpose": "이번 범위에서 확인해야 할 화면 흐름을 정리합니다.",
@@ -701,7 +701,7 @@ title, roles, priority 모두 필수입니다(2026-07-06 기획 확정). roles�
   "task": {
     "id": "27afd507-9c7f-4f0d-a2be-fcdab2477b19",
     "title": "1차 와이어프레임",
-    "roles": ["pm", "android"],
+    "role": "pm",
     "assignee": { "id": "user-uuid", "name": "김민지" },
     "priority": "medium",
     "purpose": "이번 범위에서 확인해야 할 화면 흐름을 정리합니다.",

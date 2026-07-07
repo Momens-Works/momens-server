@@ -52,7 +52,7 @@ class ProjectTaskControllerTest {
             List.of(
                 new MobileTaskGroup(
                     BoardStatus.TODO,
-                    List.of(new MobileTaskCard(taskId, "투두 태스크", List.of("android"), "low", 2))),
+                    List.of(new MobileTaskCard(taskId, "투두 태스크", "android", "low", 2))),
                 new MobileTaskGroup(BoardStatus.IN_PROGRESS, List.of()),
                 new MobileTaskGroup(BoardStatus.DONE, List.of())));
 
@@ -68,7 +68,7 @@ class ProjectTaskControllerTest {
         .andExpect(jsonPath("$.groups[0].label").value("투두"))
         .andExpect(jsonPath("$.groups[0].count").value(1))
         .andExpect(jsonPath("$.groups[0].tasks[0].id").value(taskId.toString()))
-        .andExpect(jsonPath("$.groups[0].tasks[0].roles[0]").value("android"))
+        .andExpect(jsonPath("$.groups[0].tasks[0].role").value("android"))
         .andExpect(jsonPath("$.groups[0].tasks[0].material_count").value(2))
         .andExpect(jsonPath("$.groups[1].tasks.length()").value(0));
   }
@@ -77,7 +77,7 @@ class ProjectTaskControllerTest {
   void createTaskReturnsCreatedTask() throws Exception {
     UUID taskId = UUID.randomUUID();
     when(projectTaskService.createTask(eq(PROJECT_ID), eq(USER_ID), eq("제목"), any(), eq("medium")))
-        .thenReturn(new CreatedTask(taskId, PROJECT_ID, "제목", List.of("pm"), "medium", "todo"));
+        .thenReturn(new CreatedTask(taskId, PROJECT_ID, "제목", "pm", "medium", "todo"));
 
     mockMvc
         .perform(
@@ -85,12 +85,12 @@ class ProjectTaskControllerTest {
                 .principal(principal)
                 .header("API-Version", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"title\":\"제목\",\"roles\":[\"pm\"],\"priority\":\"medium\"}"))
+                .content("{\"title\":\"제목\",\"role\":\"pm\",\"priority\":\"medium\"}"))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.task.id").value(taskId.toString()))
         .andExpect(jsonPath("$.task.project_id").value(PROJECT_ID.toString()))
         .andExpect(jsonPath("$.task.status").value("todo"))
-        .andExpect(jsonPath("$.task.roles[0]").value("pm"));
+        .andExpect(jsonPath("$.task.role").value("pm"));
   }
 
   @Test
@@ -101,13 +101,13 @@ class ProjectTaskControllerTest {
                 .principal(principal)
                 .header("API-Version", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"title\":\"  \",\"roles\":[\"pm\"],\"priority\":\"medium\"}"))
+                .content("{\"title\":\"  \",\"role\":\"pm\",\"priority\":\"medium\"}"))
         .andExpect(status().isBadRequest());
   }
 
   @Test
-  void createTaskRejectsMissingRolesOrPriority() throws Exception {
-    // title, roles, priority 모두 필수다(2026-07-06 기획 확정).
+  void createTaskRejectsMissingRoleOrPriority() throws Exception {
+    // title, role, priority 모두 필수다(2026-07-06 기획 확정, 2026-07-07 role은 단일 선택으로 재확정).
     mockMvc
         .perform(
             post("/api/mobile/projects/{projectId}/tasks", PROJECT_ID)
@@ -123,17 +123,7 @@ class ProjectTaskControllerTest {
                 .principal(principal)
                 .header("API-Version", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"title\":\"제목\",\"roles\":[\"pm\"]}"))
-        .andExpect(status().isBadRequest());
-
-    // 빈 배열은 @NotEmpty, null 원소는 @NotBlank로 걸러 400을 반환한다(DB NOT NULL로 넘겨 500이 나지 않게).
-    mockMvc
-        .perform(
-            post("/api/mobile/projects/{projectId}/tasks", PROJECT_ID)
-                .principal(principal)
-                .header("API-Version", "1")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"title\":\"제목\",\"roles\":[],\"priority\":\"medium\"}"))
+                .content("{\"title\":\"제목\",\"role\":\"pm\"}"))
         .andExpect(status().isBadRequest());
 
     mockMvc
@@ -142,7 +132,7 @@ class ProjectTaskControllerTest {
                 .principal(principal)
                 .header("API-Version", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"title\":\"제목\",\"roles\":[null],\"priority\":\"medium\"}"))
+                .content("{\"title\":\"제목\",\"role\":\"\",\"priority\":\"medium\"}"))
         .andExpect(status().isBadRequest());
   }
 
@@ -154,7 +144,7 @@ class ProjectTaskControllerTest {
                 .principal(principal)
                 .header("API-Version", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"title\":\"제목\",\"roles\":[\"ceo\"],\"priority\":\"medium\"}"))
+                .content("{\"title\":\"제목\",\"role\":\"ceo\",\"priority\":\"medium\"}"))
         .andExpect(status().isBadRequest());
 
     mockMvc
@@ -163,21 +153,7 @@ class ProjectTaskControllerTest {
                 .principal(principal)
                 .header("API-Version", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"title\":\"제목\",\"roles\":[\"pm\"],\"priority\":\"urgent\"}"))
-        .andExpect(status().isBadRequest());
-  }
-
-  @Test
-  void createTaskRejectsDuplicateRoles() throws Exception {
-    // 생성 화면 역할 칩이 중복 선택 불가라, 같은 role이 두 번 오면 400으로 막는다.
-    mockMvc
-        .perform(
-            post("/api/mobile/projects/{projectId}/tasks", PROJECT_ID)
-                .principal(principal)
-                .header("API-Version", "1")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    "{\"title\":\"제목\",\"roles\":[\"android\",\"android\"],\"priority\":\"medium\"}"))
+                .content("{\"title\":\"제목\",\"role\":\"pm\",\"priority\":\"urgent\"}"))
         .andExpect(status().isBadRequest());
   }
 
