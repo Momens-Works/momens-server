@@ -12,6 +12,7 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.project.ProjectSeedSql;
 
 /**
  * project 영속성 기반 검증.
@@ -29,8 +30,8 @@ class ProjectRepositoryIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void savesAndReadsProjectWithMappedColumns() {
-    UUID ownerId = insertUser("owner@momens.works");
-    UUID workspaceId = insertWorkspace("momens-project");
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "owner@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "momens-project");
 
     Project saved =
         projectRepository.saveAndFlush(
@@ -57,31 +58,5 @@ class ProjectRepositoryIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(found.getCreatedAt()).isNotNull();
     assertThat(found.getUpdatedAt()).isNotNull();
     assertThat(found.getDeletedAt()).isNull();
-  }
-
-  /** projects.owner_id FK를 만족하도록 사용자 데이터를 네이티브 SQL로 삽입합니다. */
-  private UUID insertUser(String email) {
-    UUID id = UUID.randomUUID();
-    entityManager
-        .getEntityManager()
-        .createNativeQuery("INSERT INTO users (id, email, name) VALUES (?1, ?2, ?3)")
-        .setParameter(1, id)
-        .setParameter(2, email)
-        .setParameter(3, "이름")
-        .executeUpdate();
-    return id;
-  }
-
-  /** projects.workspace_id FK를 만족하도록 워크스페이스 데이터를 네이티브 SQL로 삽입합니다. */
-  private UUID insertWorkspace(String slug) {
-    UUID id = UUID.randomUUID();
-    entityManager
-        .getEntityManager()
-        .createNativeQuery("INSERT INTO workspaces (id, name, slug) VALUES (?1, ?2, ?3)")
-        .setParameter(1, id)
-        .setParameter(2, "모멘스")
-        .setParameter(3, slug)
-        .executeUpdate();
-    return id;
   }
 }
