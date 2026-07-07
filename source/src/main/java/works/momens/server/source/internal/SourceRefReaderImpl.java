@@ -17,11 +17,11 @@ class SourceRefReaderImpl implements SourceRefReader {
 
   @Override
   @Transactional(readOnly = true)
-  public List<SourceRefView> findByIds(Collection<UUID> ids) {
+  public List<SourceRefView> findByIds(UUID workspaceId, Collection<UUID> ids) {
     if (ids.isEmpty()) {
       return List.of();
     }
-    return sourceRefRepository.findByIdInAndDeletedAtIsNull(ids).stream()
+    return sourceRefRepository.findByWorkspaceIdAndIdInAndDeletedAtIsNull(workspaceId, ids).stream()
         .map(SourceRefReaderImpl::toView)
         .toList();
   }
