@@ -26,6 +26,7 @@ dependencies {
     implementation project(':workspace')
     implementation project(':project')
     implementation project(':source')
+    implementation project(':signal')
     implementation project(':mobile')
 
     // Core (Boot BOM 관리, 버전 생략)
