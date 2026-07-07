@@ -23,12 +23,15 @@ import works.momens.server.project.CreatedTask;
 import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.TaskCreator;
+import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
+import works.momens.server.user.UserProfile;
+import works.momens.server.user.UserService;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
- * 태스크 보드 조회와 생성 조합 규칙 검증. 도메인 모듈 public API는 mock으로 두고, 조합 규칙(권한 검사 순서, 그룹 구성, priority 매핑,
- * material_count 기본값, 생성 command 전달)만 확인합니다.
+ * 태스크 보드 조회와 생성, 상세 조회 조합 규칙 검증. 도메인 모듈 public API는 mock으로 두고, 조합 규칙(권한 검사 순서, 그룹 구성, priority 매핑,
+ * material_count 기본값, 생성 command 전달, 상세의 assignee 결합과 purpose 개명)만 확인합니다.
  */
 @ExtendWith(MockitoExtension.class)
 class ProjectTaskServiceTest {
@@ -37,11 +40,13 @@ class ProjectTaskServiceTest {
   @Mock private WorkspaceAccess workspaceAccess;
   @Mock private TaskReader taskReader;
   @Mock private TaskCreator taskCreator;
+  @Mock private UserService userService;
   @InjectMocks private ProjectTaskService projectTaskService;
 
   private static final UUID PROJECT_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID CALLER_ID = UUID.randomUUID();
+  private static final UUID TASK_ID = UUID.randomUUID();
 
   @Test
   void getBoardThrowsProjectNotFoundWhenProjectMissing() {
@@ -129,6 +134,81 @@ class ProjectTaskServiceTest {
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(CommonErrorCode.AUTH_FORBIDDEN);
+  }
+
+  @Test
+  void getTaskDetailThrowsTaskNotFoundWhenTaskMissing() {
+    when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> projectTaskService.getTaskDetail(TASK_ID, CALLER_ID))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).getErrorCode())
+        .isEqualTo(ProjectErrorCode.TASK_NOT_FOUND);
+  }
+
+  @Test
+  void getTaskDetailThrowsForbiddenForNonMemberOfTaskWorkspace() {
+    when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
+    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(false);
+
+    assertThatThrownBy(() -> projectTaskService.getTaskDetail(TASK_ID, CALLER_ID))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).getErrorCode())
+        .isEqualTo(CommonErrorCode.AUTH_FORBIDDEN);
+  }
+
+  @Test
+  void getTaskDetailJoinsAssigneeProfileAndMapsUrgentToHigh() {
+    UUID assigneeId = UUID.randomUUID();
+    when(taskReader.findDetail(TASK_ID))
+        .thenReturn(
+            Optional.of(
+                detail(
+                    assigneeId,
+                    "화면 흐름 정리",
+                    List.of(new TaskDetail.ChecklistItem(UUID.randomUUID(), "완료기준", true)))));
+    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
+    when(userService.getProfile(assigneeId)).thenReturn(profile(assigneeId, "김규일"));
+
+    MobileTaskDetail result = projectTaskService.getTaskDetail(TASK_ID, CALLER_ID);
+
+    assertThat(result.assignee()).isEqualTo(new MobileTaskDetail.Assignee(assigneeId, "김규일"));
+    assertThat(result.priority()).isEqualTo("high");
+    assertThat(result.purpose()).isEqualTo("화면 흐름 정리");
+    assertThat(result.checklistItems())
+        .extracting(TaskDetail.ChecklistItem::title)
+        .containsExactly("완료기준");
+  }
+
+  @Test
+  void getTaskDetailReturnsNullAssigneeAndPurposeWhenUnset() {
+    when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
+    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
+
+    MobileTaskDetail result = projectTaskService.getTaskDetail(TASK_ID, CALLER_ID);
+
+    assertThat(result.assignee()).isNull();
+    assertThat(result.purpose()).isNull();
+    assertThat(result.checklistItems()).isEmpty();
+  }
+
+  private static TaskDetail detail(
+      UUID assigneeId, String description, List<TaskDetail.ChecklistItem> checklistItems) {
+    return new TaskDetail(
+        TASK_ID,
+        PROJECT_ID,
+        WORKSPACE_ID,
+        "1차 와이어프레임",
+        "todo",
+        "urgent",
+        List.of("pm"),
+        assigneeId,
+        description,
+        checklistItems);
+  }
+
+  private static UserProfile profile(UUID id, String name) {
+    return new UserProfile(id, "gyuil@momens.works", name, "backend", null, null, null);
   }
 
   private void stubMember() {
