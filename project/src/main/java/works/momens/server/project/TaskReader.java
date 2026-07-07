@@ -2,12 +2,13 @@ package works.momens.server.project;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
  * task 조회 public API.
  *
- * <p>모바일 보드(MOM-62)가 project 내부 repository를 직접 참조하지 않고 태스크를 읽도록 합니다.
+ * <p>모바일 보드(MOM-62)와 상세(MOM-63)가 project 내부 repository를 직접 참조하지 않고 태스크를 읽도록 합니다.
  */
 public interface TaskReader {
 
@@ -16,4 +17,10 @@ public interface TaskReader {
    * 삭제된 태스크는 제외하며, 정렬은 생성 시각 내림차순이고 같으면 id 내림차순입니다.
    */
   List<BoardTask> listTasksByStatus(UUID projectId, Collection<String> statuses);
+
+  /**
+   * 태스크 한 건의 상세를 조회합니다. 소프트 삭제된 태스크는 빈 값으로 취급합니다. 없을 때 어떤 에러로 응답할지는 호출하는 쪽이 정합니다({@link
+   * ProjectReader}와 같은 계약 스타일).
+   */
+  Optional<TaskDetail> findDetail(UUID taskId);
 }

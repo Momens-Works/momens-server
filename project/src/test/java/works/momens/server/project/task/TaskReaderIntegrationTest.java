@@ -15,13 +15,14 @@ import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.BoardTask;
 import works.momens.server.project.ProjectSeedSql;
+import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
 
 /**
  * task 조회 public API 검증.
  *
- * <p>실제 PostgreSQL(Testcontainers) 환경에서 상태 필터, 소프트 삭제 제외, 정렬(생성 시각 내림차순), roles 결합을 확인합니다.
- * workspaces/users/projects는 다른 모듈 소유 테이블이라 FK 대상 행만 네이티브 SQL로 만듭니다.
+ * <p>실제 PostgreSQL(Testcontainers) 환경에서 보드 조회(상태 필터, 소프트 삭제 제외, 생성 시각 내림차순 정렬, roles 결합)와 상세 조회(저장
+ * 필드, checklist 순서, 빈 값)를 확인합니다. workspaces/users/projects는 다른 모듈 소유 테이블이라 FK 대상 행만 네이티브 SQL로 만듭니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -89,6 +90,64 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(board.get(1).roles()).containsExactly("pm", "qa");
   }
 
+  @Test
+  void findDetailReturnsStoredFieldsAndChecklistInPositionOrder() {
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "gyuil@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "detail");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
+    UUID assigneeId = ProjectSeedSql.insertUser(entityManager, "jsshin8128@momens.works");
+
+    UUID taskId =
+        saveTask(workspaceId, projectId, "1차 와이어프레임", "todo", "urgent", Set.of("qa", "pm"));
+    setDetailColumns(taskId, "이번 범위의 화면 흐름을 정리한다", assigneeId);
+    // position 역순으로 넣어 조회 순서가 삽입 순서가 아니라 position 기준임을 확인한다.
+    insertChecklistItem(taskId, "두 번째 완료기준", true, 1);
+    insertChecklistItem(taskId, "첫 번째 완료기준", false, 0);
+
+    TaskDetail detail = taskReader.findDetail(taskId).orElseThrow();
+
+    assertThat(detail.projectId()).isEqualTo(projectId);
+    assertThat(detail.workspaceId()).isEqualTo(workspaceId);
+    assertThat(detail.title()).isEqualTo("1차 와이어프레임");
+    assertThat(detail.status()).isEqualTo("todo");
+    assertThat(detail.priority()).isEqualTo("urgent");
+    assertThat(detail.roles()).containsExactly("pm", "qa");
+    assertThat(detail.assigneeId()).isEqualTo(assigneeId);
+    assertThat(detail.description()).isEqualTo("이번 범위의 화면 흐름을 정리한다");
+    assertThat(detail.checklistItems())
+        .extracting(TaskDetail.ChecklistItem::title)
+        .containsExactly("첫 번째 완료기준", "두 번째 완료기준");
+    assertThat(detail.checklistItems())
+        .extracting(TaskDetail.ChecklistItem::completed)
+        .containsExactly(false, true);
+  }
+
+  @Test
+  void findDetailReturnsEmptyValuesWhenOptionalFieldsAreMissing() {
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "empty-owner@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "empty");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
+    UUID taskId = saveTask(workspaceId, projectId, "빈 상세", "todo", "medium", Set.of("pm"));
+
+    TaskDetail detail = taskReader.findDetail(taskId).orElseThrow();
+
+    assertThat(detail.assigneeId()).isNull();
+    assertThat(detail.description()).isNull();
+    assertThat(detail.checklistItems()).isEmpty();
+  }
+
+  @Test
+  void findDetailReturnsEmptyForSoftDeletedOrUnknownTask() {
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "deleted-owner@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "deleted");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
+    UUID deleted = saveTask(workspaceId, projectId, "삭제됨", "todo", "medium", Set.of());
+    softDelete(deleted);
+
+    assertThat(taskReader.findDetail(deleted)).isEmpty();
+    assertThat(taskReader.findDetail(UUID.randomUUID())).isEmpty();
+  }
+
   private UUID saveTask(
       UUID workspaceId,
       UUID projectId,
@@ -107,6 +166,32 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
                 .roles(roles)
                 .build())
         .getId();
+  }
+
+  private void setDetailColumns(UUID taskId, String description, UUID assigneeId) {
+    entityManager
+        .getEntityManager()
+        .createNativeQuery("UPDATE tasks SET description = ?1, assignee_id = ?2 WHERE id = ?3")
+        .setParameter(1, description)
+        .setParameter(2, assigneeId)
+        .setParameter(3, taskId)
+        .executeUpdate();
+    entityManager.clear();
+  }
+
+  private void insertChecklistItem(UUID taskId, String title, boolean completed, int position) {
+    entityManager
+        .getEntityManager()
+        .createNativeQuery(
+            "INSERT INTO task_checklist_items (id, task_id, title, completed, position)"
+                + " VALUES (?1, ?2, ?3, ?4, ?5)")
+        .setParameter(1, UUID.randomUUID())
+        .setParameter(2, taskId)
+        .setParameter(3, title)
+        .setParameter(4, completed)
+        .setParameter(5, position)
+        .executeUpdate();
+    entityManager.clear();
   }
 
   private void softDelete(UUID taskId) {
