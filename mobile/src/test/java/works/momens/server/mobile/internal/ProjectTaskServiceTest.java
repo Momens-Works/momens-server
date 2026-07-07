@@ -77,8 +77,8 @@ class ProjectTaskServiceTest {
     when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
         .thenReturn(
             List.of(
-                new BoardTask(todoId, "투두 태스크", "todo", "low", List.of("android")),
-                new BoardTask(inProgressId, "진행중 태스크", "in_progress", "medium", List.of())));
+                new BoardTask(todoId, "투두 태스크", "todo", "low", "android"),
+                new BoardTask(inProgressId, "진행중 태스크", "in_progress", "medium", "pm")));
 
     List<MobileTaskGroup> groups = projectTaskService.getBoard(PROJECT_ID, CALLER_ID);
 
@@ -95,24 +95,23 @@ class ProjectTaskServiceTest {
     stubMember();
     UUID taskId = UUID.randomUUID();
     when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
-        .thenReturn(List.of(new BoardTask(taskId, "긴급 태스크", "todo", "urgent", List.of("pm"))));
+        .thenReturn(List.of(new BoardTask(taskId, "긴급 태스크", "todo", "urgent", "pm")));
 
     MobileTaskCard card = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(0).tasks().get(0);
 
     assertThat(card.priority()).isEqualTo("high");
     assertThat(card.materialCount()).isZero();
-    assertThat(card.roles()).containsExactly("pm");
+    assertThat(card.role()).isEqualTo("pm");
   }
 
   @Test
   void createTaskPassesCommandThroughToCreator() {
     stubMember();
     CreatedTask created =
-        new CreatedTask(UUID.randomUUID(), PROJECT_ID, "제목", List.of("pm"), "high", "todo");
+        new CreatedTask(UUID.randomUUID(), PROJECT_ID, "제목", "pm", "high", "todo");
     when(taskCreator.create(any())).thenReturn(created);
 
-    CreatedTask result =
-        projectTaskService.createTask(PROJECT_ID, CALLER_ID, "제목", List.of("pm"), "high");
+    CreatedTask result = projectTaskService.createTask(PROJECT_ID, CALLER_ID, "제목", "pm", "high");
 
     ArgumentCaptor<CreateTaskCommand> captor = ArgumentCaptor.forClass(CreateTaskCommand.class);
     org.mockito.Mockito.verify(taskCreator).create(captor.capture());
@@ -120,7 +119,7 @@ class ProjectTaskServiceTest {
     assertThat(command.projectId()).isEqualTo(PROJECT_ID);
     assertThat(command.workspaceId()).isEqualTo(WORKSPACE_ID);
     assertThat(command.title()).isEqualTo("제목");
-    assertThat(command.roles()).containsExactly("pm");
+    assertThat(command.role()).isEqualTo("pm");
     assertThat(command.priority()).isEqualTo("high");
     assertThat(result).isSameAs(created);
   }
@@ -201,7 +200,7 @@ class ProjectTaskServiceTest {
         "1차 와이어프레임",
         "todo",
         "urgent",
-        List.of("pm"),
+        "pm",
         assigneeId,
         description,
         checklistItems);

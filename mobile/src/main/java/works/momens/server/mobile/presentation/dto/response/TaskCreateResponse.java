@@ -1,7 +1,6 @@
 package works.momens.server.mobile.presentation.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.util.List;
 import java.util.UUID;
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
@@ -18,7 +17,8 @@ public record TaskCreateResponse(@Schema(description = "생성된 태스크") Ta
       @Schema(description = "태스크 식별자") UUID id,
       @Schema(description = "프로젝트 식별자") UUID projectId,
       @Schema(description = "제목") String title,
-      @Schema(description = "역할 목록") List<String> roles,
+      @Schema(description = "역할. pm/design/backend/frontend/android/qa 중 하나", example = "pm")
+          String role,
       @Schema(description = "우선순위. low/medium/high", example = "medium") String priority,
       @Schema(description = "상태", example = "todo") String status) {}
 
@@ -28,7 +28,7 @@ public record TaskCreateResponse(@Schema(description = "생성된 태스크") Ta
             created.id(),
             created.projectId(),
             created.title(),
-            created.roles(),
+            created.role(),
             created.priority(),
             created.status()));
   }

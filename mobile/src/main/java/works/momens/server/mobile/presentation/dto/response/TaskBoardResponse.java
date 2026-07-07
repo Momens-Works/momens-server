@@ -36,7 +36,8 @@ public record TaskBoardResponse(
   public record TaskCardResponse(
       @Schema(description = "태스크 식별자") UUID id,
       @Schema(description = "제목") String title,
-      @Schema(description = "역할 목록") List<String> roles,
+      @Schema(description = "역할. pm/design/backend/frontend/android/qa 중 하나", example = "pm")
+          String role,
       @Schema(description = "우선순위. low/medium/high", example = "low") String priority,
       @Schema(description = "관련 자료 수") int materialCount) {}
 
@@ -53,7 +54,7 @@ public record TaskBoardResponse(
                     new TaskCardResponse(
                         card.id(),
                         card.title(),
-                        card.roles(),
+                        card.role(),
                         card.priority(),
                         card.materialCount()))
             .toList();

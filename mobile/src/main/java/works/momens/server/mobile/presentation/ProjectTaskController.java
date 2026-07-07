@@ -50,7 +50,7 @@ class ProjectTaskController implements ProjectTaskControllerDocs {
             projectId,
             CurrentUser.id(principal),
             request.title(),
-            request.roles(),
+            request.role(),
             request.priority()));
   }
 }

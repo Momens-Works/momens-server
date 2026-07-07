@@ -57,10 +57,9 @@ public class ProjectTaskService {
 
   @Transactional
   public CreatedTask createTask(
-      UUID projectId, UUID userId, String title, List<String> roles, String priority) {
+      UUID projectId, UUID userId, String title, String role, String priority) {
     UUID workspaceId = requireProjectMember(projectId, userId);
-    return taskCreator.create(
-        new CreateTaskCommand(projectId, workspaceId, title, roles, priority));
+    return taskCreator.create(new CreateTaskCommand(projectId, workspaceId, title, role, priority));
   }
 
   @Transactional(readOnly = true)
@@ -82,7 +81,7 @@ public class ProjectTaskService {
         detail.projectId(),
         detail.title(),
         detail.status(),
-        detail.roles(),
+        detail.role(),
         toAssignee(detail.assigneeId()),
         mapPriority(detail.priority()),
         detail.description(),
@@ -118,7 +117,7 @@ public class ProjectTaskService {
   private static MobileTaskCard toCard(BoardTask task) {
     // 관련 자료 연결(entity_relations)이 서버에 아직 없어 material_count는 0으로 둔다(명세 합성 필드 정책).
     return new MobileTaskCard(
-        task.id(), task.title(), task.roles(), mapPriority(task.priority()), 0);
+        task.id(), task.title(), task.role(), mapPriority(task.priority()), 0);
   }
 
   private static String mapPriority(String storedPriority) {
