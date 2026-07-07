@@ -33,6 +33,7 @@
 | 이름 | 값 |
 | --- | --- |
 | `type` | `risk`, `decision`, `change`, `question` |
+| `evidence.source` | `slack`, `github`, `figma`, `notion`, `file` |
 | `action_command` | `convert-to-task`, `dismiss` |
 | `action` | `convert_to_task`, `dismiss` |
 | `primary_action` | `convert-to-task` |
@@ -47,6 +48,16 @@ Signal type 기반 화면 라벨은 앱이 다음처럼 파생합니다. 이 라
 | `risk`, `change` | `Needs action` |
 | `decision` | `Needs review` |
 | `question` | `Needs decision` |
+
+화면설계서의 Signal 카테고리 표시는 같은 `type`에서 파생합니다. 특히 VOC는 별도 API enum이 아니라
+`change` type의 화면 표시명입니다.
+
+| type | 카테고리 표시 |
+| --- | --- |
+| `risk` | `Risk` |
+| `decision` | `Decision` |
+| `change` | `VOC` |
+| `question` | `Question` |
 
 ### Task
 
@@ -256,11 +267,14 @@ Refresh token을 폐기합니다.
 MVP에서는 아직 처리되지 않은 시그널만 반환합니다. `convert-to-task` 또는 `dismiss`로 처리된 시그널을
 다시 보는 inbox/필터 흐름은 MVP 이후로 둡니다.
 
+정렬은 최신 Signal이 먼저 오도록 생성 시각 내림차순을 기본으로 합니다. 수십 건 이상 누적될 때의
+pagination/cursor 계약은 MVP 이후 확장으로 둡니다.
+
 카드의 `Needs action`, `Needs review`, `Needs decision` 라벨은 응답의 `type`에서 앱이 파생합니다. 서버가
 별도 처리 상태 필드를 내려주지 않습니다.
 
-`impact`, `minsu_suggestion`은 worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. 서버는 근거 없는
-문구를 임의 생성하지 않습니다.
+`impact`는 프로젝트에 미칠 영향 요약이며 목록 카드의 보조 문구로도 사용합니다. `impact`, `minsu_suggestion`은
+worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. 서버는 근거 없는 문구를 임의 생성하지 않습니다.
 
 #### Response 200
 
@@ -334,9 +348,9 @@ MVP에서는 아직 처리되지 않은 시그널만 반환합니다. `convert-t
 }
 ```
 
-`description`은 Signal 상세 본문입니다. `impact`와 `minsu.suggestion`은 worker/Minsu가 아직 생산하지 않았으면
-`null`일 수 있습니다. `minsu.task_draft`는 worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안을
-제공할 수 있습니다.
+`description`은 Signal 상세 본문이고, `impact`는 프로젝트에 미칠 영향 요약입니다. `impact`와
+`minsu.suggestion`은 worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. `minsu.task_draft`는
+worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안을 제공할 수 있습니다.
 
 #### Errors
 
