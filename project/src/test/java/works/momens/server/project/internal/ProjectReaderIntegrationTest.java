@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Import;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.ProjectReader;
+import works.momens.server.project.ProjectSeedSql;
 import works.momens.server.project.ProjectSnapshot;
 
 /**
@@ -33,10 +34,10 @@ class ProjectReaderIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void listByWorkspaceIdsReturnsLiveProjectsOfGivenWorkspacesNewestFirst() {
-    UUID ownerId = insertUser("reader-owner@momens.works");
-    UUID firstWorkspace = insertWorkspace("reader-first");
-    UUID secondWorkspace = insertWorkspace("reader-second");
-    UUID otherWorkspace = insertWorkspace("reader-others");
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "reader-owner@momens.works");
+    UUID firstWorkspace = ProjectSeedSql.insertWorkspace(entityManager, "reader-first");
+    UUID secondWorkspace = ProjectSeedSql.insertWorkspace(entityManager, "reader-second");
+    UUID otherWorkspace = ProjectSeedSql.insertWorkspace(entityManager, "reader-others");
 
     UUID older = saveProject(firstWorkspace, ownerId, "older").getId();
     UUID newer = saveProject(secondWorkspace, ownerId, "newer").getId();
@@ -57,8 +58,8 @@ class ProjectReaderIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void workspaceIdOfResolvesLiveProjectOnly() {
-    UUID ownerId = insertUser("resolve-owner@momens.works");
-    UUID workspaceId = insertWorkspace("resolve");
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "resolve-owner@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "resolve");
     UUID live = saveProject(workspaceId, ownerId, "live").getId();
     UUID deleted = saveProject(workspaceId, ownerId, "gone").getId();
     softDelete(deleted);
@@ -70,8 +71,8 @@ class ProjectReaderIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void findSnapshotMapsMobileReadFields() {
-    UUID ownerId = insertUser("snapshot-owner@momens.works");
-    UUID workspaceId = insertWorkspace("snapshot");
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "snapshot-owner@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "snapshot");
     UUID projectId =
         projectRepository
             .saveAndFlush(
@@ -109,31 +110,5 @@ class ProjectReaderIntegrationTest extends AbstractPostgresIntegrationTest {
         .setParameter(1, projectId)
         .executeUpdate();
     entityManager.clear();
-  }
-
-  /** projects.owner_id FK를 만족하도록 사용자 데이터를 네이티브 SQL로 삽입합니다. */
-  private UUID insertUser(String email) {
-    UUID id = UUID.randomUUID();
-    entityManager
-        .getEntityManager()
-        .createNativeQuery("INSERT INTO users (id, email, name) VALUES (?1, ?2, ?3)")
-        .setParameter(1, id)
-        .setParameter(2, email)
-        .setParameter(3, "이름")
-        .executeUpdate();
-    return id;
-  }
-
-  /** projects.workspace_id FK를 만족하도록 워크스페이스 데이터를 네이티브 SQL로 삽입합니다. */
-  private UUID insertWorkspace(String slug) {
-    UUID id = UUID.randomUUID();
-    entityManager
-        .getEntityManager()
-        .createNativeQuery("INSERT INTO workspaces (id, name, slug) VALUES (?1, ?2, ?3)")
-        .setParameter(1, id)
-        .setParameter(2, "모멘스")
-        .setParameter(3, slug)
-        .executeUpdate();
-    return id;
   }
 }

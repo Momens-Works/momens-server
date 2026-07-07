@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Import;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.BoardTask;
+import works.momens.server.project.ProjectSeedSql;
 import works.momens.server.project.TaskReader;
 
 /**
@@ -35,9 +36,9 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void listTasksByStatusReturnsOnlyGivenStatuses() {
-    UUID ownerId = insertUser("board-owner@momens.works");
-    UUID workspaceId = insertWorkspace("board");
-    UUID projectId = insertProject(workspaceId, ownerId);
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "board-owner@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "board");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
 
     saveTask(workspaceId, projectId, "백로그", "backlog", "medium", Set.of());
     saveTask(workspaceId, projectId, "투두", "todo", "medium", Set.of());
@@ -55,10 +56,10 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void listTasksByStatusExcludesSoftDeletedAndOtherProjects() {
-    UUID ownerId = insertUser("filter-owner@momens.works");
-    UUID workspaceId = insertWorkspace("filter");
-    UUID projectId = insertProject(workspaceId, ownerId);
-    UUID otherProjectId = insertProject(workspaceId, ownerId);
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "filter-owner@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "filter");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
+    UUID otherProjectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
 
     saveTask(workspaceId, projectId, "살아있음", "todo", "medium", Set.of());
     UUID deleted = saveTask(workspaceId, projectId, "삭제됨", "todo", "medium", Set.of());
@@ -72,9 +73,9 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void listTasksByStatusReturnsSortedRolesAndNewestFirst() {
-    UUID ownerId = insertUser("order-owner@momens.works");
-    UUID workspaceId = insertWorkspace("order");
-    UUID projectId = insertProject(workspaceId, ownerId);
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "order-owner@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "order");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
 
     UUID earlier = saveTask(workspaceId, projectId, "먼저", "todo", "high", Set.of("qa", "pm"));
     UUID later = saveTask(workspaceId, projectId, "나중", "todo", "high", Set.of("android"));
@@ -125,43 +126,5 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
         .setParameter(2, taskId)
         .executeUpdate();
     entityManager.clear();
-  }
-
-  private UUID insertUser(String email) {
-    UUID id = UUID.randomUUID();
-    entityManager
-        .getEntityManager()
-        .createNativeQuery("INSERT INTO users (id, email, name) VALUES (?1, ?2, ?3)")
-        .setParameter(1, id)
-        .setParameter(2, email)
-        .setParameter(3, "이름")
-        .executeUpdate();
-    return id;
-  }
-
-  private UUID insertWorkspace(String slug) {
-    UUID id = UUID.randomUUID();
-    entityManager
-        .getEntityManager()
-        .createNativeQuery("INSERT INTO workspaces (id, name, slug) VALUES (?1, ?2, ?3)")
-        .setParameter(1, id)
-        .setParameter(2, "모멘스")
-        .setParameter(3, slug)
-        .executeUpdate();
-    return id;
-  }
-
-  private UUID insertProject(UUID workspaceId, UUID ownerId) {
-    UUID id = UUID.randomUUID();
-    entityManager
-        .getEntityManager()
-        .createNativeQuery(
-            "INSERT INTO projects (id, workspace_id, name, owner_id) VALUES (?1, ?2, ?3, ?4)")
-        .setParameter(1, id)
-        .setParameter(2, workspaceId)
-        .setParameter(3, "프로젝트")
-        .setParameter(4, ownerId)
-        .executeUpdate();
-    return id;
   }
 }
