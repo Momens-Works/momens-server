@@ -13,4 +13,6 @@
 | [0005](0005-refresh-token-storage-model.md) | Refresh token 저장 모델: 서버 저장형 + PostgreSQL 원장 | Accepted |
 | [0006](0006-api-path-and-versioning-policy.md) | API path·버저닝 정책: `/api` 단일화 + 전 엔드포인트 버저닝 | Accepted |
 | [0007](0007-signal-backing-and-module-boundary.md) | Signal backing과 모듈 경계: 신규 `signals` + `signal` 모듈 | Accepted |
-| [0008](0008-outbox-worker-projection-boundary.md) | Projection 경계: api-server outbox 발행 + worker 소비 | Accepted |
+| [0008](0008-outbox-worker-projection-boundary.md) | Projection 경계: api-server outbox 발행 + worker 소비 | Accepted (notification 부분은 [0009](0009-notification-consumer-ownership.md)로 개정) |
+| [0009](0009-notification-consumer-ownership.md) | Notification 소유권: api-server가 `signal.created` outbox consumer | Accepted |
+| [0010](0010-event-contract-conventions.md) | 이벤트 계약 규약: event_type 네이밍·하위호환성·버저닝 | Accepted |
