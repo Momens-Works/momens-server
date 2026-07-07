@@ -13,9 +13,12 @@ import java.util.UUID;
  *
  * <p>소프트 삭제된 source_ref는 없는 것으로 취급합니다. 반환 순서는 보장하지 않으며, 표시 순서(예: Signal evidence의 sort_order)는 호출하는
  * 쪽이 정합니다.
+ *
+ * <p>조회는 {@code workspaceId} 스코프로 한정합니다. 다른 워크스페이스의 id가 섞여 들어와도 결과에서 빠지므로, 호출하는 쪽의 상위 권한 검사와 별개로 교차
+ * 워크스페이스 콘텐츠 노출을 쿼리 단계에서 막습니다.
  */
 public interface SourceRefReader {
 
-  /** ids에 해당하는, 소프트 삭제되지 않은 source_ref를 조회합니다. 없는 id는 결과에서 빠집니다. */
-  List<SourceRefView> findByIds(Collection<UUID> ids);
+  /** workspaceId에 속하고 ids에 해당하는, 소프트 삭제되지 않은 source_ref를 조회합니다. 없거나 다른 워크스페이스의 id는 결과에서 빠집니다. */
+  List<SourceRefView> findByIds(UUID workspaceId, Collection<UUID> ids);
 }

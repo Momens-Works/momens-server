@@ -39,15 +39,28 @@ class SourceRefReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     UUID deleted = insertSourceRef(workspaceId, "slack", "스레드", "삭제됨", Instant.now());
 
     List<SourceRefView> views =
-        sourceRefReader.findByIds(List.of(live, deleted, UUID.randomUUID()));
+        sourceRefReader.findByIds(workspaceId, List.of(live, deleted, UUID.randomUUID()));
 
     assertThat(views).extracting(SourceRefView::id).containsExactly(live);
   }
 
   @Test
+  @DisplayName("id가 맞아도 다른 워크스페이스의 source_ref는 반환하지 않는다")
+  void findByIdsExcludesOtherWorkspace() {
+    UUID workspaceId = UUID.randomUUID();
+    UUID otherWorkspaceId = UUID.randomUUID();
+    UUID mine = insertSourceRef(workspaceId, "figma", "내 화면", "설명", null);
+    UUID foreign = insertSourceRef(otherWorkspaceId, "slack", "남의 스레드", "설명", null);
+
+    List<SourceRefView> views = sourceRefReader.findByIds(workspaceId, List.of(mine, foreign));
+
+    assertThat(views).extracting(SourceRefView::id).containsExactly(mine);
+  }
+
+  @Test
   @DisplayName("빈 id 목록이면 DB 조회 없이 빈 결과를 반환한다")
   void findByIdsIsEmptyForEmptyIds() {
-    assertThat(sourceRefReader.findByIds(List.of())).isEmpty();
+    assertThat(sourceRefReader.findByIds(UUID.randomUUID(), List.of())).isEmpty();
   }
 
   @Test
@@ -65,7 +78,7 @@ class SourceRefReaderIntegrationTest extends AbstractPostgresIntegrationTest {
             "https://figma.example/permission",
             occurredAt);
 
-    SourceRefView view = sourceRefReader.findByIds(List.of(id)).getFirst();
+    SourceRefView view = sourceRefReader.findByIds(workspaceId, List.of(id)).getFirst();
 
     assertThat(view)
         .isEqualTo(
