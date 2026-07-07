@@ -180,8 +180,11 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 - `signal_actions`: 사용자의 `convert-to-task`, `dismiss` 처리 기록과 멱등성을 소유한다.
 - Signal 목록/상세 및 action API를 소유한다. 경로가 `/api/mobile/*`여도 Signal 도메인 정책과
   영속성은 `mobile`이 아니라 이 모듈에 둔다.
-- Signal action 결과 outbox 발행 계약을 소유한다. outbox 소비 상태, 재시도, DLQ는 worker 책임이고,
-  retrieval indexing 상태는 retrieval 책임이다.
+- Signal action 결과 outbox 발행 계약을 소유한다. projection 경로의 outbox 소비 상태, 재시도, DLQ는
+  worker 책임이고, retrieval indexing 상태는 retrieval 책임이다.
+- Signal 발생 push notification은 api-server가 worker의 `signal.created` outbox를 소비해 발송한다
+  ([ADR-0009](../adr/0009-notification-consumer-ownership.md)). 이 소비/발송을 `signal` 모듈이 소유할지
+  별도 notification 관심사로 둘지는 **미결정**이며 구현 PR에서 정한다.
 
 신규 Signal backing은 `memory_candidates`와 분리한다. 이유와 결과는
 [ADR-0007](../adr/0007-signal-backing-and-module-boundary.md)에 기록한다.

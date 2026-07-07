@@ -82,6 +82,7 @@ api-server는 다음을 책임진다.
 - 프로젝트 단위 Signal 처리 이력 반영
 - projection 처리를 위한 outbox 이벤트 발행
 - api-server가 발행하는 outbox 이벤트 멱등키 생성
+- Signal 발생 push notification 발송(worker가 발행한 `signal.created` outbox를 소비, [ADR-0009](../adr/0009-notification-consumer-ownership.md))
 
 api-server는 다음을 직접 수행하지 않는다.
 
@@ -163,7 +164,7 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 | Mobile API Contract | `/api/mobile/*`, API-Version, 표준 에러, snake_case, no wrapper | 필수 | 포함 | 모바일팀 병렬 개발을 위한 계약 |
 | Auth / Bootstrap | 기존 인증 API 재사용, 모바일 bootstrap | 필수 | 포함 | 앱 진입 필수 |
 | Projection / Outbox | Signal action 이후 worker projection/후속 처리 연계 | 필수 | 포함 | api-server 직접 retrieval write 금지 |
-| Notification | Signal 발생 push notification | 필수 | 포함 | task 생성/Signal 삭제/task 상태 변경 알림은 MVP 이후 |
+| Notification | Signal 발생 push notification (api-server가 `signal.created` 소비, ADR-0009) | 필수 | 포함 | task 생성/Signal 삭제/task 상태 변경 알림은 MVP 이후 |
 | Web API Migration | workspace/project/milestone/task/decision/blocker 등 기존 웹 API 이관 | 선택 | 제외 | 로드맵 단계 C |
 | Legacy Retirement | 레거시 서버 폐기, DB schema ownership 이전 | 선택 | 제외 | 로드맵 단계 D |
 | 후속 Signal 흐름 | 처리된 Signal inbox, record-decision, resolve, snooze, keep-watching | 선택 | 제외 | 삭제 처리한 Signal 다시 보기와 후속 액션은 MVP 이후 |
@@ -353,13 +354,13 @@ worker 산출물 저장 구조가 확정되면 backing source를 별도 설계�
 - 클라이언트는 모바일 MVP에서 `Idempotency-Key` 헤더를 보낼 필요가 없다.
 - 멱등키는 같은 Signal에 대한 같은 액션이 중복 처리되지 않도록 생성되어야 한다.
 - MVP에서 필요한 이벤트는 최소 다음 4개다.
-  - `signal.created`: Signal 발생. producer=worker, `aggregate_type=signal`, `aggregate_id=signal_id`,
+  - `signal.created`: Signal 발생. issued_by=worker, `aggregate_type=signal`, `aggregate_id=signal_id`,
     payload `{}`.
-  - `task.created`: task 생성. producer=api-server, `aggregate_type=task`, `aggregate_id=task_id`, payload
+  - `task.created`: task 생성. issued_by=api-server, `aggregate_type=task`, `aggregate_id=task_id`, payload
     `{ "origin_type": "manual|signal", "origin_signal_id": null|"<signal_id>" }`.
-  - `signal.converted_to_task`: Signal을 task로 수용. producer=api-server, `aggregate_type=signal`,
+  - `signal.converted_to_task`: Signal을 task로 수용. issued_by=api-server, `aggregate_type=signal`,
     `aggregate_id=signal_id`, payload `{ "task_id": "<task_id>" }`.
-  - `signal.dismissed`: Signal 삭제(dismiss). producer=api-server, `aggregate_type=signal`, `aggregate_id=signal_id`,
+  - `signal.dismissed`: Signal 삭제(dismiss). issued_by=api-server, `aggregate_type=signal`, `aggregate_id=signal_id`,
     payload `{}`.
 - worker의 소비 상태, 재시도, DLQ 저장 방식은 이 문서에서 확정하지 않는다.
 
