@@ -12,6 +12,8 @@ import java.util.UUID;
 import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.project.ProjectErrorCode;
+import works.momens.server.signal.SignalErrorCode;
+import works.momens.server.signal.presentation.dto.response.SignalDetailResponse;
 import works.momens.server.signal.presentation.dto.response.SignalListResponse;
 
 /**
@@ -41,4 +43,21 @@ interface SignalControllerDocs {
   @ApiExceptions({ProjectErrorCode.class, CommonErrorCode.class})
   SignalListResponse listSignals(
       @Parameter(description = "project 식별자") UUID projectId, Principal principal);
+
+  @Operation(
+      summary = "시그널 상세 조회",
+      description = "시그널 상세 bottom sheet에 필요한 본문·근거·민수 제안·가능한 action을 조회합니다.",
+      parameters =
+          @Parameter(
+              name = "API-Version",
+              in = ParameterIn.HEADER,
+              required = false,
+              example = "1"))
+  @ApiResponse(
+      responseCode = "200",
+      description = "시그널 상세.",
+      content = @Content(schema = @Schema(implementation = SignalDetailResponse.class)))
+  @ApiExceptions({SignalErrorCode.class, CommonErrorCode.class})
+  SignalDetailResponse getSignal(
+      @Parameter(description = "signal 식별자") UUID signalId, Principal principal);
 }

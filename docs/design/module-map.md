@@ -37,6 +37,7 @@
 - `mobile`은 `user`, `project`, `workspace`의 public API만 조합한다(bootstrap, 멤버 조회).
   도메인 정책을 소유하지 않는다.
 - `signal`은 `project`의 project/workspace 해석 public API와 `workspace`의 RBAC public API를 사용한다.
+  상세 응답의 evidence는 `source`의 source_ref 조회 public API로 hydrate한다.
   Signal을 task로 수용할 때는 `project`의 task 생성 public API를 사용한다.
 - `retrieval`은 `project`·`memory`의 도메인 write 이후 발행(event 또는 public API)을 받는다.
 - 다른 모듈의 `internal` package 참조와 순환 의존은 금지한다.

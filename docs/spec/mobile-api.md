@@ -330,9 +330,7 @@ worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. 서
       "occurred_at": "2026-06-28T09:48:00+09:00",
       "relative_time_label": "00분 전",
       "summary": "설명 문구 변경으로 이탈 가능성이 있습니다.",
-      "fields": [
-        { "label": "text", "value": "text" }
-      ],
+      "fields": [],
       "source_url": "https://..."
     }
   ],
@@ -352,6 +350,9 @@ worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. 서
 `description`은 Signal 상세 본문이고, `impact`는 프로젝트에 미칠 영향 요약입니다. `impact`와
 `minsu.suggestion`은 worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. `minsu.task_draft`는
 worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안을 제공할 수 있습니다.
+
+`evidence[].fields`는 provider별 부가 필드를 위한 자리이며, MVP에서는 항상 빈 배열입니다. 근거 없는 값을
+임의로 채우지 않고, source type별 필드 투영은 후속으로 둡니다.
 
 #### Errors
 
