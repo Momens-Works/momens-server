@@ -106,6 +106,7 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("멤버에게 hydrate된 근거가 포함된 Signal 상세를 반환한다")
   void returnsSignalDetailWithHydratedEvidenceForMember() throws Exception {
     UserProfile jinsu = userService.findOrCreate("signals-it-detail@momens.works", "신진수", null);
     UUID workspace = insertWorkspace("signals-detail");
@@ -138,6 +139,7 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("상세 조회에서 workspace 멤버가 아니면 AUTH_FORBIDDEN을 반환한다")
   void returnsForbiddenOnDetailWhenNotMember() throws Exception {
     UserProfile gyuil =
         userService.findOrCreate("signals-it-detail-owner@momens.works", "김규일", null);
@@ -158,6 +160,7 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("없는 Signal을 조회하면 SIGNAL_NOT_FOUND를 반환한다")
   void returnsNotFoundForUnknownSignal() throws Exception {
     UserProfile caller =
         userService.findOrCreate("signals-it-detail-404@momens.works", "신진수", null);

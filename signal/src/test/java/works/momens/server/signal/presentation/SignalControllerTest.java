@@ -106,6 +106,7 @@ class SignalControllerTest {
   }
 
   @Test
+  @DisplayName("Signal 상세 중첩 응답을 반환한다")
   void getSignalReturnsNestedDetail() throws Exception {
     UUID signalId = UUID.randomUUID();
     UUID evidenceId = UUID.randomUUID();
