@@ -11,6 +11,6 @@ SET role = (SELECT tr.role FROM task_roles tr WHERE tr.task_id = t.id ORDER BY t
 ALTER TABLE tasks
     ALTER COLUMN role SET NOT NULL,
     ADD CONSTRAINT tasks_role_check
-        CHECK (role IN ('pm', 'design', 'backend', 'frontend', 'android', 'qa'));
+        CHECK (role IN ('pm', 'design', 'backend', 'frontend'));
 
 DROP TABLE task_roles;

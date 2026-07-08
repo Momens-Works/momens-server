@@ -79,8 +79,8 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "order");
     UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
 
-    UUID earlier = saveTask(workspaceId, projectId, "먼저", "todo", "high", "qa");
-    UUID later = saveTask(workspaceId, projectId, "나중", "todo", "high", "android");
+    UUID earlier = saveTask(workspaceId, projectId, "먼저", "todo", "high", "backend");
+    UUID later = saveTask(workspaceId, projectId, "나중", "todo", "high", "frontend");
     // 두 태스크의 created_at이 같으면 id 보조 정렬로 순서가 흔들리므로, 생성 시각을 다르게 고정해 정렬을 결정적으로 만든다.
     setCreatedAt(earlier, "2026-07-06T00:00:00Z");
     setCreatedAt(later, "2026-07-06T00:00:01Z");
@@ -88,7 +88,7 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     List<BoardTask> board = taskReader.listTasksByStatus(projectId, BOARD_STATUSES);
 
     assertThat(board).extracting(BoardTask::title).containsExactly("나중", "먼저");
-    assertThat(board.get(1).role()).isEqualTo("qa");
+    assertThat(board.get(1).role()).isEqualTo("backend");
   }
 
   @Test
@@ -98,7 +98,7 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
     UUID assigneeId = ProjectSeedSql.insertUser(entityManager, "jinsu@momens.works");
 
-    UUID taskId = saveTask(workspaceId, projectId, "1차 와이어프레임", "todo", "urgent", "qa");
+    UUID taskId = saveTask(workspaceId, projectId, "1차 와이어프레임", "todo", "urgent", "backend");
     setDetailColumns(taskId, "이번 범위의 화면 흐름을 정리한다", assigneeId);
     // position 역순으로 넣어 조회 순서가 삽입 순서가 아니라 position 기준임을 확인한다.
     insertChecklistItem(taskId, "두 번째 완료기준", true, 1);
@@ -111,7 +111,7 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(detail.title()).isEqualTo("1차 와이어프레임");
     assertThat(detail.status()).isEqualTo("todo");
     assertThat(detail.priority()).isEqualTo("urgent");
-    assertThat(detail.role()).isEqualTo("qa");
+    assertThat(detail.role()).isEqualTo("backend");
     assertThat(detail.assigneeId()).isEqualTo(assigneeId);
     assertThat(detail.description()).isEqualTo("이번 범위의 화면 흐름을 정리한다");
     assertThat(detail.checklistItems())
@@ -154,7 +154,8 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "check");
     UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
 
-    assertThatThrownBy(() -> saveTask(workspaceId, projectId, "잘못된 역할", "todo", "medium", "ceo"))
+    assertThatThrownBy(
+            () -> saveTask(workspaceId, projectId, "폐기된 역할", "todo", "medium", "android"))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 

@@ -77,7 +77,7 @@ class ProjectTaskServiceTest {
     when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
         .thenReturn(
             List.of(
-                new BoardTask(todoId, "투두 태스크", "todo", "low", "android"),
+                new BoardTask(todoId, "투두 태스크", "todo", "low", "frontend"),
                 new BoardTask(inProgressId, "진행중 태스크", "in_progress", "medium", "pm")));
 
     List<MobileTaskGroup> groups = projectTaskService.getBoard(PROJECT_ID, CALLER_ID);

@@ -65,7 +65,7 @@ Signal type 기반 화면 라벨은 앱이 다음처럼 파생합니다. 이 라
 | --- | --- |
 | `group_key` | `todo`, `in_progress`, `done` |
 | `priority` | `high`, `medium`, `low` |
-| `role` | `pm`, `design`, `backend`, `frontend`, `android`, `qa` (하나만 선택) |
+| `role` | `pm`, `design`, `backend`, `frontend` (하나만 선택. android, qa는 2026-07-08 기획 확정으로 폐기) |
 
 ### Membership
 
@@ -340,7 +340,7 @@ worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. 서
     "suggestion": "내용이 들어갈 공간입니다",
     "task_draft": {
       "title": "Android 13+ 권한 요청 플로우 점검",
-      "role": "android",
+      "role": "frontend",
       "priority": "medium"
     }
   },
@@ -371,7 +371,7 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
 ```json
 {
   "title": "Android 13+ 권한 요청 플로우 점검",
-  "role": "android",
+  "role": "frontend",
   "priority": "medium"
 }
 ```
@@ -549,7 +549,7 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
         {
           "id": "27afd507-9c7f-4f0d-a2be-fcdab2477b19",
           "title": "1차 와이어프레임",
-          "role": "android",
+          "role": "frontend",
           "priority": "low",
           "material_count": 2
         }
@@ -599,7 +599,7 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
 }
 ```
 
-title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-07 역할은 하나만 선택하는 단일 값으로 재확정). role은 pm, design, backend, frontend, android, qa 중 하나입니다(생성 화면 역할 칩은 단일 선택). priority는 low, medium, high 중 하나입니다. 셋 중 하나라도 비면 COMMON_VALIDATION_FAILED로 응답합니다. 생성한 태스크는 todo 그룹에서 시작합니다. role은 레거시 tasks에 없는 신규 속성이라 CHECK 제약을 둔 문자열 컬럼으로 저장합니다.
+title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-07 역할은 하나만 선택하는 단일 값으로 재확정). role은 pm, design, backend, frontend 중 하나입니다(2026-07-08 기획 확정으로 android, qa는 폐기하고 역할은 4종만 둡니다). priority는 low, medium, high 중 하나입니다. 셋 중 하나라도 비거나 role이 4종 밖이면 COMMON_VALIDATION_FAILED로 응답합니다. 생성한 태스크는 todo 그룹에서 시작합니다. role은 레거시 tasks에 없는 신규 속성이라 CHECK 제약을 둔 문자열 컬럼으로 저장합니다.
 
 #### Errors
 

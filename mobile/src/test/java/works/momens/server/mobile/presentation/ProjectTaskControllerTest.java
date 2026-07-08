@@ -52,7 +52,7 @@ class ProjectTaskControllerTest {
             List.of(
                 new MobileTaskGroup(
                     BoardStatus.TODO,
-                    List.of(new MobileTaskCard(taskId, "투두 태스크", "android", "low", 2))),
+                    List.of(new MobileTaskCard(taskId, "투두 태스크", "frontend", "low", 2))),
                 new MobileTaskGroup(BoardStatus.IN_PROGRESS, List.of()),
                 new MobileTaskGroup(BoardStatus.DONE, List.of())));
 
@@ -68,7 +68,7 @@ class ProjectTaskControllerTest {
         .andExpect(jsonPath("$.groups[0].label").value("투두"))
         .andExpect(jsonPath("$.groups[0].count").value(1))
         .andExpect(jsonPath("$.groups[0].tasks[0].id").value(taskId.toString()))
-        .andExpect(jsonPath("$.groups[0].tasks[0].role").value("android"))
+        .andExpect(jsonPath("$.groups[0].tasks[0].role").value("frontend"))
         .andExpect(jsonPath("$.groups[0].tasks[0].material_count").value(2))
         .andExpect(jsonPath("$.groups[1].tasks.length()").value(0));
   }
@@ -155,6 +155,22 @@ class ProjectTaskControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"title\":\"제목\",\"role\":\"pm\",\"priority\":\"urgent\"}"))
         .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createTaskRejectsRolesOutsideCreationFour() throws Exception {
+    // 역할은 pm/design/backend/frontend 4종만 남기고 android, qa는 폐기했다(2026-07-08 기획 확정).
+    // 폐기된 값은 생성에서 400으로 거절한다.
+    for (String role : new String[] {"android", "qa"}) {
+      mockMvc
+          .perform(
+              post("/api/mobile/projects/{projectId}/tasks", PROJECT_ID)
+                  .principal(principal)
+                  .header("API-Version", "1")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content("{\"title\":\"제목\",\"role\":\"" + role + "\",\"priority\":\"medium\"}"))
+          .andExpect(status().isBadRequest());
+    }
   }
 
   @TestConfiguration

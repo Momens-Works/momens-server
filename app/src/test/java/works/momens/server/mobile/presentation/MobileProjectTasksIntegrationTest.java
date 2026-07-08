@@ -43,7 +43,7 @@ class MobileProjectTasksIntegrationTest extends AbstractPostgresIntegrationTest 
     UUID project = insertProject(workspace, jinsu.id(), "tasks-board-project");
 
     insertTask(workspace, project, "백로그", "backlog", "medium", "pm");
-    insertTask(workspace, project, "긴급 투두", "todo", "urgent", "android");
+    insertTask(workspace, project, "긴급 투두", "todo", "urgent", "frontend");
     insertTask(workspace, project, "진행중", "in_progress", "medium", "pm");
     insertTask(workspace, project, "완료", "done", "low", "pm");
     insertTask(workspace, project, "취소", "cancelled", "high", "pm");
@@ -61,7 +61,7 @@ class MobileProjectTasksIntegrationTest extends AbstractPostgresIntegrationTest 
         .andExpect(jsonPath("$.groups[0].tasks[0].title").value("긴급 투두"))
         // 레거시에만 있는 urgent는 모바일 표기에서 high로 내린다.
         .andExpect(jsonPath("$.groups[0].tasks[0].priority").value("high"))
-        .andExpect(jsonPath("$.groups[0].tasks[0].role").value("android"))
+        .andExpect(jsonPath("$.groups[0].tasks[0].role").value("frontend"))
         .andExpect(jsonPath("$.groups[0].tasks[0].material_count").value(0))
         .andExpect(jsonPath("$.groups[1].group_key").value("in_progress"))
         .andExpect(jsonPath("$.groups[1].count").value(1))
@@ -82,13 +82,13 @@ class MobileProjectTasksIntegrationTest extends AbstractPostgresIntegrationTest 
                 .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
                 .header("API-Version", "1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"title\":\"권한 요청 점검\",\"role\":\"android\",\"priority\":\"high\"}"))
+                .content("{\"title\":\"권한 요청 점검\",\"role\":\"backend\",\"priority\":\"high\"}"))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.task.project_id").value(project.toString()))
         .andExpect(jsonPath("$.task.title").value("권한 요청 점검"))
         .andExpect(jsonPath("$.task.status").value("todo"))
         .andExpect(jsonPath("$.task.priority").value("high"))
-        .andExpect(jsonPath("$.task.role").value("android"));
+        .andExpect(jsonPath("$.task.role").value("backend"));
 
     Map<String, Object> row =
         jdbcTemplate.queryForMap(
@@ -96,7 +96,7 @@ class MobileProjectTasksIntegrationTest extends AbstractPostgresIntegrationTest 
             project);
     org.assertj.core.api.Assertions.assertThat(row.get("status")).isEqualTo("todo");
     org.assertj.core.api.Assertions.assertThat(row.get("priority")).isEqualTo("high");
-    org.assertj.core.api.Assertions.assertThat(row.get("role")).isEqualTo("android");
+    org.assertj.core.api.Assertions.assertThat(row.get("role")).isEqualTo("backend");
     org.assertj.core.api.Assertions.assertThat((String) row.get("label")).startsWith("MOM-");
     org.assertj.core.api.Assertions.assertThat(row.get("workspace_id")).isEqualTo(workspace);
   }
