@@ -1,15 +1,25 @@
 package works.momens.server.mobile.presentation;
 
+import jakarta.validation.Valid;
 import java.security.Principal;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.CurrentUser;
+import works.momens.server.mobile.internal.ChecklistEdit;
+import works.momens.server.mobile.internal.MobileTaskDetail;
 import works.momens.server.mobile.internal.ProjectTaskService;
+import works.momens.server.mobile.presentation.dto.request.ToggleChecklistItemRequest;
+import works.momens.server.mobile.presentation.dto.request.UpdateTaskRequest;
+import works.momens.server.mobile.presentation.dto.response.ChecklistToggleResponse;
 import works.momens.server.mobile.presentation.dto.response.TaskDetailResponse;
+import works.momens.server.mobile.presentation.dto.response.TaskUpdateResponse;
 
 /**
  * 모바일 태스크 단건 엔드포인트. task 식별자로 접근하는 {@code /api/mobile/tasks/*} 표면을 담당하고, project 경로의 보드/생성은 {@link
@@ -30,5 +40,42 @@ class TaskController implements TaskControllerDocs {
   public TaskDetailResponse getTaskDetail(@PathVariable UUID taskId, Principal principal) {
     return TaskDetailResponse.from(
         projectTaskService.getTaskDetail(taskId, CurrentUser.id(principal)));
+  }
+
+  @Override
+  @PatchMapping(path = "/tasks/{taskId}", version = "1")
+  public TaskUpdateResponse updateTask(
+      @PathVariable UUID taskId,
+      @Valid @RequestBody UpdateTaskRequest request,
+      Principal principal) {
+    List<ChecklistEdit> checklistItems =
+        request.checklistItems().stream()
+            .map(item -> new ChecklistEdit(item.id(), item.title()))
+            .toList();
+    MobileTaskDetail updated =
+        projectTaskService.updateTask(
+            taskId,
+            CurrentUser.id(principal),
+            request.title(),
+            request.role(),
+            request.assigneeId(),
+            request.priority(),
+            request.status(),
+            request.purpose(),
+            checklistItems);
+    return TaskUpdateResponse.from(updated);
+  }
+
+  @Override
+  @PatchMapping(path = "/tasks/{taskId}/checklist-items/{itemId}", version = "1")
+  public ChecklistToggleResponse toggleChecklistItem(
+      @PathVariable UUID taskId,
+      @PathVariable UUID itemId,
+      @Valid @RequestBody ToggleChecklistItemRequest request,
+      Principal principal) {
+    MobileTaskDetail updated =
+        projectTaskService.toggleChecklistItem(
+            taskId, CurrentUser.id(principal), itemId, request.completed());
+    return ChecklistToggleResponse.from(updated, itemId);
   }
 }

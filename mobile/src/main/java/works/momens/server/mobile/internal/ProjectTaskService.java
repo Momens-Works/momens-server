@@ -17,7 +17,9 @@ import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.TaskCreator;
 import works.momens.server.project.TaskDetail;
+import works.momens.server.project.TaskEditor;
 import works.momens.server.project.TaskReader;
+import works.momens.server.project.UpdateTaskCommand;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 import works.momens.server.workspace.WorkspaceAccess;
@@ -37,6 +39,7 @@ public class ProjectTaskService {
   private final WorkspaceAccess workspaceAccess;
   private final TaskReader taskReader;
   private final TaskCreator taskCreator;
+  private final TaskEditor taskEditor;
   private final UserService userService;
 
   @Transactional(readOnly = true)
@@ -76,6 +79,56 @@ public class ProjectTaskService {
       throw new BusinessException(
           CommonErrorCode.AUTH_FORBIDDEN, Map.of("task_id", taskId.toString()));
     }
+    return toMobileDetail(detail);
+  }
+
+  @Transactional
+  public MobileTaskDetail updateTask(
+      UUID taskId,
+      UUID userId,
+      String title,
+      String role,
+      UUID assigneeId,
+      String priority,
+      String status,
+      String purpose,
+      List<ChecklistEdit> checklistItems) {
+    requireTaskMember(taskId, userId);
+    List<UpdateTaskCommand.ChecklistItemEdit> items =
+        checklistItems.stream()
+            .map(edit -> new UpdateTaskCommand.ChecklistItemEdit(edit.id(), edit.title()))
+            .toList();
+    TaskDetail updated =
+        taskEditor.update(
+            new UpdateTaskCommand(
+                taskId, title, role, assigneeId, priority, status, purpose, items));
+    return toMobileDetail(updated);
+  }
+
+  @Transactional
+  public MobileTaskDetail toggleChecklistItem(
+      UUID taskId, UUID userId, UUID itemId, boolean completed) {
+    requireTaskMember(taskId, userId);
+    TaskDetail updated = taskEditor.toggleChecklistItem(taskId, itemId, completed);
+    return toMobileDetail(updated);
+  }
+
+  private void requireTaskMember(UUID taskId, UUID userId) {
+    // 수정 전에는 상세 전체를 읽을 필요가 없어 workspace만 조회해 멤버십을 확인한다.
+    UUID workspaceId =
+        taskReader
+            .workspaceIdOf(taskId)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        ProjectErrorCode.TASK_NOT_FOUND, Map.of("task_id", taskId.toString())));
+    if (!workspaceAccess.isMember(workspaceId, userId)) {
+      throw new BusinessException(
+          CommonErrorCode.AUTH_FORBIDDEN, Map.of("task_id", taskId.toString()));
+    }
+  }
+
+  private MobileTaskDetail toMobileDetail(TaskDetail detail) {
     return new MobileTaskDetail(
         detail.id(),
         detail.projectId(),
