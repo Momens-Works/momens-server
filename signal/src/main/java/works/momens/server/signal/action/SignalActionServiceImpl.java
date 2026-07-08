@@ -104,7 +104,16 @@ class SignalActionServiceImpl implements SignalActionService {
               "processed_action", existing.getActionType()));
     }
     if (CONVERT_TO_TASK.equals(requestedActionType)) {
-      TaskDetail detail = taskReader.findDetail(existing.getResultTaskId()).orElseThrow();
+      TaskDetail detail =
+          taskReader
+              .findDetail(existing.getResultTaskId())
+              .orElseThrow(
+                  () ->
+                      new IllegalStateException(
+                          "signal_actions.result_task_id가 존재하지 않는 task를 가리킴: signal_id="
+                              + existing.getSignalId()
+                              + ", result_task_id="
+                              + existing.getResultTaskId()));
       return new SignalActionResult(
           existing.getSignalId(),
           CONVERT_TO_TASK,
