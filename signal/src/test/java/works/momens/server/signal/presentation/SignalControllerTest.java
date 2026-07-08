@@ -26,7 +26,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import works.momens.server.signal.ConvertToTaskCommand;
 import works.momens.server.signal.SignalActionResult;
 import works.momens.server.signal.SignalActionService;
 import works.momens.server.signal.SignalDetail;
@@ -219,7 +218,9 @@ class SignalControllerTest {
   void convertToTaskWithoutBodyPassesAllNullCommand() throws Exception {
     UUID signalId = UUID.randomUUID();
     when(signalActionService.convertToTask(
-            eq(signalId), eq(USER_ID), eq(new ConvertToTaskCommand(null, null, null))))
+            eq(signalId),
+            eq(USER_ID),
+            eq(new SignalActionService.ConvertToTaskCommand(null, null, null))))
         .thenReturn(
             new SignalActionResult(
                 signalId,

@@ -19,11 +19,10 @@ import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
-import works.momens.server.signal.ConvertToTaskCommand;
 import works.momens.server.signal.SignalActionResult;
+import works.momens.server.signal.SignalActionService;
 import works.momens.server.signal.SignalErrorCode;
 import works.momens.server.signal.SignalReader;
-import works.momens.server.signal.SignalSnapshot;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /** SignalActionServiceImpl의 가드·멱등·충돌·동시성 레이스 정책 검증(원자 쓰기는 SignalActionExecutor를 mock으로 분리). */
@@ -57,7 +56,9 @@ class SignalActionServiceImplTest {
     assertThatThrownBy(
             () ->
                 service.convertToTask(
-                    SIGNAL_ID, USER_ID, new ConvertToTaskCommand(null, "backend", null)))
+                    SIGNAL_ID,
+                    USER_ID,
+                    new SignalActionService.ConvertToTaskCommand(null, "backend", null)))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(SignalErrorCode.SIGNAL_NOT_FOUND);
@@ -67,7 +68,8 @@ class SignalActionServiceImplTest {
   @DisplayName("workspace 멤버가 아니면 AUTH_FORBIDDEN을 던진다(404 우선)")
   void throwsForbiddenWhenNotMember() {
     when(signalReader.findLive(SIGNAL_ID))
-        .thenReturn(Optional.of(new SignalSnapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목")));
+        .thenReturn(
+            Optional.of(new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목")));
     when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(false);
 
     assertThatThrownBy(() -> service.dismiss(SIGNAL_ID, USER_ID))
@@ -80,14 +82,17 @@ class SignalActionServiceImplTest {
   @DisplayName("role이 body에도 draft에도 없으면 COMMON_VALIDATION_FAILED를 던진다")
   void throwsValidationFailedWhenRoleMissing() {
     when(signalReader.findLive(SIGNAL_ID))
-        .thenReturn(Optional.of(new SignalSnapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목")));
+        .thenReturn(
+            Optional.of(new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목")));
     when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
     when(signalActionRepository.findBySignalId(SIGNAL_ID)).thenReturn(Optional.empty());
 
     assertThatThrownBy(
             () ->
                 service.convertToTask(
-                    SIGNAL_ID, USER_ID, new ConvertToTaskCommand(null, null, null)))
+                    SIGNAL_ID,
+                    USER_ID,
+                    new SignalActionService.ConvertToTaskCommand(null, null, null)))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(CommonErrorCode.COMMON_VALIDATION_FAILED);
@@ -97,7 +102,8 @@ class SignalActionServiceImplTest {
   @Test
   @DisplayName("title·priority는 폴백하고 role은 body 값을 그대로 executor에 넘긴다")
   void fallsBackTitleAndPriorityButPassesRoleThrough() {
-    SignalSnapshot signal = new SignalSnapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "시그널 제목");
+    SignalReader.Snapshot signal =
+        new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "시그널 제목");
     when(signalReader.findLive(SIGNAL_ID)).thenReturn(Optional.of(signal));
     when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
     when(signalActionRepository.findBySignalId(SIGNAL_ID)).thenReturn(Optional.empty());
@@ -110,7 +116,10 @@ class SignalActionServiceImplTest {
                 new SignalActionResult.TaskResult(UUID.randomUUID(), "시그널 제목", "todo")));
 
     SignalActionResult result =
-        service.convertToTask(SIGNAL_ID, USER_ID, new ConvertToTaskCommand(null, "backend", null));
+        service.convertToTask(
+            SIGNAL_ID,
+            USER_ID,
+            new SignalActionService.ConvertToTaskCommand(null, "backend", null));
 
     assertThat(result.created()).isTrue();
     verify(executor).convert(signal, USER_ID, "시그널 제목", "backend", "medium");
@@ -120,7 +129,8 @@ class SignalActionServiceImplTest {
   @DisplayName("같은 action 재요청은 executor를 호출하지 않고 기존 결과를 replay한다")
   void replaysExistingResultForSameAction() {
     when(signalReader.findLive(SIGNAL_ID))
-        .thenReturn(Optional.of(new SignalSnapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목")));
+        .thenReturn(
+            Optional.of(new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목")));
     when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
     UUID taskId = UUID.randomUUID();
     SignalAction existing =
@@ -148,7 +158,10 @@ class SignalActionServiceImplTest {
                     java.util.List.of())));
 
     SignalActionResult result =
-        service.convertToTask(SIGNAL_ID, USER_ID, new ConvertToTaskCommand(null, "backend", null));
+        service.convertToTask(
+            SIGNAL_ID,
+            USER_ID,
+            new SignalActionService.ConvertToTaskCommand(null, "backend", null));
 
     assertThat(result.created()).isFalse();
     assertThat(result.task().id()).isEqualTo(taskId);
@@ -159,7 +172,8 @@ class SignalActionServiceImplTest {
   @DisplayName("이미 다른 action으로 처리됐으면 SIGNAL_INVALID_STATE를 던진다")
   void throwsInvalidStateWhenProcessedByDifferentAction() {
     when(signalReader.findLive(SIGNAL_ID))
-        .thenReturn(Optional.of(new SignalSnapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목")));
+        .thenReturn(
+            Optional.of(new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목")));
     when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
     SignalAction existing =
         SignalAction.builder()
@@ -173,7 +187,9 @@ class SignalActionServiceImplTest {
     assertThatThrownBy(
             () ->
                 service.convertToTask(
-                    SIGNAL_ID, USER_ID, new ConvertToTaskCommand(null, "backend", null)))
+                    SIGNAL_ID,
+                    USER_ID,
+                    new SignalActionService.ConvertToTaskCommand(null, "backend", null)))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(SignalErrorCode.SIGNAL_INVALID_STATE);
@@ -182,7 +198,8 @@ class SignalActionServiceImplTest {
   @Test
   @DisplayName("동시성 레이스로 executor가 제약 위반을 던지면 재조회해 replay한다")
   void recoversFromRaceByReplayingAfterConstraintViolation() {
-    SignalSnapshot signal = new SignalSnapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목");
+    SignalReader.Snapshot signal =
+        new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목");
     when(signalReader.findLive(SIGNAL_ID)).thenReturn(Optional.of(signal));
     when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
     SignalAction racedRow =

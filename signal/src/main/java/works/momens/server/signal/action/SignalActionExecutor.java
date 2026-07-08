@@ -8,7 +8,7 @@ import works.momens.server.project.CreateTaskCommand;
 import works.momens.server.project.CreatedTask;
 import works.momens.server.project.TaskCreator;
 import works.momens.server.signal.SignalActionResult;
-import works.momens.server.signal.SignalSnapshot;
+import works.momens.server.signal.SignalReader;
 
 /**
  * Signal action의 원자 쓰기 트랜잭션.
@@ -26,7 +26,7 @@ class SignalActionExecutor {
 
   @Transactional
   SignalActionResult convert(
-      SignalSnapshot signal, UUID userId, String title, String role, String priority) {
+      SignalReader.Snapshot signal, UUID userId, String title, String role, String priority) {
     CreatedTask created =
         taskCreator.create(
             new CreateTaskCommand(signal.projectId(), signal.workspaceId(), title, role, priority));
@@ -46,7 +46,7 @@ class SignalActionExecutor {
   }
 
   @Transactional
-  SignalActionResult dismiss(SignalSnapshot signal, UUID userId) {
+  SignalActionResult dismiss(SignalReader.Snapshot signal, UUID userId) {
     signalActionRepository.save(
         SignalAction.builder()
             .workspaceId(signal.workspaceId())

@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.CurrentUser;
-import works.momens.server.signal.ConvertToTaskCommand;
 import works.momens.server.signal.SignalActionResult;
 import works.momens.server.signal.SignalActionService;
 import works.momens.server.signal.SignalDetailService;
@@ -59,8 +58,10 @@ class SignalController implements SignalControllerDocs {
       @PathVariable UUID signalId,
       @Valid @RequestBody(required = false) ConvertToTaskRequest request,
       Principal principal) {
-    ConvertToTaskCommand command =
-        request != null ? request.toCommand() : new ConvertToTaskCommand(null, null, null);
+    SignalActionService.ConvertToTaskCommand command =
+        request != null
+            ? request.toCommand()
+            : new SignalActionService.ConvertToTaskCommand(null, null, null);
     SignalActionResult result =
         signalActionService.convertToTask(signalId, CurrentUser.id(principal), command);
     HttpStatus status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
