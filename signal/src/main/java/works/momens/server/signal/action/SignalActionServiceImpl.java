@@ -10,12 +10,10 @@ import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
-import works.momens.server.signal.ConvertToTaskCommand;
 import works.momens.server.signal.SignalActionResult;
 import works.momens.server.signal.SignalActionService;
 import works.momens.server.signal.SignalErrorCode;
 import works.momens.server.signal.SignalReader;
-import works.momens.server.signal.SignalSnapshot;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
@@ -41,8 +39,8 @@ class SignalActionServiceImpl implements SignalActionService {
 
   @Override
   public SignalActionResult convertToTask(
-      UUID signalId, UUID userId, ConvertToTaskCommand command) {
-    SignalSnapshot signal = loadAuthorized(signalId, userId);
+      UUID signalId, UUID userId, SignalActionService.ConvertToTaskCommand command) {
+    SignalReader.Snapshot signal = loadAuthorized(signalId, userId);
     Optional<SignalAction> existing = signalActionRepository.findBySignalId(signalId);
     if (existing.isPresent()) {
       return replayOrConflict(existing.get(), CONVERT_TO_TASK);
@@ -67,7 +65,7 @@ class SignalActionServiceImpl implements SignalActionService {
 
   @Override
   public SignalActionResult dismiss(UUID signalId, UUID userId) {
-    SignalSnapshot signal = loadAuthorized(signalId, userId);
+    SignalReader.Snapshot signal = loadAuthorized(signalId, userId);
     Optional<SignalAction> existing = signalActionRepository.findBySignalId(signalId);
     if (existing.isPresent()) {
       return replayOrConflict(existing.get(), DISMISS);
@@ -81,8 +79,8 @@ class SignalActionServiceImpl implements SignalActionService {
     }
   }
 
-  private SignalSnapshot loadAuthorized(UUID signalId, UUID userId) {
-    SignalSnapshot signal =
+  private SignalReader.Snapshot loadAuthorized(UUID signalId, UUID userId) {
+    SignalReader.Snapshot signal =
         signalReader
             .findLive(signalId)
             .orElseThrow(

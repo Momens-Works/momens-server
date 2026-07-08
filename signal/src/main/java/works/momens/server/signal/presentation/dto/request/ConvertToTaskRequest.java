@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Pattern;
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
-import works.momens.server.signal.ConvertToTaskCommand;
+import works.momens.server.signal.SignalActionService;
 
 /**
  * convert-to-task 요청. body 전체와 각 필드가 모두 생략 가능하다(docs/spec/mobile-api.md).
@@ -25,7 +25,7 @@ public record ConvertToTaskRequest(
         @Pattern(regexp = "low|medium|high")
         String priority) {
 
-  public ConvertToTaskCommand toCommand() {
-    return new ConvertToTaskCommand(title, role, priority);
+  public SignalActionService.ConvertToTaskCommand toCommand() {
+    return new SignalActionService.ConvertToTaskCommand(title, role, priority);
   }
 }
