@@ -3,6 +3,7 @@ package works.momens.server.signal.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,8 +16,8 @@ import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 /**
  * Signal 읽기 모델 검증.
  *
- * <p>실제 PostgreSQL(Testcontainers)에서 소프트 삭제 제외 id 조회와 컬럼 매핑을 확인합니다. signals는 worker가 쓰는 읽기 전용
- * 테이블이므로 fixture는 네이티브 SQL로 삽입합니다. 프로젝트 목록의 미처리 필터는 {@code signal_actions}에 의존하므로 후속 PR에서 검증합니다.
+ * <p>실제 PostgreSQL(Testcontainers)에서 소프트 삭제 제외 id 조회, 컬럼 매핑, 미처리(signal_actions 없음) 필터를 확인합니다.
+ * signals·signal_actions는 각각 worker·api-server가 쓰는 테이블이므로 fixture는 네이티브 SQL로 삽입합니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -74,6 +75,54 @@ class SignalRepositoryIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(signal.getOccurredAt()).isEqualTo(occurredAt);
   }
 
+  @Test
+  @DisplayName("signal_actions가 있는 Signal과 소프트 삭제된 Signal은 미처리 목록에서 빠진다")
+  void findUnprocessedExcludesSignalsWithActionOrDeleted() {
+    UUID projectId = UUID.randomUUID();
+    Instant createdAt = Instant.parse("2026-07-01T00:00:00Z");
+    UUID unprocessed = insertSignal(projectId, "risk", "unprocessed", null, createdAt);
+    UUID processed =
+        insertSignal(projectId, "decision", "processed", null, createdAt.minusSeconds(60));
+    UUID deleted = insertSignal(projectId, "risk", "gone", Instant.now(), createdAt);
+    insertSignal(UUID.randomUUID(), "risk", "otherProject", null, createdAt);
+    insertAction(processed);
+
+    List<Signal> result = signalRepository.findUnprocessedByProjectId(projectId);
+
+    assertThat(result).extracting(Signal::getId).containsExactly(unprocessed);
+    assertThat(result).extracting(Signal::getId).doesNotContain(processed, deleted);
+  }
+
+  @Test
+  @DisplayName("생성 시각이 같으면 id 내림차순으로 순서를 고정한다")
+  void findUnprocessedTieBreaksByIdDescendingOnEqualCreatedAt() {
+    UUID projectId = UUID.randomUUID();
+    Instant createdAt = Instant.parse("2026-07-01T00:00:00Z");
+    UUID first = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    UUID second = UUID.fromString("00000000-0000-0000-0000-000000000002");
+    insertSignalWithId(second, projectId, "risk", "second", createdAt);
+    insertSignalWithId(first, projectId, "risk", "first", createdAt);
+
+    List<Signal> result = signalRepository.findUnprocessedByProjectId(projectId);
+
+    assertThat(result).extracting(Signal::getId).containsExactly(second, first);
+  }
+
+  private void insertAction(UUID signalId) {
+    entityManager
+        .getEntityManager()
+        .createNativeQuery(
+            "INSERT INTO signal_actions (id, workspace_id, signal_id, action_type,"
+                + " processed_by_user_id) VALUES (?1, ?2, ?3, ?4, ?5)")
+        .setParameter(1, UUID.randomUUID())
+        .setParameter(2, UUID.randomUUID())
+        .setParameter(3, signalId)
+        .setParameter(4, "dismiss")
+        .setParameter(5, UUID.randomUUID())
+        .executeUpdate();
+    entityManager.clear();
+  }
+
   private UUID insertSignal(
       UUID projectId, String type, String title, Instant deletedAt, Instant createdAt) {
     UUID id = UUID.randomUUID();
@@ -93,5 +142,23 @@ class SignalRepositoryIntegrationTest extends AbstractPostgresIntegrationTest {
         .executeUpdate();
     entityManager.clear();
     return id;
+  }
+
+  private void insertSignalWithId(
+      UUID id, UUID projectId, String type, String title, Instant createdAt) {
+    entityManager
+        .getEntityManager()
+        .createNativeQuery(
+            "INSERT INTO signals (id, workspace_id, project_id, type, title, description,"
+                + " created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
+        .setParameter(1, id)
+        .setParameter(2, UUID.randomUUID())
+        .setParameter(3, projectId)
+        .setParameter(4, type)
+        .setParameter(5, title)
+        .setParameter(6, "본문")
+        .setParameter(7, createdAt)
+        .executeUpdate();
+    entityManager.clear();
   }
 }

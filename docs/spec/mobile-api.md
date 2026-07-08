@@ -267,8 +267,9 @@ Refresh token을 폐기합니다.
 MVP에서는 아직 처리되지 않은 시그널만 반환합니다. `convert-to-task` 또는 `dismiss`로 처리된 시그널을
 다시 보는 inbox/필터 흐름은 MVP 이후로 둡니다.
 
-정렬은 최신 Signal이 먼저 오도록 생성 시각 내림차순을 기본으로 합니다. 수십 건 이상 누적될 때의
-pagination/cursor 계약은 MVP 이후 확장으로 둡니다.
+정렬은 최신 Signal이 먼저 오도록 생성 시각 내림차순을 기본으로 합니다. 생성 시각이 같으면 id
+내림차순으로 순서를 고정합니다. 수십 건 이상 누적될 때의 pagination/cursor 계약은 MVP 이후 확장으로
+둡니다.
 
 카드의 `Needs action`, `Needs review`, `Needs decision` 라벨은 응답의 `type`에서 앱이 파생합니다. 서버가
 별도 처리 상태 필드를 내려주지 않습니다.

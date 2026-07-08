@@ -1,0 +1,106 @@
+package works.momens.server.signal.presentation;
+
+import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.security.Principal;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import works.momens.server.signal.internal.SignalListService;
+import works.momens.server.signal.internal.SignalSummary;
+
+/**
+ * 컨트롤러가 경로 변수와 Principal을 서비스에 그대로 전달하고 명세(docs/spec/mobile-api.md)의 고정 envelope·snake_case 응답
+ * shape를 내는지 검증합니다. versioning은 모듈 경계상 app 설정을 못 가져오므로 슬라이스 안에서 동일하게 구성합니다. 인증 실패(401)와 에러 응답
+ * shape는 app의 통합 테스트가 봅니다.
+ */
+@WebMvcTest(SignalController.class)
+@AutoConfigureMockMvc(addFilters = false)
+@Import(SignalControllerTest.ApiVersioningTestConfig.class)
+class SignalControllerTest {
+
+  @Autowired private MockMvc mockMvc;
+  @MockitoBean private SignalListService signalListService;
+
+  private static final UUID USER_ID = UUID.fromString("5d2f7f3a-5db1-4f2c-8b9e-13607dd1f5e8");
+  private static final UUID PROJECT_ID = UUID.fromString("30d9e9fe-f43b-4097-a88e-dc19f0a5b025");
+  private final Principal principal = USER_ID::toString;
+
+  @Test
+  void listSignalsReturnsFixedEnvelopeWithSnakeCaseSignals() throws Exception {
+    UUID signalId = UUID.randomUUID();
+    when(signalListService.listUnprocessed(eq(PROJECT_ID), eq(USER_ID)))
+        .thenReturn(
+            List.of(
+                new SignalSummary(
+                    signalId, PROJECT_ID, "risk", "이탈 가능성 발견", "완료율에 영향을 줄 수 있습니다.", "점검 제안")));
+
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/signals", PROJECT_ID)
+                .principal(principal)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("오늘 확인해야 할 시그널"))
+        .andExpect(jsonPath("$.description").value("프로젝트의 의사결정에 영향을 줄 수 있는 변화입니다."))
+        .andExpect(jsonPath("$.signals.length()").value(1))
+        .andExpect(jsonPath("$.signals[0].id").value(signalId.toString()))
+        .andExpect(jsonPath("$.signals[0].project_id").value(PROJECT_ID.toString()))
+        .andExpect(jsonPath("$.signals[0].type").value("risk"))
+        .andExpect(jsonPath("$.signals[0].title").value("이탈 가능성 발견"))
+        .andExpect(jsonPath("$.signals[0].impact").value("완료율에 영향을 줄 수 있습니다."))
+        .andExpect(jsonPath("$.signals[0].minsu_suggestion").value("점검 제안"));
+  }
+
+  @Test
+  void listSignalsIncludesNullImpactAndMinsuSuggestion() throws Exception {
+    UUID signalId = UUID.randomUUID();
+    when(signalListService.listUnprocessed(eq(PROJECT_ID), eq(USER_ID)))
+        .thenReturn(List.of(new SignalSummary(signalId, PROJECT_ID, "decision", "제목", null, null)));
+
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/signals", PROJECT_ID)
+                .principal(principal)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.signals[0].impact", nullValue()))
+        .andExpect(jsonPath("$.signals[0].minsu_suggestion", nullValue()));
+  }
+
+  @Test
+  void listSignalsReturnsEmptyArrayWhenNoneUnprocessed() throws Exception {
+    when(signalListService.listUnprocessed(eq(PROJECT_ID), eq(USER_ID))).thenReturn(List.of());
+
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/signals", PROJECT_ID)
+                .principal(principal)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.signals").isArray())
+        .andExpect(jsonPath("$.signals.length()").value(0));
+  }
+
+  @TestConfiguration
+  static class ApiVersioningTestConfig implements WebMvcConfigurer {
+    @Override
+    public void configureApiVersioning(ApiVersionConfigurer configurer) {
+      configurer.useRequestHeader("API-Version").addSupportedVersions("1").setDefaultVersion("1");
+    }
+  }
+}
