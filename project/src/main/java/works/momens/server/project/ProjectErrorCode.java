@@ -13,7 +13,8 @@ import works.momens.server.common.api.ErrorCode;
 @RequiredArgsConstructor
 public enum ProjectErrorCode implements ErrorCode {
   PROJECT_NOT_FOUND(404, "프로젝트를 찾을 수 없습니다."),
-  TASK_NOT_FOUND(404, "태스크를 찾을 수 없습니다.");
+  TASK_NOT_FOUND(404, "태스크를 찾을 수 없습니다."),
+  TASK_CHECKLIST_ITEM_NOT_FOUND(404, "완료기준 항목을 찾을 수 없습니다.");
 
   private final int status;
   private final String defaultMessage;

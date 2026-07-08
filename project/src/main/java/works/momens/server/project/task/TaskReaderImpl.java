@@ -31,31 +31,17 @@ class TaskReaderImpl implements TaskReader {
   @Transactional(readOnly = true)
   public Optional<TaskDetail> findDetail(UUID taskId) {
     // checklistItems는 LAZY 컬렉션이라 이 트랜잭션 안에서 보조 SELECT로 초기화된다.
-    return taskRepository.findByIdAndDeletedAtIsNull(taskId).map(TaskReaderImpl::toDetail);
+    return taskRepository.findByIdAndDeletedAtIsNull(taskId).map(TaskDetailMapper::toDetail);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<UUID> workspaceIdOf(UUID taskId) {
+    return taskRepository.findWorkspaceIdById(taskId);
   }
 
   private static BoardTask toBoardTask(Task task) {
     return new BoardTask(
         task.getId(), task.getTitle(), task.getStatus(), task.getPriority(), task.getRole());
-  }
-
-  private static TaskDetail toDetail(Task task) {
-    List<TaskDetail.ChecklistItem> checklistItems =
-        task.getChecklistItems().stream()
-            .map(
-                item ->
-                    new TaskDetail.ChecklistItem(item.getId(), item.getTitle(), item.isCompleted()))
-            .toList();
-    return new TaskDetail(
-        task.getId(),
-        task.getProjectId(),
-        task.getWorkspaceId(),
-        task.getTitle(),
-        task.getStatus(),
-        task.getPriority(),
-        task.getRole(),
-        task.getAssigneeId(),
-        task.getDescription(),
-        checklistItems);
   }
 }
