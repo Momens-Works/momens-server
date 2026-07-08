@@ -60,15 +60,23 @@ public record SignalDetailResponse(
   public static SignalDetailResponse from(SignalDetail detail) {
     return new SignalDetailResponse(
         detail.id(),
-        new ProjectRef(detail.projectId(), detail.projectName()),
+        toProject(detail),
         detail.type(),
         detail.title(),
         detail.description(),
         detail.impact(),
-        detail.evidence().stream().map(SignalDetailResponse::toEvidence).toList(),
-        new Minsu(detail.minsuSuggestion(), minimalTaskDraft(detail.title())),
+        toEvidenceList(detail),
+        toMinsu(detail),
         ACTIONS,
         PRIMARY_ACTION);
+  }
+
+  private static ProjectRef toProject(SignalDetail detail) {
+    return new ProjectRef(detail.projectId(), detail.projectName());
+  }
+
+  private static List<EvidenceResponse> toEvidenceList(SignalDetail detail) {
+    return detail.evidence().stream().map(SignalDetailResponse::toEvidence).toList();
   }
 
   private static EvidenceResponse toEvidence(SignalDetail.Evidence evidence) {
@@ -81,6 +89,10 @@ public record SignalDetailResponse(
         evidence.summary(),
         List.of(),
         evidence.sourceUrl());
+  }
+
+  private static Minsu toMinsu(SignalDetail detail) {
+    return new Minsu(detail.minsuSuggestion(), minimalTaskDraft(detail.title()));
   }
 
   /** worker/Minsu 산출물이 없을 때 서버가 제공하는 Signal 제목 기반 최소 초안. */
