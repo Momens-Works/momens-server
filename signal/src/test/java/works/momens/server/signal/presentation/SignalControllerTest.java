@@ -2,9 +2,11 @@ package works.momens.server.signal.presentation;
 
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,10 +21,14 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import works.momens.server.signal.ConvertToTaskCommand;
+import works.momens.server.signal.SignalActionResult;
+import works.momens.server.signal.SignalActionService;
 import works.momens.server.signal.SignalDetail;
 import works.momens.server.signal.SignalDetailService;
 import works.momens.server.signal.SignalListService;
@@ -41,6 +47,7 @@ class SignalControllerTest {
   @Autowired private MockMvc mockMvc;
   @MockitoBean private SignalListService signalListService;
   @MockitoBean private SignalDetailService signalDetailService;
+  @MockitoBean private SignalActionService signalActionService;
 
   private static final UUID USER_ID = UUID.fromString("5d2f7f3a-5db1-4f2c-8b9e-13607dd1f5e8");
   private static final UUID PROJECT_ID = UUID.fromString("30d9e9fe-f43b-4097-a88e-dc19f0a5b025");
@@ -155,6 +162,109 @@ class SignalControllerTest {
         .andExpect(jsonPath("$.minsu.task_draft.priority").value("medium"))
         .andExpect(jsonPath("$.actions").value(contains("convert-to-task", "dismiss")))
         .andExpect(jsonPath("$.primary_action").value("convert-to-task"));
+  }
+
+  @Test
+  @DisplayName("convert-to-task 신규 처리는 201과 task를 반환한다")
+  void convertToTaskReturnsCreatedWhenNewlyProcessed() throws Exception {
+    UUID signalId = UUID.randomUUID();
+    UUID taskId = UUID.randomUUID();
+    when(signalActionService.convertToTask(eq(signalId), eq(USER_ID), any()))
+        .thenReturn(
+            new SignalActionResult(
+                signalId,
+                "convert_to_task",
+                true,
+                new SignalActionResult.TaskResult(taskId, "제목", "todo")));
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signalId)
+                .principal(principal)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"backend\"}"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.task.id").value(taskId.toString()))
+        .andExpect(jsonPath("$.task.title").value("제목"))
+        .andExpect(jsonPath("$.task.status").value("todo"))
+        .andExpect(jsonPath("$.signal.id").value(signalId.toString()))
+        .andExpect(jsonPath("$.signal.action").value("convert_to_task"));
+  }
+
+  @Test
+  @DisplayName("convert-to-task 재요청(멱등 replay)은 200을 반환한다")
+  void convertToTaskReturnsOkWhenReplayed() throws Exception {
+    UUID signalId = UUID.randomUUID();
+    UUID taskId = UUID.randomUUID();
+    when(signalActionService.convertToTask(eq(signalId), eq(USER_ID), any()))
+        .thenReturn(
+            new SignalActionResult(
+                signalId,
+                "convert_to_task",
+                false,
+                new SignalActionResult.TaskResult(taskId, "제목", "todo")));
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signalId)
+                .principal(principal)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.task.id").value(taskId.toString()));
+  }
+
+  @Test
+  @DisplayName("convert-to-task body 생략은 command에 전부 null을 전달한다")
+  void convertToTaskWithoutBodyPassesAllNullCommand() throws Exception {
+    UUID signalId = UUID.randomUUID();
+    when(signalActionService.convertToTask(
+            eq(signalId), eq(USER_ID), eq(new ConvertToTaskCommand(null, null, null))))
+        .thenReturn(
+            new SignalActionResult(
+                signalId,
+                "convert_to_task",
+                true,
+                new SignalActionResult.TaskResult(UUID.randomUUID(), "제목", "todo")));
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signalId)
+                .principal(principal)
+                .header("API-Version", "1"))
+        .andExpect(status().isCreated());
+  }
+
+  @Test
+  @DisplayName("잘못된 role 패턴은 COMMON_VALIDATION_FAILED로 400을 반환한다")
+  void convertToTaskWithInvalidRolePatternReturns400() throws Exception {
+    UUID signalId = UUID.randomUUID();
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signalId)
+                .principal(principal)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"android\"}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @DisplayName("dismiss는 신규·재요청 모두 200과 signal envelope를 반환한다")
+  void dismissReturnsOkWithSignalEnvelope() throws Exception {
+    UUID signalId = UUID.randomUUID();
+    when(signalActionService.dismiss(eq(signalId), eq(USER_ID)))
+        .thenReturn(new SignalActionResult(signalId, "dismiss", true, null));
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/dismiss", signalId)
+                .principal(principal)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.signal.id").value(signalId.toString()))
+        .andExpect(jsonPath("$.signal.action").value("dismiss"));
   }
 
   @TestConfiguration

@@ -20,8 +20,11 @@ dependencies {
     implementation project(':source')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    // Signal 목록 컨트롤러(presentation).
+    // Signal 목록/action 컨트롤러(presentation).
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    // convert-to-task 요청 body 검증(@Pattern). 검증 실패는 app의 예외 핸들러가
+    // COMMON_VALIDATION_FAILED로 변환합니다(mobile CreateTaskRequest와 같은 방식).
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
     // OpenAPI 문서화 애너테이션(@Tag/@Operation/@Schema)만 사용합니다. Swagger UI와 공통 설정은
     // 실행과 조립을 맡는 app 모듈이 springdoc starter로 소유합니다(docs/spec/openapi.md).
     implementation 'io.swagger.core.v3:swagger-annotations-jakarta:2.2.52'
