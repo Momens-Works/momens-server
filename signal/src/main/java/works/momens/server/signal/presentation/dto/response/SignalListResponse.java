@@ -35,18 +35,16 @@ public record SignalListResponse(
 
   public static SignalListResponse from(List<SignalSummary> signals) {
     return new SignalListResponse(
-        TITLE,
-        DESCRIPTION,
-        signals.stream()
-            .map(
-                signal ->
-                    new SignalItem(
-                        signal.id(),
-                        signal.projectId(),
-                        signal.type(),
-                        signal.title(),
-                        signal.impact(),
-                        signal.minsuSuggestion()))
-            .toList());
+        TITLE, DESCRIPTION, signals.stream().map(SignalListResponse::toItem).toList());
+  }
+
+  private static SignalItem toItem(SignalSummary signal) {
+    return new SignalItem(
+        signal.id(),
+        signal.projectId(),
+        signal.type(),
+        signal.title(),
+        signal.impact(),
+        signal.minsuSuggestion());
   }
 }
