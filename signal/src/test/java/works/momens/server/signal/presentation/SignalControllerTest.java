@@ -127,7 +127,6 @@ class SignalControllerTest {
                         "figma",
                         "권한 화면",
                         Instant.parse("2026-07-06T00:00:00Z"),
-                        "1일 전",
                         "요약",
                         "https://f/1"))));
 
@@ -144,7 +143,7 @@ class SignalControllerTest {
         .andExpect(jsonPath("$.evidence[0].id").value(evidenceId.toString()))
         .andExpect(jsonPath("$.evidence[0].source").value("figma"))
         .andExpect(jsonPath("$.evidence[0].source_title").value("권한 화면"))
-        .andExpect(jsonPath("$.evidence[0].relative_time_label").value("1일 전"))
+        .andExpect(jsonPath("$.evidence[0].relative_time_label").doesNotExist())
         .andExpect(jsonPath("$.evidence[0].summary").value("요약"))
         // fields는 MVP에서 항상 빈 배열이다(D3).
         .andExpect(jsonPath("$.evidence[0].fields.length()").value(0))

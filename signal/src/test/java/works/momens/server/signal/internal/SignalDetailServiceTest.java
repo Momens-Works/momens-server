@@ -6,9 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,15 +28,13 @@ import works.momens.server.source.SourceRefView;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
- * Signal 상세 조립 검증. 접근 검사와 source 근거 hydrate(각각 mock), 근거 정렬·summary 폴백·상대 시각 라벨·원본 누락 제외를 실제
- * PostgreSQL(Testcontainers) + 고정 Clock으로 확인합니다. Clock은 빈으로 노출하지 않으므로 서비스를 package-private 생성자로 직접
- * 조립합니다(실 repository는 @DataJpaTest에서 주입).
+ * Signal 상세 조립 검증. 접근 검사와 source 근거 hydrate(각각 mock), 근거 정렬·summary 폴백·원본 누락 제외를 실제
+ * PostgreSQL(Testcontainers)로 확인합니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class SignalDetailServiceTest extends AbstractPostgresIntegrationTest {
 
-  private static final Instant NOW = Instant.parse("2026-07-07T00:00:00Z");
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID PROJECT_ID = UUID.randomUUID();
   private static final UUID CALLER_ID = UUID.randomUUID();
@@ -60,8 +56,7 @@ class SignalDetailServiceTest extends AbstractPostgresIntegrationTest {
             signalEvidenceRepository,
             projectReader,
             workspaceAccess,
-            sourceRefReader,
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            sourceRefReader);
   }
 
   @Test
@@ -86,7 +81,7 @@ class SignalDetailServiceTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
-  @DisplayName("근거를 sort_order 순으로 조립하고 summary 폴백·상대 라벨을 채우며 원본 없는 근거는 제외한다")
+  @DisplayName("근거를 sort_order 순으로 조립하고 summary 폴백을 채우며 원본 없는 근거는 제외한다")
   void assemblesEvidenceInSortOrderWithFallbackAndSkipsMissing() {
     UUID signalId = insertSignal();
     UUID ref0 = UUID.randomUUID();
@@ -100,7 +95,7 @@ class SignalDetailServiceTest extends AbstractPostgresIntegrationTest {
     when(projectReader.findSnapshot(PROJECT_ID))
         .thenReturn(
             Optional.of(new ProjectSnapshot(PROJECT_ID, WORKSPACE_ID, "Q2", null, 0, null)));
-    // snippet이 없는 ref0은 text로 폴백, occurred_at 없는 ref0은 라벨 null. missing은 반환하지 않아 제외된다.
+    // snippet이 없는 ref0은 text로 폴백하고, missing은 source 원본이 반환되지 않아 제외된다.
     when(sourceRefReader.findByIds(any(), any()))
         .thenReturn(
             List.of(
@@ -119,9 +114,10 @@ class SignalDetailServiceTest extends AbstractPostgresIntegrationTest {
     assertThat(detail.projectName()).isEqualTo("Q2");
     assertThat(detail.evidence()).extracting(SignalDetail.Evidence::id).containsExactly(ref0, ref1);
     assertThat(detail.evidence().get(0).summary()).isEqualTo("본문0");
-    assertThat(detail.evidence().get(0).relativeTimeLabel()).isNull();
+    assertThat(detail.evidence().get(0).occurredAt()).isNull();
     assertThat(detail.evidence().get(1).summary()).isEqualTo("요약1");
-    assertThat(detail.evidence().get(1).relativeTimeLabel()).isEqualTo("1일 전");
+    assertThat(detail.evidence().get(1).occurredAt())
+        .isEqualTo(Instant.parse("2026-07-06T00:00:00Z"));
   }
 
   @Test

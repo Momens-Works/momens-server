@@ -1,14 +1,12 @@
 package works.momens.server.signal.internal;
 
-import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
@@ -28,6 +26,7 @@ import works.momens.server.workspace.WorkspaceAccess;
  * hydrate하고(ADR-0008 read 경계), 원본이 없는 근거는 건너뜁니다. summary는 snippet이 없으면 text로 폴백합니다.
  */
 @Service
+@RequiredArgsConstructor
 public class SignalDetailService {
 
   private final SignalRepository signalRepository;
@@ -35,40 +34,6 @@ public class SignalDetailService {
   private final ProjectReader projectReader;
   private final WorkspaceAccess workspaceAccess;
   private final SourceRefReader sourceRefReader;
-  private final Clock clock;
-
-  // 상대 시각 라벨용 Clock은 시스템 UTC 고정입니다. 별도 Clock 빈으로 두면 auth의 Clock 빈과 타입이 충돌하므로
-  // 빈으로 노출하지 않고, 테스트만 아래 package-private 생성자로 고정 Clock을 주입합니다.
-  @Autowired
-  public SignalDetailService(
-      SignalRepository signalRepository,
-      SignalEvidenceRepository signalEvidenceRepository,
-      ProjectReader projectReader,
-      WorkspaceAccess workspaceAccess,
-      SourceRefReader sourceRefReader) {
-    this(
-        signalRepository,
-        signalEvidenceRepository,
-        projectReader,
-        workspaceAccess,
-        sourceRefReader,
-        Clock.systemUTC());
-  }
-
-  SignalDetailService(
-      SignalRepository signalRepository,
-      SignalEvidenceRepository signalEvidenceRepository,
-      ProjectReader projectReader,
-      WorkspaceAccess workspaceAccess,
-      SourceRefReader sourceRefReader,
-      Clock clock) {
-    this.signalRepository = signalRepository;
-    this.signalEvidenceRepository = signalEvidenceRepository;
-    this.projectReader = projectReader;
-    this.workspaceAccess = workspaceAccess;
-    this.sourceRefReader = sourceRefReader;
-    this.clock = clock;
-  }
 
   @Transactional(readOnly = true)
   public SignalDetail getDetail(UUID signalId, UUID userId) {
@@ -106,23 +71,16 @@ public class SignalDetailService {
             .findByIds(workspaceId, links.stream().map(SignalEvidence::getSourceRefId).toList())
             .stream()
             .collect(Collectors.toMap(SourceRefView::id, Function.identity()));
-    Instant now = clock.instant();
     return links.stream()
         .map(link -> refs.get(link.getSourceRefId()))
         .filter(Objects::nonNull)
-        .map(ref -> toEvidence(ref, now))
+        .map(SignalDetailService::toEvidence)
         .toList();
   }
 
-  private static SignalDetail.Evidence toEvidence(SourceRefView ref, Instant now) {
+  private static SignalDetail.Evidence toEvidence(SourceRefView ref) {
     String summary = ref.snippet() != null ? ref.snippet() : ref.text();
     return new SignalDetail.Evidence(
-        ref.id(),
-        ref.sourceType(),
-        ref.title(),
-        ref.sourceCreatedAt(),
-        RelativeTimeLabel.of(now, ref.sourceCreatedAt()),
-        summary,
-        ref.sourceUrl());
+        ref.id(), ref.sourceType(), ref.title(), ref.sourceCreatedAt(), summary, ref.sourceUrl());
   }
 }
