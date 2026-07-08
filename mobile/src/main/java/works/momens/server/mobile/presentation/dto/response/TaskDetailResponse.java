@@ -35,7 +35,9 @@ public record TaskDetailResponse(
   @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "담당자")
   public record AssigneeResponse(
-      @Schema(description = "사용자 식별자") UUID id, @Schema(description = "이름") String name) {}
+      @Schema(description = "사용자 식별자") UUID id,
+      @Schema(description = "이름") String name,
+      @Schema(description = "구글 계정 프로필 이미지. 없으면 null") String avatarUrl) {}
 
   @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "완료기준")
@@ -95,6 +97,6 @@ public record TaskDetailResponse(
     if (assignee == null) {
       return null;
     }
-    return new AssigneeResponse(assignee.id(), assignee.name());
+    return new AssigneeResponse(assignee.id(), assignee.name(), assignee.avatarUrl());
   }
 }

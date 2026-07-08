@@ -629,7 +629,8 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
   "role": "pm",
   "assignee": {
     "id": "b9b1...e7",
-    "name": "김민지"
+    "name": "김민지",
+    "avatar_url": "https://lh3.googleusercontent.com/a/..."
   },
   "priority": "medium",
   "purpose": "이번 범위에서 확인해야 할 화면 흐름을 정리합니다.",
@@ -667,7 +668,7 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 `material_count`는 `0`입니다. `open_questions`, `next_action`은 MVP에서 backing source가 없으면 각각 `[]`,
 `null`로 반환합니다. 서버는 근거 없는 값을 임의 생성하지 않습니다(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
 
-담당자가 지정되지 않았으면 `assignee`는 `null`, 목적을 아직 작성하지 않았으면 `purpose`는 `null`입니다.
+담당자가 지정되지 않았으면 `assignee`는 `null`, 목적을 아직 작성하지 않았으면 `purpose`는 `null`입니다. 태스크 생성 시점에 민수가 담당자를 판단해 지정하는데, 판단에 걸리는 시간 동안에는 담당자가 없어 `assignee`가 `null`로 내려가고, 이후 지정되면 조회에 자동으로 반영됩니다. `assignee.avatar_url`은 담당자의 구글 계정 프로필 이미지이고, 없으면 `null`입니다.
 완료기준이 없으면 `checklist`는 `completed_count` 0, `total_count` 0, `items` 빈 배열입니다(2026-07-07 확정).
 `status`는 저장된 5종(backlog, todo, in_progress, done, cancelled)을 그대로 반환하고(상세 상태 칩이 5종 노출),
 `priority`는 보드와 같이 저장된 urgent를 high로 반환합니다. `purpose`는 레거시 `tasks.description`에 매핑됩니다.
@@ -712,7 +713,7 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
     "title": "1차 와이어프레임",
     "status": "in_progress",
     "role": "pm",
-    "assignee": { "id": "user-uuid", "name": "김민지" },
+    "assignee": { "id": "user-uuid", "name": "김민지", "avatar_url": "https://lh3.googleusercontent.com/a/..." },
     "priority": "medium",
     "purpose": "이번 범위에서 확인해야 할 화면 흐름을 정리합니다.",
     "checklist": {

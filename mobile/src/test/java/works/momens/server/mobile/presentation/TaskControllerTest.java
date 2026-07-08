@@ -56,7 +56,8 @@ class TaskControllerTest {
                 "1차 와이어프레임",
                 "todo",
                 "frontend",
-                new MobileTaskDetail.Assignee(assigneeId, "김규일"),
+                new MobileTaskDetail.Assignee(
+                    assigneeId, "김규일", "https://lh3.googleusercontent.com/a/gyuil"),
                 "medium",
                 "이번 범위의 화면 흐름을 정리한다",
                 List.of(
@@ -73,6 +74,8 @@ class TaskControllerTest {
         .andExpect(jsonPath("$.role").value("frontend"))
         .andExpect(jsonPath("$.assignee.id").value(assigneeId.toString()))
         .andExpect(jsonPath("$.assignee.name").value("김규일"))
+        .andExpect(
+            jsonPath("$.assignee.avatar_url").value("https://lh3.googleusercontent.com/a/gyuil"))
         .andExpect(jsonPath("$.priority").value("medium"))
         .andExpect(jsonPath("$.purpose").value("이번 범위의 화면 흐름을 정리한다"))
         .andExpect(jsonPath("$.checklist.completed_count").value(1))
