@@ -67,7 +67,7 @@ class SignalDetailServiceTest extends AbstractPostgresIntegrationTest {
   @Test
   @DisplayName("Signal이 없으면 SIGNAL_NOT_FOUND를 던진다")
   void throwsSignalNotFoundWhenMissing() {
-    assertThatThrownBy(() -> signalDetailService.get(UUID.randomUUID(), CALLER_ID))
+    assertThatThrownBy(() -> signalDetailService.getDetail(UUID.randomUUID(), CALLER_ID))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(SignalErrorCode.SIGNAL_NOT_FOUND);
@@ -79,7 +79,7 @@ class SignalDetailServiceTest extends AbstractPostgresIntegrationTest {
     UUID signalId = insertSignal();
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(false);
 
-    assertThatThrownBy(() -> signalDetailService.get(signalId, CALLER_ID))
+    assertThatThrownBy(() -> signalDetailService.getDetail(signalId, CALLER_ID))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(CommonErrorCode.AUTH_FORBIDDEN);
@@ -114,7 +114,7 @@ class SignalDetailServiceTest extends AbstractPostgresIntegrationTest {
                     "https://f/1",
                     Instant.parse("2026-07-06T00:00:00Z"))));
 
-    SignalDetail detail = signalDetailService.get(signalId, CALLER_ID);
+    SignalDetail detail = signalDetailService.getDetail(signalId, CALLER_ID);
 
     assertThat(detail.projectName()).isEqualTo("Q2");
     assertThat(detail.evidence()).extracting(SignalDetail.Evidence::id).containsExactly(ref0, ref1);
@@ -143,7 +143,7 @@ class SignalDetailServiceTest extends AbstractPostgresIntegrationTest {
                 new SourceRefView(high, "slack", "높음", "요약", "본문", "https://s/h", null),
                 new SourceRefView(low, "figma", "낮음", "요약", "본문", "https://s/l", null)));
 
-    SignalDetail detail = signalDetailService.get(signalId, CALLER_ID);
+    SignalDetail detail = signalDetailService.getDetail(signalId, CALLER_ID);
 
     assertThat(detail.evidence()).extracting(SignalDetail.Evidence::id).containsExactly(low, high);
   }

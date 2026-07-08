@@ -37,6 +37,7 @@ class SignalController implements SignalControllerDocs {
   @Override
   @GetMapping(path = "/signals/{signalId}", version = "1")
   public SignalDetailResponse getSignal(@PathVariable UUID signalId, Principal principal) {
-    return SignalDetailResponse.from(signalDetailService.get(signalId, CurrentUser.id(principal)));
+    return SignalDetailResponse.from(
+        signalDetailService.getDetail(signalId, CurrentUser.id(principal)));
   }
 }
