@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -41,6 +42,7 @@ class SignalControllerTest {
   private final Principal principal = USER_ID::toString;
 
   @Test
+  @DisplayName("Signal 목록 고정 envelope와 snake_case 항목을 반환한다")
   void listSignalsReturnsFixedEnvelopeWithSnakeCaseSignals() throws Exception {
     UUID signalId = UUID.randomUUID();
     when(signalListService.listUnprocessed(eq(PROJECT_ID), eq(USER_ID)))
@@ -67,6 +69,7 @@ class SignalControllerTest {
   }
 
   @Test
+  @DisplayName("impact와 minsu_suggestion이 null이어도 응답에 포함한다")
   void listSignalsIncludesNullImpactAndMinsuSuggestion() throws Exception {
     UUID signalId = UUID.randomUUID();
     when(signalListService.listUnprocessed(eq(PROJECT_ID), eq(USER_ID)))
@@ -83,6 +86,7 @@ class SignalControllerTest {
   }
 
   @Test
+  @DisplayName("미처리 Signal이 없으면 빈 배열을 반환한다")
   void listSignalsReturnsEmptyArrayWhenNoneUnprocessed() throws Exception {
     when(signalListService.listUnprocessed(eq(PROJECT_ID), eq(USER_ID))).thenReturn(List.of());
 

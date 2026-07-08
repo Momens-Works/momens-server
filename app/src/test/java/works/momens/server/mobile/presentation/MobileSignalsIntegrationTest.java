@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,6 +34,7 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
+  @DisplayName("workspace 멤버에게 미처리 Signal 목록을 반환한다")
   void returnsUnprocessedSignalsForWorkspaceMember() throws Exception {
     UserProfile jinsu = userService.findOrCreate("signals-it-jinsu@momens.works", "신진수", null);
     UUID workspace = insertWorkspace("signals-list");
@@ -57,6 +59,7 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("workspace 멤버가 아니면 AUTH_FORBIDDEN을 반환한다")
   void returnsForbiddenWhenCallerIsNotWorkspaceMember() throws Exception {
     UserProfile gyuil =
         userService.findOrCreate("signals-it-owner-gyuil@momens.works", "김규일", null);
@@ -77,6 +80,7 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("없는 project를 조회하면 PROJECT_NOT_FOUND를 반환한다")
   void returnsNotFoundForUnknownProject() throws Exception {
     UserProfile caller = userService.findOrCreate("signals-it-404@momens.works", "신진수", null);
 
@@ -90,6 +94,7 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("토큰 없이 조회하면 AUTH_UNAUTHORIZED를 반환한다")
   void returnsStandardUnauthorizedWithoutToken() throws Exception {
     mockMvc
         .perform(
