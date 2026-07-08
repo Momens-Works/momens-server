@@ -677,7 +677,7 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 
 ### PATCH /api/mobile/tasks/{taskId}
 
-태스크 수정 화면에서 변경한 값을 저장합니다. 보내지 않은 필드는 변경하지 않습니다.
+태스크 수정 화면이 저장한 편집 상태 전체를 받아 갱신합니다. title, role, priority, status는 항상 채워 보냅니다. title은 생성과 달리 빈 문자열을 허용하고, title을 빈 문자열로 보내면 상세 화면이 '새 태스크'로 표시합니다.
 
 #### Request
 
@@ -687,6 +687,7 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
   "role": "pm",
   "assignee_id": "user-uuid",
   "priority": "medium",
+  "status": "in_progress",
   "purpose": "이번 범위에서 확인해야 할 화면 흐름을 정리합니다.",
   "checklist_items": [
     { "id": "item-1", "title": "어쩌구어쩌구 반영" },
@@ -695,15 +696,19 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 }
 ```
 
-담당자를 비우는 경우 `assignee_id`를 `null`로 보냅니다. `checklist_items`는 완료기준 수정 화면에서 저장할 때 사용하며, `id`가 없는 항목은 새로 생성합니다.
+담당자를 비우려면 `assignee_id`를 `null`로 보냅니다. `status`는 backlog, todo, in_progress, done, cancelled 다섯 값 중 하나입니다. `checklist_items`는 완료기준 최종 목록이고, `id`가 있으면 기존 항목을 갱신하고 `id`가 없으면 새로 만들며, 목록에서 빠진 기존 항목은 삭제합니다. 완료기준은 0개에서 5개까지 허용하고, 5개를 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 글자 수 제한은 별도 이슈로 보류되어 여기서 검증하지 않습니다.
 
 #### Response 200
+
+응답의 `task`는 상세 조회와 같은 형식이고 `status`까지 담습니다. 수정을 저장하면 앱이 상세 화면으로 돌아가므로, 다시 조회하지 않고 화면을 갱신할 수 있도록 상세 전체를 반환합니다. `materials`, `open_questions`, `next_action`은 상세와 동일하게 backing source가 생기기 전까지 각각 빈 배열, 빈 배열, null입니다.
 
 ```json
 {
   "task": {
     "id": "27afd507-9c7f-4f0d-a2be-fcdab2477b19",
+    "project_id": "30d9e9fe-f43b-4097-a88e-dc19f0a5b025",
     "title": "1차 와이어프레임",
+    "status": "in_progress",
     "role": "pm",
     "assignee": { "id": "user-uuid", "name": "김민지" },
     "priority": "medium",
@@ -715,7 +720,10 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
         { "id": "item-1", "title": "어쩌구어쩌구 반영", "completed": true },
         { "id": "item-5", "title": "새 완료기준", "completed": false }
       ]
-    }
+    },
+    "materials": [],
+    "open_questions": [],
+    "next_action": null
   }
 }
 ```

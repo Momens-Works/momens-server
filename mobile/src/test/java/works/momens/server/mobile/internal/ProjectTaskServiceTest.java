@@ -24,7 +24,9 @@ import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.TaskCreator;
 import works.momens.server.project.TaskDetail;
+import works.momens.server.project.TaskEditor;
 import works.momens.server.project.TaskReader;
+import works.momens.server.project.UpdateTaskCommand;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 import works.momens.server.workspace.WorkspaceAccess;
@@ -40,6 +42,7 @@ class ProjectTaskServiceTest {
   @Mock private WorkspaceAccess workspaceAccess;
   @Mock private TaskReader taskReader;
   @Mock private TaskCreator taskCreator;
+  @Mock private TaskEditor taskEditor;
   @Mock private UserService userService;
   @InjectMocks private ProjectTaskService projectTaskService;
 
@@ -189,6 +192,88 @@ class ProjectTaskServiceTest {
     assertThat(result.assignee()).isNull();
     assertThat(result.purpose()).isNull();
     assertThat(result.checklistItems()).isEmpty();
+  }
+
+  @Test
+  void updateTaskThrowsTaskNotFoundWhenTaskMissing() {
+    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () ->
+                projectTaskService.updateTask(
+                    TASK_ID, CALLER_ID, "제목", "pm", null, "medium", "todo", null, List.of()))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).getErrorCode())
+        .isEqualTo(ProjectErrorCode.TASK_NOT_FOUND);
+  }
+
+  @Test
+  void updateTaskThrowsForbiddenWhenCallerIsNotMember() {
+    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
+    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(false);
+
+    assertThatThrownBy(
+            () ->
+                projectTaskService.updateTask(
+                    TASK_ID, CALLER_ID, "제목", "pm", null, "medium", "todo", null, List.of()))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).getErrorCode())
+        .isEqualTo(CommonErrorCode.AUTH_FORBIDDEN);
+  }
+
+  @Test
+  void updateTaskSendsFullEditableStateToEditor() {
+    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
+    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
+    when(taskEditor.update(any())).thenReturn(detail(null, "수정한 목적", List.of()));
+    List<ChecklistEdit> items = List.of(new ChecklistEdit(null, "A"));
+
+    MobileTaskDetail result =
+        projectTaskService.updateTask(
+            TASK_ID, CALLER_ID, "제목", "backend", null, "high", "in_progress", "수정한 목적", items);
+
+    ArgumentCaptor<UpdateTaskCommand> captor = ArgumentCaptor.forClass(UpdateTaskCommand.class);
+    org.mockito.Mockito.verify(taskEditor).update(captor.capture());
+    UpdateTaskCommand command = captor.getValue();
+    assertThat(command.taskId()).isEqualTo(TASK_ID);
+    assertThat(command.title()).isEqualTo("제목");
+    assertThat(command.role()).isEqualTo("backend");
+    assertThat(command.assigneeId()).isNull();
+    assertThat(command.priority()).isEqualTo("high");
+    assertThat(command.status()).isEqualTo("in_progress");
+    assertThat(command.purpose()).isEqualTo("수정한 목적");
+    assertThat(command.checklistItems())
+        .containsExactly(new UpdateTaskCommand.ChecklistItemEdit(null, "A"));
+    assertThat(result.assignee()).isNull();
+  }
+
+  @Test
+  void toggleChecklistItemThrowsTaskNotFoundWhenTaskMissing() {
+    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () ->
+                projectTaskService.toggleChecklistItem(TASK_ID, CALLER_ID, UUID.randomUUID(), true))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).getErrorCode())
+        .isEqualTo(ProjectErrorCode.TASK_NOT_FOUND);
+  }
+
+  @Test
+  void toggleChecklistItemPassesThroughToEditor() {
+    UUID itemId = UUID.randomUUID();
+    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
+    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
+    when(taskEditor.toggleChecklistItem(TASK_ID, itemId, true))
+        .thenReturn(
+            detail(null, null, List.of(new TaskDetail.ChecklistItem(itemId, "완료기준", true))));
+
+    MobileTaskDetail result =
+        projectTaskService.toggleChecklistItem(TASK_ID, CALLER_ID, itemId, true);
+
+    assertThat(result.checklistItems())
+        .extracting(TaskDetail.ChecklistItem::completed)
+        .containsExactly(true);
   }
 
   private static TaskDetail detail(

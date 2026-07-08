@@ -1,7 +1,10 @@
 package works.momens.server.mobile.presentation;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -14,6 +17,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
@@ -96,6 +100,130 @@ class TaskControllerTest {
         .andExpect(jsonPath("$.checklist.completed_count").value(0))
         .andExpect(jsonPath("$.checklist.total_count").value(0))
         .andExpect(jsonPath("$.checklist.items.length()").value(0));
+  }
+
+  @Test
+  void updateTaskReturnsWrappedTaskWithStatus() throws Exception {
+    UUID itemId = UUID.randomUUID();
+    when(projectTaskService.updateTask(
+            eq(TASK_ID), eq(USER_ID), any(), any(), any(), any(), any(), any(), any()))
+        .thenReturn(
+            new MobileTaskDetail(
+                TASK_ID,
+                PROJECT_ID,
+                "수정된 제목",
+                "in_progress",
+                "backend",
+                null,
+                "high",
+                "수정한 목적",
+                List.of(new TaskDetail.ChecklistItem(itemId, "기준", false))));
+
+    mockMvc
+        .perform(
+            patch("/api/mobile/tasks/{taskId}", TASK_ID)
+                .principal(principal)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"title\":\"수정된 제목\",\"role\":\"backend\",\"assignee_id\":null,"
+                        + "\"priority\":\"high\",\"status\":\"in_progress\",\"purpose\":\"수정한 목적\","
+                        + "\"checklist_items\":[{\"title\":\"기준\"}]}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.task.id").value(TASK_ID.toString()))
+        .andExpect(jsonPath("$.task.title").value("수정된 제목"))
+        .andExpect(jsonPath("$.task.status").value("in_progress"))
+        .andExpect(jsonPath("$.task.role").value("backend"))
+        .andExpect(jsonPath("$.task.priority").value("high"))
+        .andExpect(jsonPath("$.task.checklist.total_count").value(1));
+  }
+
+  @Test
+  void updateTaskAllowsEmptyTitle() throws Exception {
+    when(projectTaskService.updateTask(
+            eq(TASK_ID), eq(USER_ID), any(), any(), any(), any(), any(), any(), any()))
+        .thenReturn(
+            new MobileTaskDetail(
+                TASK_ID, PROJECT_ID, "", "todo", "pm", null, "medium", null, List.of()));
+
+    mockMvc
+        .perform(
+            patch("/api/mobile/tasks/{taskId}", TASK_ID)
+                .principal(principal)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"title\":\"\",\"role\":\"pm\",\"priority\":\"medium\","
+                        + "\"status\":\"todo\",\"checklist_items\":[]}"))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void updateTaskRejectsStatusOutsideFiveValues() throws Exception {
+    mockMvc
+        .perform(
+            patch("/api/mobile/tasks/{taskId}", TASK_ID)
+                .principal(principal)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"title\":\"제목\",\"role\":\"pm\",\"priority\":\"medium\","
+                        + "\"status\":\"archived\",\"checklist_items\":[]}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void updateTaskRejectsMoreThanFiveChecklistItems() throws Exception {
+    mockMvc
+        .perform(
+            patch("/api/mobile/tasks/{taskId}", TASK_ID)
+                .principal(principal)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"title\":\"제목\",\"role\":\"pm\",\"priority\":\"medium\",\"status\":\"todo\","
+                        + "\"checklist_items\":[{\"title\":\"1\"},{\"title\":\"2\"},{\"title\":\"3\"},"
+                        + "{\"title\":\"4\"},{\"title\":\"5\"},{\"title\":\"6\"}]}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void toggleChecklistItemReturnsChecklistSummary() throws Exception {
+    UUID itemId = UUID.randomUUID();
+    UUID otherId = UUID.randomUUID();
+    when(projectTaskService.toggleChecklistItem(TASK_ID, USER_ID, itemId, true))
+        .thenReturn(
+            new MobileTaskDetail(
+                TASK_ID,
+                PROJECT_ID,
+                "제목",
+                "todo",
+                "pm",
+                null,
+                "medium",
+                null,
+                List.of(
+                    new TaskDetail.ChecklistItem(itemId, "바꾼 기준", true),
+                    new TaskDetail.ChecklistItem(otherId, "다른 기준", false))));
+
+    mockMvc
+        .perform(
+            patch("/api/mobile/tasks/{taskId}/checklist-items/{itemId}", TASK_ID, itemId)
+                .principal(principal)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"completed\":true}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.checklist.completed_count").value(1))
+        .andExpect(jsonPath("$.checklist.total_count").value(2))
+        .andExpect(jsonPath("$.checklist.item.id").value(itemId.toString()))
+        .andExpect(jsonPath("$.checklist.item.completed").value(true));
+  }
+
+  @Test
+  void toggleChecklistItemRejectsMissingCompleted() throws Exception {
+    mockMvc
+        .perform(
+            patch("/api/mobile/tasks/{taskId}/checklist-items/{itemId}", TASK_ID, UUID.randomUUID())
+                .principal(principal)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+        .andExpect(status().isBadRequest());
   }
 
   @TestConfiguration
