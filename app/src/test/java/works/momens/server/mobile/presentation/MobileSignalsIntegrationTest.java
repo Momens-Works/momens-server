@@ -244,6 +244,27 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("convert-to-task에 공백 title을 보내면 COMMON_VALIDATION_FAILED를 반환한다")
+  void convertToTaskWithBlankTitleReturnsValidationFailed() throws Exception {
+    UserProfile jinsu =
+        userService.findOrCreate("signals-it-convert-blank@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("signals-convert-blank");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "signals-convert-blank-project");
+    UUID signal = insertSignal(workspace, project, "risk", "제목", null, null);
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signal)
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"   \",\"role\":\"backend\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("COMMON_VALIDATION_FAILED"));
+  }
+
+  @Test
   @DisplayName("dismiss는 처리 기록만 남기고, 재요청은 멱등 replay로 200을 반환하며 목록에서 제외한다")
   void dismissRecordsActionAndExcludesFromList() throws Exception {
     UserProfile jinsu = userService.findOrCreate("signals-it-dismiss@momens.works", "신진수", null);

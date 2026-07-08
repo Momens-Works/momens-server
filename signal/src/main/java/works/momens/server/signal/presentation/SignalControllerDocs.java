@@ -68,9 +68,9 @@ interface SignalControllerDocs {
   @Operation(
       summary = "시그널을 태스크로 전환",
       description =
-          "시그널을 태스크로 전환합니다. body와 각 필드 모두 생략 가능하며, 생략한 title은 시그널 제목으로 채웁니다. role은 폴백이 없어"
-              + " 생략하면 COMMON_VALIDATION_FAILED를 반환합니다. 같은 시그널에 같은 action을 재요청하면 새 태스크를 만들지 않고 기존 결과를"
-              + " 200으로 반환합니다.",
+          "시그널을 태스크로 전환합니다. title은 생략하면 시그널 제목으로, priority는 생략하면 medium으로 채웁니다. role은 폴백이 없어"
+              + " body에 없으면 COMMON_VALIDATION_FAILED를 반환합니다(사실상 필수). 같은 시그널에 같은 action을 재요청하면 새 태스크를"
+              + " 만들지 않고 기존 결과를 200으로 반환합니다.",
       parameters =
           @Parameter(
               name = "API-Version",
