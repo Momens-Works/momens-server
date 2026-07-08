@@ -23,5 +23,5 @@ CREATE TABLE signals (
     deleted_at TIMESTAMPTZ
 );
 
--- 목록은 프로젝트 스코프 + 미삭제 + 생성 시각 내림차순으로 조회한다(미처리 필터 목록 API는 후속 PR).
+-- 목록은 프로젝트 스코프 + 미삭제 + 생성 시각 내림차순(동률 시 id 내림차순)으로 조회한다.
 CREATE INDEX idx_signals_project_live ON signals(project_id, created_at DESC) WHERE deleted_at IS NULL;
