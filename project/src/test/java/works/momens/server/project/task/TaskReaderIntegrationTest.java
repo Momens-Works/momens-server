@@ -95,7 +95,7 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     UUID ownerId = ProjectSeedSql.insertUser(entityManager, "gyuil@momens.works");
     UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "detail");
     UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
-    UUID assigneeId = ProjectSeedSql.insertUser(entityManager, "jsshin8128@momens.works");
+    UUID assigneeId = ProjectSeedSql.insertUser(entityManager, "jinsu@momens.works");
 
     UUID taskId =
         saveTask(workspaceId, projectId, "1차 와이어프레임", "todo", "urgent", Set.of("qa", "pm"));
