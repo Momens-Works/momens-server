@@ -342,8 +342,9 @@ worker 산출물 저장 구조가 확정되면 backing source를 별도 설계�
 
 - Minsu draft는 최종 task/decision이 아니라 사용자 확정 액션용 초안이다.
 - Minsu draft는 `convert-to-task` 실행 시 기본값으로 사용될 수 있어야 한다.
-- worker/Minsu가 풍부한 draft를 아직 생산하지 않으면 서버는 Signal title 기반 최소 초안(`roles: []`,
-  `priority: medium`)을 제공할 수 있다.
+- worker/Minsu가 풍부한 draft를 아직 생산하지 않으면 서버는 Signal title 기반 최소 초안(`priority: medium`)을
+  제공할 수 있다. role은 단일 필수값이라(MOM-76) 최소 초안이 role을 추론할 수 없으면 그 처리는 convert-to-task
+  설계에서 확정한다.
 - 사용자의 확정 액션이 있기 전까지 Minsu draft는 프로젝트의 확정된 기억이나 실행 항목으로 간주하지 않는다.
 
 ## Outbox 요구사항
