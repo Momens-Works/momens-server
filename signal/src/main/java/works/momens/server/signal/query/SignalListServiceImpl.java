@@ -10,6 +10,8 @@ import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.project.ProjectReader;
+import works.momens.server.signal.SignalListService;
+import works.momens.server.signal.SignalSummary;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
@@ -20,12 +22,13 @@ import works.momens.server.workspace.WorkspaceAccess;
  */
 @Service
 @RequiredArgsConstructor
-public class SignalListService {
+class SignalListServiceImpl implements SignalListService {
 
   private final SignalRepository signalRepository;
   private final ProjectReader projectReader;
   private final WorkspaceAccess workspaceAccess;
 
+  @Override
   @Transactional(readOnly = true)
   public List<SignalSummary> listUnprocessed(UUID projectId, UUID userId) {
     UUID workspaceId =

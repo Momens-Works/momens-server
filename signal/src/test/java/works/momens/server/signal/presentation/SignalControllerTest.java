@@ -11,7 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,10 +23,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import works.momens.server.signal.query.SignalDetail;
-import works.momens.server.signal.query.SignalDetailService;
-import works.momens.server.signal.query.SignalListService;
-import works.momens.server.signal.query.SignalSummary;
+import works.momens.server.signal.SignalDetail;
+import works.momens.server.signal.SignalDetailService;
+import works.momens.server.signal.SignalListService;
+import works.momens.server.signal.SignalSummary;
 
 /**
  * 컨트롤러가 경로 변수와 Principal을 서비스에 그대로 전달하고 명세(docs/spec/mobile-api.md)의 고정 envelope·snake_case 응답
@@ -113,24 +112,23 @@ class SignalControllerTest {
     UUID evidenceId = UUID.randomUUID();
     when(signalDetailService.getDetail(eq(signalId), eq(USER_ID)))
         .thenReturn(
-            Optional.of(
-                new SignalDetail(
-                    signalId,
-                    PROJECT_ID,
-                    "Q2 Activation Readiness",
-                    "risk",
-                    "이탈 가능성",
-                    "본문",
-                    "완료율에 영향",
-                    "점검 제안",
-                    List.of(
-                        new SignalDetail.Evidence(
-                            evidenceId,
-                            "figma",
-                            "권한 화면",
-                            Instant.parse("2026-07-06T00:00:00Z"),
-                            "요약",
-                            "https://f/1")))));
+            new SignalDetail(
+                signalId,
+                PROJECT_ID,
+                "Q2 Activation Readiness",
+                "risk",
+                "이탈 가능성",
+                "본문",
+                "완료율에 영향",
+                "점검 제안",
+                List.of(
+                    new SignalDetail.Evidence(
+                        evidenceId,
+                        "figma",
+                        "권한 화면",
+                        Instant.parse("2026-07-06T00:00:00Z"),
+                        "요약",
+                        "https://f/1"))));
 
     mockMvc
         .perform(

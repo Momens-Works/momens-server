@@ -1,20 +1,17 @@
 package works.momens.server.signal.presentation;
 
 import java.security.Principal;
-import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CurrentUser;
-import works.momens.server.signal.SignalErrorCode;
+import works.momens.server.signal.SignalDetailService;
+import works.momens.server.signal.SignalListService;
 import works.momens.server.signal.presentation.dto.response.SignalDetailResponse;
 import works.momens.server.signal.presentation.dto.response.SignalListResponse;
-import works.momens.server.signal.query.SignalDetailService;
-import works.momens.server.signal.query.SignalListService;
 
 /**
  * 모바일 Signal 조회 엔드포인트.
@@ -41,12 +38,6 @@ class SignalController implements SignalControllerDocs {
   @GetMapping(path = "/signals/{signalId}", version = "1")
   public SignalDetailResponse getSignal(@PathVariable UUID signalId, Principal principal) {
     return SignalDetailResponse.from(
-        signalDetailService
-            .getDetail(signalId, CurrentUser.id(principal))
-            .orElseThrow(
-                () ->
-                    new BusinessException(
-                        SignalErrorCode.SIGNAL_NOT_FOUND,
-                        Map.of("signal_id", signalId.toString()))));
+        signalDetailService.getDetail(signalId, CurrentUser.id(principal)));
   }
 }

@@ -201,11 +201,12 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 [ADR-0007](../adr/0007-signal-backing-and-module-boundary.md)에 기록한다.
 
 내부는 도메인 하위 경계로 논리 분리한다(MOM-65). Signal 조회(`query`)는 Spring Modulith nested
-논리 모듈이고, 외부에는 이 패키지의 조회 서비스와 응답 조립용 레코드만 공개한다. nested 모듈은
-부모 루트 패키지(`signal`의 `SignalErrorCode`)를 역참조하면 Modulith가 순환으로 판정하므로,
-not-found 판단은 nested 모듈이 `Optional`을 반환하고 presentation(모듈 root 슬라이스)이
-`SIGNAL_NOT_FOUND`를 던지는 방식으로 분리한다(`project`의 `task` nested 모듈이 `TaskReader.findDetail`을
-`Optional`로 두고 `mobile`이 `TASK_NOT_FOUND`를 던지는 것과 같은 원칙).
+논리 모듈이고, `project`의 `task`와 같은 방식을 따른다: 공개 계약(`SignalListService`,
+`SignalDetailService` 인터페이스와 `SignalDetail`, `SignalSummary` 레코드)은 모듈 root에 두고,
+구현체(`SignalListServiceImpl`, `SignalDetailServiceImpl`)와 엔티티·리포지토리만 `query` 안에
+package-private로 은닉한다. nested 모듈이 자기 구현에서 root의 `SignalErrorCode`를 참조하는
+것은 단방향(query → root)이라 순환이 아니다 — presentation(모듈 root)이 nested 모듈의 구현
+타입을 직접 참조하는 반대 방향의 의존이 생겼을 때만 Modulith가 순환으로 판정한다.
 
 ### memory
 

@@ -21,6 +21,8 @@ import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.project.ProjectReader;
+import works.momens.server.signal.SignalListService;
+import works.momens.server.signal.SignalSummary;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
@@ -31,8 +33,8 @@ import works.momens.server.workspace.WorkspaceAccess;
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(SignalListService.class)
-class SignalListServiceTest extends AbstractPostgresIntegrationTest {
+@Import(SignalListServiceImpl.class)
+class SignalListServiceImplTest extends AbstractPostgresIntegrationTest {
 
   @Autowired private SignalListService signalListService;
   @Autowired private TestEntityManager entityManager;
