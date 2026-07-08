@@ -43,7 +43,6 @@ public record SignalDetailResponse(
       String source,
       @Schema(nullable = true) String sourceTitle,
       @Schema(nullable = true) Instant occurredAt,
-      @Schema(nullable = true) String relativeTimeLabel,
       @Schema(nullable = true) String summary,
       @Schema(description = "provider별 부가 필드. MVP에서는 항상 빈 목록입니다.") List<FieldResponse> fields,
       @Schema(nullable = true) String sourceUrl) {}
@@ -85,7 +84,6 @@ public record SignalDetailResponse(
         evidence.source(),
         evidence.sourceTitle(),
         evidence.occurredAt(),
-        evidence.relativeTimeLabel(),
         evidence.summary(),
         List.of(),
         evidence.sourceUrl());

@@ -328,7 +328,6 @@ worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. 서
       "source": "figma",
       "source_title": "권한 요청 화면 v2",
       "occurred_at": "2026-06-28T09:48:00+09:00",
-      "relative_time_label": "00분 전",
       "summary": "설명 문구 변경으로 이탈 가능성이 있습니다.",
       "fields": [],
       "source_url": "https://..."

@@ -27,7 +27,6 @@ public record SignalDetail(
       String source,
       String sourceTitle,
       Instant occurredAt,
-      String relativeTimeLabel,
       String summary,
       String sourceUrl) {}
 }
