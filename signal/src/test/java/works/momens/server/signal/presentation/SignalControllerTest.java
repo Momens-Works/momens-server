@@ -110,7 +110,7 @@ class SignalControllerTest {
   void getSignalReturnsNestedDetail() throws Exception {
     UUID signalId = UUID.randomUUID();
     UUID evidenceId = UUID.randomUUID();
-    when(signalDetailService.get(eq(signalId), eq(USER_ID)))
+    when(signalDetailService.getDetail(eq(signalId), eq(USER_ID)))
         .thenReturn(
             new SignalDetail(
                 signalId,

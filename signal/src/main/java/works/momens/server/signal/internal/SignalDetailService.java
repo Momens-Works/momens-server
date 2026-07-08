@@ -71,7 +71,7 @@ public class SignalDetailService {
   }
 
   @Transactional(readOnly = true)
-  public SignalDetail get(UUID signalId, UUID userId) {
+  public SignalDetail getDetail(UUID signalId, UUID userId) {
     Signal signal =
         signalRepository
             .findByIdAndDeletedAtIsNull(signalId)
