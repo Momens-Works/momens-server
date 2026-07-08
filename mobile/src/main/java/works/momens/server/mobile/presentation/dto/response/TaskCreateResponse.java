@@ -17,8 +17,7 @@ public record TaskCreateResponse(@Schema(description = "생성된 태스크") Ta
       @Schema(description = "태스크 식별자") UUID id,
       @Schema(description = "프로젝트 식별자") UUID projectId,
       @Schema(description = "제목") String title,
-      @Schema(description = "역할. pm/design/backend/frontend/android/qa 중 하나", example = "pm")
-          String role,
+      @Schema(description = "역할. pm/design/backend/frontend 중 하나", example = "pm") String role,
       @Schema(description = "우선순위. low/medium/high", example = "medium") String priority,
       @Schema(description = "상태", example = "todo") String status) {}
 

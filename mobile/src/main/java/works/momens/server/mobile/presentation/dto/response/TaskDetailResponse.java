@@ -22,8 +22,7 @@ public record TaskDetailResponse(
     @Schema(description = "제목") String title,
     @Schema(description = "상태. backlog/todo/in_progress/done/cancelled", example = "todo")
         String status,
-    @Schema(description = "역할. pm/design/backend/frontend/android/qa 중 하나", example = "pm")
-        String role,
+    @Schema(description = "역할. pm/design/backend/frontend 중 하나", example = "pm") String role,
     @Schema(description = "담당자. 미지정이면 null") AssigneeResponse assignee,
     @Schema(description = "우선순위. low/medium/high", example = "medium") String priority,
     @Schema(description = "목적. 작성 전이면 null") String purpose,

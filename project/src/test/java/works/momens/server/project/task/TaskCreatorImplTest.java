@@ -36,7 +36,8 @@ class TaskCreatorImplTest {
     when(labelAllocator.allocateMomLabel(workspaceId)).thenReturn("MOM-0001");
 
     CreatedTask created =
-        taskCreator.create(new CreateTaskCommand(projectId, workspaceId, "권한 요청 점검", "qa", "high"));
+        taskCreator.create(
+            new CreateTaskCommand(projectId, workspaceId, "권한 요청 점검", "backend", "high"));
 
     ArgumentCaptor<Task> captor = ArgumentCaptor.forClass(Task.class);
     verify(taskRepository).save(captor.capture());
@@ -47,13 +48,13 @@ class TaskCreatorImplTest {
     assertThat(saved.getProjectId()).isEqualTo(projectId);
     assertThat(saved.getTitle()).isEqualTo("권한 요청 점검");
     assertThat(saved.getPriority()).isEqualTo("high");
-    assertThat(saved.getRole()).isEqualTo("qa");
+    assertThat(saved.getRole()).isEqualTo("backend");
 
     assertThat(created.id()).isEqualTo(saved.getId());
     assertThat(created.projectId()).isEqualTo(projectId);
     assertThat(created.status()).isEqualTo("todo");
     assertThat(created.priority()).isEqualTo("high");
-    assertThat(created.role()).isEqualTo("qa");
+    assertThat(created.role()).isEqualTo("backend");
   }
 
   @Test
