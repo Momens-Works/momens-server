@@ -200,13 +200,20 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 신규 Signal backing은 `memory_candidates`와 분리한다. 이유와 결과는
 [ADR-0007](../adr/0007-signal-backing-and-module-boundary.md)에 기록한다.
 
-내부는 도메인 하위 경계로 논리 분리한다(MOM-65). Signal 조회(`query`)는 Spring Modulith nested
-논리 모듈이고, `project`의 `task`와 같은 방식을 따른다: 공개 계약(`SignalListService`,
-`SignalDetailService` 인터페이스와 `SignalDetail`, `SignalSummary` 레코드)은 모듈 root에 두고,
-구현체(`SignalListServiceImpl`, `SignalDetailServiceImpl`)와 엔티티·리포지토리만 `query` 안에
-package-private로 은닉한다. nested 모듈이 자기 구현에서 root의 `SignalErrorCode`를 참조하는
-것은 단방향(query → root)이라 순환이 아니다 — presentation(모듈 root)이 nested 모듈의 구현
-타입을 직접 참조하는 반대 방향의 의존이 생겼을 때만 Modulith가 순환으로 판정한다.
+내부는 도메인 하위 경계로 논리 분리한다(MOM-65). Signal 조회(`query`)와 action(`action`)은 각각
+Spring Modulith nested 논리 모듈이고, `project`의 `task`와 같은 방식을 따른다: 공개 계약(조회는
+`SignalListService`·`SignalDetailService`·`SignalReader` 인터페이스와 `SignalDetail`·
+`SignalSummary`·`SignalSnapshot` 레코드, action은 `SignalActionService` 인터페이스와
+`SignalActionResult`·`ConvertToTaskCommand` 레코드)은 모듈 root에 두고, 구현체(`*Impl`)와
+엔티티·리포지토리만 각 nested 패키지 안에 package-private로 은닉한다. nested 모듈이 자기 구현에서
+root의 타입(`SignalErrorCode` 등)을 참조하는 것은 단방향(query/action → root)이라 순환이 아니다 —
+presentation(모듈 root)이 nested 모듈의 구현 타입을 직접 참조하는 반대 방향의 의존이 생겼을 때만
+Modulith가 순환으로 판정한다. action은 query가 공개한 `SignalReader`로 Signal 스냅샷을 읽고,
+convert-to-task는 `project`의 `TaskCreator.create`/`TaskReader.findDetail`(둘 다 root-to-root,
+다른 top-level 모듈 참조라 표준 방향)을 쓴다. convert-to-task 트랜잭션(`tasks insert +
+signal_actions insert`)과 dismiss 트랜잭션(`signal_actions insert`)은 `SignalActionExecutor`가
+소유하고, facade(`SignalActionServiceImpl`)와 빈을 분리해 멱등·충돌 정책과 원자 쓰기를 나눈다.
+MOM-66의 outbox 이벤트 insert는 이 executor 메서드들에 추가되는 것으로 같은 트랜잭션에 합류한다.
 
 ### memory
 

@@ -1,6 +1,8 @@
 package works.momens.server.mobile.presentation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -10,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import works.momens.server.auth.AccessTokenTestFactory;
@@ -172,6 +175,216 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
                 .header("API-Version", "1"))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.error.code").value("SIGNAL_NOT_FOUND"));
+  }
+
+  @Test
+  @DisplayName("convert-to-task는 태스크를 생성하고 재요청은 멱등 replay로 200을 반환한다")
+  void convertToTaskCreatesTaskAndReplaysOnRetry() throws Exception {
+    UserProfile jinsu = userService.findOrCreate("signals-it-convert@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("signals-convert");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "signals-convert-project");
+    UUID signal = insertSignal(workspace, project, "risk", "이탈 가능성 발견", "완료율에 영향", null);
+    String token = "Bearer " + accessTokens.issueAccessToken(jinsu.id());
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signal)
+                .header("Authorization", token)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"backend\"}"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.task.title").value("이탈 가능성 발견"))
+        .andExpect(jsonPath("$.task.status").value("todo"))
+        .andExpect(jsonPath("$.signal.id").value(signal.toString()))
+        .andExpect(jsonPath("$.signal.action").value("convert_to_task"));
+
+    Integer taskCount =
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM tasks WHERE project_id = ?", Integer.class, project);
+    assertThat(taskCount).isEqualTo(1);
+    String taskId =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM tasks WHERE project_id = ?", String.class, project);
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signal)
+                .header("Authorization", token)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"backend\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.task.id").value(taskId));
+
+    Integer taskCountAfterRetry =
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM tasks WHERE project_id = ?", Integer.class, project);
+    assertThat(taskCountAfterRetry).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("convert-to-task에 role이 없으면 COMMON_VALIDATION_FAILED를 반환한다")
+  void convertToTaskWithoutRoleReturnsValidationFailed() throws Exception {
+    UserProfile jinsu =
+        userService.findOrCreate("signals-it-convert-400@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("signals-convert-400");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "signals-convert-400-project");
+    UUID signal = insertSignal(workspace, project, "risk", "제목", null, null);
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signal)
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("COMMON_VALIDATION_FAILED"));
+  }
+
+  @Test
+  @DisplayName("dismiss는 처리 기록만 남기고, 재요청은 멱등 replay로 200을 반환하며 목록에서 제외한다")
+  void dismissRecordsActionAndExcludesFromList() throws Exception {
+    UserProfile jinsu = userService.findOrCreate("signals-it-dismiss@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("signals-dismiss");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "signals-dismiss-project");
+    UUID signal = insertSignal(workspace, project, "decision", "제목", null, null);
+    String token = "Bearer " + accessTokens.issueAccessToken(jinsu.id());
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/dismiss", signal)
+                .header("Authorization", token)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.signal.id").value(signal.toString()))
+        .andExpect(jsonPath("$.signal.action").value("dismiss"));
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/dismiss", signal)
+                .header("Authorization", token)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.signal.action").value("dismiss"));
+
+    Integer actionCount =
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM signal_actions WHERE signal_id = ?", Integer.class, signal);
+    assertThat(actionCount).isEqualTo(1);
+
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/signals", project)
+                .header("Authorization", token)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.signals.length()").value(0));
+  }
+
+  @Test
+  @DisplayName("이미 dismiss된 Signal에 convert-to-task를 요청하면 SIGNAL_INVALID_STATE를 반환한다")
+  void convertToTaskAfterDismissReturnsInvalidState() throws Exception {
+    UserProfile jinsu = userService.findOrCreate("signals-it-conflict-1@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("signals-conflict-1");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "signals-conflict-1-project");
+    UUID signal = insertSignal(workspace, project, "risk", "제목", null, null);
+    String token = "Bearer " + accessTokens.issueAccessToken(jinsu.id());
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/dismiss", signal)
+                .header("Authorization", token)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk());
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signal)
+                .header("Authorization", token)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"backend\"}"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.error.code").value("SIGNAL_INVALID_STATE"));
+  }
+
+  @Test
+  @DisplayName("이미 전환된 Signal에 dismiss를 요청하면 SIGNAL_INVALID_STATE를 반환한다")
+  void dismissAfterConvertToTaskReturnsInvalidState() throws Exception {
+    UserProfile jinsu = userService.findOrCreate("signals-it-conflict-2@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("signals-conflict-2");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "signals-conflict-2-project");
+    UUID signal = insertSignal(workspace, project, "risk", "제목", null, null);
+    String token = "Bearer " + accessTokens.issueAccessToken(jinsu.id());
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signal)
+                .header("Authorization", token)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"backend\"}"))
+        .andExpect(status().isCreated());
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/dismiss", signal)
+                .header("Authorization", token)
+                .header("API-Version", "1"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.error.code").value("SIGNAL_INVALID_STATE"));
+  }
+
+  @Test
+  @DisplayName("action 요청에서 workspace 멤버가 아니면 AUTH_FORBIDDEN을 반환한다")
+  void actionsReturnForbiddenWhenNotMember() throws Exception {
+    UserProfile gyuil =
+        userService.findOrCreate("signals-it-action-owner@momens.works", "김규일", null);
+    UserProfile jinsu =
+        userService.findOrCreate("signals-it-action-stranger@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("signals-action-forbidden");
+    addMember(workspace, gyuil.id(), "owner");
+    UUID project = insertProject(workspace, gyuil.id(), "signals-action-forbidden-project");
+    UUID signal = insertSignal(workspace, project, "risk", "제목", null, null);
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/dismiss", signal)
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.error.code").value("AUTH_FORBIDDEN"));
+  }
+
+  @Test
+  @DisplayName("없는 Signal에 action을 요청하면 SIGNAL_NOT_FOUND를 반환한다")
+  void actionsReturnNotFoundForUnknownSignal() throws Exception {
+    UserProfile caller =
+        userService.findOrCreate("signals-it-action-404@momens.works", "신진수", null);
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/dismiss", UUID.randomUUID())
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(caller.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.error.code").value("SIGNAL_NOT_FOUND"));
+  }
+
+  @Test
+  @DisplayName("토큰 없이 action을 요청하면 AUTH_UNAUTHORIZED를 반환한다")
+  void actionsReturnUnauthorizedWithoutToken() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/dismiss", UUID.randomUUID())
+                .header("API-Version", "1"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.error.code").value("AUTH_UNAUTHORIZED"));
   }
 
   private UUID insertWorkspace(String slug) {

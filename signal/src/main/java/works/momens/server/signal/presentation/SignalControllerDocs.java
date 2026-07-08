@@ -9,10 +9,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
+import org.springframework.http.ResponseEntity;
 import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.signal.SignalErrorCode;
+import works.momens.server.signal.presentation.dto.request.ConvertToTaskRequest;
+import works.momens.server.signal.presentation.dto.response.ConvertToTaskResponse;
+import works.momens.server.signal.presentation.dto.response.DismissResponse;
 import works.momens.server.signal.presentation.dto.response.SignalDetailResponse;
 import works.momens.server.signal.presentation.dto.response.SignalListResponse;
 
@@ -59,5 +63,50 @@ interface SignalControllerDocs {
       content = @Content(schema = @Schema(implementation = SignalDetailResponse.class)))
   @ApiExceptions({SignalErrorCode.class, CommonErrorCode.class})
   SignalDetailResponse getSignal(
+      @Parameter(description = "signal 식별자") UUID signalId, Principal principal);
+
+  @Operation(
+      summary = "시그널을 태스크로 전환",
+      description =
+          "시그널을 태스크로 전환합니다. body와 각 필드 모두 생략 가능하며, 생략한 title은 시그널 제목으로 채웁니다. role은 폴백이 없어"
+              + " 생략하면 COMMON_VALIDATION_FAILED를 반환합니다. 같은 시그널에 같은 action을 재요청하면 새 태스크를 만들지 않고 기존 결과를"
+              + " 200으로 반환합니다.",
+      parameters =
+          @Parameter(
+              name = "API-Version",
+              in = ParameterIn.HEADER,
+              required = false,
+              example = "1"))
+  @ApiResponse(
+      responseCode = "201",
+      description = "새로 전환됨.",
+      content = @Content(schema = @Schema(implementation = ConvertToTaskResponse.class)))
+  @ApiResponse(
+      responseCode = "200",
+      description = "같은 action 재요청(멱등 replay).",
+      content = @Content(schema = @Schema(implementation = ConvertToTaskResponse.class)))
+  @ApiExceptions({SignalErrorCode.class, CommonErrorCode.class})
+  ResponseEntity<ConvertToTaskResponse> convertToTask(
+      @Parameter(description = "signal 식별자") UUID signalId,
+      ConvertToTaskRequest request,
+      Principal principal);
+
+  @Operation(
+      summary = "시그널을 처리하지 않고 닫음(dismiss)",
+      description =
+          "시그널을 태스크로 전환하지 않고 처리 완료로 기록합니다. 물리 삭제가 아니며, 같은 시그널에 dismiss를 재요청하면 기존 결과를 200으로"
+              + " 반환합니다.",
+      parameters =
+          @Parameter(
+              name = "API-Version",
+              in = ParameterIn.HEADER,
+              required = false,
+              example = "1"))
+  @ApiResponse(
+      responseCode = "200",
+      description = "처리 완료(신규 또는 멱등 replay).",
+      content = @Content(schema = @Schema(implementation = DismissResponse.class)))
+  @ApiExceptions({SignalErrorCode.class, CommonErrorCode.class})
+  DismissResponse dismiss(
       @Parameter(description = "signal 식별자") UUID signalId, Principal principal);
 }
