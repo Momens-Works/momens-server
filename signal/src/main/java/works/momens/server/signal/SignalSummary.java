@@ -1,4 +1,4 @@
-package works.momens.server.signal.query;
+package works.momens.server.signal;
 
 import java.util.UUID;
 
