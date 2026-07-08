@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.UUID;
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
-import works.momens.server.signal.internal.SignalSummary;
+import works.momens.server.signal.query.SignalSummary;
 
 /**
  * {@code GET /api/mobile/projects/{projectId}/signals} 응답. shape는 docs/spec/mobile-api.md의 Signal
