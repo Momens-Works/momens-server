@@ -1,5 +1,6 @@
 package works.momens.server.signal.presentation;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -8,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.security.Principal;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +23,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import works.momens.server.signal.internal.SignalDetail;
+import works.momens.server.signal.internal.SignalDetailService;
 import works.momens.server.signal.internal.SignalListService;
 import works.momens.server.signal.internal.SignalSummary;
 
@@ -36,6 +40,7 @@ class SignalControllerTest {
 
   @Autowired private MockMvc mockMvc;
   @MockitoBean private SignalListService signalListService;
+  @MockitoBean private SignalDetailService signalDetailService;
 
   private static final UUID USER_ID = UUID.fromString("5d2f7f3a-5db1-4f2c-8b9e-13607dd1f5e8");
   private static final UUID PROJECT_ID = UUID.fromString("30d9e9fe-f43b-4097-a88e-dc19f0a5b025");
@@ -98,6 +103,58 @@ class SignalControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.signals").isArray())
         .andExpect(jsonPath("$.signals.length()").value(0));
+  }
+
+  @Test
+  void getSignalReturnsNestedDetail() throws Exception {
+    UUID signalId = UUID.randomUUID();
+    UUID evidenceId = UUID.randomUUID();
+    when(signalDetailService.get(eq(signalId), eq(USER_ID)))
+        .thenReturn(
+            new SignalDetail(
+                signalId,
+                PROJECT_ID,
+                "Q2 Activation Readiness",
+                "risk",
+                "이탈 가능성",
+                "본문",
+                "완료율에 영향",
+                "점검 제안",
+                List.of(
+                    new SignalDetail.Evidence(
+                        evidenceId,
+                        "figma",
+                        "권한 화면",
+                        Instant.parse("2026-07-06T00:00:00Z"),
+                        "1일 전",
+                        "요약",
+                        "https://f/1"))));
+
+    mockMvc
+        .perform(
+            get("/api/mobile/signals/{signalId}", signalId)
+                .principal(principal)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(signalId.toString()))
+        .andExpect(jsonPath("$.project.id").value(PROJECT_ID.toString()))
+        .andExpect(jsonPath("$.project.name").value("Q2 Activation Readiness"))
+        .andExpect(jsonPath("$.description").value("본문"))
+        .andExpect(jsonPath("$.evidence[0].id").value(evidenceId.toString()))
+        .andExpect(jsonPath("$.evidence[0].source").value("figma"))
+        .andExpect(jsonPath("$.evidence[0].source_title").value("권한 화면"))
+        .andExpect(jsonPath("$.evidence[0].relative_time_label").value("1일 전"))
+        .andExpect(jsonPath("$.evidence[0].summary").value("요약"))
+        // fields는 MVP에서 항상 빈 배열이다(D3).
+        .andExpect(jsonPath("$.evidence[0].fields.length()").value(0))
+        .andExpect(jsonPath("$.evidence[0].source_url").value("https://f/1"))
+        .andExpect(jsonPath("$.minsu.suggestion").value("점검 제안"))
+        // task_draft는 Signal 제목 기반 최소 초안(roles 빈 배열, priority medium).
+        .andExpect(jsonPath("$.minsu.task_draft.title").value("이탈 가능성"))
+        .andExpect(jsonPath("$.minsu.task_draft.roles.length()").value(0))
+        .andExpect(jsonPath("$.minsu.task_draft.priority").value("medium"))
+        .andExpect(jsonPath("$.actions").value(contains("convert-to-task", "dismiss")))
+        .andExpect(jsonPath("$.primary_action").value("convert-to-task"));
   }
 
   @TestConfiguration

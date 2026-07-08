@@ -16,6 +16,8 @@ dependencies {
     // 목록 API의 멤버십 가드에 필요한 도메인 모듈 public API(module-map 의존 방향).
     implementation project(':project')
     implementation project(':workspace')
+    // 상세 API의 evidence hydrate에 필요한 source_ref 조회 public API(module-map 의존 방향).
+    implementation project(':source')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     // Signal 목록 컨트롤러(presentation).
