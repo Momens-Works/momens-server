@@ -73,24 +73,35 @@ class ProjectTaskServiceTest {
   }
 
   @Test
-  void getBoardBucketsTasksIntoThreeGroupsInOrderAndKeepsEmptyGroups() {
+  void getBoardBucketsTasksIntoFiveGroupsInOrderAndKeepsEmptyGroups() {
     stubMember();
+    UUID backlogId = UUID.randomUUID();
     UUID todoId = UUID.randomUUID();
     UUID inProgressId = UUID.randomUUID();
+    UUID cancelledId = UUID.randomUUID();
     when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
         .thenReturn(
             List.of(
+                new BoardTask(backlogId, "백로그 태스크", "backlog", "medium", "pm"),
                 new BoardTask(todoId, "투두 태스크", "todo", "low", "frontend"),
-                new BoardTask(inProgressId, "진행중 태스크", "in_progress", "medium", "pm")));
+                new BoardTask(inProgressId, "진행중 태스크", "in_progress", "medium", "pm"),
+                new BoardTask(cancelledId, "취소 태스크", "cancelled", "high", "pm")));
 
     List<MobileTaskGroup> groups = projectTaskService.getBoard(PROJECT_ID, CALLER_ID);
 
     assertThat(groups)
         .extracting(MobileTaskGroup::status)
-        .containsExactly(BoardStatus.TODO, BoardStatus.IN_PROGRESS, BoardStatus.DONE);
-    assertThat(groups.get(0).tasks()).extracting(MobileTaskCard::id).containsExactly(todoId);
-    assertThat(groups.get(1).tasks()).extracting(MobileTaskCard::id).containsExactly(inProgressId);
-    assertThat(groups.get(2).tasks()).isEmpty();
+        .containsExactly(
+            BoardStatus.BACKLOG,
+            BoardStatus.TODO,
+            BoardStatus.IN_PROGRESS,
+            BoardStatus.DONE,
+            BoardStatus.CANCELLED);
+    assertThat(groups.get(0).tasks()).extracting(MobileTaskCard::id).containsExactly(backlogId);
+    assertThat(groups.get(1).tasks()).extracting(MobileTaskCard::id).containsExactly(todoId);
+    assertThat(groups.get(2).tasks()).extracting(MobileTaskCard::id).containsExactly(inProgressId);
+    assertThat(groups.get(3).tasks()).isEmpty();
+    assertThat(groups.get(4).tasks()).extracting(MobileTaskCard::id).containsExactly(cancelledId);
   }
 
   @Test
@@ -100,7 +111,8 @@ class ProjectTaskServiceTest {
     when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
         .thenReturn(List.of(new BoardTask(taskId, "긴급 태스크", "todo", "urgent", "pm")));
 
-    MobileTaskCard card = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(0).tasks().get(0);
+    // 보드 그룹 순서는 backlog, todo, ... 이므로 todo 그룹은 인덱스 1이다.
+    MobileTaskCard card = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(1).tasks().get(0);
 
     assertThat(card.priority()).isEqualTo("high");
     assertThat(card.materialCount()).isZero();
