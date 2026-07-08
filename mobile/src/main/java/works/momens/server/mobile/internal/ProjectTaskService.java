@@ -148,7 +148,7 @@ public class ProjectTaskService {
     // assignee_id는 users FK(ON DELETE SET NULL)라 값이 있으면 항상 해석된다. 불변식이 깨지면 조용히
     // 담당자 없음으로 만들지 않고 getProfile의 USER_NOT_FOUND로 크게 실패한다.
     UserProfile profile = userService.getProfile(assigneeId);
-    return new MobileTaskDetail.Assignee(profile.id(), profile.name());
+    return new MobileTaskDetail.Assignee(profile.id(), profile.name(), profile.avatarUrl());
   }
 
   private UUID requireProjectMember(UUID projectId, UUID userId) {

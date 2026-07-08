@@ -186,7 +186,10 @@ class ProjectTaskServiceTest {
 
     MobileTaskDetail result = projectTaskService.getTaskDetail(TASK_ID, CALLER_ID);
 
-    assertThat(result.assignee()).isEqualTo(new MobileTaskDetail.Assignee(assigneeId, "김규일"));
+    assertThat(result.assignee())
+        .isEqualTo(
+            new MobileTaskDetail.Assignee(
+                assigneeId, "김규일", "https://lh3.googleusercontent.com/a/gyuil"));
     assertThat(result.priority()).isEqualTo("high");
     assertThat(result.purpose()).isEqualTo("화면 흐름 정리");
     assertThat(result.checklistItems())
@@ -304,7 +307,14 @@ class ProjectTaskServiceTest {
   }
 
   private static UserProfile profile(UUID id, String name) {
-    return new UserProfile(id, "gyuil@momens.works", name, "backend", null, null, null);
+    return new UserProfile(
+        id,
+        "gyuil@momens.works",
+        name,
+        "backend",
+        "https://lh3.googleusercontent.com/a/gyuil",
+        null,
+        null);
   }
 
   private void stubMember() {

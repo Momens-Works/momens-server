@@ -22,6 +22,6 @@ public record MobileTaskDetail(
     String purpose,
     List<TaskDetail.ChecklistItem> checklistItems) {
 
-  /** 담당자 표시 정보. */
-  public record Assignee(UUID id, String name) {}
+  /** 담당자 표시 정보. avatarUrl은 담당자의 구글 계정 프로필 이미지이고, 없으면 null입니다. */
+  public record Assignee(UUID id, String name, String avatarUrl) {}
 }
