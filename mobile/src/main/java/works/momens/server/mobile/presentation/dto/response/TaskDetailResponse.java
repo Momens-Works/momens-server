@@ -73,20 +73,29 @@ public record TaskDetailResponse(
             .map(item -> new ChecklistItemResponse(item.id(), item.title(), item.completed()))
             .toList();
     int completedCount = (int) items.stream().filter(ChecklistItemResponse::completed).count();
+    AssigneeResponse assignee = toAssignee(detail.assignee());
+    ChecklistResponse checklist = new ChecklistResponse(completedCount, items.size(), items);
+
+    // materials, open_questions, next_action은 backing source가 아직 없어 빈 값으로 내린다(명세 합성 필드 정책).
     return new TaskDetailResponse(
         detail.id(),
         detail.projectId(),
         detail.title(),
         detail.status(),
         detail.role(),
-        detail.assignee() == null
-            ? null
-            : new AssigneeResponse(detail.assignee().id(), detail.assignee().name()),
+        assignee,
         detail.priority(),
         detail.purpose(),
-        new ChecklistResponse(completedCount, items.size(), items),
+        checklist,
         List.of(),
         List.of(),
         null);
+  }
+
+  private static AssigneeResponse toAssignee(MobileTaskDetail.Assignee assignee) {
+    if (assignee == null) {
+      return null;
+    }
+    return new AssigneeResponse(assignee.id(), assignee.name());
   }
 }
