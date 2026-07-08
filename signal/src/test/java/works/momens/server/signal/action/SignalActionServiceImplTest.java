@@ -169,6 +169,36 @@ class SignalActionServiceImplTest {
   }
 
   @Test
+  @DisplayName("replay 대상 task가 존재하지 않으면 진단 메시지를 담은 IllegalStateException을 던진다")
+  void throwsIllegalStateWhenReplayTaskMissing() {
+    when(signalReader.findLive(SIGNAL_ID))
+        .thenReturn(
+            Optional.of(new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목")));
+    when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
+    UUID missingTaskId = UUID.randomUUID();
+    SignalAction existing =
+        SignalAction.builder()
+            .workspaceId(WORKSPACE_ID)
+            .signalId(SIGNAL_ID)
+            .actionType("convert_to_task")
+            .resultTaskId(missingTaskId)
+            .processedByUserId(USER_ID)
+            .build();
+    when(signalActionRepository.findBySignalId(SIGNAL_ID)).thenReturn(Optional.of(existing));
+    when(taskReader.findDetail(missingTaskId)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () ->
+                service.convertToTask(
+                    SIGNAL_ID,
+                    USER_ID,
+                    new SignalActionService.ConvertToTaskCommand(null, "backend", null)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining(SIGNAL_ID.toString())
+        .hasMessageContaining(missingTaskId.toString());
+  }
+
+  @Test
   @DisplayName("이미 다른 action으로 처리됐으면 SIGNAL_INVALID_STATE를 던진다")
   void throwsInvalidStateWhenProcessedByDifferentAction() {
     when(signalReader.findLive(SIGNAL_ID))
