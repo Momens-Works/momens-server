@@ -23,4 +23,10 @@ public interface TaskReader {
    * ProjectReader}와 같은 계약 스타일).
    */
   Optional<TaskDetail> findDetail(UUID taskId);
+
+  /**
+   * 태스크가 속한 workspace id를 조회합니다. 수정 화면이 태스크를 바꾸기 전에 멤버십을 확인하는 용도라, 상세 전체를 읽지 않고 workspace만 가져옵니다.
+   * 소프트 삭제된 태스크는 빈 값으로 취급합니다.
+   */
+  Optional<UUID> workspaceIdOf(UUID taskId);
 }

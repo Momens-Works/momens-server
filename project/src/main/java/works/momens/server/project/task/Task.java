@@ -10,12 +10,15 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import works.momens.server.common.persistence.BaseEntity;
+import works.momens.server.project.UpdateTaskCommand;
 
 /**
  * 태스크.
@@ -91,5 +94,46 @@ class Task extends BaseEntity {
     this.status = status != null ? status : "backlog";
     this.priority = priority != null ? priority : "medium";
     this.role = role;
+  }
+
+  /**
+   * 수정 화면이 저장한 편집 상태 전체로 태스크를 갱신합니다. title, role, priority, status는 mobile이 검증한 값이라 항상 채워집니다.
+   * description은 목적을 비운 경우 빈 문자열이나 null로 들어옵니다. assigneeId는 담당자를 지정하면 값이, 비우면 null이 들어옵니다.
+   */
+  void update(
+      String title,
+      String role,
+      String priority,
+      String status,
+      String description,
+      UUID assigneeId) {
+    this.title = title;
+    this.role = role;
+    this.priority = priority;
+    this.status = status;
+    this.description = description;
+    this.assigneeId = assigneeId;
+  }
+
+  /**
+   * 완료기준 목록을 수정 화면이 저장한 최종 목록으로 교체합니다. id가 있고 기존에 있던 항목은 제목만 갱신해 완료 상태를 유지하고, id가 없으면 새 항목을 만듭니다.
+   * 최종 목록에서 빠진 기존 항목은 컬렉션에서 제거되어 orphanRemoval로 삭제됩니다. 리스트 순서가 곧 저장 순서라 {@code @OrderColumn}이
+   * position을 다시 매깁니다.
+   */
+  void replaceChecklist(List<UpdateTaskCommand.ChecklistItemEdit> edits) {
+    Map<UUID, TaskChecklistItem> existingById =
+        checklistItems.stream().collect(Collectors.toMap(TaskChecklistItem::getId, item -> item));
+    List<TaskChecklistItem> rebuilt = new ArrayList<>();
+    for (UpdateTaskCommand.ChecklistItemEdit edit : edits) {
+      TaskChecklistItem existing = edit.id() == null ? null : existingById.get(edit.id());
+      if (existing != null) {
+        existing.updateTitle(edit.title());
+        rebuilt.add(existing);
+      } else {
+        rebuilt.add(new TaskChecklistItem(edit.title()));
+      }
+    }
+    checklistItems.clear();
+    checklistItems.addAll(rebuilt);
   }
 }
