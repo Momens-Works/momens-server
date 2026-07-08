@@ -252,6 +252,21 @@ class SignalControllerTest {
   }
 
   @Test
+  @DisplayName("공백 title override는 400을 반환한다")
+  void convertToTaskWithBlankTitleReturns400() throws Exception {
+    UUID signalId = UUID.randomUUID();
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signalId)
+                .principal(principal)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"   \",\"role\":\"backend\"}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
   @DisplayName("dismiss는 신규·재요청 모두 200과 signal envelope를 반환한다")
   void dismissReturnsOkWithSignalEnvelope() throws Exception {
     UUID signalId = UUID.randomUUID();

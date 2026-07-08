@@ -366,7 +366,10 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
 
 #### Request
 
-요청 body는 선택입니다. body를 보내지 않으면 서버가 시그널의 태스크 초안을 사용합니다.
+`title`은 생략하면 시그널 제목을, `priority`는 생략하면 `medium`을 씁니다. `role`은 서버가
+채울 수 있는 값이 없어(시그널 상세의 `minsu.task_draft.roles`는 항상 빈 배열) 보내지 않으면
+`COMMON_VALIDATION_FAILED`를 반환합니다 — 사실상 필수입니다. `title`은 값을 보낸다면 공백일
+수 없습니다.
 
 ```json
 {
