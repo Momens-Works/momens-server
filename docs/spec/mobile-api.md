@@ -544,6 +544,7 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
   "title": "프로젝트 태스크",
   "description": "업무를 한눈에 확인하고 상세 내용을 확인하세요.",
   "groups": [
+    { "group_key": "backlog", "label": "백로그", "count": 0, "tasks": [] },
     {
       "group_key": "todo",
       "label": "투두",
@@ -559,12 +560,13 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
       ]
     },
     { "group_key": "in_progress", "label": "진행중", "count": 2, "tasks": [] },
-    { "group_key": "done", "label": "완료", "count": 2, "tasks": [] }
+    { "group_key": "done", "label": "완료", "count": 2, "tasks": [] },
+    { "group_key": "cancelled", "label": "취소", "count": 0, "tasks": [] }
   ]
 }
 ```
 
-보드는 todo, in_progress, done 세 그룹만 노출하고, 레거시 상태인 backlog와 cancelled는 담지 않습니다. 세 그룹은 태스크가 없어도 항상 포함하며 그때 tasks는 빈 배열입니다. priority는 low, medium, high로 반환하고, 저장된 값이 레거시 전용인 urgent이면 high로 반환합니다(2026-07-06 가결정). material_count는 관련 자료 연결 데이터가 아직 없어 0으로 고정합니다(합성 필드 정책).
+보드는 backlog, todo, in_progress, done, cancelled 다섯 그룹을 순서대로 노출합니다. 태스크 수정 화면이 상태 5종을 모두 편집하므로, backlog나 cancelled로 바꾼 태스크가 보드에서 사라지지 않도록 다섯 그룹을 모두 담습니다(MOM-75). 다섯 그룹은 태스크가 없어도 항상 포함하며 그때 tasks는 빈 배열입니다. priority는 low, medium, high로 반환하고, 저장된 값이 레거시 전용인 urgent이면 high로 반환합니다(2026-07-06 가결정). material_count는 관련 자료 연결 데이터가 아직 없어 0으로 고정합니다(합성 필드 정책).
 
 #### Errors
 
