@@ -1,4 +1,4 @@
-package works.momens.server.signal.internal;
+package works.momens.server.signal.query;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -22,7 +22,6 @@ import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.ProjectSnapshot;
-import works.momens.server.signal.SignalErrorCode;
 import works.momens.server.source.SourceRefReader;
 import works.momens.server.source.SourceRefView;
 import works.momens.server.workspace.WorkspaceAccess;
@@ -60,12 +59,9 @@ class SignalDetailServiceTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
-  @DisplayName("Signal이 없으면 SIGNAL_NOT_FOUND를 던진다")
-  void throwsSignalNotFoundWhenMissing() {
-    assertThatThrownBy(() -> signalDetailService.getDetail(UUID.randomUUID(), CALLER_ID))
-        .isInstanceOf(BusinessException.class)
-        .extracting(e -> ((BusinessException) e).getErrorCode())
-        .isEqualTo(SignalErrorCode.SIGNAL_NOT_FOUND);
+  @DisplayName("Signal이 없으면 빈 Optional을 반환한다")
+  void returnsEmptyWhenMissing() {
+    assertThat(signalDetailService.getDetail(UUID.randomUUID(), CALLER_ID)).isEmpty();
   }
 
   @Test
@@ -109,7 +105,7 @@ class SignalDetailServiceTest extends AbstractPostgresIntegrationTest {
                     "https://f/1",
                     Instant.parse("2026-07-06T00:00:00Z"))));
 
-    SignalDetail detail = signalDetailService.getDetail(signalId, CALLER_ID);
+    SignalDetail detail = signalDetailService.getDetail(signalId, CALLER_ID).orElseThrow();
 
     assertThat(detail.projectName()).isEqualTo("Q2");
     assertThat(detail.evidence()).extracting(SignalDetail.Evidence::id).containsExactly(ref0, ref1);
@@ -139,7 +135,7 @@ class SignalDetailServiceTest extends AbstractPostgresIntegrationTest {
                 new SourceRefView(high, "slack", "높음", "요약", "본문", "https://s/h", null),
                 new SourceRefView(low, "figma", "낮음", "요약", "본문", "https://s/l", null)));
 
-    SignalDetail detail = signalDetailService.getDetail(signalId, CALLER_ID);
+    SignalDetail detail = signalDetailService.getDetail(signalId, CALLER_ID).orElseThrow();
 
     assertThat(detail.evidence()).extracting(SignalDetail.Evidence::id).containsExactly(low, high);
   }

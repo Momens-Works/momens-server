@@ -200,6 +200,13 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 신규 Signal backing은 `memory_candidates`와 분리한다. 이유와 결과는
 [ADR-0007](../adr/0007-signal-backing-and-module-boundary.md)에 기록한다.
 
+내부는 도메인 하위 경계로 논리 분리한다(MOM-65). Signal 조회(`query`)는 Spring Modulith nested
+논리 모듈이고, 외부에는 이 패키지의 조회 서비스와 응답 조립용 레코드만 공개한다. nested 모듈은
+부모 루트 패키지(`signal`의 `SignalErrorCode`)를 역참조하면 Modulith가 순환으로 판정하므로,
+not-found 판단은 nested 모듈이 `Optional`을 반환하고 presentation(모듈 root 슬라이스)이
+`SIGNAL_NOT_FOUND`를 던지는 방식으로 분리한다(`project`의 `task` nested 모듈이 `TaskReader.findDetail`을
+`Optional`로 두고 `mobile`이 `TASK_NOT_FOUND`를 던지는 것과 같은 원칙).
+
 ### memory
 
 제품 기억 lifecycle을 담당한다.

@@ -1,4 +1,4 @@
-package works.momens.server.signal.internal;
+package works.momens.server.signal.query;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

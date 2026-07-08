@@ -1,4 +1,4 @@
-package works.momens.server.signal.internal;
+package works.momens.server.signal.query;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
