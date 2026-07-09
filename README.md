@@ -36,7 +36,6 @@ Momens의 새로운 Java Spring 제품 API 서버입니다.
 - [로컬 개발](docs/local-development.md)
 - [기반 규칙](docs/rules/README.md)
 - [ADR](docs/adr/)
-- [추후 결정 로그](docs/pending-decisions.md)
 - [Agent Guide](AGENTS.md) — AI 진입점(Codex/Claude 공용), `CLAUDE.md`가 가리킴
 
 사람이 읽는 `docs/` 문서는 한국어로 작성합니다. AI/에이전트 전용 진입점은

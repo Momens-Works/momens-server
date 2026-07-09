@@ -6,7 +6,7 @@
 
 ### DB
 
-- PostgreSQL만 지원합니다. 초기 DB 접근은 JPA. QueryDSL은 필요 시 추가합니다([P8](../pending-decisions.md)).
+- PostgreSQL만 지원합니다. 초기 DB 접근은 JPA. QueryDSL은 필요 시 추가합니다.
 - DB 통합 테스트는 PostgreSQL Testcontainers를 사용합니다(H2 미사용).
 
 ### 엔티티

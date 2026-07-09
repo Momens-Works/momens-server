@@ -140,7 +140,7 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   레거시 tasks에 없는 신규 속성이지만 태스크당 하나만 선택하는 단일 값이라(MOM-76, 2026-07-07
   확정) priority와 같은 방식으로 CHECK 제약을 둔 문자열 컬럼에 저장한다. 완료기준은 레거시에
   없는 신규 테이블 `task_checklist_items`이고, Task aggregate 내부 자식이라 별도 repository
-  없이 Task를 통해서만 접근한다(prod 공유 스키마 반영은 컷오버 때 조율, P12). 조회 public API는
+  없이 Task를 통해서만 접근한다(prod 공유 스키마 반영은 컷오버 때 조율). 조회 public API는
   `TaskReader`(listTasksByStatus, findDetail)와 `BoardTask`, `TaskDetail`이고, 어떤 상태를
   보일지와 표기 매핑은 표면이 정한다. 생성 public API는 `TaskCreator`(create)이고, 생성 시
   workspace의 `LabelAllocator`로 MOM 라벨을 발급한다.
