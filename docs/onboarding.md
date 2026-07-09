@@ -181,7 +181,6 @@ git push -u origin MOM-15-feat/create-category
 | [기반 규칙](rules/README.md) | 코딩·Git·아키텍처 등 |
 | [spec/](spec/) | 서버 API 계약·응답·에러 코드 |
 | [adr/](adr/) | 결정 기록 (ADR) |
-| [pending-decisions.md](pending-decisions.md) | 추후 결정 로그 |
 | [../AGENTS.md](../AGENTS.md) | AI 진입점 (Codex/Claude 공용) |
 
 ---
