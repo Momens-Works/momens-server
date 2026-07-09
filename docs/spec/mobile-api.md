@@ -680,7 +680,7 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 
 ### PATCH /api/mobile/tasks/{taskId}
 
-태스크 수정 화면이 저장한 편집 상태 전체를 받아 갱신합니다. title, role, priority, status는 항상 채워 보냅니다. title은 생성과 달리 빈 문자열을 허용하고, title을 빈 문자열로 보내면 상세 화면이 '새 태스크'로 표시합니다.
+태스크 수정 화면에서 편집한 필드를 저장합니다. 요청은 리소스 전체가 아니라 편집 가능한 필드 전체(title, role, assignee_id, priority, status, purpose, checklist_items)를 담고, 서버가 관리하는 필드(materials, open_questions, next_action과 완료기준 항목의 completed 상태)는 요청에 없어 그대로 유지합니다. title, role, priority, status는 항상 채워 보냅니다. title은 생성과 달리 빈 문자열을 허용하고, title을 빈 문자열로 보내면 상세 화면이 '새 태스크'로 표시합니다.
 
 #### Request
 
