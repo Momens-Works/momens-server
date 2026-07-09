@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
+import works.momens.server.signal.SignalActionService;
 import works.momens.server.signal.SignalDetail;
 
 /**
@@ -32,7 +33,6 @@ public record SignalDetailResponse(
 
   private static final List<String> ACTIONS = List.of("convert-to-task", "dismiss");
   private static final String PRIMARY_ACTION = "convert-to-task";
-  private static final String DEFAULT_PRIORITY = "medium";
 
   @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public record ProjectRef(UUID id, @Schema(nullable = true) String name) {}
@@ -95,6 +95,7 @@ public record SignalDetailResponse(
 
   /** worker/Minsu 산출물이 없을 때 서버가 제공하는 Signal 제목 기반 최소 초안. */
   private static TaskDraft minimalTaskDraft(String signalTitle) {
-    return new TaskDraft(signalTitle, List.of(), DEFAULT_PRIORITY);
+    return new TaskDraft(
+        signalTitle, List.of(), SignalActionService.ConvertToTaskCommand.DEFAULT_PRIORITY);
   }
 }

@@ -21,15 +21,12 @@ import works.momens.server.workspace.WorkspaceAccess;
  *
  * <p>실제 원자 쓰기는 {@link SignalActionExecutor}에 위임한다({@code @Transactional} 프록시가 걸리도록 빈을 분리). ledger
  * {@code UNIQUE(signal_id)}로 인한 동시성 레이스(같은 Signal에 대한 두 요청이 동시에 처리 없음을 확인하고 둘 다 insert를 시도하는 경우)는
- * {@link DataIntegrityViolationException}을 잡아 재조회 후 replay/충돌로 되돌린다.
+ * {@link DataIntegrityViolationException}을 잡아 재조회 후 replay/충돌로 되돌린다. {@code action_type} 문자열은
+ * {@link SignalActionType}이 유일한 출처다.
  */
 @Service
 @RequiredArgsConstructor
 class SignalActionServiceImpl implements SignalActionService {
-
-  private static final String CONVERT_TO_TASK = "convert_to_task";
-  private static final String DISMISS = "dismiss";
-  private static final String DEFAULT_PRIORITY = "medium";
 
   private final SignalReader signalReader;
   private final WorkspaceAccess workspaceAccess;
@@ -43,11 +40,14 @@ class SignalActionServiceImpl implements SignalActionService {
     SignalReader.Snapshot signal = loadAuthorized(signalId, userId);
     Optional<SignalAction> existing = signalActionRepository.findBySignalId(signalId);
     if (existing.isPresent()) {
-      return replayOrConflict(existing.get(), CONVERT_TO_TASK);
+      return replayOrConflict(existing.get(), SignalActionType.CONVERT_TO_TASK);
     }
 
     String title = command.title() != null ? command.title() : signal.title();
-    String priority = command.priority() != null ? command.priority() : DEFAULT_PRIORITY;
+    String priority =
+        command.priority() != null
+            ? command.priority()
+            : SignalActionService.ConvertToTaskCommand.DEFAULT_PRIORITY;
     String role = command.role();
     if (role == null) {
       throw new BusinessException(
@@ -59,7 +59,7 @@ class SignalActionServiceImpl implements SignalActionService {
     } catch (DataIntegrityViolationException raced) {
       return replayOrConflict(
           signalActionRepository.findBySignalId(signalId).orElseThrow(() -> raced),
-          CONVERT_TO_TASK);
+          SignalActionType.CONVERT_TO_TASK);
     }
   }
 
@@ -68,14 +68,15 @@ class SignalActionServiceImpl implements SignalActionService {
     SignalReader.Snapshot signal = loadAuthorized(signalId, userId);
     Optional<SignalAction> existing = signalActionRepository.findBySignalId(signalId);
     if (existing.isPresent()) {
-      return replayOrConflict(existing.get(), DISMISS);
+      return replayOrConflict(existing.get(), SignalActionType.DISMISS);
     }
 
     try {
       return executor.dismiss(signal, userId);
     } catch (DataIntegrityViolationException raced) {
       return replayOrConflict(
-          signalActionRepository.findBySignalId(signalId).orElseThrow(() -> raced), DISMISS);
+          signalActionRepository.findBySignalId(signalId).orElseThrow(() -> raced),
+          SignalActionType.DISMISS);
     }
   }
 
@@ -95,15 +96,16 @@ class SignalActionServiceImpl implements SignalActionService {
     return signal;
   }
 
-  private SignalActionResult replayOrConflict(SignalAction existing, String requestedActionType) {
-    if (!existing.getActionType().equals(requestedActionType)) {
+  private SignalActionResult replayOrConflict(
+      SignalAction existing, SignalActionType requestedActionType) {
+    if (!existing.getActionType().equals(requestedActionType.value())) {
       throw new BusinessException(
           SignalErrorCode.SIGNAL_INVALID_STATE,
           Map.of(
               "signal_id", existing.getSignalId().toString(),
               "processed_action", existing.getActionType()));
     }
-    if (CONVERT_TO_TASK.equals(requestedActionType)) {
+    if (requestedActionType == SignalActionType.CONVERT_TO_TASK) {
       TaskDetail detail =
           taskReader
               .findDetail(existing.getResultTaskId())
@@ -116,10 +118,11 @@ class SignalActionServiceImpl implements SignalActionService {
                               + existing.getResultTaskId()));
       return new SignalActionResult(
           existing.getSignalId(),
-          CONVERT_TO_TASK,
+          SignalActionType.CONVERT_TO_TASK.value(),
           false,
           new SignalActionResult.TaskResult(detail.id(), detail.title(), detail.status()));
     }
-    return new SignalActionResult(existing.getSignalId(), DISMISS, false, null);
+    return new SignalActionResult(
+        existing.getSignalId(), SignalActionType.DISMISS.value(), false, null);
   }
 }
