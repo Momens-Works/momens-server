@@ -15,8 +15,8 @@
 
 ### 프로필
 
-- 프로필: `local` / `test` / `prod`. 활성화는 `SPRING_PROFILES_ACTIVE` 또는
-  `--spring.profiles.active`.
+- 프로필: `local` / `dev` / `test` / `prod`. 활성화는 `SPRING_PROFILES_ACTIVE` 또는
+  `--spring.profiles.active`. `dev`는 모바일 MVP 검증용 배포 환경(`momens-k8s-dev`)에서 씁니다.
 - `application.yml`(공통) + `application-<profile>.yml`(환경별). 민감값은 env placeholder.
 
 ### 환경변수
@@ -35,7 +35,7 @@
 
 - 실제 secret은 커밋하지 않습니다. 커밋 가능한 설정 파일에는 환경변수 placeholder만 둡니다.
 - 커밋 금지: `.env`, `.env.*`, `application-secret.yml`, `application-*-secret.yml`.
-  커밋 가능: `application.yml`, `application-{local,test,prod}.yml`, `.env.example`.
+  커밋 가능: `application.yml`, `application-{local,dev,test,prod}.yml`, `.env.example`.
 - secret 주입: 로컬은 `.env`, CI는 GitHub Actions Secrets, 운영은 Kubernetes Secret 또는
   External Secrets.
 - 개인 DM·개인 메모·private submodule·private repo를 secret 저장소로 쓰지 않습니다.
