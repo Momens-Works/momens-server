@@ -486,28 +486,38 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
     "name": "Q2 Activation Readiness",
     "target_date": "2026-06-30",
     "progress": 64,
-    "summary": "내용이 들어갈 공간입니다"
-  },
-  "review_summary": {
-    "title": "리뷰 요약",
-    "body": "Android 권한 요청 이슈가 발견되었으며, 소셜 로그인은 MVP 범위에서 제외되었습니다."
+    "summary": "목표일까지 Q2 Activation Readiness 범위의 회원 가입 MVP를 안정적으로 릴리즈한다."
   },
   "signal_summary": {
+    "summary": "Android 권한 요청 이슈가 발견되었으며, 소셜 로그인은 MVP 범위에서 제외되었습니다. 이메일 회원가입과 온보딩 이탈 개선이 우선적으로 필요합니다.",
     "selected_filter": "all",
     "filters": [
-      { "key": "all", "label": "전체", "count": 4 },
-      { "key": "decisions", "label": "결정", "count": 2 },
-      { "key": "risks", "label": "리스크", "count": 1 },
-      { "key": "questions", "label": "질문", "count": 1 }
+      { "key": "all", "label": "All", "count": 5 },
+      { "key": "decisions", "label": "Decision", "count": 2 },
+      { "key": "risks", "label": "Risk", "count": 1 },
+      { "key": "questions", "label": "Question", "count": 2 }
     ],
     "items": [
       {
-        "id": "signal-or-memory-id",
-        "type": "risk",
-        "title": "Android 권한 요청 이슈",
-        "summary": "MVP 완료율과 온보딩 품질에 영향을 줄 수 있습니다.",
+        "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
+        "type": "decision",
+        "title": "소셜 로그인은 MVP 범위에서 제외",
         "source": "signal",
         "signal_id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1"
+      },
+      {
+        "id": "8a1c2b34-56d7-4e89-9f01-234a5b6c7d8e",
+        "type": "decision",
+        "title": "회원가입 MVP 범위 1차 확정",
+        "source": "signal",
+        "signal_id": "8a1c2b34-56d7-4e89-9f01-234a5b6c7d8e"
+      },
+      {
+        "id": "3b9e0d12-78f4-4a56-8c01-9d2e3f4a5b6c",
+        "type": "risk",
+        "title": "Android 13+ 권한 요청 플로우 이탈 가능성",
+        "source": "signal",
+        "signal_id": "3b9e0d12-78f4-4a56-8c01-9d2e3f4a5b6c"
       }
     ]
   },
@@ -515,19 +525,45 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
     {
       "rank": 1,
       "title": "이메일 회원가입 완료율 개선",
-      "task_id": "27afd507-9c7f-4f0d-a2be-fcdab2477b19",
-      "signal_id": null
+      "task_id": "27afd507-9c7f-4f0d-a2be-fcdab2477b19"
+    },
+    {
+      "rank": 2,
+      "title": "Android 13+ 권한 요청 플로우 정비",
+      "task_id": "4c8e1f23-a567-4b89-9c01-2d3e4f5a6b7c"
+    },
+    {
+      "rank": 3,
+      "title": "온보딩 이탈 구간 계측 추가",
+      "task_id": "9d0a2b34-c678-4d90-8e12-3f4a5b6c7d8e"
+    },
+    {
+      "rank": 4,
+      "title": "소셜 로그인 제외 범위 QA",
+      "task_id": "1e2f3a45-b789-4c01-9d23-4a5b6c7d8e9f"
     }
   ]
 }
 ```
 
 `signal_summary`는 `change`(VOC) 신호를 노출하지 않고 필터는 `all`, `decisions`, `risks`, `questions`만 둡니다.
-`review_summary`는 worker/Minsu 산출물 후보로 MVP backing source가 없으면 `null`(또는 내부 값이 빈 상태)로
-반환합니다(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
+`filters[].label`은 화면 표기 그대로 `All`, `Decision`, `Risk`, `Question`으로 내립니다(2026-07-10 화면설계서 표기,
+가결정). `signal_summary.summary`는 시그널 요약 헤더 아래 문단(해당 프로젝트 이슈와 진행상황 요약)입니다.
+worker/Minsu 산출물 후보로 MVP backing source가 없으면 `null`로 반환합니다(요구사항 명세 "합성/파생 필드 응답 정책"
+참고). 2026-07-10 화면설계서는 이 문단을 시그널 요약이라 부르고 리뷰 요약이라는 개념이나 헤더는 따로 없어서, 별도
+`review_summary` 객체를 두지 않습니다. 화면의 "시그널 요약 · N" 헤더 숫자는 `filters`에서 `key`가 `all`인 항목의
+`count`로 렌더링합니다(필터 선택과 무관하게 유지).
+
+`priorities`의 원천은 태스크입니다(2026-07-10 기획 확정). `title`은 태스크 제목이고, `task_id`로 태스크 상세로
+이동할 수 있습니다. 정렬은 `priority`가 높은 순(high, medium, low)이고, 같으면 생성이 오래된 순입니다(생성 시각
+오름차순, 생성 시각까지 같으면 id 오름차순으로 순서를 고정합니다). 상위 4개까지만 담습니다. 화면의
+"현재 우선순위 · N" 헤더 숫자는 배열 길이로 계산하며, 배열 길이와 항상 같은 값이라 별도 개수 필드를 두지
+않습니다. 우선순위에 포함할 태스크 상태 범위(완료나 취소 태스크의 포함 여부)는 구현에서 확정합니다.
 
 #### Errors
 
+- `AUTH_UNAUTHORIZED`
+- `AUTH_INVALID_TOKEN`
 - `PROJECT_NOT_FOUND`
 - `AUTH_FORBIDDEN`
 
