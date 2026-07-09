@@ -213,7 +213,9 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 
 - 경로: `GET /api/mobile/projects/{projectId}/brief`
 - 브리프는 모바일 홈 역할을 한다.
-- 응답은 프로젝트 스냅샷, 리뷰 요약, signal summary filter/dropdown, 우선순위를 표현할 수 있어야 한다.
+- 응답은 프로젝트 스냅샷, 시그널 요약 문단(`signal_summary.summary`), signal summary
+  filter/dropdown, 우선순위를 표현할 수 있어야 한다. (2026-07-10 화면설계서 기준으로 종전
+  "리뷰 요약"을 시그널 요약 문단으로 정리했다.)
 - 브리프 signal summary는 `change`(VOC) 신호를 노출하지 않는다. 필터는 `all`, `decisions`, `risks`, `questions`만 둔다.
 
 ### R-READ-004. 프로젝트 태스크 목록 조회
@@ -310,7 +312,7 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 | `material_count` | `materials[]` 개수 | `0` |
 | `open_questions[]` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `[]` |
 | `next_action` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `null` |
-| `review_summary` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `null` |
+| `signal_summary.summary` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `null` |
 
 서버는 backing source 또는 확정된 합성 규칙이 없는 값을 임의 생성하지 않는다. 후속 버전에서
 worker 산출물 저장 구조가 확정되면 backing source를 별도 설계한다.

@@ -173,6 +173,9 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   이 모듈이 소유하고(저장 상태 5종 전부. MOM-75에서 backlog와 cancelled를 추가), project 조회에는
   그 상태 목록을 넘긴다. priority 매핑(urgent를 high로 반환), material_count 기본값도 조합
   규칙이라 이 모듈이 소유한다(MOM-62).
+- `GET /api/mobile/projects/{projectId}/brief`: project의 스냅샷(`ProjectReader.findSnapshot`)과
+  workspace 멤버십을 조합해 브리프 화면 정보를 내린다. 스냅샷이 workspace id를 들고 있어 별도
+  workspace 해석 조회 없이 멤버십 검사로 이어진다(MOM-67).
 - `GET /api/mobile/tasks/{taskId}`: project의 태스크 상세(`TaskReader.findDetail`)와 workspace
   멤버십(태스크가 속한 workspace 기준), user 프로필(담당자 이름)을 조합한다. purpose 개명
   (도메인 description), priority 매핑, 빈 값 고정(materials와 open_questions는 빈 배열,
