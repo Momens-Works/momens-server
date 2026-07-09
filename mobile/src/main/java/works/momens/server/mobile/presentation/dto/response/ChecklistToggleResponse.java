@@ -37,7 +37,11 @@ public record ChecklistToggleResponse(
     List<TaskDetail.ChecklistItem> items = detail.checklistItems();
     int completedCount = (int) items.stream().filter(TaskDetail.ChecklistItem::completed).count();
     TaskDetail.ChecklistItem changed =
-        items.stream().filter(item -> item.id().equals(itemId)).findFirst().orElseThrow();
+        items.stream()
+            .filter(item -> item.id().equals(itemId))
+            .findFirst()
+            .orElseThrow(
+                () -> new IllegalStateException("완료 상태를 바꾼 완료기준 항목을 응답에서 찾지 못했습니다: " + itemId));
     ItemResponse item = new ItemResponse(changed.id(), changed.title(), changed.completed());
     return new ChecklistToggleResponse(new ChecklistResponse(completedCount, items.size(), item));
   }
