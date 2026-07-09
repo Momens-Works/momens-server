@@ -17,8 +17,15 @@ public interface SignalActionService {
   /**
    * convert-to-task 요청 입력. 세 필드 모두 nullable이다.
    *
-   * <p>{@code title}이 없으면 Signal 제목으로, {@code priority}가 없으면 {@code medium}으로 폴백한다. {@code role}은
-   * 폴백이 없어 body와 Signal의 minsu task_draft 어디에도 없으면 검증 실패로 취급한다.
+   * <p>{@code title}이 없으면 Signal 제목으로, {@code priority}가 없으면 {@link #DEFAULT_PRIORITY}로 폴백한다.
+   * {@code role}은 폴백이 없어 body와 Signal의 minsu task_draft 어디에도 없으면 검증 실패로 취급한다.
    */
-  record ConvertToTaskCommand(String title, String role, String priority) {}
+  record ConvertToTaskCommand(String title, String role, String priority) {
+
+    /**
+     * {@code priority} 생략 시 폴백 값. 실제 폴백은 {@code SignalActionServiceImpl}이 수행하고, Signal 상세 응답의
+     * task_draft 미리보기({@code SignalDetailResponse})도 같은 값을 참조해 실제 생성 결과와 어긋나지 않게 한다.
+     */
+    public static final String DEFAULT_PRIORITY = "medium";
+  }
 }

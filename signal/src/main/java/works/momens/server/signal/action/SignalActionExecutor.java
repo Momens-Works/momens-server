@@ -34,13 +34,13 @@ class SignalActionExecutor {
         SignalAction.builder()
             .workspaceId(signal.workspaceId())
             .signalId(signal.id())
-            .actionType("convert_to_task")
+            .actionType(SignalActionType.CONVERT_TO_TASK.value())
             .resultTaskId(created.id())
             .processedByUserId(userId)
             .build());
     return new SignalActionResult(
         signal.id(),
-        "convert_to_task",
+        SignalActionType.CONVERT_TO_TASK.value(),
         true,
         new SignalActionResult.TaskResult(created.id(), created.title(), created.status()));
   }
@@ -51,9 +51,9 @@ class SignalActionExecutor {
         SignalAction.builder()
             .workspaceId(signal.workspaceId())
             .signalId(signal.id())
-            .actionType("dismiss")
+            .actionType(SignalActionType.DISMISS.value())
             .processedByUserId(userId)
             .build());
-    return new SignalActionResult(signal.id(), "dismiss", true, null);
+    return new SignalActionResult(signal.id(), SignalActionType.DISMISS.value(), true, null);
   }
 }
