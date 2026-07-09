@@ -63,7 +63,7 @@ Signal type 기반 화면 라벨은 앱이 다음처럼 파생합니다. 이 라
 
 | 이름 | 값 |
 | --- | --- |
-| `group_key` | `todo`, `in_progress`, `done` |
+| `group_key` | `backlog`, `todo`, `in_progress`, `done`, `cancelled` |
 | `priority` | `high`, `medium`, `low` |
 | `role` | `pm`, `design`, `backend`, `frontend` (하나만 선택. android, qa는 2026-07-08 기획 확정으로 폐기) |
 

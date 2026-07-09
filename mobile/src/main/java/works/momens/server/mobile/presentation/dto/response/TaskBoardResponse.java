@@ -11,14 +11,15 @@ import works.momens.server.mobile.internal.MobileTaskGroup;
  * {@code GET /api/mobile/projects/{projectId}/tasks} 응답. 응답 형식은 docs/spec/mobile-api.md 태스크 절을
  * 따릅니다.
  *
- * <p>제목과 안내 문구는 화면 고정값이고, 그룹은 todo, in_progress, done 순서로 항상 셋을 포함합니다.
+ * <p>제목과 안내 문구는 화면 고정값이고, 그룹은 backlog, todo, in_progress, done, cancelled 순서로 항상 다섯을 포함합니다(MOM-75).
  */
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "프로젝트 태스크 보드 응답")
 public record TaskBoardResponse(
     @Schema(description = "화면 제목", example = "프로젝트 태스크") String title,
     @Schema(description = "화면 안내 문구") String description,
-    @Schema(description = "상태 그룹 목록(todo, in_progress, done 순서)") List<GroupResponse> groups) {
+    @Schema(description = "상태 그룹 목록(backlog, todo, in_progress, done, cancelled 순서)")
+        List<GroupResponse> groups) {
 
   private static final String BOARD_TITLE = "프로젝트 태스크";
   private static final String BOARD_DESCRIPTION = "업무를 한눈에 확인하고 상세 내용을 확인하세요.";
