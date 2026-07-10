@@ -43,5 +43,21 @@ class OpenApiRequestExampleTest extends AbstractPostgresIntegrationTest {
         .as(
             "default must be absent; default: null makes Swagger UI render the request example as null")
         .isFalse();
+
+    JsonNode apiVersion =
+        findParameter(
+            root.path("paths").path("/api/auth/google/token").path("post"), "API-Version");
+    assertThat(apiVersion).as("Spring MVC API versioning should document API-Version").isNotNull();
+    assertThat(apiVersion.path("in").asString()).isEqualTo("header");
+    assertThat(apiVersion.path("schema").path("type").asString()).isEqualTo("string");
+  }
+
+  private JsonNode findParameter(JsonNode operation, String name) {
+    for (JsonNode parameter : operation.path("parameters")) {
+      if (name.equals(parameter.path("name").asString())) {
+        return parameter;
+      }
+    }
+    return null;
   }
 }

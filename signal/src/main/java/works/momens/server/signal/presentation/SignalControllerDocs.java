@@ -2,7 +2,6 @@ package works.momens.server.signal.presentation;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -33,14 +32,7 @@ interface SignalControllerDocs {
   @Operation(
       summary = "시그널 목록 조회",
       description =
-          "프로젝트의 아직 처리되지 않은 시그널을 생성 시각 내림차순(동률 시 id 내림차순)으로 조회합니다. 처리된 시그널을 다시 보는 흐름은 MVP 이후입니다.",
-      parameters =
-          @Parameter(
-              name = "API-Version",
-              in = ParameterIn.HEADER,
-              required = false,
-              example = "1",
-              schema = @Schema(implementation = String.class)))
+          "프로젝트의 아직 처리되지 않은 시그널을 생성 시각 내림차순(동률 시 id 내림차순)으로 조회합니다. 처리된 시그널을 다시 보는 흐름은 MVP 이후입니다.")
   @ApiResponse(
       responseCode = "200",
       description = "미처리 시그널 목록. 없으면 signals는 빈 배열입니다.",
@@ -51,14 +43,7 @@ interface SignalControllerDocs {
 
   @Operation(
       summary = "시그널 상세 조회",
-      description = "시그널 상세 bottom sheet에 필요한 본문·근거·민수 제안·가능한 action을 조회합니다.",
-      parameters =
-          @Parameter(
-              name = "API-Version",
-              in = ParameterIn.HEADER,
-              required = false,
-              example = "1",
-              schema = @Schema(implementation = String.class)))
+      description = "시그널 상세 bottom sheet에 필요한 본문·근거·민수 제안·가능한 action을 조회합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "시그널 상세.",
@@ -72,14 +57,7 @@ interface SignalControllerDocs {
       description =
           "시그널을 태스크로 전환합니다. title은 생략하면 시그널 제목으로, priority는 생략하면 medium으로 채웁니다. role은 폴백이 없어"
               + " body에 없으면 COMMON_VALIDATION_FAILED를 반환합니다(사실상 필수). 같은 시그널에 같은 action을 재요청하면 새 태스크를"
-              + " 만들지 않고 기존 결과를 200으로 반환합니다.",
-      parameters =
-          @Parameter(
-              name = "API-Version",
-              in = ParameterIn.HEADER,
-              required = false,
-              example = "1",
-              schema = @Schema(implementation = String.class)))
+              + " 만들지 않고 기존 결과를 200으로 반환합니다.")
   @ApiResponse(
       responseCode = "201",
       description = "새로 전환됨.",
@@ -98,14 +76,7 @@ interface SignalControllerDocs {
       summary = "시그널을 처리하지 않고 닫음(dismiss)",
       description =
           "시그널을 태스크로 전환하지 않고 처리 완료로 기록합니다. 물리 삭제가 아니며, 같은 시그널에 dismiss를 재요청하면 기존 결과를 200으로"
-              + " 반환합니다.",
-      parameters =
-          @Parameter(
-              name = "API-Version",
-              in = ParameterIn.HEADER,
-              required = false,
-              example = "1",
-              schema = @Schema(implementation = String.class)))
+              + " 반환합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "처리 완료(신규 또는 멱등 replay).",
