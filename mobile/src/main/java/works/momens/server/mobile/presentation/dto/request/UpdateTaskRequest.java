@@ -1,5 +1,6 @@
 package works.momens.server.mobile.presentation.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -8,8 +9,6 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.UUID;
-import tools.jackson.databind.PropertyNamingStrategies;
-import tools.jackson.databind.annotation.JsonNaming;
 
 /**
  * 태스크 수정 요청. 요청 형식은 docs/spec/mobile-api.md 태스크 수정 절을 따릅니다.
@@ -19,7 +18,6 @@ import tools.jackson.databind.annotation.JsonNaming;
  * 지정, null이면 담당자 비우기입니다. {@code purpose}는 목적이고 저장 시 description에 매핑됩니다. {@code checklistItems}는
  * 완료기준 최종 목록이며 0개에서 5개까지 허용합니다. 글자 수 제한은 별도 이슈로 보류되어 여기서 검증하지 않습니다.
  */
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "태스크 수정 요청")
 public record UpdateTaskRequest(
     @Schema(description = "제목. 값은 있어야 하고 빈 문자열은 허용합니다.", example = "1차 와이어프레임") @NotNull
@@ -28,7 +26,7 @@ public record UpdateTaskRequest(
         @NotBlank
         @Pattern(regexp = "pm|design|backend|frontend")
         String role,
-    @Schema(description = "담당자 식별자. 비우려면 null을 보냅니다.") UUID assigneeId,
+    @JsonProperty("assignee_id") @Schema(description = "담당자 식별자. 비우려면 null을 보냅니다.") UUID assigneeId,
     @Schema(description = "우선순위. low/medium/high", example = "medium")
         @NotBlank
         @Pattern(regexp = "low|medium|high")
@@ -40,7 +38,10 @@ public record UpdateTaskRequest(
         @Pattern(regexp = "backlog|todo|in_progress|done|cancelled")
         String status,
     @Schema(description = "목적. 비우면 빈 문자열이나 null입니다.") String purpose,
-    @Schema(description = "완료기준 최종 목록. 0개에서 5개까지 허용합니다.") @Size(max = 5) @Valid
+    @JsonProperty("checklist_items")
+        @Schema(description = "완료기준 최종 목록. 0개에서 5개까지 허용합니다.")
+        @Size(max = 5)
+        @Valid
         List<ChecklistItemRequest> checklistItems) {
 
   public UpdateTaskRequest {
@@ -49,7 +50,6 @@ public record UpdateTaskRequest(
   }
 
   /** 완료기준 한 항목. id가 있으면 기존 항목, 없으면 새 항목입니다. */
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "완료기준 항목")
   public record ChecklistItemRequest(
       @Schema(description = "항목 식별자. 새 항목이면 생략합니다.") UUID id,

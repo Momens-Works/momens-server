@@ -1,13 +1,13 @@
 package works.momens.server.auth.presentation.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import tools.jackson.databind.PropertyNamingStrategies;
-import tools.jackson.databind.annotation.JsonNaming;
 
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "Access/refresh token 응답")
 public record TokenResponse(
-    @Schema(description = "Momens access token") String accessToken,
-    @Schema(description = "Momens refresh token") String refreshToken,
-    @Schema(description = "토큰 타입", example = "Bearer") String tokenType,
-    @Schema(description = "access token 만료까지 남은 초", example = "900") long expiresIn) {}
+    @JsonProperty("access_token") @Schema(description = "Momens access token") String accessToken,
+    @JsonProperty("refresh_token") @Schema(description = "Momens refresh token")
+        String refreshToken,
+    @JsonProperty("token_type") @Schema(description = "토큰 타입", example = "Bearer") String tokenType,
+    @JsonProperty("expires_in") @Schema(description = "access token 만료까지 남은 초", example = "900")
+        long expiresIn) {}

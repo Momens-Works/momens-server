@@ -1,21 +1,18 @@
 package works.momens.server.mobile.presentation.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;
-import tools.jackson.databind.PropertyNamingStrategies;
-import tools.jackson.databind.annotation.JsonNaming;
 import works.momens.server.project.CreatedTask;
 
 /** {@code POST /api/mobile/projects/{projectId}/tasks} 응답. 생성된 태스크를 {@code task} 아래에 담습니다. */
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "태스크 생성 응답")
 public record TaskCreateResponse(@Schema(description = "생성된 태스크") TaskResponse task) {
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "생성된 태스크")
   public record TaskResponse(
       @Schema(description = "태스크 식별자") UUID id,
-      @Schema(description = "프로젝트 식별자") UUID projectId,
+      @JsonProperty("project_id") @Schema(description = "프로젝트 식별자") UUID projectId,
       @Schema(description = "제목") String title,
       @Schema(description = "역할. pm/design/backend/frontend 중 하나", example = "pm") String role,
       @Schema(description = "우선순위. low/medium/high", example = "medium") String priority,
