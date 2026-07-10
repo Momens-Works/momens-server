@@ -485,21 +485,22 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
   "signal_summary": {
     "summary": "Android 권한 요청 이슈가 발견되었으며, 소셜 로그인은 MVP 범위에서 제외되었습니다. 이메일 회원가입과 온보딩 이탈 개선이 우선적으로 필요합니다.",
     "filters": [
-      { "key": "all", "label": "All", "count": 5 },
-      { "key": "decisions", "label": "Decision", "count": 2 },
-      { "key": "risks", "label": "Risk", "count": 1 },
-      { "key": "questions", "label": "Question", "count": 2 }
+      { "key": "all", "label": "All", "count": 6 },
+      { "key": "change", "label": "VOC", "count": 1 },
+      { "key": "risk", "label": "Risk", "count": 1 },
+      { "key": "decision", "label": "Decision", "count": 2 },
+      { "key": "question", "label": "Question", "count": 2 }
     ],
     "items": [
+      {
+        "id": "5c1a2b34-56d7-4e89-9f01-234a5b6c7d8e",
+        "type": "change",
+        "title": "권한 요청 반복 문의"
+      },
       {
         "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
         "type": "decision",
         "title": "소셜 로그인은 MVP 범위에서 제외"
-      },
-      {
-        "id": "8a1c2b34-56d7-4e89-9f01-234a5b6c7d8e",
-        "type": "decision",
-        "title": "회원가입 MVP 범위 1차 확정"
       },
       {
         "id": "3b9e0d12-78f4-4a56-8c01-9d2e3f4a5b6c",
@@ -534,18 +535,23 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
 }
 ```
 
-`signal_summary`는 `change`(VOC) 신호를 노출하지 않고 필터는 `all`, `decisions`, `risks`, `questions`만 둡니다.
-`filters[].label`은 화면 표기 그대로 `All`, `Decision`, `Risk`, `Question`으로 내립니다(2026-07-10 화면설계서 표기,
-가결정). `signal_summary.summary`는 시그널 요약 헤더 아래 문단(해당 프로젝트 이슈와 진행상황 요약)입니다.
-worker/Minsu 산출물 후보로 MVP backing source가 없으면 `null`로 반환합니다(요구사항 명세 "합성/파생 필드 응답 정책"
-참고). 2026-07-10 화면설계서는 이 문단을 시그널 요약이라 부르고 리뷰 요약이라는 개념이나 헤더는 따로 없어서, 별도
+`filters`는 처리 대기 시그널에 실제 있는 type으로 구성합니다(2026-07-10 기획 확정). `key`가 `all`인 항목을 맨 앞에
+고정하고 전체 개수를 담은 뒤, 나머지 type 칩을 이어 붙입니다. 각 type 칩의 `key`는 signal type(`change`, `decision`,
+`risk`, `question`)이고 `count`는 그 type의 처리 대기 시그널 수입니다. 개수가 0인 type은 칩을 만들지 않습니다.
+type 목록을 서버가 고정하지 않아 민수가 새 type을 만들면 칩이 자동으로 늘어납니다. `label`은 type에서 파생하며 첫
+글자를 대문자로 바꾼 표기이고, `change`만 화면 표기 `VOC`로 둡니다(위 Signal 카테고리 표시 표와 같음). type 칩
+순서는 `label` 글자수가 적은 것부터이고 글자수가 같으면 `label` 알파벳순입니다.
+
+`signal_summary.summary`는 시그널 요약 헤더 아래 문단(해당 프로젝트 이슈와 진행상황 요약)입니다. worker/Minsu
+산출물 후보로 MVP backing source가 없으면 `null`로 반환합니다(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
+2026-07-10 화면설계서는 이 문단을 시그널 요약이라 부르고 리뷰 요약이라는 개념이나 헤더는 따로 없어서, 별도
 `review_summary` 객체를 두지 않습니다. 화면의 "시그널 요약 · N" 헤더 숫자는 `filters`에서 `key`가 `all`인 항목의
 `count`로 렌더링합니다(필터 선택과 무관하게 유지).
 
-`items`는 미처리(VOC 제외) 시그널의 최신순(생성 시각 내림차순, 같으면 id 내림차순) 첫 페이지이고 기본 3개입니다
-(2026-07-10 화면설계서의 기본 노출 개수). `next_cursor`는 다음 페이지를 여는 커서 문자열이고 다음 페이지가
-없으면 `null`입니다. 커서는 서버만 해석하므로, 클라이언트는 내용을 해석하지 않고 아래 하위 엔드포인트에
-그대로 되돌려줍니다.
+`items`는 처리 대기 시그널의 최신순(생성 시각 내림차순, 같으면 id 내림차순) 첫 페이지이고 기본 3개입니다
+(2026-07-10 화면설계서의 기본 노출 개수). change(VOC)도 다른 type과 똑같이 포함합니다. `next_cursor`는 다음
+페이지를 여는 커서 문자열이고 다음 페이지가 없으면 `null`입니다. 커서는 서버만 해석하므로, 클라이언트는 내용을
+해석하지 않고 아래 하위 엔드포인트에 그대로 되돌려줍니다.
 
 `priorities`의 원천은 태스크입니다(2026-07-10 기획 확정). `title`은 태스크 제목이고, `task_id`로 태스크 상세로
 이동할 수 있습니다. 정렬은 `priority`가 높은 순(high, medium, low)이고, 같으면 생성이 오래된 순입니다(생성 시각
@@ -569,7 +575,7 @@ worker/Minsu 산출물 후보로 MVP backing source가 없으면 `null`로 반�
 
 | 이름 | 필수 | 설명 |
 | --- | --- | --- |
-| `filter` | 아니오 | `all`, `decisions`, `risks`, `questions`. 기본값은 `all` |
+| `filter` | 아니오 | `all` 또는 signal type(`change`, `decision`, `risk`, `question`). 기본값은 `all` |
 | `cursor` | 아니오 | 이전 응답의 `next_cursor`. 없으면 첫 페이지 |
 | `limit` | 아니오 | 페이지 크기. 없거나 0이면 기본값 3, 상한 50(넘기면 상한으로 줄임). 음수는 `COMMON_VALIDATION_FAILED` |
 
@@ -588,9 +594,11 @@ worker/Minsu 산출물 후보로 MVP backing source가 없으면 `null`로 반�
 }
 ```
 
-정렬과 항목 구성은 브리프 본체의 `signal_summary.items`와 같습니다. 형식이 잘못된 `cursor`나 필터 목록에 없는
-`filter` 값은 `COMMON_VALIDATION_FAILED`(400)로 응답합니다. 커서가 마지막으로 본 항목의 생성 시각과 id를
-기준으로 하기 때문에, 페이지 사이에 시그널이 처리되어도 다음 페이지의 위치가 밀리지 않습니다.
+정렬과 항목 구성은 브리프 본체의 `signal_summary.items`와 같습니다. `filter`는 열린 어휘라 `all`이나 빈 값이면
+전체를, 그 외 값은 해당 type을 조회합니다. 알려지지 않은 type은 매칭이 없어 빈 목록으로 응답하고 400을 내지
+않습니다. type 어휘를 서버가 고정하지 않아 새 type이 코드 변경 없이 흐르게 하려는 선택입니다. 형식이 잘못된
+`cursor`와 음수 `limit`은 `COMMON_VALIDATION_FAILED`(400)로 응답합니다. 커서가 마지막으로 본 항목의 생성 시각과
+id를 기준으로 하기 때문에, 페이지 사이에 시그널이 처리되어도 다음 페이지의 위치가 밀리지 않습니다.
 
 #### Errors
 

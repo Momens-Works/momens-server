@@ -109,7 +109,7 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
   }
 
   @Test
-  void returnsSignalSummaryCountsAndFirstPageExcludingChangeAndProcessed() throws Exception {
+  void returnsSignalSummaryFiltersAndFirstPageIncludingChangeExcludingProcessed() throws Exception {
     UserProfile jinsu = userService.findOrCreate("brief-it-signal-jinsu@momens.works", "신진수", null);
     UUID workspace = insertWorkspace("brief-signal");
     addMember(workspace, jinsu.id(), "owner");
@@ -119,10 +119,9 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
     insertSignal(
         workspace, project, "risk", "Android 13+ 권한 요청 플로우 이탈 가능성", "2026-07-03T00:00:00Z");
     insertSignal(workspace, project, "question", "온보딩 단계 수 확정 필요", "2026-07-04T00:00:00Z");
-    UUID newest =
-        insertSignal(workspace, project, "question", "권한 요청 문구 결정 필요", "2026-07-05T00:00:00Z");
-    // change(VOC)와 처리된 signal은 개수와 목록 모두에서 빠져야 한다.
-    insertSignal(workspace, project, "change", "VOC 유형", "2026-07-06T00:00:00Z");
+    insertSignal(workspace, project, "question", "권한 요청 문구 결정 필요", "2026-07-05T00:00:00Z");
+    UUID voc = insertSignal(workspace, project, "change", "권한 요청 반복 문의", "2026-07-06T00:00:00Z");
+    // 처리된 signal만 개수와 목록에서 빠진다. change는 이제 포함된다.
     UUID processed = insertSignal(workspace, project, "risk", "이미 처리됨", "2026-07-07T00:00:00Z");
     insertAction(workspace, processed, jinsu.id());
 
@@ -132,21 +131,26 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
                 .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
                 .header("API-Version", "1"))
         .andExpect(status().isOk())
+        // All 맨 앞(전체 6), 나머지는 라벨 글자수 오름차순과 알파벳순(VOC, Risk, Decision, Question).
+        .andExpect(jsonPath("$.signal_summary.filters.length()").value(5))
         .andExpect(jsonPath("$.signal_summary.filters[0].key").value("all"))
-        .andExpect(jsonPath("$.signal_summary.filters[0].count").value(5))
-        .andExpect(jsonPath("$.signal_summary.filters[1].key").value("decisions"))
-        .andExpect(jsonPath("$.signal_summary.filters[1].count").value(2))
-        .andExpect(jsonPath("$.signal_summary.filters[2].key").value("risks"))
-        .andExpect(jsonPath("$.signal_summary.filters[2].count").value(1))
-        .andExpect(jsonPath("$.signal_summary.filters[3].key").value("questions"))
+        .andExpect(jsonPath("$.signal_summary.filters[0].count").value(6))
+        .andExpect(jsonPath("$.signal_summary.filters[1].key").value("change"))
+        .andExpect(jsonPath("$.signal_summary.filters[1].label").value("VOC"))
+        .andExpect(jsonPath("$.signal_summary.filters[1].count").value(1))
+        .andExpect(jsonPath("$.signal_summary.filters[2].key").value("risk"))
+        .andExpect(jsonPath("$.signal_summary.filters[2].label").value("Risk"))
+        .andExpect(jsonPath("$.signal_summary.filters[3].key").value("decision"))
+        .andExpect(jsonPath("$.signal_summary.filters[3].label").value("Decision"))
         .andExpect(jsonPath("$.signal_summary.filters[3].count").value(2))
+        .andExpect(jsonPath("$.signal_summary.filters[4].key").value("question"))
+        .andExpect(jsonPath("$.signal_summary.filters[4].count").value(2))
         .andExpect(jsonPath("$.signal_summary.items.length()").value(3))
-        .andExpect(jsonPath("$.signal_summary.items[0].id").value(newest.toString()))
-        .andExpect(jsonPath("$.signal_summary.items[0].type").value("question"))
-        .andExpect(jsonPath("$.signal_summary.items[0].title").value("권한 요청 문구 결정 필요"))
-        .andExpect(jsonPath("$.signal_summary.items[1].title").value("온보딩 단계 수 확정 필요"))
-        .andExpect(
-            jsonPath("$.signal_summary.items[2].title").value("Android 13+ 권한 요청 플로우 이탈 가능성"))
+        .andExpect(jsonPath("$.signal_summary.items[0].id").value(voc.toString()))
+        .andExpect(jsonPath("$.signal_summary.items[0].type").value("change"))
+        .andExpect(jsonPath("$.signal_summary.items[0].title").value("권한 요청 반복 문의"))
+        .andExpect(jsonPath("$.signal_summary.items[1].title").value("권한 요청 문구 결정 필요"))
+        .andExpect(jsonPath("$.signal_summary.items[2].title").value("온보딩 단계 수 확정 필요"))
         .andExpect(jsonPath("$.signal_summary.next_cursor").isNotEmpty());
   }
 
@@ -189,7 +193,7 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
     mockMvc
         .perform(
             get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
-                .param("filter", "decisions")
+                .param("filter", "decision")
                 .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
                 .header("API-Version", "1"))
         .andExpect(status().isOk())
