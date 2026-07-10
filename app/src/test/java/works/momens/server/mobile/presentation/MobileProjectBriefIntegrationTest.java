@@ -1,23 +1,29 @@
 package works.momens.server.mobile.presentation;
 
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import works.momens.server.auth.AccessTokenTestFactory;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.mobile.internal.MobileClock;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 
@@ -26,15 +32,28 @@ import works.momens.server.user.UserService;
  *
  * <p>실토큰(auth public testFixtures)과 실제 PostgreSQL로 보안 체인부터 권한 검사, 프로젝트 스냅샷 응답 shape까지 끝까지 확인합니다.
  * 사용자는 user public API로 만들고, workspace/멤버십/project는 아직 생성 public API가 없어 소유 스키마에 SQL로 시드합니다.
+ *
+ * <p>브리프의 "오늘"이 결정적이도록 mobileClock을 고정 Clock으로 덮어씁니다(FIXED_NOW). 시그널 시드는 그날(KST) 범위 안에 두고, 범위 밖과
+ * 처리(전환)된 시그널로 당일 집계 규칙을 검증합니다(MOM-81).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest {
 
+  // 고정 시각 2026-07-10T12:00Z는 KST로 2026-07-10 21:00이다. 그날(KST) 범위는 UTC 07-09 15:00 이상 07-10 15:00
+  // 미만.
+  private static final Instant FIXED_NOW = Instant.parse("2026-07-10T12:00:00Z");
+
   @Autowired private MockMvc mockMvc;
   @Autowired private AccessTokenTestFactory accessTokens;
   @Autowired private UserService userService;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @MockitoBean private MobileClock mobileClock;
+
+  @BeforeEach
+  void fixClock() {
+    when(mobileClock.clock()).thenReturn(Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+  }
 
   @Test
   void returnsProjectSnapshotForMember() throws Exception {
@@ -109,21 +128,25 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
   }
 
   @Test
-  void returnsSignalSummaryFiltersAndFirstPageIncludingChangeExcludingProcessed() throws Exception {
+  void returnsTodaySignalsIncludingConvertedAndExcludingOtherDays() throws Exception {
     UserProfile jinsu = userService.findOrCreate("brief-it-signal-jinsu@momens.works", "신진수", null);
     UUID workspace = insertWorkspace("brief-signal");
     addMember(workspace, jinsu.id(), "owner");
     UUID project = insertProject(workspace, jinsu.id(), "brief-signal-project", null, 0, null);
-    insertSignal(workspace, project, "decision", "소셜 로그인은 MVP 범위에서 제외", "2026-07-01T00:00:00Z");
-    insertSignal(workspace, project, "decision", "회원가입 MVP 범위 1차 확정", "2026-07-02T00:00:00Z");
-    insertSignal(
-        workspace, project, "risk", "Android 13+ 권한 요청 플로우 이탈 가능성", "2026-07-03T00:00:00Z");
-    insertSignal(workspace, project, "question", "온보딩 단계 수 확정 필요", "2026-07-04T00:00:00Z");
-    insertSignal(workspace, project, "question", "권한 요청 문구 결정 필요", "2026-07-05T00:00:00Z");
-    UUID voc = insertSignal(workspace, project, "change", "권한 요청 반복 문의", "2026-07-06T00:00:00Z");
-    // 처리된 signal만 개수와 목록에서 빠진다. change는 이제 포함된다.
-    UUID processed = insertSignal(workspace, project, "risk", "이미 처리됨", "2026-07-07T00:00:00Z");
-    insertAction(workspace, processed, jinsu.id());
+    // 모두 당일(KST 2026-07-10) 범위 안이다.
+    insertSignal(workspace, project, "decision", "소셜 로그인은 MVP 범위에서 제외", "2026-07-10T00:00:00Z");
+    insertSignal(workspace, project, "decision", "회원가입 MVP 범위 1차 확정", "2026-07-10T01:00:00Z");
+    UUID converted =
+        insertSignal(
+            workspace, project, "risk", "Android 13+ 권한 요청 플로우 이탈 가능성", "2026-07-10T02:00:00Z");
+    insertSignal(workspace, project, "question", "온보딩 단계 수 확정 필요", "2026-07-10T03:00:00Z");
+    insertSignal(workspace, project, "question", "권한 요청 문구 결정 필요", "2026-07-10T04:00:00Z");
+    UUID voc = insertSignal(workspace, project, "change", "권한 요청 반복 문의", "2026-07-10T05:00:00Z");
+    // risk 하나를 태스크로 전환해도 당일 집계에는 그대로 남는다(MOM-81 핵심).
+    insertAction(workspace, converted, jinsu.id());
+    // 어제(범위 밖)와 당일에 소프트 삭제된 시그널은 집계에서 빠진다.
+    insertSignal(workspace, project, "risk", "어제 온 시그널", "2026-07-09T00:00:00Z");
+    insertDeletedSignal(workspace, project, "change", "당일 삭제", "2026-07-10T06:00:00Z");
 
     mockMvc
         .perform(
@@ -131,7 +154,7 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
                 .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
                 .header("API-Version", "1"))
         .andExpect(status().isOk())
-        // All 맨 앞(전체 6), 나머지는 라벨 글자수 오름차순과 알파벳순(VOC, Risk, Decision, Question).
+        // 전환된 risk까지 그대로 세서 전체 6. 나머지는 라벨 글자수 오름차순과 알파벳순(VOC, Risk, Decision, Question).
         .andExpect(jsonPath("$.signal_summary.filters.length()").value(5))
         .andExpect(jsonPath("$.signal_summary.filters[0].key").value("all"))
         .andExpect(jsonPath("$.signal_summary.filters[0].count").value(6))
@@ -140,6 +163,7 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
         .andExpect(jsonPath("$.signal_summary.filters[1].count").value(1))
         .andExpect(jsonPath("$.signal_summary.filters[2].key").value("risk"))
         .andExpect(jsonPath("$.signal_summary.filters[2].label").value("Risk"))
+        .andExpect(jsonPath("$.signal_summary.filters[2].count").value(1))
         .andExpect(jsonPath("$.signal_summary.filters[3].key").value("decision"))
         .andExpect(jsonPath("$.signal_summary.filters[3].label").value("Decision"))
         .andExpect(jsonPath("$.signal_summary.filters[3].count").value(2))
@@ -160,10 +184,10 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
     UUID workspace = insertWorkspace("brief-page");
     addMember(workspace, jinsu.id(), "owner");
     UUID project = insertProject(workspace, jinsu.id(), "brief-page-project", null, 0, null);
-    UUID oldest = insertSignal(workspace, project, "decision", "가장 오래된 결정", "2026-07-01T00:00:00Z");
-    insertSignal(workspace, project, "risk", "리스크", "2026-07-02T00:00:00Z");
-    insertSignal(workspace, project, "question", "질문", "2026-07-03T00:00:00Z");
-    insertSignal(workspace, project, "decision", "최신 결정", "2026-07-04T00:00:00Z");
+    UUID oldest = insertSignal(workspace, project, "decision", "가장 오래된 결정", "2026-07-10T01:00:00Z");
+    insertSignal(workspace, project, "risk", "리스크", "2026-07-10T02:00:00Z");
+    insertSignal(workspace, project, "question", "질문", "2026-07-10T03:00:00Z");
+    insertSignal(workspace, project, "decision", "최신 결정", "2026-07-10T04:00:00Z");
 
     // 첫 페이지(기본 3개)의 next_cursor로 나머지 1개를 이어서 조회한다.
     String firstPageBody =
@@ -344,6 +368,15 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
         "본문",
         Timestamp.from(Instant.parse(createdAt)));
     return id;
+  }
+
+  private void insertDeletedSignal(
+      UUID workspaceId, UUID projectId, String type, String title, String createdAt) {
+    UUID id = insertSignal(workspaceId, projectId, type, title, createdAt);
+    jdbcTemplate.update(
+        "UPDATE signals SET deleted_at = ? WHERE id = ?",
+        Timestamp.from(Instant.parse(createdAt)),
+        id);
   }
 
   private UUID insertTask(
