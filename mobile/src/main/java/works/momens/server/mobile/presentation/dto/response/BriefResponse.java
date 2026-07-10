@@ -17,7 +17,8 @@ import works.momens.server.project.ProjectSnapshot;
 @Schema(description = "프로젝트 브리프 응답")
 public record BriefResponse(
     @Schema(description = "프로젝트 스냅샷") ProjectResponse project,
-    @Schema(description = "시그널 요약") SignalSummaryResponse signalSummary) {
+    @Schema(description = "시그널 요약") SignalSummaryResponse signalSummary,
+    @Schema(description = "현재 우선순위(상위 4개, 정렬 순번 포함)") List<PriorityResponse> priorities) {
 
   @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "프로젝트 스냅샷")
@@ -47,6 +48,13 @@ public record BriefResponse(
       @Schema(description = "해당 type의 미처리 시그널 수. all은 노출 type 전체 합") long count) {}
 
   @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+  @Schema(description = "현재 우선순위 항목")
+  public record PriorityResponse(
+      @Schema(description = "정렬 순번(1부터). 화면의 01~04 표기와 같습니다.", example = "1") int rank,
+      @Schema(description = "태스크 제목") String title,
+      @Schema(description = "task 식별자. 태스크 상세로 이동할 때 사용합니다.") UUID taskId) {}
+
+  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "시그널 요약 항목")
   public record SignalItemResponse(
       @Schema(description = "signal 식별자") UUID id,
@@ -59,7 +67,8 @@ public record BriefResponse(
     return new BriefResponse(
         toProject(brief.project()),
         new SignalSummaryResponse(
-            null, toFilters(brief.filters()), toItems(brief.items()), brief.nextCursor()));
+            null, toFilters(brief.filters()), toItems(brief.items()), brief.nextCursor()),
+        toPriorities(brief.priorities()));
   }
 
   private static ProjectResponse toProject(ProjectSnapshot snapshot) {
@@ -76,6 +85,12 @@ public record BriefResponse(
         .map(
             count ->
                 new FilterResponse(count.filter().key(), count.filter().label(), count.count()))
+        .toList();
+  }
+
+  private static List<PriorityResponse> toPriorities(List<MobileBrief.Priority> priorities) {
+    return priorities.stream()
+        .map(priority -> new PriorityResponse(priority.rank(), priority.title(), priority.taskId()))
         .toList();
   }
 
