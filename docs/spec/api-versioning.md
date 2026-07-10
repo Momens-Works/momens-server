@@ -87,7 +87,7 @@ public class PostController {
 - 모든 path에 `/api` prefix를 사용합니다. 레거시 path alias는 두지 않습니다.
 - 모든 handler에 `version` mapping을 둡니다(초기 버전 `1`).
 - 모든 클라이언트는 `API-Version` header를 전달합니다.
-- OpenAPI에 `API-Version`을 직접 선언할 때는 [OpenAPI 규칙](openapi.md#api-version-header)에 따라 문자열
-  schema를 함께 명시합니다.
+- OpenAPI의 `API-Version` header는 Spring MVC API versioning 설정에서 자동 생성하며 controller docs에
+  중복 선언하지 않습니다([OpenAPI 규칙](openapi.md#api-version-header)).
 - 레거시 이관 엔드포인트의 응답 body 호환 여부는 응답 문서의 모드를 따릅니다.
 - API 명세서를 전달할 때 모든 path가 `/api` prefix와 `API-Version` 헤더를 쓴다는 사실을 안내합니다.

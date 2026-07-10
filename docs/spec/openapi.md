@@ -131,17 +131,9 @@ Request/response DTO는 `record`를 기본으로 하고 `@Schema`로 문서화�
 모든 엔드포인트는 [API 버저닝](api-versioning.md)이 적용되므로 `API-Version` request header를 문서화합니다.
 초기 버전은 `1`입니다.
 
-`@Operation.parameters`에 `API-Version`을 직접 선언할 때는 Spring MVC API versioning이 자동 생성한
-header와 안전하게 병합되도록 문자열 schema를 명시합니다.
-
-```java
-@Parameter(
-    name = "API-Version",
-    in = ParameterIn.HEADER,
-    required = false,
-    example = "1",
-    schema = @Schema(implementation = String.class))
-```
+springdoc이 Spring MVC API versioning 설정과 handler의 `version` mapping을 읽어 문자열 header schema를
+자동 생성합니다. `@Operation.parameters`에 `API-Version`을 다시 선언하면 자동 생성된 parameter와 중복되므로
+직접 선언하지 않습니다.
 
 ## 구현 체크리스트
 
@@ -150,5 +142,5 @@ header와 안전하게 병합되도록 문자열 schema를 명시합니다.
 - 주요 실패 응답은 `@ApiExceptions`로 선언합니다.
 - `@ApiExceptions`가 너무 넓은 공통 에러를 노출하지 않는지 확인합니다.
 - 모든 엔드포인트는 `API-Version` header를 문서화합니다.
-- `API-Version`을 직접 선언하면 문자열 schema를 함께 명시합니다.
+- controller docs에 `API-Version` parameter를 직접 중복 선언하지 않습니다.
 - 모든 path를 `/api` prefix 단일 경로로 문서화하고, 레거시 alias path를 두지 않습니다.

@@ -1,8 +1,6 @@
 package works.momens.server.auth.presentation;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -21,14 +19,7 @@ interface AuthControllerDocs {
 
   @Operation(
       summary = "모바일 Google ID 토큰 교환",
-      description = "Google ID 토큰을 검증하고 Momens access/refresh token을 발급합니다.",
-      parameters =
-          @Parameter(
-              name = "API-Version",
-              in = ParameterIn.HEADER,
-              required = false,
-              example = "1",
-              schema = @Schema(implementation = String.class)))
+      description = "Google ID 토큰을 검증하고 Momens access/refresh token을 발급합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "토큰 발급 성공",
@@ -38,14 +29,7 @@ interface AuthControllerDocs {
 
   @Operation(
       summary = "Access token 재발급",
-      description = "Refresh token을 회전하고 새 access/refresh token을 발급합니다.",
-      parameters =
-          @Parameter(
-              name = "API-Version",
-              in = ParameterIn.HEADER,
-              required = false,
-              example = "1",
-              schema = @Schema(implementation = String.class)))
+      description = "Refresh token을 회전하고 새 access/refresh token을 발급합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "토큰 재발급 성공",
@@ -53,16 +37,7 @@ interface AuthControllerDocs {
   @ApiExceptions({AuthErrorCode.class, CommonErrorCode.class})
   TokenResponse refresh(RefreshTokenRequest request);
 
-  @Operation(
-      summary = "로그아웃",
-      description = "Refresh token을 폐기합니다.",
-      parameters =
-          @Parameter(
-              name = "API-Version",
-              in = ParameterIn.HEADER,
-              required = false,
-              example = "1",
-              schema = @Schema(implementation = String.class)))
+  @Operation(summary = "로그아웃", description = "Refresh token을 폐기합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "로그아웃 성공",
