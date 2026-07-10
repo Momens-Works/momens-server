@@ -26,6 +26,17 @@ app/src/main/java/works/momens/server/support/openapi
 
 기능 모듈에는 해당 기능의 controller, request/response DTO, controller docs interface를 둡니다.
 
+## 의존성 버전 정렬
+
+기능 모듈이 사용하는 `swagger-annotations`와 `app` 런타임의 `swagger-core`/`swagger-models`는 같은
+릴리스 버전으로 맞춥니다. 일부 구성요소만 올리면 annotation 기본값을 다른 의미로 해석해 request
+schema에 의도하지 않은 `default: null`이 생길 수 있습니다.
+
+- springdoc 또는 Swagger 의존성을 올릴 때 세 구성요소의 런타임 버전을 함께 확인합니다.
+- `/v3/api-docs`가 OpenAPI 3.1을 유지하고 request object schema에 의도하지 않은 `default`가 없는지
+  통합 테스트로 검증합니다.
+- 문서 생성 문제를 숨기기 위해 OpenAPI 3.0으로 낮추거나 직렬화된 JSON을 후처리하지 않습니다.
+
 ## Controller 문서화
 
 공개 API controller는 Swagger annotation을 구현 로직과 분리하기 위해 `XxxControllerDocs` 인터페이스를
@@ -120,6 +131,18 @@ Request/response DTO는 `record`를 기본으로 하고 `@Schema`로 문서화�
 모든 엔드포인트는 [API 버저닝](api-versioning.md)이 적용되므로 `API-Version` request header를 문서화합니다.
 초기 버전은 `1`입니다.
 
+`@Operation.parameters`에 `API-Version`을 직접 선언할 때는 Spring MVC API versioning이 자동 생성한
+header와 안전하게 병합되도록 문자열 schema를 명시합니다.
+
+```java
+@Parameter(
+    name = "API-Version",
+    in = ParameterIn.HEADER,
+    required = false,
+    example = "1",
+    schema = @Schema(implementation = String.class))
+```
+
 ## 구현 체크리스트
 
 - controller docs interface를 둘지 먼저 결정합니다.
@@ -127,4 +150,5 @@ Request/response DTO는 `record`를 기본으로 하고 `@Schema`로 문서화�
 - 주요 실패 응답은 `@ApiExceptions`로 선언합니다.
 - `@ApiExceptions`가 너무 넓은 공통 에러를 노출하지 않는지 확인합니다.
 - 모든 엔드포인트는 `API-Version` header를 문서화합니다.
+- `API-Version`을 직접 선언하면 문자열 schema를 함께 명시합니다.
 - 모든 path를 `/api` prefix 단일 경로로 문서화하고, 레거시 alias path를 두지 않습니다.

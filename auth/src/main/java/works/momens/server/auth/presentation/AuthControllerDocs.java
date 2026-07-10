@@ -27,7 +27,8 @@ interface AuthControllerDocs {
               name = "API-Version",
               in = ParameterIn.HEADER,
               required = false,
-              example = "1"))
+              example = "1",
+              schema = @Schema(implementation = String.class)))
   @ApiResponse(
       responseCode = "200",
       description = "토큰 발급 성공",
@@ -43,7 +44,8 @@ interface AuthControllerDocs {
               name = "API-Version",
               in = ParameterIn.HEADER,
               required = false,
-              example = "1"))
+              example = "1",
+              schema = @Schema(implementation = String.class)))
   @ApiResponse(
       responseCode = "200",
       description = "토큰 재발급 성공",
@@ -59,7 +61,8 @@ interface AuthControllerDocs {
               name = "API-Version",
               in = ParameterIn.HEADER,
               required = false,
-              example = "1"))
+              example = "1",
+              schema = @Schema(implementation = String.class)))
   @ApiResponse(
       responseCode = "200",
       description = "로그아웃 성공",
