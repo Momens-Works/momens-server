@@ -216,6 +216,8 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 - 응답은 프로젝트 스냅샷, 시그널 요약 문단(`signal_summary.summary`), signal summary
   filter/dropdown, 우선순위를 표현할 수 있어야 한다. (2026-07-10 화면설계서 기준으로 종전
   "리뷰 요약"을 시그널 요약 문단으로 정리했다.)
+- 시그널 요약의 필터 전환과 더보기는 커서 기반 페이지네이션으로 제공한다(2026-07-10 확정,
+  하위 엔드포인트 `GET .../brief/signal-summary`).
 - 브리프 signal summary는 `change`(VOC) 신호를 노출하지 않는다. 필터는 `all`, `decisions`, `risks`, `questions`만 둔다.
 
 ### R-READ-004. 프로젝트 태스크 목록 조회

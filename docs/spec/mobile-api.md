@@ -468,14 +468,8 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
 
 ### GET /api/mobile/projects/{projectId}/brief
 
-프로젝트 브리프 화면에 필요한 정보를 조회합니다.
-
-#### Query
-
-| 이름 | 필수 | 설명 |
-| --- | --- | --- |
-| `signal_summary_filter` | 아니오 | `all`, `decisions`, `risks`, `questions`. 기본값은 `all` |
-| `signal_summary_limit` | 아니오 | 요약 항목 수 제한 |
+프로젝트 브리프 화면의 초기 로드에 필요한 정보를 조회합니다. 쿼리 파라미터는 없습니다. 시그널 요약의
+필터 전환과 더보기 페이지 이동은 아래 하위 엔드포인트가 담당합니다.
 
 #### Response 200
 
@@ -490,7 +484,6 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
   },
   "signal_summary": {
     "summary": "Android 권한 요청 이슈가 발견되었으며, 소셜 로그인은 MVP 범위에서 제외되었습니다. 이메일 회원가입과 온보딩 이탈 개선이 우선적으로 필요합니다.",
-    "selected_filter": "all",
     "filters": [
       { "key": "all", "label": "All", "count": 5 },
       { "key": "decisions", "label": "Decision", "count": 2 },
@@ -501,25 +494,20 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
       {
         "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
         "type": "decision",
-        "title": "소셜 로그인은 MVP 범위에서 제외",
-        "source": "signal",
-        "signal_id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1"
+        "title": "소셜 로그인은 MVP 범위에서 제외"
       },
       {
         "id": "8a1c2b34-56d7-4e89-9f01-234a5b6c7d8e",
         "type": "decision",
-        "title": "회원가입 MVP 범위 1차 확정",
-        "source": "signal",
-        "signal_id": "8a1c2b34-56d7-4e89-9f01-234a5b6c7d8e"
+        "title": "회원가입 MVP 범위 1차 확정"
       },
       {
         "id": "3b9e0d12-78f4-4a56-8c01-9d2e3f4a5b6c",
         "type": "risk",
-        "title": "Android 13+ 권한 요청 플로우 이탈 가능성",
-        "source": "signal",
-        "signal_id": "3b9e0d12-78f4-4a56-8c01-9d2e3f4a5b6c"
+        "title": "Android 13+ 권한 요청 플로우 이탈 가능성"
       }
-    ]
+    ],
+    "next_cursor": "MjAyNi0wNy0wM1QwMDowMDowMFp8M2I5ZTBkMTItNzhmNC00YTU2LThjMDEtOWQyZTNmNGE1YjZj"
   },
   "priorities": [
     {
@@ -554,6 +542,11 @@ worker/Minsu 산출물 후보로 MVP backing source가 없으면 `null`로 반�
 `review_summary` 객체를 두지 않습니다. 화면의 "시그널 요약 · N" 헤더 숫자는 `filters`에서 `key`가 `all`인 항목의
 `count`로 렌더링합니다(필터 선택과 무관하게 유지).
 
+`items`는 미처리(VOC 제외) 시그널의 최신순(생성 시각 내림차순, 같으면 id 내림차순) 첫 페이지이고 기본 3개입니다
+(2026-07-10 화면설계서의 기본 노출 개수). `next_cursor`는 다음 페이지를 여는 커서 문자열이고 다음 페이지가
+없으면 `null`입니다. 커서는 서버만 해석하므로, 클라이언트는 내용을 해석하지 않고 아래 하위 엔드포인트에
+그대로 되돌려줍니다.
+
 `priorities`의 원천은 태스크입니다(2026-07-10 기획 확정). `title`은 태스크 제목이고, `task_id`로 태스크 상세로
 이동할 수 있습니다. 정렬은 `priority`가 높은 순(high, medium, low)이고, 같으면 생성이 오래된 순입니다(생성 시각
 오름차순, 생성 시각까지 같으면 id 오름차순으로 순서를 고정합니다). 상위 4개까지만 담습니다. 화면의
@@ -565,6 +558,45 @@ worker/Minsu 산출물 후보로 MVP backing source가 없으면 `null`로 반�
 - `AUTH_UNAUTHORIZED`
 - `AUTH_INVALID_TOKEN`
 - `PROJECT_NOT_FOUND`
+- `AUTH_FORBIDDEN`
+
+### GET /api/mobile/projects/{projectId}/brief/signal-summary
+
+브리프 시그널 요약의 필터 전환과 더보기 페이지 이동에 사용합니다. 커서 기반 페이지네이션입니다(2026-07-10 확정).
+
+#### Query
+
+| 이름 | 필수 | 설명 |
+| --- | --- | --- |
+| `filter` | 아니오 | `all`, `decisions`, `risks`, `questions`. 기본값은 `all` |
+| `cursor` | 아니오 | 이전 응답의 `next_cursor`. 없으면 첫 페이지 |
+| `limit` | 아니오 | 페이지 크기. 없거나 0이면 기본값 3, 상한 50(넘기면 상한으로 줄임). 음수는 `COMMON_VALIDATION_FAILED` |
+
+#### Response 200
+
+```json
+{
+  "items": [
+    {
+      "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
+      "type": "decision",
+      "title": "소셜 로그인은 MVP 범위에서 제외"
+    }
+  ],
+  "next_cursor": null
+}
+```
+
+정렬과 항목 구성은 브리프 본체의 `signal_summary.items`와 같습니다. 형식이 잘못된 `cursor`나 필터 목록에 없는
+`filter` 값은 `COMMON_VALIDATION_FAILED`(400)로 응답합니다. 커서가 마지막으로 본 항목의 생성 시각과 id를
+기준으로 하기 때문에, 페이지 사이에 시그널이 처리되어도 다음 페이지의 위치가 밀리지 않습니다.
+
+#### Errors
+
+- `AUTH_UNAUTHORIZED`
+- `AUTH_INVALID_TOKEN`
+- `PROJECT_NOT_FOUND`
+- `COMMON_VALIDATION_FAILED`
 - `AUTH_FORBIDDEN`
 
 ## 태스크

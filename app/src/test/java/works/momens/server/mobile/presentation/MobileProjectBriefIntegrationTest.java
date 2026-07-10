@@ -5,6 +5,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -59,7 +62,120 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
         .andExpect(jsonPath("$.project.progress").value(64))
         .andExpect(
             jsonPath("$.project.summary")
-                .value("목표일까지 Q2 Activation Readiness 범위의 회원 가입 MVP를 안정적으로 릴리즈한다."));
+                .value("목표일까지 Q2 Activation Readiness 범위의 회원 가입 MVP를 안정적으로 릴리즈한다."))
+        // 시그널이 없으면 개수는 0, 목록은 빈 배열, 다음 커서와 요약 문단은 null로 항상 포함된다.
+        .andExpect(jsonPath("$.signal_summary.summary", nullValue()))
+        .andExpect(jsonPath("$.signal_summary.filters[0].key").value("all"))
+        .andExpect(jsonPath("$.signal_summary.filters[0].count").value(0))
+        .andExpect(jsonPath("$.signal_summary.items.length()").value(0))
+        .andExpect(jsonPath("$.signal_summary.next_cursor", nullValue()));
+  }
+
+  @Test
+  void returnsSignalSummaryCountsAndFirstPageExcludingChangeAndProcessed() throws Exception {
+    UserProfile jinsu = userService.findOrCreate("brief-it-signal-jinsu@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("brief-signal");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "brief-signal-project", null, 0, null);
+    insertSignal(workspace, project, "decision", "소셜 로그인은 MVP 범위에서 제외", "2026-07-01T00:00:00Z");
+    insertSignal(workspace, project, "decision", "회원가입 MVP 범위 1차 확정", "2026-07-02T00:00:00Z");
+    insertSignal(
+        workspace, project, "risk", "Android 13+ 권한 요청 플로우 이탈 가능성", "2026-07-03T00:00:00Z");
+    insertSignal(workspace, project, "question", "온보딩 단계 수 확정 필요", "2026-07-04T00:00:00Z");
+    UUID newest =
+        insertSignal(workspace, project, "question", "권한 요청 문구 결정 필요", "2026-07-05T00:00:00Z");
+    // change(VOC)와 처리된 signal은 개수와 목록 모두에서 빠져야 한다.
+    insertSignal(workspace, project, "change", "VOC 유형", "2026-07-06T00:00:00Z");
+    UUID processed = insertSignal(workspace, project, "risk", "이미 처리됨", "2026-07-07T00:00:00Z");
+    insertAction(workspace, processed, jinsu.id());
+
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/brief", project)
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.signal_summary.filters[0].key").value("all"))
+        .andExpect(jsonPath("$.signal_summary.filters[0].count").value(5))
+        .andExpect(jsonPath("$.signal_summary.filters[1].key").value("decisions"))
+        .andExpect(jsonPath("$.signal_summary.filters[1].count").value(2))
+        .andExpect(jsonPath("$.signal_summary.filters[2].key").value("risks"))
+        .andExpect(jsonPath("$.signal_summary.filters[2].count").value(1))
+        .andExpect(jsonPath("$.signal_summary.filters[3].key").value("questions"))
+        .andExpect(jsonPath("$.signal_summary.filters[3].count").value(2))
+        .andExpect(jsonPath("$.signal_summary.items.length()").value(3))
+        .andExpect(jsonPath("$.signal_summary.items[0].id").value(newest.toString()))
+        .andExpect(jsonPath("$.signal_summary.items[0].type").value("question"))
+        .andExpect(jsonPath("$.signal_summary.items[0].title").value("권한 요청 문구 결정 필요"))
+        .andExpect(jsonPath("$.signal_summary.items[1].title").value("온보딩 단계 수 확정 필요"))
+        .andExpect(
+            jsonPath("$.signal_summary.items[2].title").value("Android 13+ 권한 요청 플로우 이탈 가능성"))
+        .andExpect(jsonPath("$.signal_summary.next_cursor").isNotEmpty());
+  }
+
+  @Test
+  void paginatesSignalSummaryWithCursorAndFilter() throws Exception {
+    UserProfile jinsu = userService.findOrCreate("brief-it-page-jinsu@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("brief-page");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "brief-page-project", null, 0, null);
+    UUID oldest = insertSignal(workspace, project, "decision", "가장 오래된 결정", "2026-07-01T00:00:00Z");
+    insertSignal(workspace, project, "risk", "리스크", "2026-07-02T00:00:00Z");
+    insertSignal(workspace, project, "question", "질문", "2026-07-03T00:00:00Z");
+    insertSignal(workspace, project, "decision", "최신 결정", "2026-07-04T00:00:00Z");
+
+    // 첫 페이지(기본 3개)의 next_cursor로 나머지 1개를 이어서 조회한다.
+    String firstPageBody =
+        mockMvc
+            .perform(
+                get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
+                    .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                    .header("API-Version", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(3))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String nextCursor = JsonPath.read(firstPageBody, "$.next_cursor");
+
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
+                .param("cursor", nextCursor)
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(1))
+        .andExpect(jsonPath("$.items[0].id").value(oldest.toString()))
+        .andExpect(jsonPath("$.next_cursor", nullValue()));
+
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
+                .param("filter", "decisions")
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(2))
+        .andExpect(jsonPath("$.items[0].title").value("최신 결정"))
+        .andExpect(jsonPath("$.items[1].title").value("가장 오래된 결정"));
+  }
+
+  @Test
+  void returnsValidationFailedForMalformedCursor() throws Exception {
+    UserProfile jinsu = userService.findOrCreate("brief-it-cursor-jinsu@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("brief-cursor");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "brief-cursor-project", null, 0, null);
+
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
+                .param("cursor", "not-a-cursor")
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("COMMON_VALIDATION_FAILED"));
   }
 
   @Test
@@ -158,5 +274,32 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
         progress,
         summary);
     return id;
+  }
+
+  private UUID insertSignal(
+      UUID workspaceId, UUID projectId, String type, String title, String createdAt) {
+    UUID id = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO signals (id, workspace_id, project_id, type, title, description, created_at)"
+            + " VALUES (?, ?, ?, ?, ?, ?, ?)",
+        id,
+        workspaceId,
+        projectId,
+        type,
+        title,
+        "본문",
+        Timestamp.from(Instant.parse(createdAt)));
+    return id;
+  }
+
+  private void insertAction(UUID workspaceId, UUID signalId, UUID userId) {
+    jdbcTemplate.update(
+        "INSERT INTO signal_actions (id, workspace_id, signal_id, action_type,"
+            + " processed_by_user_id) VALUES (?, ?, ?, ?, ?)",
+        UUID.randomUUID(),
+        workspaceId,
+        signalId,
+        "dismiss",
+        userId);
   }
 }
