@@ -39,7 +39,8 @@ interface SignalControllerDocs {
               name = "API-Version",
               in = ParameterIn.HEADER,
               required = false,
-              example = "1"))
+              example = "1",
+              schema = @Schema(implementation = String.class)))
   @ApiResponse(
       responseCode = "200",
       description = "미처리 시그널 목록. 없으면 signals는 빈 배열입니다.",
@@ -56,7 +57,8 @@ interface SignalControllerDocs {
               name = "API-Version",
               in = ParameterIn.HEADER,
               required = false,
-              example = "1"))
+              example = "1",
+              schema = @Schema(implementation = String.class)))
   @ApiResponse(
       responseCode = "200",
       description = "시그널 상세.",
@@ -76,7 +78,8 @@ interface SignalControllerDocs {
               name = "API-Version",
               in = ParameterIn.HEADER,
               required = false,
-              example = "1"))
+              example = "1",
+              schema = @Schema(implementation = String.class)))
   @ApiResponse(
       responseCode = "201",
       description = "새로 전환됨.",
@@ -101,7 +104,8 @@ interface SignalControllerDocs {
               name = "API-Version",
               in = ParameterIn.HEADER,
               required = false,
-              example = "1"))
+              example = "1",
+              schema = @Schema(implementation = String.class)))
   @ApiResponse(
       responseCode = "200",
       description = "처리 완료(신규 또는 멱등 replay).",
