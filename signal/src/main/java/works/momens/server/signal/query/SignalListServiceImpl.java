@@ -62,9 +62,12 @@ class SignalListServiceImpl implements SignalListService {
       String cursor,
       int limit) {
     requireMember(projectId, userId);
+    // 잘못된 limit이나 커서는 조회 전에 거른다(불필요한 DB 조회 방지).
+    int pageSize = resolvePageSize(limit);
+    Cursor position = Cursor.decode(cursor);
     List<Signal> base =
         signalRepository.findByProjectIdAndCreatedRange(projectId, createdFrom, createdToExclusive);
-    return page(base, types, cursor, limit);
+    return page(base, types, position, pageSize);
   }
 
   @Override
@@ -78,16 +81,18 @@ class SignalListServiceImpl implements SignalListService {
         .collect(Collectors.groupingBy(Signal::getType, Collectors.counting()));
   }
 
-  /** 전량 조회한 base를 type과 커서로 거른 뒤 한 페이지로 자른다. 페이지 조회의 공통 처리다. */
-  private static SignalSummaryPage page(
-      List<Signal> base, Collection<String> types, String cursor, int limit) {
+  /** limit을 검사하고 상한으로 줄인다. 1 미만은 인터페이스 계약 위반이라 COMMON_VALIDATION_FAILED로 실패한다. */
+  private static int resolvePageSize(int limit) {
     if (limit < 1) {
-      // 인터페이스가 정한 조건(1 이상)을 구현에서도 검사해, 다른 호출자가 잘못된 값으로 서버 오류를 만나지 않게 한다.
       throw new BusinessException(
           CommonErrorCode.COMMON_VALIDATION_FAILED, Map.of("limit", String.valueOf(limit)));
     }
-    int pageSize = Math.min(limit, MAX_PAGE_SIZE);
-    Cursor position = Cursor.decode(cursor);
+    return Math.min(limit, MAX_PAGE_SIZE);
+  }
+
+  /** 전량 조회한 base를 type과 커서로 거른 뒤 한 페이지로 자른다. 페이지 조회의 공통 처리다. */
+  private static SignalSummaryPage page(
+      List<Signal> base, Collection<String> types, Cursor position, int pageSize) {
     boolean allTypes = types == null || types.isEmpty();
     List<Signal> filtered =
         base.stream()
