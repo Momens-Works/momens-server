@@ -42,6 +42,11 @@ class TaskReaderImpl implements TaskReader {
 
   private static BoardTask toBoardTask(Task task) {
     return new BoardTask(
-        task.getId(), task.getTitle(), task.getStatus(), task.getPriority(), task.getRole());
+        task.getId(),
+        task.getTitle(),
+        task.getStatus(),
+        task.getPriority(),
+        task.getRole(),
+        task.getCreatedAt());
   }
 }
