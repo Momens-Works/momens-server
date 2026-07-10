@@ -1,5 +1,6 @@
 package works.momens.server.signal.query;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,4 +22,18 @@ interface SignalRepository extends JpaRepository<Signal, UUID> {
               + " ORDER BY s.created_at DESC, s.id DESC",
       nativeQuery = true)
   List<Signal> findUnprocessedByProjectId(@Param("projectId") UUID projectId);
+
+  // 브리프의 당일 집계용. signal_actions와 무관하게 created_at이 [from, toExclusive) 범위인 Signal을
+  // 조회한다(MOM-81). 전환이나 dismiss 여부와 상관없이 그날 온 시그널을 세고, 소프트 삭제는 제외한다.
+  // 정렬과 id 보조 키는 미처리 조회와 같고, idx_signals_project_live 부분 인덱스를 탄다.
+  @Query(
+      value =
+          "SELECT s.* FROM signals s WHERE s.project_id = :projectId AND s.deleted_at IS NULL"
+              + " AND s.created_at >= :from AND s.created_at < :toExclusive"
+              + " ORDER BY s.created_at DESC, s.id DESC",
+      nativeQuery = true)
+  List<Signal> findByProjectIdAndCreatedRange(
+      @Param("projectId") UUID projectId,
+      @Param("from") Instant from,
+      @Param("toExclusive") Instant toExclusive);
 }
