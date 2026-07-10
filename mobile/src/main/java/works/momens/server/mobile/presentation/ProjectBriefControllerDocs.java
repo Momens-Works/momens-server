@@ -28,7 +28,7 @@ interface ProjectBriefControllerDocs {
       summary = "프로젝트 브리프 조회",
       description =
           "브리프 화면(오늘의 브리프)의 초기 로드에 필요한 정보를 조회합니다. 시그널 요약은 미처리(VOC 제외) 최신순 첫 페이지(기본 3개)와 타입별"
-              + " 개수를 담고, 필터 전환과 더보기는 하위 엔드포인트를 사용합니다.")
+              + " 개수를 담고, 필터 전환과 더보기는 하위 엔드포인트 GET .../brief/signal-summary를 사용합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "브리프 조회 성공",

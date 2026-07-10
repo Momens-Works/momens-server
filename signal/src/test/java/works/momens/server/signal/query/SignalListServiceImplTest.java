@@ -152,6 +152,22 @@ class SignalListServiceImplTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("페이지 크기가 상한(50)을 넘으면 상한으로 줄여 조회한다")
+  void coercesPageSizeDownToMax() {
+    allowMember();
+    Instant base = Instant.parse("2026-07-01T00:00:00Z");
+    for (int i = 0; i < 51; i++) {
+      insertSignal("risk", "시그널 " + i, null, null, base.plusSeconds(i));
+    }
+
+    SignalSummaryPage page =
+        signalListService.listUnprocessedPage(PROJECT_ID, CALLER_ID, List.of("risk"), null, 100);
+
+    assertThat(page.items()).hasSize(50);
+    assertThat(page.nextCursor()).isNotNull();
+  }
+
+  @Test
   @DisplayName("1 미만 limit은 COMMON_VALIDATION_FAILED로 실패한다")
   void throwsValidationFailedForLimitBelowOne() {
     allowMember();

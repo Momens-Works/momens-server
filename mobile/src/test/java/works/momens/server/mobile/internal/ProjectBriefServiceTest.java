@@ -177,6 +177,19 @@ class ProjectBriefServiceTest {
   }
 
   @Test
+  void getSignalSummaryPageTreatsZeroLimitAsDefault() {
+    // AIP-158과 명세대로 0은 에러가 아니라 기본값 3으로 조회한다.
+    when(signalListService.listUnprocessedPage(
+            eq(PROJECT_ID), eq(CALLER_ID), eq(List.of("decision")), isNull(), eq(3)))
+        .thenReturn(new SignalSummaryPage(List.of(), null));
+
+    MobileBriefSignalPage page =
+        projectBriefService.getSignalSummaryPage(PROJECT_ID, CALLER_ID, "decisions", null, 0);
+
+    assertThat(page.items()).isEmpty();
+  }
+
+  @Test
   void getSignalSummaryPageThrowsValidationFailedForUnknownFilter() {
     // change(VOC)는 브리프 노출 필터가 아니므로 잘못된 값과 똑같이 거른다.
     assertThatThrownBy(

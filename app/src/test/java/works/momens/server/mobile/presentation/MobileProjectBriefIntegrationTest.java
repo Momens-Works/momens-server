@@ -267,6 +267,19 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
   }
 
   @Test
+  void returnsNotFoundForUnknownProjectOnSignalSummaryPage() throws Exception {
+    UserProfile caller = userService.findOrCreate("brief-it-page-404@momens.works", "신진수", null);
+
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/brief/signal-summary", UUID.randomUUID())
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(caller.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.error.code").value("PROJECT_NOT_FOUND"));
+  }
+
+  @Test
   void returnsStandardUnauthorizedWithoutToken() throws Exception {
     mockMvc
         .perform(
