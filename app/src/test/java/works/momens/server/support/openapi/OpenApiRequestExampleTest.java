@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -59,5 +62,43 @@ class OpenApiRequestExampleTest extends AbstractPostgresIntegrationTest {
       }
     }
     return null;
+  }
+
+  /**
+   * DTO의 Jackson 3 {@code @JsonNaming}을 swagger-core가 읽지 못해 스키마 property가 camelCase로 나오던 문제를,
+   * swagger-core의 ObjectMapper에 snake_case 전략을 걸어(전역) 고쳤다. 새 DTO/필드가 camelCase 키로 새면 실제 wire
+   * format(snake_case)과 문서가 어긋나므로, 전체 스키마를 스캔해 회귀를 막는다.
+   */
+  @Test
+  void allSchemaPropertyKeysAreSnakeCase() throws Exception {
+    String body =
+        mockMvc
+            .perform(get("/v3/api-docs"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    JsonNode schemas = new ObjectMapper().readTree(body).path("components").path("schemas");
+    List<String> offenders = new ArrayList<>();
+    for (Map.Entry<String, JsonNode> schema : schemas.properties()) {
+      collectCamelCaseKeys(schema.getKey(), schema.getValue(), offenders);
+    }
+
+    assertThat(offenders)
+        .as("schema property keys must be snake_case to match the wire format")
+        .isEmpty();
+  }
+
+  private void collectCamelCaseKeys(String path, JsonNode schema, List<String> offenders) {
+    for (Map.Entry<String, JsonNode> property : schema.path("properties").properties()) {
+      if (property.getKey().chars().anyMatch(Character::isUpperCase)) {
+        offenders.add(path + "." + property.getKey());
+      }
+      collectCamelCaseKeys(path + "." + property.getKey(), property.getValue(), offenders);
+    }
+    if (schema.has("items")) {
+      collectCamelCaseKeys(path + "[]", schema.get("items"), offenders);
+    }
   }
 }

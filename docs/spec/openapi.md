@@ -126,6 +126,17 @@ Request/response DTO는 `record`를 기본으로 하고 `@Schema`로 문서화�
 - 주요 필드에는 `description`, `example`, `nullable`을 명시합니다.
 - validation annotation과 `@Schema` 설명이 서로 어긋나지 않게 합니다.
 
+### Property 이름(snake_case)
+
+wire format은 snake_case이고, DTO는 런타임 직렬화에 Jackson 3 `@JsonNaming(SnakeCaseStrategy)`를
+씁니다. 스키마를 만드는 swagger-core는 Jackson 2라 이 애노테이션을 읽지 못해, 그대로 두면 스키마
+property가 Java 필드명(camelCase)으로 나가 실제 API와 어긋납니다.
+
+- `app`이 등록하는 `ModelResolver` 빈이 swagger-core의 Jackson 2 ObjectMapper에 snake_case 전략을
+  걸어 스키마 property를 전역 snake_case로 생성합니다. DTO에는 별도 애노테이션을 추가하지 않습니다.
+- 특정 필드만 다른 이름이 필요하면 Jackson 2 `@JsonProperty`로 override합니다.
+- 모든 스키마 property가 snake_case인지 통합 테스트로 검증합니다.
+
 ## API Version Header
 
 모든 엔드포인트는 [API 버저닝](api-versioning.md)이 적용되므로 `API-Version` request header를 문서화합니다.
