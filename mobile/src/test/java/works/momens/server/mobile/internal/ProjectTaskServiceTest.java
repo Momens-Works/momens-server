@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -49,6 +50,7 @@ class ProjectTaskServiceTest {
   private static final UUID PROJECT_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID CALLER_ID = UUID.randomUUID();
+  private static final Instant CREATED_AT = Instant.parse("2026-07-01T00:00:00Z");
   private static final UUID TASK_ID = UUID.randomUUID();
 
   @Test
@@ -82,10 +84,10 @@ class ProjectTaskServiceTest {
     when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
         .thenReturn(
             List.of(
-                new BoardTask(backlogId, "백로그 태스크", "backlog", "medium", "pm"),
-                new BoardTask(todoId, "투두 태스크", "todo", "low", "frontend"),
-                new BoardTask(inProgressId, "진행중 태스크", "in_progress", "medium", "pm"),
-                new BoardTask(cancelledId, "취소 태스크", "cancelled", "high", "pm")));
+                new BoardTask(backlogId, "백로그 태스크", "backlog", "medium", "pm", CREATED_AT),
+                new BoardTask(todoId, "투두 태스크", "todo", "low", "frontend", CREATED_AT),
+                new BoardTask(inProgressId, "진행중 태스크", "in_progress", "medium", "pm", CREATED_AT),
+                new BoardTask(cancelledId, "취소 태스크", "cancelled", "high", "pm", CREATED_AT)));
 
     List<MobileTaskGroup> groups = projectTaskService.getBoard(PROJECT_ID, CALLER_ID);
 
@@ -109,7 +111,7 @@ class ProjectTaskServiceTest {
     stubMember();
     UUID taskId = UUID.randomUUID();
     when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
-        .thenReturn(List.of(new BoardTask(taskId, "긴급 태스크", "todo", "urgent", "pm")));
+        .thenReturn(List.of(new BoardTask(taskId, "긴급 태스크", "todo", "urgent", "pm", CREATED_AT)));
 
     // 보드 그룹 순서는 backlog, todo, ... 이므로 todo 그룹은 인덱스 1이다.
     MobileTaskCard card = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(1).tasks().get(0);

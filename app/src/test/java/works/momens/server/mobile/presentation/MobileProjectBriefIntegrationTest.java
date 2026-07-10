@@ -68,7 +68,43 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
         .andExpect(jsonPath("$.signal_summary.filters[0].key").value("all"))
         .andExpect(jsonPath("$.signal_summary.filters[0].count").value(0))
         .andExpect(jsonPath("$.signal_summary.items.length()").value(0))
-        .andExpect(jsonPath("$.signal_summary.next_cursor", nullValue()));
+        .andExpect(jsonPath("$.signal_summary.next_cursor", nullValue()))
+        .andExpect(jsonPath("$.priorities.length()").value(0));
+  }
+
+  @Test
+  void ranksPrioritiesByPriorityThenOldestCreationAndLimitsToFour() throws Exception {
+    UserProfile jinsu =
+        userService.findOrCreate("brief-it-priority-jinsu@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("brief-priority");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "brief-priority-project", null, 0, null);
+    UUID urgentOld =
+        insertTask(workspace, project, "긴급 오래됨", "backlog", "urgent", "2026-07-01T00:00:00Z");
+    UUID highNew = insertTask(workspace, project, "높음 최신", "todo", "high", "2026-07-03T00:00:00Z");
+    UUID mediumOld =
+        insertTask(workspace, project, "중간 오래됨", "in_progress", "medium", "2026-07-01T00:00:00Z");
+    UUID mediumNew =
+        insertTask(workspace, project, "중간 최신", "todo", "medium", "2026-07-02T00:00:00Z");
+    insertTask(workspace, project, "낮음 잘림", "todo", "low", "2026-07-01T00:00:00Z");
+    // done과 cancelled는 우선순위 후보에서 빠져야 한다.
+    insertTask(workspace, project, "완료됨", "done", "high", "2026-07-01T00:00:00Z");
+    insertTask(workspace, project, "취소됨", "cancelled", "high", "2026-07-01T00:00:00Z");
+
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/brief", project)
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.priorities.length()").value(4))
+        .andExpect(jsonPath("$.priorities[0].rank").value(1))
+        .andExpect(jsonPath("$.priorities[0].title").value("긴급 오래됨"))
+        .andExpect(jsonPath("$.priorities[0].task_id").value(urgentOld.toString()))
+        .andExpect(jsonPath("$.priorities[1].task_id").value(highNew.toString()))
+        .andExpect(jsonPath("$.priorities[2].task_id").value(mediumOld.toString()))
+        .andExpect(jsonPath("$.priorities[3].rank").value(4))
+        .andExpect(jsonPath("$.priorities[3].task_id").value(mediumNew.toString()));
   }
 
   @Test
@@ -288,6 +324,28 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
         type,
         title,
         "본문",
+        Timestamp.from(Instant.parse(createdAt)));
+    return id;
+  }
+
+  private UUID insertTask(
+      UUID workspaceId,
+      UUID projectId,
+      String title,
+      String status,
+      String priority,
+      String createdAt) {
+    UUID id = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO tasks (id, workspace_id, project_id, title, status, priority, role,"
+            + " created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        id,
+        workspaceId,
+        projectId,
+        title,
+        status,
+        priority,
+        "pm",
         Timestamp.from(Instant.parse(createdAt)));
     return id;
   }

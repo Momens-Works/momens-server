@@ -45,6 +45,7 @@ class ProjectBriefControllerTest {
   private static final UUID PROJECT_ID = UUID.fromString("30d9e9fe-f43b-4097-a88e-dc19f0a5b025");
   private static final UUID WORKSPACE_ID = UUID.fromString("9be5a41c-2c63-4f7e-9d15-3b7f8c2a1d40");
   private static final UUID SIGNAL_ID = UUID.fromString("6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1");
+  private static final UUID TASK_ID = UUID.fromString("27afd507-9c7f-4f0d-a2be-fcdab2477b19");
   private final Principal principal = USER_ID::toString;
 
   @Test
@@ -65,7 +66,8 @@ class ProjectBriefControllerTest {
                     new MobileBrief.FilterCount(BriefSignalFilter.RISKS, 1L),
                     new MobileBrief.FilterCount(BriefSignalFilter.QUESTIONS, 2L)),
                 List.of(new MobileBrief.SignalItem(SIGNAL_ID, "decision", "소셜 로그인은 MVP 범위에서 제외")),
-                "cursor-1"));
+                "cursor-1",
+                List.of(new MobileBrief.Priority(1, "이메일 회원가입 완료율 개선", TASK_ID))));
 
     mockMvc
         .perform(
@@ -92,7 +94,11 @@ class ProjectBriefControllerTest {
         .andExpect(jsonPath("$.signal_summary.items[0].id").value(SIGNAL_ID.toString()))
         .andExpect(jsonPath("$.signal_summary.items[0].type").value("decision"))
         .andExpect(jsonPath("$.signal_summary.items[0].title").value("소셜 로그인은 MVP 범위에서 제외"))
-        .andExpect(jsonPath("$.signal_summary.next_cursor").value("cursor-1"));
+        .andExpect(jsonPath("$.signal_summary.next_cursor").value("cursor-1"))
+        .andExpect(jsonPath("$.priorities.length()").value(1))
+        .andExpect(jsonPath("$.priorities[0].rank").value(1))
+        .andExpect(jsonPath("$.priorities[0].title").value("이메일 회원가입 완료율 개선"))
+        .andExpect(jsonPath("$.priorities[0].task_id").value(TASK_ID.toString()));
   }
 
   @Test
