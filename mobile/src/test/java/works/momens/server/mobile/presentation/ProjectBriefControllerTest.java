@@ -22,7 +22,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import works.momens.server.mobile.internal.BriefSignalFilter;
 import works.momens.server.mobile.internal.MobileBrief;
 import works.momens.server.mobile.internal.MobileBriefSignalPage;
 import works.momens.server.mobile.internal.ProjectBriefService;
@@ -61,11 +60,12 @@ class ProjectBriefControllerTest {
                     64,
                     "목표일까지 Q2 Activation Readiness 범위의 회원 가입 MVP를 안정적으로 릴리즈한다."),
                 List.of(
-                    new MobileBrief.FilterCount(BriefSignalFilter.ALL, 5L),
-                    new MobileBrief.FilterCount(BriefSignalFilter.DECISIONS, 2L),
-                    new MobileBrief.FilterCount(BriefSignalFilter.RISKS, 1L),
-                    new MobileBrief.FilterCount(BriefSignalFilter.QUESTIONS, 2L)),
-                List.of(new MobileBrief.SignalItem(SIGNAL_ID, "decision", "소셜 로그인은 MVP 범위에서 제외")),
+                    new MobileBrief.FilterCount("all", "All", 12L),
+                    new MobileBrief.FilterCount("change", "VOC", 7L),
+                    new MobileBrief.FilterCount("risk", "Risk", 1L),
+                    new MobileBrief.FilterCount("decision", "Decision", 2L),
+                    new MobileBrief.FilterCount("question", "Question", 2L)),
+                List.of(new MobileBrief.SignalItem(SIGNAL_ID, "change", "권한 요청 반복 문의")),
                 "cursor-1",
                 List.of(new MobileBrief.Priority(1, "이메일 회원가입 완료율 개선", TASK_ID))));
 
@@ -84,16 +84,17 @@ class ProjectBriefControllerTest {
                 .value("목표일까지 Q2 Activation Readiness 범위의 회원 가입 MVP를 안정적으로 릴리즈한다."))
         // 시그널 요약 문단은 backing source가 없어 null로 항상 포함된다(합성 필드 정책).
         .andExpect(jsonPath("$.signal_summary.summary", nullValue()))
-        .andExpect(jsonPath("$.signal_summary.filters.length()").value(4))
+        .andExpect(jsonPath("$.signal_summary.filters.length()").value(5))
         .andExpect(jsonPath("$.signal_summary.filters[0].key").value("all"))
         .andExpect(jsonPath("$.signal_summary.filters[0].label").value("All"))
-        .andExpect(jsonPath("$.signal_summary.filters[0].count").value(5))
-        .andExpect(jsonPath("$.signal_summary.filters[1].key").value("decisions"))
-        .andExpect(jsonPath("$.signal_summary.filters[1].label").value("Decision"))
+        .andExpect(jsonPath("$.signal_summary.filters[0].count").value(12))
+        .andExpect(jsonPath("$.signal_summary.filters[1].key").value("change"))
+        .andExpect(jsonPath("$.signal_summary.filters[1].label").value("VOC"))
+        .andExpect(jsonPath("$.signal_summary.filters[1].count").value(7))
         .andExpect(jsonPath("$.signal_summary.items.length()").value(1))
         .andExpect(jsonPath("$.signal_summary.items[0].id").value(SIGNAL_ID.toString()))
-        .andExpect(jsonPath("$.signal_summary.items[0].type").value("decision"))
-        .andExpect(jsonPath("$.signal_summary.items[0].title").value("소셜 로그인은 MVP 범위에서 제외"))
+        .andExpect(jsonPath("$.signal_summary.items[0].type").value("change"))
+        .andExpect(jsonPath("$.signal_summary.items[0].title").value("권한 요청 반복 문의"))
         .andExpect(jsonPath("$.signal_summary.next_cursor").value("cursor-1"))
         .andExpect(jsonPath("$.priorities.length()").value(1))
         .andExpect(jsonPath("$.priorities[0].rank").value(1))
@@ -104,15 +105,15 @@ class ProjectBriefControllerTest {
   @Test
   void getSignalSummaryPagePassesQueryParamsThrough() throws Exception {
     when(projectBriefService.getSignalSummaryPage(
-            eq(PROJECT_ID), eq(USER_ID), eq("decisions"), eq("cursor-1"), eq(5)))
+            eq(PROJECT_ID), eq(USER_ID), eq("change"), eq("cursor-1"), eq(5)))
         .thenReturn(
             new MobileBriefSignalPage(
-                List.of(new MobileBrief.SignalItem(SIGNAL_ID, "decision", "결정")), null));
+                List.of(new MobileBrief.SignalItem(SIGNAL_ID, "change", "VOC 문의")), null));
 
     mockMvc
         .perform(
             get("/api/mobile/projects/{projectId}/brief/signal-summary", PROJECT_ID)
-                .param("filter", "decisions")
+                .param("filter", "change")
                 .param("cursor", "cursor-1")
                 .param("limit", "5")
                 .principal(principal)

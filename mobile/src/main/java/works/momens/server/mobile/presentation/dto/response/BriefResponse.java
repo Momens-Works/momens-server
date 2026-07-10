@@ -34,7 +34,7 @@ public record BriefResponse(
   public record SignalSummaryResponse(
       @Schema(description = "시그널 요약 문단. backing source가 없으면 null로 포함됩니다.", nullable = true)
           String summary,
-      @Schema(description = "필터 칩 목록(all, decisions, risks, questions 순서)")
+      @Schema(description = "필터 칩 목록. all이 맨 앞이고 나머지는 라벨 글자수 오름차순과 알파벳순")
           List<FilterResponse> filters,
       @Schema(description = "미처리 시그널 요약 최신순 첫 페이지") List<SignalItemResponse> items,
       @Schema(description = "다음 페이지 커서. 다음 페이지가 없으면 null로 포함됩니다.", nullable = true)
@@ -82,9 +82,7 @@ public record BriefResponse(
 
   private static List<FilterResponse> toFilters(List<MobileBrief.FilterCount> filters) {
     return filters.stream()
-        .map(
-            count ->
-                new FilterResponse(count.filter().key(), count.filter().label(), count.count()))
+        .map(count -> new FilterResponse(count.key(), count.label(), count.count()))
         .toList();
   }
 
