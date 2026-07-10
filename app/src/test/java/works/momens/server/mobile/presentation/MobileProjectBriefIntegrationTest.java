@@ -80,14 +80,15 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
     addMember(workspace, jinsu.id(), "owner");
     UUID project = insertProject(workspace, jinsu.id(), "brief-priority-project", null, 0, null);
     UUID urgentOld =
-        insertTask(workspace, project, "긴급 오래됨", "backlog", "urgent", "2026-07-01T00:00:00Z");
+        insertTask(workspace, project, "긴급 오래됨", "in_progress", "urgent", "2026-07-01T00:00:00Z");
     UUID highNew = insertTask(workspace, project, "높음 최신", "todo", "high", "2026-07-03T00:00:00Z");
     UUID mediumOld =
         insertTask(workspace, project, "중간 오래됨", "in_progress", "medium", "2026-07-01T00:00:00Z");
     UUID mediumNew =
         insertTask(workspace, project, "중간 최신", "todo", "medium", "2026-07-02T00:00:00Z");
     insertTask(workspace, project, "낮음 잘림", "todo", "low", "2026-07-01T00:00:00Z");
-    // done과 cancelled는 우선순위 후보에서 빠져야 한다.
+    // backlog와 done, cancelled는 우선순위 후보에서 빠져야 한다. backlog는 urgent라도 제외된다.
+    insertTask(workspace, project, "백로그 제외", "backlog", "urgent", "2026-07-01T00:00:00Z");
     insertTask(workspace, project, "완료됨", "done", "high", "2026-07-01T00:00:00Z");
     insertTask(workspace, project, "취소됨", "cancelled", "high", "2026-07-01T00:00:00Z");
 

@@ -46,7 +46,7 @@ class ProjectBriefServiceTest {
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID CALLER_ID = UUID.randomUUID();
   private static final List<String> EXPOSED_TYPES = List.of("decision", "risk", "question");
-  private static final List<String> PRIORITY_STATUSES = List.of("backlog", "todo", "in_progress");
+  private static final List<String> PRIORITY_STATUSES = List.of("todo", "in_progress");
 
   @Test
   void getBriefThrowsProjectNotFoundWhenProjectMissing() {
