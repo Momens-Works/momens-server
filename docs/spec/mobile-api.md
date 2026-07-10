@@ -551,8 +551,8 @@ worker/Minsu 산출물 후보로 MVP backing source가 없으면 `null`로 반�
 이동할 수 있습니다. 정렬은 `priority`가 높은 순(high, medium, low)이고, 같으면 생성이 오래된 순입니다(생성 시각
 오름차순, 생성 시각까지 같으면 id 오름차순으로 순서를 고정합니다). 저장된 값이 레거시 전용인 urgent이면 high와
 같은 순위로 정렬합니다. 상위 4개까지만 담습니다. 화면의 "현재 우선순위 · N" 헤더 숫자는 배열 길이로 계산하며,
-배열 길이와 항상 같은 값이라 별도 개수 필드를 두지 않습니다. 후보는 backlog, todo, in_progress 상태의
-태스크이고 done과 cancelled는 제외합니다(2026-07-10 확정).
+배열 길이와 항상 같은 값이라 별도 개수 필드를 두지 않습니다. 후보는 진행 중인 todo와 in_progress 상태의
+태스크이고 backlog와 done, cancelled는 제외합니다(2026-07-10 기획 확정).
 
 #### Errors
 

@@ -179,9 +179,9 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   미처리 요약(타입별 개수와 커서 페이지, `SignalListService`), workspace 멤버십을 조합해
   브리프 화면 정보를 내린다. project 조회 결과에 workspace id가 포함되어 있어 workspace를
   따로 조회하지 않고 바로 멤버십을 검사한다. 브리프가 노출하는 필터 키와 화면 라벨,
-  change(VOC) 제외, 페이지 기본 크기 3, 현재 우선순위 구성(미완료 상태만 후보, priority 높은
-  순과 생성 오래된 순 정렬, 상위 4개)은 조합 규칙이라 `BriefSignalFilter`와 `MobilePriority`
-  enum, 조합 서비스가 소유한다(MOM-67).
+  change(VOC) 제외, 페이지 기본 크기 3, 현재 우선순위 구성(진행 중인 todo와 in_progress만
+  후보, priority 높은 순과 생성 오래된 순 정렬, 상위 4개)은 조합 규칙이라 `BriefSignalFilter`와
+  `MobilePriority` enum, 조합 서비스가 소유한다(MOM-67).
 - `GET /api/mobile/tasks/{taskId}`: project의 태스크 상세(`TaskReader.findDetail`)와 workspace
   멤버십(태스크가 속한 workspace 기준), user 프로필(담당자 이름)을 조합한다. purpose 개명
   (도메인 description), priority 매핑, 빈 값 고정(materials와 open_questions는 빈 배열,
