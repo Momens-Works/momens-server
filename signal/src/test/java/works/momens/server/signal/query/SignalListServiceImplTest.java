@@ -134,6 +134,20 @@ class SignalListServiceImplTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("type 목록이 null이면 type을 가리지 않고 전체를 조회한다")
+  void returnsAllTypesWhenTypesNull() {
+    allowMember();
+    UUID decision =
+        insertSignal("decision", "결정", null, null, Instant.parse("2026-07-01T00:00:00Z"));
+    UUID change = insertSignal("change", "VOC", null, null, Instant.parse("2026-07-02T00:00:00Z"));
+
+    SignalSummaryPage page =
+        signalListService.listUnprocessedPage(PROJECT_ID, CALLER_ID, null, null, 10);
+
+    assertThat(page.items()).extracting(SignalSummary::id).containsExactly(change, decision);
+  }
+
+  @Test
   @DisplayName("페이지 조회는 넘긴 type만 담고 처리된 Signal을 제외한다")
   void filtersPageByTypesAndExcludesProcessed() {
     allowMember();
