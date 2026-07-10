@@ -203,9 +203,10 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 - `signal_actions`: 사용자의 `convert-to-task`, `dismiss` 처리 기록과 멱등성을 소유한다.
 - Signal 목록/상세 및 action API를 소유한다. 경로가 `/api/mobile/*`여도 Signal 도메인 정책과
   영속성은 `mobile`이 아니라 이 모듈에 둔다.
-- 브리프(MOM-67)가 쓰는 미처리 요약의 커서 페이지 조회와 타입별 개수 집계도
-  `SignalListService`가 소유한다. 정렬 기준과 커서 규칙도 이 모듈이 정한다. 어떤 type을
-  노출할지는 호출하는 표면이 정한다.
+- 시그널 탭의 미처리 목록 조회(`listUnprocessed`)와, 브리프가 쓰는 당일 생성 범위의 커서 페이지
+  조회(`listByCreatedRange`), 타입별 개수 집계(`countByCreatedRange`)를 `SignalListService`가
+  소유한다. 당일 범위 조회는 처리 여부와 무관하게 담고 소프트 삭제는 제외한다(MOM-81). 정렬
+  기준과 커서 규칙도 이 모듈이 정하고, 어떤 type을 노출할지와 하루 경계는 호출하는 표면이 정한다.
 - body 없는 `convert-to-task`는 태스크 등록 시점에 민수가 생성하는 task draft를 입력으로 사용한다.
   민수(서버 내 모듈로 구현 예정)가 구현되기 전에는 고정 목 draft(title=Signal title, role=`pm`,
   priority=`medium`)를 쓰고, draft는 `signals` backing에 저장하지 않는다(ADR-0011).

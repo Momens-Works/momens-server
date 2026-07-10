@@ -21,15 +21,15 @@ import works.momens.server.signal.SignalSummaryPage;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
- * Signal 목록 조회 서비스. 프로젝트가 속한 workspace를 해석하고 요청자의 멤버십을 검사한 뒤, 아직 처리되지 않은 Signal만 반환한다.
+ * Signal 목록 조회 서비스. 프로젝트가 속한 workspace를 해석하고 요청자의 멤버십을 검사한 뒤 Signal을 반환한다. 시그널 탭은 미처리 Signal을 조회하고,
+ * 브리프는 당일 생성 범위의 Signal을 조회한다.
  *
  * <p>Signal 처리 여부는 사용자별이 아니라 프로젝트 단위이므로(docs/design/mobile-mvp-server-requirements.md Signal 요구사항),
  * 멤버십 검사는 목록 조회와 별개로 단순 {@code isMember} 조회만으로 충분하다(목록처럼 멤버 스냅샷을 응답에 함께 반환하지 않는다).
  *
- * <p>커서 페이지 조회는 전량 조회 뒤 메모리에서 자른다. 미처리 Signal은 처리될수록 줄어들어 개수가 크게 늘지 않으므로 지금 규모에서는 이 방식으로 충분하고,
- * AIP-158도 초기 규모가 작은 컬렉션에는 전량 조회 뒤 자르는 구현을 인정한다. 목록이 커지면 응답 형식은 그대로 두고 조회 쿼리만 keyset 방식으로 바꾼다. 커서는
- * 마지막으로 본 항목의 생성 시각과 id를 base64로 감싼 문자열이고, 정렬 동률을 id로 고정하므로 페이지 사이에 Signal이 처리되어도 다음 페이지의 위치가 밀리지
- * 않는다.
+ * <p>커서 페이지 조회는 전량 조회 뒤 메모리에서 자른다. 프로젝트당 시그널 규모가 크지 않아 지금은 이 방식으로 충분하고, AIP-158도 초기 규모가 작은 컬렉션에는 전량
+ * 조회 뒤 자르는 구현을 인정한다. 목록이 커지면 응답 형식은 그대로 두고 조회 쿼리만 keyset 방식으로 바꾼다. 커서는 마지막으로 본 항목의 생성 시각과 id를
+ * base64로 감싼 문자열이고, 정렬 동률을 id로 고정하므로 페이지 사이에 Signal이 바뀌어도 다음 페이지의 위치가 밀리지 않는다.
  */
 @Service
 @RequiredArgsConstructor
@@ -53,9 +53,34 @@ class SignalListServiceImpl implements SignalListService {
 
   @Override
   @Transactional(readOnly = true)
-  public SignalSummaryPage listUnprocessedPage(
-      UUID projectId, UUID userId, Collection<String> types, String cursor, int limit) {
+  public SignalSummaryPage listByCreatedRange(
+      UUID projectId,
+      UUID userId,
+      Collection<String> types,
+      Instant createdFrom,
+      Instant createdToExclusive,
+      String cursor,
+      int limit) {
     requireMember(projectId, userId);
+    List<Signal> base =
+        signalRepository.findByProjectIdAndCreatedRange(projectId, createdFrom, createdToExclusive);
+    return page(base, types, cursor, limit);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Map<String, Long> countByCreatedRange(
+      UUID projectId, UUID userId, Instant createdFrom, Instant createdToExclusive) {
+    requireMember(projectId, userId);
+    return signalRepository
+        .findByProjectIdAndCreatedRange(projectId, createdFrom, createdToExclusive)
+        .stream()
+        .collect(Collectors.groupingBy(Signal::getType, Collectors.counting()));
+  }
+
+  /** 전량 조회한 base를 type과 커서로 거른 뒤 한 페이지로 자른다. 페이지 조회의 공통 처리다. */
+  private static SignalSummaryPage page(
+      List<Signal> base, Collection<String> types, String cursor, int limit) {
     if (limit < 1) {
       // 인터페이스가 정한 조건(1 이상)을 구현에서도 검사해, 다른 호출자가 잘못된 값으로 서버 오류를 만나지 않게 한다.
       throw new BusinessException(
@@ -65,22 +90,14 @@ class SignalListServiceImpl implements SignalListService {
     Cursor position = Cursor.decode(cursor);
     boolean allTypes = types == null || types.isEmpty();
     List<Signal> filtered =
-        signalRepository.findUnprocessedByProjectId(projectId).stream()
+        base.stream()
             .filter(signal -> allTypes || types.contains(signal.getType()))
             .filter(signal -> position == null || position.isBefore(signal))
             .toList();
-    List<Signal> page = filtered.subList(0, Math.min(pageSize, filtered.size()));
-    String nextCursor = filtered.size() > page.size() ? Cursor.encode(page.getLast()) : null;
+    List<Signal> paged = filtered.subList(0, Math.min(pageSize, filtered.size()));
+    String nextCursor = filtered.size() > paged.size() ? Cursor.encode(paged.getLast()) : null;
     return new SignalSummaryPage(
-        page.stream().map(SignalListServiceImpl::toSummary).toList(), nextCursor);
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public Map<String, Long> countUnprocessedByType(UUID projectId, UUID userId) {
-    requireMember(projectId, userId);
-    return signalRepository.findUnprocessedByProjectId(projectId).stream()
-        .collect(Collectors.groupingBy(Signal::getType, Collectors.counting()));
+        paged.stream().map(SignalListServiceImpl::toSummary).toList(), nextCursor);
   }
 
   private void requireMember(UUID projectId, UUID userId) {
