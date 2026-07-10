@@ -63,9 +63,10 @@ class SignalListServiceImpl implements SignalListService {
     }
     int pageSize = Math.min(limit, MAX_PAGE_SIZE);
     Cursor position = Cursor.decode(cursor);
+    boolean allTypes = types == null || types.isEmpty();
     List<Signal> filtered =
         signalRepository.findUnprocessedByProjectId(projectId).stream()
-            .filter(signal -> types.contains(signal.getType()))
+            .filter(signal -> allTypes || types.contains(signal.getType()))
             .filter(signal -> position == null || position.isBefore(signal))
             .toList();
     List<Signal> page = filtered.subList(0, Math.min(pageSize, filtered.size()));
