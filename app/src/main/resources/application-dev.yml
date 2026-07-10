@@ -20,5 +20,6 @@ spring:
 
 logging:
   level:
-    root: INFO
-    works.momens.server: INFO
+    # dev 는 모바일 MVP 를 직접 검증하는 환경이라 문제 발생 시 kubectl logs 로 원인을 자주 추적합니다.
+    # 애플리케이션 패키지만 DEBUG 로 올려 세부 로그를 남깁니다(root 등 그 외는 base 의 INFO 를 상속).
+    works.momens.server: DEBUG
