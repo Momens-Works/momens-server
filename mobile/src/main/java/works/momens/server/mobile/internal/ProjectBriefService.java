@@ -22,14 +22,15 @@ import works.momens.server.signal.SignalSummaryPage;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
- * 모바일 브리프 표면의 조합 서비스. project(스냅샷, 태스크), signal(미처리 요약), workspace(멤버십) public API를 조합하고 도메인 정책을
+ * 모바일 브리프 표면의 조합 서비스. project(스냅샷, 태스크), signal(당일 시그널 요약), workspace(멤버십) public API를 조합하고 도메인 정책을
  * 소유하지 않습니다.
  *
  * <p>project 조회 결과가 workspace id를 포함하므로(태스크 상세와 같은 방식) project가 있는지 확인한 뒤 workspace를 따로 조회하지 않고 바로
  * 멤버십을 검사합니다. signal 목록 서비스도 자체적으로 접근을 검사해 브리프의 검사와 일부 겹치지만, 단순 조회 수준이라 그대로 두었습니다.
  *
- * <p>시그널 요약 필터 칩(처리 대기 목록에 있는 type으로 데이터 기반 구성, 라벨과 정렬), 페이지 기본 크기, 현재 우선순위 구성(후보 상태와 정렬, 상위 4개)은
- * 모바일 조합 규칙이므로 이 서비스와 {@link SignalTypeLabel}, {@link MobilePriority}가 소유합니다.
+ * <p>브리프는 오늘의 브리프라 그날 생성된 시그널을 처리 여부와 무관하게 봅니다(MOM-81). 시그널 요약 필터 칩(당일 시그널의 type으로 데이터 기반 구성, 라벨과
+ * 정렬), 오늘의 하루 경계({@link BriefDay}), 페이지 기본 크기, 현재 우선순위 구성(후보 상태와 정렬, 상위 4개)은 모바일 조합 규칙이므로 이 서비스와
+ * {@link SignalTypeLabel}, {@link MobilePriority}가 소유합니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -62,6 +63,7 @@ public class ProjectBriefService {
   private final WorkspaceAccess workspaceAccess;
   private final SignalListService signalListService;
   private final TaskReader taskReader;
+  private final MobileClock mobileClock;
 
   @Transactional(readOnly = true)
   public MobileBrief getBrief(UUID projectId, UUID userId) {
@@ -77,10 +79,14 @@ public class ProjectBriefService {
       throw new BusinessException(
           CommonErrorCode.AUTH_FORBIDDEN, Map.of("project_id", projectId.toString()));
     }
-    Map<String, Long> countsByType = signalListService.countUnprocessedByType(projectId, userId);
+    // 브리프는 오늘의 브리프라 그날 온 시그널을 처리 여부와 무관하게 센다(MOM-81).
+    BriefDay.Range today = BriefDay.today(mobileClock.clock());
+    Map<String, Long> countsByType =
+        signalListService.countByCreatedRange(projectId, userId, today.from(), today.toExclusive());
     // filter=all은 type을 가리지 않고 전체를 조회하므로 null을 넘긴다. change도 items에 포함된다.
     SignalSummaryPage firstPage =
-        signalListService.listUnprocessedPage(projectId, userId, null, null, DEFAULT_PAGE_SIZE);
+        signalListService.listByCreatedRange(
+            projectId, userId, null, today.from(), today.toExclusive(), null, DEFAULT_PAGE_SIZE);
     return new MobileBrief(
         snapshot,
         toFilterCounts(countsByType),
@@ -97,9 +103,16 @@ public class ProjectBriefService {
         filterKey == null || filterKey.isBlank() || SignalTypeLabel.ALL_KEY.equals(filterKey)
             ? null
             : List.of(filterKey);
+    BriefDay.Range today = BriefDay.today(mobileClock.clock());
     SignalSummaryPage page =
-        signalListService.listUnprocessedPage(
-            projectId, userId, types, cursor, resolvePageSize(limit));
+        signalListService.listByCreatedRange(
+            projectId,
+            userId,
+            types,
+            today.from(),
+            today.toExclusive(),
+            cursor,
+            resolvePageSize(limit));
     return new MobileBriefSignalPage(toItems(page.items()), page.nextCursor());
   }
 
@@ -116,7 +129,7 @@ public class ProjectBriefService {
   }
 
   private static List<MobileBrief.FilterCount> toFilterCounts(Map<String, Long> countsByType) {
-    // 처리 대기 목록에 있는 type만 칩으로 만든다(개수 0인 type은 칩이 없다). All 칩은 전체 합으로 맨 앞에 고정한다.
+    // 당일 목록에 있는 type만 칩으로 만든다(개수 0인 type은 칩이 없다). All 칩은 전체 합으로 맨 앞에 고정한다.
     MobileBrief.FilterCount all =
         new MobileBrief.FilterCount(
             SignalTypeLabel.ALL_KEY,

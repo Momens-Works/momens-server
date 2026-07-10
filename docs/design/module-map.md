@@ -176,13 +176,16 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   규칙이라 이 모듈이 소유한다(MOM-62).
 - `GET /api/mobile/projects/{projectId}/brief`와 `GET .../brief/signal-summary`: project의
   스냅샷(`ProjectReader.findSnapshot`)과 태스크(`TaskReader.listTasksByStatus`), signal의
-  미처리 요약(타입별 개수와 커서 페이지, `SignalListService`), workspace 멤버십을 조합해
-  브리프 화면 정보를 내린다. project 조회 결과에 workspace id가 포함되어 있어 workspace를
-  따로 조회하지 않고 바로 멤버십을 검사한다. 시그널 요약 필터 칩(처리 대기 목록에 있는 type으로
-  데이터 기반 구성, 라벨은 첫 글자 대문자화에 change만 VOC로 바꾸고, All을 맨 앞에 둔 뒤 라벨
-  글자수와 알파벳순 정렬), 페이지 기본 크기 3, 현재 우선순위 구성(진행 중인 todo와 in_progress만
-  후보, priority 높은 순과 생성 오래된 순 정렬, 상위 4개)은 조합 규칙이라 `SignalTypeLabel`과
-  `MobilePriority`, 조합 서비스가 소유한다(MOM-67).
+  당일 시그널 요약(타입별 개수와 커서 페이지, `SignalListService.countByCreatedRange`와
+  `listByCreatedRange`), workspace 멤버십을 조합해 브리프 화면 정보를 내린다. project 조회
+  결과에 workspace id가 포함되어 있어 workspace를 따로 조회하지 않고 바로 멤버십을 검사한다.
+  브리프는 오늘의 브리프라 당일 생성된 시그널을 처리 여부와 무관하게 집계한다(MOM-81). 하루
+  경계를 어떤 타임존으로 볼지(Asia/Seoul 고정)는 `BriefDay`가 소유하고, 시각은 `mobileClock`
+  으로 주입한다. 시그널 요약 필터 칩(당일 시그널의 type으로 데이터 기반 구성, 라벨은 첫 글자
+  대문자화에 change만 VOC로 바꾸고, All을 맨 앞에 둔 뒤 라벨 글자수와 알파벳순 정렬), 페이지
+  기본 크기 3, 현재 우선순위 구성(진행 중인 todo와 in_progress만 후보, priority 높은 순과 생성
+  오래된 순 정렬, 상위 4개)은 조합 규칙이라 `SignalTypeLabel`과 `MobilePriority`, 조합 서비스가
+  소유한다(MOM-67).
 - `GET /api/mobile/tasks/{taskId}`: project의 태스크 상세(`TaskReader.findDetail`)와 workspace
   멤버십(태스크가 속한 workspace 기준), user 프로필(담당자 이름)을 조합한다. purpose 개명
   (도메인 description), priority 매핑, 빈 값 고정(materials와 open_questions는 빈 배열,
