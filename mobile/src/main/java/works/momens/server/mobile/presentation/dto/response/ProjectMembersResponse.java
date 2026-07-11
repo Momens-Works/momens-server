@@ -3,8 +3,6 @@ package works.momens.server.mobile.presentation.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.UUID;
-import tools.jackson.databind.PropertyNamingStrategies;
-import tools.jackson.databind.annotation.JsonNaming;
 import works.momens.server.mobile.internal.ProjectMember;
 
 /**
@@ -13,12 +11,10 @@ import works.momens.server.mobile.internal.ProjectMember;
  *
  * <p>신규 Standard 계약이라 {@code avatar_url}은 값이 없어도 null로 항상 포함합니다(bootstrap 전례).
  */
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "프로젝트 멤버 목록 응답")
 public record ProjectMembersResponse(
     @Schema(description = "멤버 목록(이름 오름차순). 검색 결과가 없으면 빈 배열입니다.") List<MemberResponse> members) {
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "프로젝트 멤버 한 명")
   public record MemberResponse(
       @Schema(description = "사용자 식별자", example = "5d2f7f3a-5db1-4f2c-8b9e-13607dd1f5e8") UUID id,
