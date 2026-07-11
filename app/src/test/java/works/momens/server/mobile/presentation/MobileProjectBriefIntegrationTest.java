@@ -227,6 +227,61 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
   }
 
   @Test
+  void keepsSingleFilterAcrossCursorPagesAmongOtherTypes() throws Exception {
+    UserProfile jinsu =
+        userService.findOrCreate("brief-it-filter-page-jinsu@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("brief-filter-page");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "brief-filter-page-project", null, 0, null);
+    // 당일(KST 2026-07-10) 범위 안에 decision과 다른 type을 시간순으로 번갈아 심는다.
+    UUID d4 = insertSignal(workspace, project, "decision", "결정 4", "2026-07-10T05:00:00Z");
+    insertSignal(workspace, project, "risk", "리스크", "2026-07-10T04:30:00Z");
+    UUID d3 = insertSignal(workspace, project, "decision", "결정 3", "2026-07-10T04:00:00Z");
+    insertSignal(workspace, project, "question", "질문", "2026-07-10T03:30:00Z");
+    UUID d2 = insertSignal(workspace, project, "decision", "결정 2", "2026-07-10T03:00:00Z");
+    insertSignal(workspace, project, "change", "VOC", "2026-07-10T02:30:00Z");
+    UUID d1 = insertSignal(workspace, project, "decision", "결정 1", "2026-07-10T02:00:00Z");
+
+    // filter=decision, limit=2로 1페이지에 decision 둘만 담고 next_cursor를 받는다.
+    String firstPageBody =
+        mockMvc
+            .perform(
+                get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
+                    .param("filter", "decision")
+                    .param("limit", "2")
+                    .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                    .header("API-Version", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(2))
+            .andExpect(jsonPath("$.items[0].id").value(d4.toString()))
+            .andExpect(jsonPath("$.items[0].type").value("decision"))
+            .andExpect(jsonPath("$.items[1].id").value(d3.toString()))
+            .andExpect(jsonPath("$.items[1].type").value("decision"))
+            .andExpect(jsonPath("$.next_cursor").isNotEmpty())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String nextCursor = JsonPath.read(firstPageBody, "$.next_cursor");
+
+    // 더보기: 커서로 넘긴 2페이지에도 decision만 이어진다. 사이에 낀 question, change는 새어 들어오지 않는다.
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
+                .param("filter", "decision")
+                .param("limit", "2")
+                .param("cursor", nextCursor)
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(2))
+        .andExpect(jsonPath("$.items[0].id").value(d2.toString()))
+        .andExpect(jsonPath("$.items[0].type").value("decision"))
+        .andExpect(jsonPath("$.items[1].id").value(d1.toString()))
+        .andExpect(jsonPath("$.items[1].type").value("decision"))
+        .andExpect(jsonPath("$.next_cursor", nullValue()));
+  }
+
+  @Test
   void returnsValidationFailedForMalformedCursor() throws Exception {
     UserProfile jinsu = userService.findOrCreate("brief-it-cursor-jinsu@momens.works", "신진수", null);
     UUID workspace = insertWorkspace("brief-cursor");
