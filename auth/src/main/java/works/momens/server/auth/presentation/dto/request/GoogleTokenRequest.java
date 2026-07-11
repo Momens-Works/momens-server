@@ -3,10 +3,7 @@ package works.momens.server.auth.presentation.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import tools.jackson.databind.PropertyNamingStrategies;
-import tools.jackson.databind.annotation.JsonNaming;
 
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "모바일 Google ID 토큰 교환 요청")
 public record GoogleTokenRequest(
     @NotBlank

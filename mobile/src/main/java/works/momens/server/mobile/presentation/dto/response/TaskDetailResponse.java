@@ -3,8 +3,6 @@ package works.momens.server.mobile.presentation.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.UUID;
-import tools.jackson.databind.PropertyNamingStrategies;
-import tools.jackson.databind.annotation.JsonNaming;
 import works.momens.server.mobile.internal.MobileTaskDetail;
 
 /**
@@ -14,7 +12,6 @@ import works.momens.server.mobile.internal.MobileTaskDetail;
  * entity_relations)가 신규 서버에 아직 없어 빈 배열이고, {@code open_questions}와 {@code next_action}은 MVP backing
  * source가 미확정이라 각각 빈 배열, null입니다(명세 합성/파생 필드 응답 정책).
  */
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "태스크 상세 응답")
 public record TaskDetailResponse(
     @Schema(description = "태스크 식별자") UUID id,
@@ -32,28 +29,24 @@ public record TaskDetailResponse(
         List<OpenQuestionResponse> openQuestions,
     @Schema(description = "다음행동. MVP backing source 미확정으로 null") String nextAction) {
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "담당자")
   public record AssigneeResponse(
       @Schema(description = "사용자 식별자") UUID id,
       @Schema(description = "이름") String name,
       @Schema(description = "구글 계정 프로필 이미지. 없으면 null") String avatarUrl) {}
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "완료기준")
   public record ChecklistResponse(
       @Schema(description = "완료된 항목 수") int completedCount,
       @Schema(description = "전체 항목 수") int totalCount,
       @Schema(description = "항목 목록(저장 순서)") List<ChecklistItemResponse> items) {}
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "완료기준 항목")
   public record ChecklistItemResponse(
       @Schema(description = "항목 식별자") UUID id,
       @Schema(description = "항목 제목") String title,
       @Schema(description = "완료 여부") boolean completed) {}
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "관련자료")
   public record MaterialResponse(
       @Schema(description = "자료 식별자") String id,
@@ -63,7 +56,6 @@ public record TaskDetailResponse(
       @Schema(description = "자료 종류") String kind,
       @Schema(description = "원본 문서 링크") String sourceUrl) {}
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "열린질문")
   public record OpenQuestionResponse(
       @Schema(description = "질문 식별자") String id, @Schema(description = "질문 본문") String body) {}

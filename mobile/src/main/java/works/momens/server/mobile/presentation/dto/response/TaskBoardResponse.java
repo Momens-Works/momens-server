@@ -3,8 +3,6 @@ package works.momens.server.mobile.presentation.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.UUID;
-import tools.jackson.databind.PropertyNamingStrategies;
-import tools.jackson.databind.annotation.JsonNaming;
 import works.momens.server.mobile.internal.MobileTaskGroup;
 
 /**
@@ -13,7 +11,6 @@ import works.momens.server.mobile.internal.MobileTaskGroup;
  *
  * <p>제목과 안내 문구는 화면 고정값이고, 그룹은 todo, in_progress, done 순서로 항상 셋을 포함합니다.
  */
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "프로젝트 태스크 보드 응답")
 public record TaskBoardResponse(
     @Schema(description = "화면 제목", example = "프로젝트 태스크") String title,
@@ -23,7 +20,6 @@ public record TaskBoardResponse(
   private static final String BOARD_TITLE = "프로젝트 태스크";
   private static final String BOARD_DESCRIPTION = "업무를 한눈에 확인하고 상세 내용을 확인하세요.";
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "상태 그룹")
   public record GroupResponse(
       @Schema(description = "그룹 키", example = "todo") String groupKey,
@@ -31,7 +27,6 @@ public record TaskBoardResponse(
       @Schema(description = "그룹 태스크 수") int count,
       @Schema(description = "그룹 태스크 목록") List<TaskCardResponse> tasks) {}
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "보드 태스크 카드")
   public record TaskCardResponse(
       @Schema(description = "태스크 식별자") UUID id,

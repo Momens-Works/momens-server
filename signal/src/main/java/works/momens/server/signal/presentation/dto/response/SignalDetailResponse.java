@@ -4,8 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import tools.jackson.databind.PropertyNamingStrategies;
-import tools.jackson.databind.annotation.JsonNaming;
 import works.momens.server.signal.SignalActionService;
 import works.momens.server.signal.SignalDetail;
 
@@ -17,7 +15,6 @@ import works.momens.server.signal.SignalDetail;
  * priority medium)을 내려줍니다. {@code fields}는 MVP에서 항상 빈 목록입니다(근거 없는 값 미생성 정책). action은 미처리 Signal 기준
  * 고정 목록입니다.
  */
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "시그널 상세 응답")
 public record SignalDetailResponse(
     UUID id,
@@ -34,10 +31,8 @@ public record SignalDetailResponse(
   private static final List<String> ACTIONS = List.of("convert-to-task", "dismiss");
   private static final String PRIMARY_ACTION = "convert-to-task";
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public record ProjectRef(UUID id, @Schema(nullable = true) String name) {}
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public record EvidenceResponse(
       UUID id,
       String source,
@@ -47,13 +42,10 @@ public record SignalDetailResponse(
       @Schema(description = "provider별 부가 필드. MVP에서는 항상 빈 목록입니다.") List<FieldResponse> fields,
       @Schema(nullable = true) String sourceUrl) {}
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public record FieldResponse(String label, String value) {}
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public record Minsu(@Schema(nullable = true) String suggestion, TaskDraft taskDraft) {}
 
-  @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   public record TaskDraft(String title, List<String> roles, String priority) {}
 
   public static SignalDetailResponse from(SignalDetail detail) {

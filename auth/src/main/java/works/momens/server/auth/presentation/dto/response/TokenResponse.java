@@ -1,10 +1,7 @@
 package works.momens.server.auth.presentation.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import tools.jackson.databind.PropertyNamingStrategies;
-import tools.jackson.databind.annotation.JsonNaming;
 
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "Access/refresh token 응답")
 public record TokenResponse(
     @Schema(description = "Momens access token") String accessToken,
