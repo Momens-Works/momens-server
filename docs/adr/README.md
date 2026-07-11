@@ -16,3 +16,4 @@
 | [0008](0008-outbox-worker-projection-boundary.md) | Projection 경계: api-server outbox 발행 + worker 소비 | Accepted (notification 부분은 [0009](0009-notification-consumer-ownership.md)로 개정) |
 | [0009](0009-notification-consumer-ownership.md) | Notification 소유권: api-server가 `signal.created` outbox consumer | Accepted |
 | [0010](0010-event-contract-conventions.md) | 이벤트 계약 규약: event_type 네이밍·하위호환성·버저닝 | Accepted |
+| [0011](0011-signal-evidence-and-task-draft-contract.md) | Signal evidence와 task draft 생산·저장 계약 | Accepted |

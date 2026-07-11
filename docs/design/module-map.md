@@ -198,13 +198,17 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 모바일 Signal 원본과 사용자 처리 흐름을 담당한다.
 
 - `signals` 조회 모델: worker가 생성한 Signal 원본을 프로젝트 스코프로 조회한다.
-- `signal_evidence`: Signal과 `source_refs`의 근거 연결을 읽어 모바일 상세 응답을 조립한다.
+- `signal_evidence`: Signal과 `source_refs`의 근거 연결 및 근거별 `대상`·`변화`·`영향`을 읽어 모바일
+  상세 응답을 조립한다. 의미 값은 worker 또는 같은 backing 계약의 fixture가 생산한다(ADR-0011).
 - `signal_actions`: 사용자의 `convert-to-task`, `dismiss` 처리 기록과 멱등성을 소유한다.
 - Signal 목록/상세 및 action API를 소유한다. 경로가 `/api/mobile/*`여도 Signal 도메인 정책과
   영속성은 `mobile`이 아니라 이 모듈에 둔다.
 - 브리프(MOM-67)가 쓰는 미처리 요약의 커서 페이지 조회와 타입별 개수 집계도
   `SignalListService`가 소유한다. 정렬 기준과 커서 규칙도 이 모듈이 정한다. 어떤 type을
   노출할지는 호출하는 표면이 정한다.
+- body 없는 `convert-to-task`는 태스크 등록 시점에 민수가 생성하는 task draft를 입력으로 사용한다.
+  민수(서버 내 모듈로 구현 예정)가 구현되기 전에는 고정 목 draft(title=Signal title, role=`pm`,
+  priority=`medium`)를 쓰고, draft는 `signals` backing에 저장하지 않는다(ADR-0011).
 - Signal action 결과 outbox 발행 계약을 소유한다. projection 경로의 outbox 소비 상태, 재시도, DLQ는
   worker 책임이고, retrieval indexing 상태는 retrieval 책임이다.
 - Signal 발생 push notification은 api-server가 worker의 `signal.created` outbox를 소비해 발송한다
@@ -217,8 +221,8 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 내부는 도메인 하위 경계로 논리 분리한다(MOM-65). Signal 조회(`query`)와 action(`action`)은 각각
 Spring Modulith nested 논리 모듈이고, `project`의 `task`와 같은 방식을 따른다: 공개 계약(조회는
 `SignalListService`·`SignalDetailService`·`SignalReader` 인터페이스와 `SignalDetail`·
-`SignalSummary`, `SignalSummaryPage`, `SignalSnapshot` 레코드, action은 `SignalActionService` 인터페이스와
-`SignalActionResult`·`ConvertToTaskCommand` 레코드)은 모듈 root에 두고, 구현체(`*Impl`)와
+`SignalSummary`, `SignalSummaryPage`, `SignalSnapshot` 레코드, action은 `SignalActionService`
+인터페이스와 `SignalActionResult` 레코드)는 모듈 root에 두고, 구현체(`*Impl`)와
 엔티티·리포지토리만 각 nested 패키지 안에 package-private로 은닉한다. nested 모듈이 자기 구현에서
 root의 타입(`SignalErrorCode` 등)을 참조하는 것은 단방향(query/action → root)이라 순환이 아니다 —
 presentation(모듈 root)이 nested 모듈의 구현 타입을 직접 참조하는 반대 방향의 의존이 생겼을 때만

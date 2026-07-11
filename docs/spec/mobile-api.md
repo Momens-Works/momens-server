@@ -36,10 +36,9 @@
 | `evidence.source` | `slack`, `github`, `figma`, `notion`, `file` |
 | `action_command` | `convert-to-task`, `dismiss` |
 | `action` | `convert_to_task`, `dismiss` |
-| `primary_action` | `convert-to-task` |
 
-`action_command`는 상세 응답의 `actions[]`와 path segment에 쓰는 명령 값입니다. `action`은 action 처리 결과와
-저장 ledger의 enum 값입니다.
+`action_command`는 action endpoint의 path segment에 쓰는 명령 값입니다. `action`은 action 처리 결과와 저장
+ledger의 enum 값입니다.
 
 Signal type 기반 화면 라벨은 앱이 다음처럼 파생합니다. 이 라벨은 처리 상태나 목록 필터가 아닙니다.
 
@@ -274,8 +273,13 @@ MVP에서는 아직 처리되지 않은 시그널만 반환합니다. `convert-t
 카드의 `Needs action`, `Needs review`, `Needs decision` 라벨은 응답의 `type`에서 앱이 파생합니다. 서버가
 별도 처리 상태 필드를 내려주지 않습니다.
 
-`impact`는 프로젝트에 미칠 영향 요약이며 목록 카드의 보조 문구로도 사용합니다. `impact`, `minsu_suggestion`은
-worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. 서버는 근거 없는 문구를 임의 생성하지 않습니다.
+`impact`는 프로젝트에 미칠 영향 요약이며 목록 카드의 보조 문구로도 사용합니다. `impact`는 worker가
+Signal과 함께 생산하고, worker가 준비되지 않은 MVP 환경에서는 같은 backing 계약의 fixture가 채웁니다.
+`minsu_suggestion`은 민수 산출물이며, 민수(서버 내 모듈로 구현 예정)가 구현되기 전에는 목으로
+처리합니다. 서버는 근거 없는 문구를 임의 생성하지 않습니다.
+
+응답 항목에서는 `project_id`를 생략하지만 Signal backing의 `project_id`는 유지합니다. 서버가 경로의 프로젝트로
+목록을 필터링하고, 원탭 전환 시 task를 어느 프로젝트에 만들지 결정하는 내부 귀속 정보이기 때문입니다.
 
 #### Response 200
 
@@ -286,7 +290,6 @@ worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. 서
   "signals": [
     {
       "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
-      "project_id": "30d9e9fe-f43b-4097-a88e-dc19f0a5b025",
       "type": "risk",
       "title": "Android 13+ 권한 요청 플로우에서 이탈 가능성 발견",
       "impact": "MVP 완료율과 온보딩 품질에 영향을 줄 수 있습니다.",
@@ -314,44 +317,38 @@ worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. 서
 ```json
 {
   "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
-  "project": {
-    "id": "30d9e9fe-f43b-4097-a88e-dc19f0a5b025",
-    "name": "Q2 Activation Readiness"
-  },
   "type": "risk",
   "title": "Android 13+ 권한 요청 플로우에서 이탈 가능성 발견",
-  "description": "Android 13 이상에서 권한 요청 타이밍이 늦어져 사용자가 기능 가치를 이해하기 전에 이탈할 수 있습니다.",
   "impact": "MVP 완료율과 온보딩 품질에 영향을 줄 수 있습니다.",
   "evidence": [
     {
-      "id": "evidence-uuid",
+      "source_ref_id": "source-ref-uuid",
       "source": "figma",
-      "source_title": "권한 요청 화면 v2",
       "occurred_at": "2026-06-28T09:48:00+09:00",
-      "summary": "설명 문구 변경으로 이탈 가능성이 있습니다.",
-      "fields": [],
+      "details": {
+        "target": "권한 요청 화면",
+        "change": "권한 요청 단계 이탈률 증가",
+        "impact": "회원가입 완료율 저하 가능"
+      },
       "source_url": "https://..."
     }
   ],
-  "minsu": {
-    "suggestion": "내용이 들어갈 공간입니다",
-    "task_draft": {
-      "title": "Android 13+ 권한 요청 플로우 점검",
-      "role": "frontend",
-      "priority": "medium"
-    }
-  },
-  "actions": ["convert-to-task", "dismiss"],
-  "primary_action": "convert-to-task"
+  "minsu_suggestion": "권한 요청 시점을 다시 검토해보세요."
 }
 ```
 
-`description`은 Signal 상세 본문이고, `impact`는 프로젝트에 미칠 영향 요약입니다. `impact`와
-`minsu.suggestion`은 worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있습니다. `minsu.task_draft`는
-worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안을 제공할 수 있습니다.
+`impact`는 Signal 전체가 프로젝트에 미칠 영향 요약입니다. `evidence[].details.impact`는 해당 근거 한 건에서
+관찰한 영향이라 범위가 다릅니다. `details.target`, `details.change`, `details.impact`는 worker 또는 같은 backing
+계약의 fixture가 생산하며 각 값은 공백 포함 30자 이하입니다. 서버는 값을 자르거나 임의 생성하지 않습니다.
 
-`evidence[].fields`는 provider별 부가 필드를 위한 자리이며, MVP에서는 항상 빈 배열입니다. 근거 없는 값을
-임의로 채우지 않고, source type별 필드 투영은 후속으로 둡니다.
+근거 행 헤더는 도구 이름(`source`)으로 표시하므로 원천 문서 제목(`source_title`)은 내려주지 않습니다.
+`occurred_at`, `source_url`은 원천에 값이 없으면 `null`일 수 있습니다. 상대 시간 라벨은 앱이
+`occurred_at`으로 렌더합니다. 근거 개수에 따른 펼침·접힘·빈 상태도 앱이 담당합니다.
+
+project는 모바일의 현재 context로 고정되어 있고, description·task draft·action 목록은 상세 화면에서 사용하지
+않으므로 응답하지 않습니다. 이는 응답 계약에서만 제외하는 것이며 backing의 `project_id`는 목록 필터와 task
+귀속에 계속 사용합니다. 처리된 Signal을 다시 보는 inbox는 MVP 이후 범위이므로 이미 처리된 Signal도
+`SIGNAL_NOT_FOUND`로 응답합니다.
 
 #### Errors
 
@@ -362,22 +359,13 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
 
 ### POST /api/mobile/signals/{signalId}/actions/convert-to-task
 
-시그널을 태스크로 등록합니다.
+시그널을 원탭으로 태스크에 등록합니다. 요청 body는 없습니다.
 
-#### Request
+서버는 태스크 등록 시점에 민수가 생성하는 task draft(`title`, `role`, `priority`)를 사용합니다. 민수는
+서버 내 모듈로 구현 예정이며, 구현되기 전 MVP에서는 고정 목 draft를 사용합니다: `title`은 Signal title,
+`role`은 `pm`, `priority`는 `medium`. draft는 Signal backing에 저장하지 않습니다.
 
-`title`은 생략하면 시그널 제목을, `priority`는 생략하면 `medium`을 씁니다. `role`은 서버가
-채울 수 있는 값이 없어(시그널 상세의 `minsu.task_draft.roles`는 항상 빈 배열) 보내지 않으면
-`COMMON_VALIDATION_FAILED`를 반환합니다 — 사실상 필수입니다. `title`은 값을 보낸다면 공백일
-수 없습니다.
-
-```json
-{
-  "title": "Android 13+ 권한 요청 플로우 점검",
-  "role": "frontend",
-  "priority": "medium"
-}
-```
+클라이언트는 title·role·priority를 선택하거나 전송하지 않습니다.
 
 #### Response 201
 
@@ -385,7 +373,7 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
 {
   "task": {
     "id": "new-task-uuid",
-    "title": "Android 13+ 권한 요청 플로우 점검",
+    "title": "Android 13+ 권한 요청 플로우에서 이탈 가능성 발견",
     "status": "todo"
   },
   "signal": {
@@ -403,7 +391,7 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
 {
   "task": {
     "id": "existing-task-uuid",
-    "title": "Android 13+ 권한 요청 플로우 점검",
+    "title": "Android 13+ 권한 요청 플로우에서 이탈 가능성 발견",
     "status": "todo"
   },
   "signal": {
@@ -419,7 +407,6 @@ worker/Minsu 산출물이 없으면 서버가 Signal title 기반 최소 초안�
 - `AUTH_INVALID_TOKEN`
 - `SIGNAL_NOT_FOUND`
 - `SIGNAL_INVALID_STATE`
-- `COMMON_VALIDATION_FAILED`
 - `AUTH_FORBIDDEN`
 
 ### POST /api/mobile/signals/{signalId}/actions/dismiss
