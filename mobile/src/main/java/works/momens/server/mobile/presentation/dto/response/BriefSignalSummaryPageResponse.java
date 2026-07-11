@@ -13,7 +13,7 @@ import works.momens.server.mobile.internal.MobileBriefSignalPage;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Schema(description = "브리프 시그널 요약 페이지 응답")
 public record BriefSignalSummaryPageResponse(
-    @Schema(description = "미처리 시그널 요약 최신순 페이지") List<BriefResponse.SignalItemResponse> items,
+    @Schema(description = "당일 시그널 요약 최신순 페이지") List<BriefResponse.SignalItemResponse> items,
     @Schema(description = "다음 페이지 커서. 다음 페이지가 없으면 null로 포함됩니다.", nullable = true)
         String nextCursor) {
 

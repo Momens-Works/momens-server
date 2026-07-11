@@ -36,7 +36,7 @@ public record BriefResponse(
           String summary,
       @Schema(description = "필터 칩 목록. all이 맨 앞이고 나머지는 라벨 글자수 오름차순과 알파벳순")
           List<FilterResponse> filters,
-      @Schema(description = "미처리 시그널 요약 최신순 첫 페이지") List<SignalItemResponse> items,
+      @Schema(description = "당일 시그널 요약 최신순 첫 페이지") List<SignalItemResponse> items,
       @Schema(description = "다음 페이지 커서. 다음 페이지가 없으면 null로 포함됩니다.", nullable = true)
           String nextCursor) {}
 
@@ -45,7 +45,7 @@ public record BriefResponse(
   public record FilterResponse(
       @Schema(description = "필터 키", example = "all") String key,
       @Schema(description = "화면 라벨", example = "All") String label,
-      @Schema(description = "해당 type의 미처리 시그널 수. all은 노출 type 전체 합") long count) {}
+      @Schema(description = "해당 type의 당일 시그널 수. all은 노출 type 전체 합") long count) {}
 
   @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "현재 우선순위 항목")
