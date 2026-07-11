@@ -60,7 +60,7 @@ Momens Mobile은 기존 웹 기능을 축소 이식하는 앱이 아니다. 모�
 | Signal / 신호 | 프로젝트 목표, 일정, 범위, 품질, 의사결정, 실행 흐름에 영향을 줄 수 있어 사람이 검토해야 하는 변화 |
 | Signal 표시 라벨 | 화면에서 Signal type을 묶어 보여주는 라벨. `risk`/`change`는 `Needs action`, `decision`은 `Needs review`, `question`은 `Needs decision`으로 표현한다. 처리 상태나 목록 필터가 아니다 |
 | Evidence / 근거 | 신호 판단을 뒷받침하는 출처 기반 정보 |
-| Minsu draft | 민수가 생성한 사용자 확정 액션용 초안. 최종 task/decision이 아니다 |
+| Task draft | 민수가 태스크 등록 시점에 생성하는 사용자 확정 액션용 초안. 최종 task가 아니다 |
 | Minsu suggestion | 신호를 바탕으로 민수가 제안하는 다음 행동 |
 | Brief / 브리프 | 프로젝트 상태와 최근 맥락을 짧게 요약한 화면 단위 |
 | Task / 태스크 | 담당자와 상태를 가지고 진행되는 실행 항목 |
@@ -193,7 +193,11 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 - 처리된 Signal(`convert-to-task` 또는 `dismiss`)을 다시 조회하거나 필터링하는 흐름은 MVP에서 제공하지 않는다.
 - 목록 응답은 신호 카드 렌더링에 필요한 정보를 포함해야 한다.
 - 목록 응답은 type, title, impact, Minsu suggestion을 표현할 수 있어야 한다.
-- impact와 Minsu suggestion은 worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있다.
+- project는 요청 경로로 고정되므로 Signal 항목마다 project id를 반복하지 않는다.
+- Signal backing의 project id는 목록 필터와 convert-to-task의 task 귀속에 필요하므로 서버 내부에는 유지한다.
+- impact는 worker가 Signal과 함께 생산하며, worker가 준비되지 않은 MVP 환경에서는 같은 backing
+  계약의 fixture가 채운다.
+- Minsu suggestion은 민수 산출물이며, 민수(서버 내 모듈로 구현 예정)가 구현되기 전에는 목으로 처리한다.
 - 화면의 `Needs action`, `Needs review`, `Needs decision` 라벨은 Signal type에서 파생한다.
 
 ### R-READ-002. 신호 상세 조회
@@ -201,9 +205,13 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 서버는 신호 1건의 상세를 조회할 수 있어야 한다.
 
 - 경로: `GET /api/mobile/signals/{signalId}`
-- 상세 응답은 신호 본문(description), 근거 목록, Minsu suggestion, 가능한 action(`convert-to-task`, `dismiss`)을
-  표현할 수 있어야 한다.
-- 상세 응답의 impact와 Minsu suggestion은 worker/Minsu가 아직 생산하지 않았으면 `null`일 수 있다.
+- 상세 응답은 type, title, Signal 전체의 impact, 근거 목록, Minsu suggestion을 표현할 수 있어야 한다.
+- project·description·task draft·가능한 action 목록은 모바일 상세 화면에서 사용하지 않으므로 응답하지 않는다.
+- 근거는 source 정보와 `대상`, `변화`, `영향`을 포함해야 한다. 세 의미 값은 worker 또는 동일 backing
+  계약의 fixture가 생산하고, 각각 공백 포함 30자 이하로 제한한다(화면설계서 기준).
+- 근거 행 헤더는 도구 이름으로 표시하므로 원천 문서 제목은 응답에 포함하지 않는다.
+- 상대 시간 라벨은 서버가 생성하지 않고 앱이 `occurred_at`으로 렌더한다.
+- 처리된 Signal을 다시 보는 inbox가 MVP 이후 범위이므로 상세 조회도 미처리 Signal만 대상으로 한다.
 - 상세 화면의 `Needs action` 등 상단 라벨은 처리 상태가 아니라 Signal type 기반 표시 라벨이다.
 - 근거는 원천 도구를 모두 열지 않아도 사용자가 판단할 수 있는 형태로 제공되어야 한다.
 
@@ -255,6 +263,11 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 서버는 신호를 태스크로 전환할 수 있어야 한다.
 
 - 경로: `POST /api/mobile/signals/{signalId}/actions/convert-to-task`
+- 요청 body를 받지 않는 원탭 action이다.
+- 태스크에 사용할 draft(title, role, priority)는 태스크 등록 시점에 민수가 생성한다. 민수 구현 전
+  MVP에서는 고정 목 draft(title=Signal title, role=`pm`, priority=`medium`)를 사용한다.
+- task draft role은 `pm`, `design`, `backend`, `frontend` 중 하나여야 한다.
+- task draft priority는 `low`, `medium`, `high` 중 하나여야 한다.
 - 서버는 최종 task를 생성해야 한다.
 - 서버는 Signal이 처리되었음을 기록하고, 이후 MVP Signal 목록에서 제외해야 한다.
 - 서버는 projection 처리를 위한 outbox 이벤트를 발행해야 한다.
@@ -317,19 +330,20 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 | `next_action` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `null` |
 | `signal_summary.summary` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `null` |
 
-서버는 backing source 또는 확정된 합성 규칙이 없는 값을 임의 생성하지 않는다. 후속 버전에서
-worker 산출물 저장 구조가 확정되면 backing source를 별도 설계한다.
+서버는 backing source가 없는 값을 임의 생성하지 않는다. worker가 준비되지 않은 MVP 환경에서는
+production 코드 분기 대신 worker와 같은 backing 계약의 fixture를 사용한다. 민수 산출물(Minsu
+suggestion, task draft)을 민수 구현 전까지 목으로 처리하는 것은 이 원칙의 명시적 예외다(ADR-0011).
 
 ## Signal 요구사항
 
 - Signal은 모바일 API가 안정적으로 조회하고 액션 대상으로 참조할 수 있는 형태로 저장되어야 한다.
 - Signal 생성은 worker가 담당해야 한다.
-- 풍부한 Minsu suggestion/draft 생성은 worker/Minsu 산출물로 후속 확장하되, MVP convert 기본값은
-  Signal title 기반 최소 초안으로 제공할 수 있어야 한다.
+- Minsu suggestion과 task draft는 민수 산출물이다. 민수는 서버 내 모듈로 구현할 계획이며, 구현되기
+  전에는 목으로 처리한다.
 - Signal type은 `risk`, `decision`, `change`, `question`을 지원해야 한다.
 - VOC는 MVP에서 독립 Signal type으로 두지 않고 `change`의 화면 표시명으로 표현해야 한다.
 - Signal은 사용자가 어떤 검토를 해야 하는지 표현할 수 있어야 한다.
-- Signal description은 상세 화면의 본문으로 제공되어야 한다.
+- Signal description은 backing에 보존할 수 있지만 모바일 상세 응답에는 노출하지 않는다.
 - 화면 표시 라벨은 Signal type에서 파생한다. `risk`/`change`는 `Needs action`, `decision`은
   `Needs review`, `question`은 `Needs decision`이다.
 - 화면설계서의 카테고리 표시는 Signal type에서 파생한다. `risk`는 `Risk`, `decision`은 `Decision`,
@@ -340,17 +354,21 @@ worker 산출물 저장 구조가 확정되면 backing source를 별도 설계�
 - 모바일 MVP의 Signal 목록은 처리되지 않은 Signal만 반환하며, 처리된 Signal을 다시 보는 흐름은 제공하지 않는다.
 - MVP에서 Signal을 처리하는 action은 `convert-to-task`와 `dismiss`다. 화면의 `삭제` 버튼은 `dismiss` action으로
   처리한다.
-- Signal 상세는 하나 이상의 근거를 표현할 수 있어야 한다.
-- Signal은 Minsu draft를 가질 수 있어야 한다.
+- Signal 상세는 근거 목록을 표현할 수 있어야 하며, 개수별 펼침·접힘·빈 상태는 모바일이 담당한다.
+- Signal backing에는 task draft를 저장하지 않는다. draft는 태스크 등록 시점에 생성한다.
 
-## Minsu draft 요구사항
+## Task draft 요구사항
 
-- Minsu draft는 최종 task/decision이 아니라 사용자 확정 액션용 초안이다.
-- Minsu draft는 `convert-to-task` 실행 시 기본값으로 사용될 수 있어야 한다.
-- worker/Minsu가 풍부한 draft를 아직 생산하지 않으면 서버는 Signal title 기반 최소 초안(`priority: medium`)을
-  제공할 수 있다. role은 단일 필수값이라(MOM-76) 최소 초안이 role을 추론할 수 없으면 그 처리는 convert-to-task
-  설계에서 확정한다.
-- 사용자의 확정 액션이 있기 전까지 Minsu draft는 프로젝트의 확정된 기억이나 실행 항목으로 간주하지 않는다.
+- Task draft는 최종 task가 아니라 사용자 원탭 action을 위한 초안이다.
+- draft(title, role, priority)는 민수 산출물이며, Signal 생성 시점이 아니라 태스크 등록
+  (`convert-to-task`) 시점에 생성한다. Signal backing에는 저장하지 않는다.
+- 민수는 서버 내 모듈로 구현할 계획이다. 민수가 구현되기 전 MVP에서는 api-server가 고정 목
+  draft(title=Signal title, role=`pm`, priority=`medium`)를 사용한다.
+- api-server는 draft를 모바일 상세 응답에 노출하지 않고 body 없는 `convert-to-task`의 입력으로만
+  사용한다.
+- 사용자의 확정 action이 있기 전까지 task draft는 프로젝트의 실행 항목으로 간주하지 않는다.
+
+생산 책임과 대안 비교는 [ADR-0011](../adr/0011-signal-evidence-and-task-draft-contract.md)을 따른다.
 
 ## Outbox 요구사항
 
@@ -400,7 +418,7 @@ worker 산출물 저장 구조가 확정되면 backing source를 별도 설계�
 - Outbox 테이블의 상세 스키마(이 문서는 제품/API 요구사항만 다루며, DB 상세 스키마는 별도 설계 산출물에서 관리한다)
 - worker outbox 소비 상태, 재시도, DLQ 설계
 - FCM 디바이스 토큰 등록/해제 API 계약(경로, 요청 body, 토큰 회전/중복/폐기 정책)
-- Signal 목록/상세 텍스트 글자 수 제한의 책임 경계(서버/worker 생성 제한인지, 앱 표시 truncation 규칙인지)
+- Minsu suggestion 목 문구의 구체 값과 민수 모듈의 상세 경계(민수 구현 시 후속 확정)
 - 태스크 상세 확장 필드가 비어 있을 때의 구체 응답 값 정책
 - bootstrap의 project 0개 응답 정책의 확정(R-READ-000의 2026-07-04 가결정안으로 구현했고, 기획
   확인 후 확정한다. 기본 project 선정 규칙은 2026-07-04에 기획이 임의 1개로 확인해 줬다)
