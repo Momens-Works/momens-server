@@ -10,6 +10,7 @@ ext {
     springModulithVersion = '2.1.0'
     springdocVersion = '3.0.3'
     springDotenvVersion = '5.1.0'
+    openapiRequestValidatorVersion = '3.0.0'
 }
 
 dependencies {
@@ -73,4 +74,6 @@ dependencies {
     testImplementation testFixtures(project(':common'))
     // 보안 통합테스트용 access token 팩토리(auth public testFixtures). auth.internal 직접 참조를 피합니다.
     testImplementation testFixtures(project(':auth'))
+    // 실제 request/response를 /v3/api-docs 스펙과 대조하는 계약 검증(문서-응답 드리프트 방지).
+    testImplementation "com.atlassian.oai:openapi-request-validator-mockmvc:${openapiRequestValidatorVersion}"
 }
