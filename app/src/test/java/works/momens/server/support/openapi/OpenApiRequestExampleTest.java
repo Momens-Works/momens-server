@@ -65,9 +65,10 @@ class OpenApiRequestExampleTest extends AbstractPostgresIntegrationTest {
   }
 
   /**
-   * DTO의 Jackson 3 {@code @JsonNaming}을 swagger-core가 읽지 못해 스키마 property가 camelCase로 나오던 문제를,
-   * swagger-core의 ObjectMapper에 snake_case 전략을 걸어(전역) 고쳤다. 새 DTO/필드가 camelCase 키로 새면 실제 wire
-   * format(snake_case)과 문서가 어긋나므로, 전체 스키마를 스캔해 회귀를 막는다.
+   * 런타임 snake_case를 swagger-core가 따라가지 못해 스키마 property가 camelCase로 나오던 문제를, swagger-core의
+   * ObjectMapper에 snake_case 전략을 걸어(전역, {@code OpenApiConfig}) 고쳤다. 새 DTO/필드가 camelCase 키로 새면 실제
+   * wire format(snake_case)과 문서가 어긋나므로, 전체 스키마를 스캔해 회귀를 막는다. 런타임 쪽 같은 검증은 {@code
+   * OpenApiActualResponseContractTest}가 실제 응답으로 수행한다.
    */
   @Test
   void allSchemaPropertyKeysAreSnakeCase() throws Exception {
