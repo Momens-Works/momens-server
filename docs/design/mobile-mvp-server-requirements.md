@@ -159,7 +159,7 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 | 영역 | 기능 | 우선순위 | 1차 범위 | 비고 |
 | --- | --- | --- | --- | --- |
 | Mobile Signal | Signal 목록/상세 조회, convert-to-task, dismiss | MVP | 포함 | 최신 Figma 기준 핵심 흐름 |
-| Mobile Brief | 프로젝트 브리프 조회 | MVP | 포함 | 모바일 홈 역할 |
+| Mobile Brief | 프로젝트 브리프 조회 | MVP | 포함 | 프로젝트 상태와 최근 맥락 요약 탭 |
 | Mobile Task | 태스크 보드/생성/상세/수정/체크리스트 토글 | MVP | 포함 | 프로젝트 탭 핵심 흐름 |
 | Mobile API Contract | `/api/mobile/*`, API-Version, 표준 에러, snake_case, no wrapper | 필수 | 포함 | 모바일팀 병렬 개발을 위한 계약 |
 | Auth / Bootstrap | 기존 인증 API 재사용, 모바일 bootstrap | 필수 | 포함 | 앱 진입 필수 |
@@ -220,7 +220,7 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 서버는 프로젝트 브리프를 조회할 수 있어야 한다.
 
 - 경로: `GET /api/mobile/projects/{projectId}/brief`
-- 브리프는 모바일 홈 역할을 한다.
+- 브리프는 프로젝트 상태와 최근 맥락을 짧게 요약해 보여주는 탭이다(홈 탭은 신호).
 - 응답은 프로젝트 스냅샷, 시그널 요약 문단(`signal_summary.summary`), signal summary
   filter/dropdown, 우선순위를 표현할 수 있어야 한다. (2026-07-10 화면설계서 기준으로 종전
   "리뷰 요약"을 시그널 요약 문단으로 정리했다.)
