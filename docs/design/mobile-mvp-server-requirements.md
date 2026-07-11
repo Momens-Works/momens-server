@@ -218,7 +218,8 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
   "리뷰 요약"을 시그널 요약 문단으로 정리했다.)
 - 시그널 요약의 필터 전환과 더보기는 커서 기반 페이지네이션으로 제공한다(2026-07-10 확정,
   하위 엔드포인트 `GET .../brief/signal-summary`).
-- 브리프 signal summary는 `change`(VOC) 신호를 노출하지 않는다. 필터는 `all`, `decisions`, `risks`, `questions`만 둔다.
+- 브리프 signal summary는 `change`(VOC)를 포함해 저장된 모든 type을 노출한다(2026-07-10 기획
+  갱신으로 종전 change 제외를 번복). 필터 칩은 시그널에 있는 type으로 데이터 기반 구성한다.
 
 ### R-READ-004. 프로젝트 태스크 목록 조회
 

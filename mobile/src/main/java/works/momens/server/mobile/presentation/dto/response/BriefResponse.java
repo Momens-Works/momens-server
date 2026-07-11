@@ -58,7 +58,7 @@ public record BriefResponse(
   @Schema(description = "시그널 요약 항목")
   public record SignalItemResponse(
       @Schema(description = "signal 식별자") UUID id,
-      @Schema(description = "signal type. decision/risk/question 중 하나", example = "decision")
+      @Schema(description = "signal type. change, decision, risk, question 등이 온다", example = "risk")
           String type,
       @Schema(description = "제목") String title) {}
 
