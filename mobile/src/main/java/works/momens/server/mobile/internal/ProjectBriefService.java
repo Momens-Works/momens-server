@@ -1,5 +1,6 @@
 package works.momens.server.mobile.internal;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -81,7 +82,8 @@ public class ProjectBriefService {
           CommonErrorCode.AUTH_FORBIDDEN, Map.of("project_id", projectId.toString()));
     }
     // 브리프는 오늘의 브리프라 그날 온 시그널을 처리 여부와 무관하게 센다(MOM-81).
-    BriefDay.Range today = BriefDay.today(mobileClock.clock());
+    LocalDate anchor = BriefDay.today(mobileClock.clock());
+    BriefDay.Range today = BriefDay.rangeOf(anchor);
     Map<String, Long> countsByType =
         signalListService.countByCreatedRange(projectId, userId, today.from(), today.toExclusive());
     // filter=all은 type을 가리지 않고 전체를 조회하므로 null을 넘긴다. change도 items에 포함된다.
@@ -92,7 +94,7 @@ public class ProjectBriefService {
         snapshot,
         toFilterCounts(countsByType),
         toItems(firstPage.items()),
-        firstPage.nextCursor(),
+        nextCursor(anchor, firstPage),
         toPriorities(taskReader.listTasksByStatus(projectId, PRIORITY_STATUSES)));
   }
 
@@ -104,17 +106,27 @@ public class ProjectBriefService {
         filterKey == null || filterKey.isBlank() || SignalTypeLabel.ALL_KEY.equals(filterKey)
             ? null
             : List.of(filterKey);
-    BriefDay.Range today = BriefDay.today(mobileClock.clock());
+    // 커서가 있으면 첫 페이지에서 정한 기준일을 그대로 쓰고, 없으면(직접 첫 페이지 조회) 오늘로 앵커를 잡는다.
+    // 이렇게 하면 페이지네이션 도중 자정을 넘겨도 창이 밀리지 않는다.
+    boolean hasCursor = cursor != null && !cursor.isBlank();
+    BriefSignalCursor position = hasCursor ? BriefSignalCursor.decode(cursor) : null;
+    LocalDate anchor = hasCursor ? position.anchor() : BriefDay.today(mobileClock.clock());
+    BriefDay.Range window = BriefDay.rangeOf(anchor);
     SignalSummaryPage page =
         signalListService.listByCreatedRange(
             projectId,
             userId,
             types,
-            today.from(),
-            today.toExclusive(),
-            cursor,
+            window.from(),
+            window.toExclusive(),
+            hasCursor ? position.signalCursor() : null,
             resolvePageSize(limit));
-    return new MobileBriefSignalPage(toItems(page.items()), page.nextCursor());
+    return new MobileBriefSignalPage(toItems(page.items()), nextCursor(anchor, page));
+  }
+
+  /** signal 커서를 기준일 앵커와 함께 감싼다. 다음 페이지가 없으면 null이다. */
+  private static String nextCursor(LocalDate anchor, SignalSummaryPage page) {
+    return page.nextCursor() == null ? null : BriefSignalCursor.encode(anchor, page.nextCursor());
   }
 
   private static int resolvePageSize(Integer limit) {

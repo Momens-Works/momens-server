@@ -227,6 +227,48 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
   }
 
   @Test
+  void keepsTodayWindowAcrossMidnightWhenPaginating() throws Exception {
+    UserProfile jinsu =
+        userService.findOrCreate("brief-it-midnight-jinsu@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("brief-midnight");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "brief-midnight-project", null, 0, null);
+    // 모두 당일(KST 2026-07-10) 범위 안. 첫 페이지에서 최신 3개를 보고 남은 가장 오래된 하나를 커서로 잇는다.
+    UUID oldest = insertSignal(workspace, project, "decision", "가장 오래된 결정", "2026-07-10T01:00:00Z");
+    insertSignal(workspace, project, "risk", "리스크", "2026-07-10T02:00:00Z");
+    insertSignal(workspace, project, "question", "질문", "2026-07-10T03:00:00Z");
+    insertSignal(workspace, project, "decision", "최신 결정", "2026-07-10T04:00:00Z");
+
+    String firstPageBody =
+        mockMvc
+            .perform(
+                get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
+                    .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                    .header("API-Version", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(3))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String nextCursor = JsonPath.read(firstPageBody, "$.next_cursor");
+
+    // 더보기 요청이 자정을 넘겨 다음 날(KST 2026-07-11)에 도착해도, 커서에 실린 기준일로 같은 창을 복원한다.
+    when(mobileClock.clock())
+        .thenReturn(Clock.fixed(Instant.parse("2026-07-11T12:00:00Z"), ZoneOffset.UTC));
+
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
+                .param("cursor", nextCursor)
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(1))
+        .andExpect(jsonPath("$.items[0].id").value(oldest.toString()))
+        .andExpect(jsonPath("$.next_cursor", nullValue()));
+  }
+
+  @Test
   void keepsSingleFilterAcrossCursorPagesAmongOtherTypes() throws Exception {
     UserProfile jinsu =
         userService.findOrCreate("brief-it-filter-page-jinsu@momens.works", "신진수", null);
