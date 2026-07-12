@@ -61,8 +61,8 @@ class ProjectBriefControllerTest {
                     "목표일까지 Q2 Activation Readiness 범위의 회원 가입 MVP를 안정적으로 릴리즈한다."),
                 List.of(
                     new MobileBrief.FilterCount("all", "All", 12L),
-                    new MobileBrief.FilterCount("change", "VOC", 7L),
                     new MobileBrief.FilterCount("risk", "Risk", 1L),
+                    new MobileBrief.FilterCount("change", "Change", 7L),
                     new MobileBrief.FilterCount("decision", "Decision", 2L),
                     new MobileBrief.FilterCount("question", "Question", 2L)),
                 List.of(new MobileBrief.SignalItem(SIGNAL_ID, "change", "권한 요청 반복 문의")),
@@ -88,9 +88,9 @@ class ProjectBriefControllerTest {
         .andExpect(jsonPath("$.signal_summary.filters[0].key").value("all"))
         .andExpect(jsonPath("$.signal_summary.filters[0].label").value("All"))
         .andExpect(jsonPath("$.signal_summary.filters[0].count").value(12))
-        .andExpect(jsonPath("$.signal_summary.filters[1].key").value("change"))
-        .andExpect(jsonPath("$.signal_summary.filters[1].label").value("VOC"))
-        .andExpect(jsonPath("$.signal_summary.filters[1].count").value(7))
+        .andExpect(jsonPath("$.signal_summary.filters[2].key").value("change"))
+        .andExpect(jsonPath("$.signal_summary.filters[2].label").value("Change"))
+        .andExpect(jsonPath("$.signal_summary.filters[2].count").value(7))
         .andExpect(jsonPath("$.signal_summary.items.length()").value(1))
         .andExpect(jsonPath("$.signal_summary.items[0].id").value(SIGNAL_ID.toString()))
         .andExpect(jsonPath("$.signal_summary.items[0].type").value("change"))
