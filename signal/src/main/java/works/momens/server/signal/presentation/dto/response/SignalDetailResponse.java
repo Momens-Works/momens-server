@@ -31,7 +31,10 @@ public record SignalDetailResponse(
       @Schema(nullable = true) String sourceUrl) {}
 
   @Schema(description = "근거의 대상·변화·영향. signal_evidence가 소유하며 각 값은 공백 포함 30자 이하입니다.")
-  public record Details(String target, String change, String impact) {}
+  public record Details(
+      @Schema(nullable = true, maxLength = 30) String target,
+      @Schema(nullable = true, maxLength = 30) String change,
+      @Schema(nullable = true, maxLength = 30) String impact) {}
 
   public static SignalDetailResponse from(SignalDetail detail) {
     return new SignalDetailResponse(
