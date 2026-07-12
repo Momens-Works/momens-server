@@ -29,7 +29,7 @@ jobs:
           fi
 
           # 템플릿 안내 주석의 예시 라벨·URL이 실제 입력으로 오인되지 않도록 제거합니다.
-          PR_BODY_VISIBLE="$(sed '/<!--/,/-->/d' <<<"$PR_BODY")"
+          PR_BODY_VISIBLE="$(perl -0777 -pe 's/<!--.*?-->//gs' <<<"$PR_BODY")"
 
           # 1) 제목: [Feature]/[Bug]/[Refactor]/[Chore]/[Docs] prefix + 제목
           if [[ ! "$PR_TITLE" =~ ^\[(Feature|Bug|Refactor|Chore|Docs)\]\ .+ ]]; then
