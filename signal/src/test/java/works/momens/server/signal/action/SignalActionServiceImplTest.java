@@ -181,6 +181,50 @@ class SignalActionServiceImplTest {
   }
 
   @Test
+  @DisplayName("convertToTask 동시성 레이스로 제약 위반을 만나면 재조회해 기존 task로 replay한다")
+  void recoversFromRaceByReplayingAfterConvertConstraintViolation() {
+    SignalReader.Snapshot signal =
+        new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목");
+    when(signalReader.findLive(SIGNAL_ID)).thenReturn(Optional.of(signal));
+    when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
+    UUID taskId = UUID.randomUUID();
+    SignalAction racedRow =
+        SignalAction.builder()
+            .workspaceId(WORKSPACE_ID)
+            .signalId(SIGNAL_ID)
+            .actionType("convert_to_task")
+            .resultTaskId(taskId)
+            .processedByUserId(USER_ID)
+            .build();
+    when(signalActionRepository.findBySignalId(SIGNAL_ID))
+        .thenReturn(Optional.empty())
+        .thenReturn(Optional.of(racedRow));
+    when(executor.convert(signal, USER_ID, "제목", "pm", "medium"))
+        .thenThrow(new DataIntegrityViolationException("unique violation"));
+    when(taskReader.findDetail(taskId))
+        .thenReturn(
+            Optional.of(
+                new TaskDetail(
+                    taskId,
+                    PROJECT_ID,
+                    WORKSPACE_ID,
+                    "제목",
+                    "todo",
+                    "medium",
+                    "pm",
+                    null,
+                    null,
+                    java.util.List.of())));
+
+    SignalActionResult result = service.convertToTask(SIGNAL_ID, USER_ID);
+
+    assertThat(result.created()).isFalse();
+    assertThat(result.actionType()).isEqualTo("convert_to_task");
+    assertThat(result.task().id()).isEqualTo(taskId);
+    verify(signalActionRepository, times(2)).findBySignalId(SIGNAL_ID);
+  }
+
+  @Test
   @DisplayName("동시성 레이스로 executor가 제약 위반을 던지면 재조회해 replay한다")
   void recoversFromRaceByReplayingAfterConstraintViolation() {
     SignalReader.Snapshot signal =
