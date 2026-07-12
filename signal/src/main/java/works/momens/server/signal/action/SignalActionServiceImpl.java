@@ -28,6 +28,15 @@ import works.momens.server.workspace.WorkspaceAccess;
 @RequiredArgsConstructor
 class SignalActionServiceImpl implements SignalActionService {
 
+  /**
+   * convert-to-task 고정 목 draft(ADR-0011). task draft(title·role·priority)는 민수 산출물이며, 민수가 서버 모듈로
+   * 구현되기 전까지 서버가 이 고정 값으로 task를 만든다. role·priority는 클라이언트가 보내지 않고, title은 Signal 제목을 쓴다. 고정 값이라 같은
+   * Signal 요청은 결정적이다. 실제 민수 연동은 MOM-0691·MOM-0692에서 이 상수를 대체한다.
+   */
+  private static final String MOCK_DRAFT_ROLE = "pm";
+
+  private static final String MOCK_DRAFT_PRIORITY = "medium";
+
   private final SignalReader signalReader;
   private final WorkspaceAccess workspaceAccess;
   private final SignalActionRepository signalActionRepository;
@@ -35,27 +44,15 @@ class SignalActionServiceImpl implements SignalActionService {
   private final TaskReader taskReader;
 
   @Override
-  public SignalActionResult convertToTask(
-      UUID signalId, UUID userId, SignalActionService.ConvertToTaskCommand command) {
+  public SignalActionResult convertToTask(UUID signalId, UUID userId) {
     SignalReader.Snapshot signal = loadAuthorized(signalId, userId);
     Optional<SignalAction> existing = signalActionRepository.findBySignalId(signalId);
     if (existing.isPresent()) {
       return replayOrConflict(existing.get(), SignalActionType.CONVERT_TO_TASK);
     }
 
-    String title = command.title() != null ? command.title() : signal.title();
-    String priority =
-        command.priority() != null
-            ? command.priority()
-            : SignalActionService.ConvertToTaskCommand.DEFAULT_PRIORITY;
-    String role = command.role();
-    if (role == null) {
-      throw new BusinessException(
-          CommonErrorCode.COMMON_VALIDATION_FAILED, Map.of("field", "role"));
-    }
-
     try {
-      return executor.convert(signal, userId, title, role, priority);
+      return executor.convert(signal, userId, signal.title(), MOCK_DRAFT_ROLE, MOCK_DRAFT_PRIORITY);
     } catch (DataIntegrityViolationException raced) {
       return replayOrConflict(
           signalActionRepository.findBySignalId(signalId).orElseThrow(() -> raced),

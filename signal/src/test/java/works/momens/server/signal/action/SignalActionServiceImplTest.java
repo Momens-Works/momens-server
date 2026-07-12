@@ -20,7 +20,6 @@ import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
 import works.momens.server.signal.SignalActionResult;
-import works.momens.server.signal.SignalActionService;
 import works.momens.server.signal.SignalErrorCode;
 import works.momens.server.signal.SignalReader;
 import works.momens.server.workspace.WorkspaceAccess;
@@ -53,12 +52,7 @@ class SignalActionServiceImplTest {
   void throwsSignalNotFoundWhenSignalMissing() {
     when(signalReader.findLive(SIGNAL_ID)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(
-            () ->
-                service.convertToTask(
-                    SIGNAL_ID,
-                    USER_ID,
-                    new SignalActionService.ConvertToTaskCommand(null, "backend", null)))
+    assertThatThrownBy(() -> service.convertToTask(SIGNAL_ID, USER_ID))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(SignalErrorCode.SIGNAL_NOT_FOUND);
@@ -79,35 +73,14 @@ class SignalActionServiceImplTest {
   }
 
   @Test
-  @DisplayName("role이 body에도 draft에도 없으면 COMMON_VALIDATION_FAILED를 던진다")
-  void throwsValidationFailedWhenRoleMissing() {
-    when(signalReader.findLive(SIGNAL_ID))
-        .thenReturn(
-            Optional.of(new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목")));
-    when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
-    when(signalActionRepository.findBySignalId(SIGNAL_ID)).thenReturn(Optional.empty());
-
-    assertThatThrownBy(
-            () ->
-                service.convertToTask(
-                    SIGNAL_ID,
-                    USER_ID,
-                    new SignalActionService.ConvertToTaskCommand(null, null, null)))
-        .isInstanceOf(BusinessException.class)
-        .extracting(e -> ((BusinessException) e).getErrorCode())
-        .isEqualTo(CommonErrorCode.COMMON_VALIDATION_FAILED);
-    verify(executor, never()).convert(any(), any(), any(), any(), any());
-  }
-
-  @Test
-  @DisplayName("title·priority는 폴백하고 role은 body 값을 그대로 executor에 넘긴다")
-  void fallsBackTitleAndPriorityButPassesRoleThrough() {
+  @DisplayName("convert는 Signal 제목과 고정 목 draft(role=pm, priority=medium)로 executor를 호출한다")
+  void convertUsesFixedMockDraft() {
     SignalReader.Snapshot signal =
         new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "시그널 제목");
     when(signalReader.findLive(SIGNAL_ID)).thenReturn(Optional.of(signal));
     when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
     when(signalActionRepository.findBySignalId(SIGNAL_ID)).thenReturn(Optional.empty());
-    when(executor.convert(signal, USER_ID, "시그널 제목", "backend", "medium"))
+    when(executor.convert(signal, USER_ID, "시그널 제목", "pm", "medium"))
         .thenReturn(
             new SignalActionResult(
                 SIGNAL_ID,
@@ -115,14 +88,10 @@ class SignalActionServiceImplTest {
                 true,
                 new SignalActionResult.TaskResult(UUID.randomUUID(), "시그널 제목", "todo")));
 
-    SignalActionResult result =
-        service.convertToTask(
-            SIGNAL_ID,
-            USER_ID,
-            new SignalActionService.ConvertToTaskCommand(null, "backend", null));
+    SignalActionResult result = service.convertToTask(SIGNAL_ID, USER_ID);
 
     assertThat(result.created()).isTrue();
-    verify(executor).convert(signal, USER_ID, "시그널 제목", "backend", "medium");
+    verify(executor).convert(signal, USER_ID, "시그널 제목", "pm", "medium");
   }
 
   @Test
@@ -152,16 +121,12 @@ class SignalActionServiceImplTest {
                     "제목",
                     "todo",
                     "medium",
-                    "backend",
+                    "pm",
                     null,
                     null,
                     java.util.List.of())));
 
-    SignalActionResult result =
-        service.convertToTask(
-            SIGNAL_ID,
-            USER_ID,
-            new SignalActionService.ConvertToTaskCommand(null, "backend", null));
+    SignalActionResult result = service.convertToTask(SIGNAL_ID, USER_ID);
 
     assertThat(result.created()).isFalse();
     assertThat(result.task().id()).isEqualTo(taskId);
@@ -187,12 +152,7 @@ class SignalActionServiceImplTest {
     when(signalActionRepository.findBySignalId(SIGNAL_ID)).thenReturn(Optional.of(existing));
     when(taskReader.findDetail(missingTaskId)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(
-            () ->
-                service.convertToTask(
-                    SIGNAL_ID,
-                    USER_ID,
-                    new SignalActionService.ConvertToTaskCommand(null, "backend", null)))
+    assertThatThrownBy(() -> service.convertToTask(SIGNAL_ID, USER_ID))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining(SIGNAL_ID.toString())
         .hasMessageContaining(missingTaskId.toString());
@@ -214,12 +174,7 @@ class SignalActionServiceImplTest {
             .build();
     when(signalActionRepository.findBySignalId(SIGNAL_ID)).thenReturn(Optional.of(existing));
 
-    assertThatThrownBy(
-            () ->
-                service.convertToTask(
-                    SIGNAL_ID,
-                    USER_ID,
-                    new SignalActionService.ConvertToTaskCommand(null, "backend", null)))
+    assertThatThrownBy(() -> service.convertToTask(SIGNAL_ID, USER_ID))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(SignalErrorCode.SIGNAL_INVALID_STATE);

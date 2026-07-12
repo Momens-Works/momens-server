@@ -88,8 +88,7 @@ class SignalListServiceImplTest extends AbstractPostgresIntegrationTest {
     List<SignalSummary> signals = signalListService.listUnprocessed(PROJECT_ID, CALLER_ID);
 
     assertThat(signals)
-        .containsExactly(
-            new SignalSummary(unprocessed, PROJECT_ID, "risk", "이탈 가능성", "완료율에 영향", "점검 제안"));
+        .containsExactly(new SignalSummary(unprocessed, "risk", "이탈 가능성", "완료율에 영향", "점검 제안"));
   }
 
   @Test

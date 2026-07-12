@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,8 +19,6 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
-import works.momens.server.project.ProjectReader;
-import works.momens.server.project.ProjectSnapshot;
 import works.momens.server.signal.SignalDetail;
 import works.momens.server.signal.SignalDetailService;
 import works.momens.server.signal.SignalErrorCode;
@@ -30,8 +27,8 @@ import works.momens.server.source.SourceRefView;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
- * Signal 상세 조립 검증. 접근 검사와 source 근거 hydrate(각각 mock), 근거 정렬·summary 폴백·원본 누락 제외를 실제
- * PostgreSQL(Testcontainers)로 확인합니다.
+ * Signal 상세 조립 검증. 접근 검사와 source hydrate(각각 mock), 근거의 의미 값(대상·변화·영향)과 정렬·원본 누락 제외, 처리·삭제된 Signal의
+ * SIGNAL_NOT_FOUND를 실제 PostgreSQL(Testcontainers)로 확인합니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -45,7 +42,6 @@ class SignalDetailServiceImplTest extends AbstractPostgresIntegrationTest {
   @Autowired private SignalEvidenceRepository signalEvidenceRepository;
   @Autowired private TestEntityManager entityManager;
 
-  private final ProjectReader projectReader = mock(ProjectReader.class);
   private final WorkspaceAccess workspaceAccess = mock(WorkspaceAccess.class);
   private final SourceRefReader sourceRefReader = mock(SourceRefReader.class);
   private SignalDetailService signalDetailService;
@@ -54,17 +50,25 @@ class SignalDetailServiceImplTest extends AbstractPostgresIntegrationTest {
   void setUp() {
     signalDetailService =
         new SignalDetailServiceImpl(
-            signalRepository,
-            signalEvidenceRepository,
-            projectReader,
-            workspaceAccess,
-            sourceRefReader);
+            signalRepository, signalEvidenceRepository, workspaceAccess, sourceRefReader);
   }
 
   @Test
   @DisplayName("Signal이 없으면 SIGNAL_NOT_FOUND를 던진다")
   void throwsSignalNotFoundWhenMissing() {
     assertThatThrownBy(() -> signalDetailService.getDetail(UUID.randomUUID(), CALLER_ID))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).getErrorCode())
+        .isEqualTo(SignalErrorCode.SIGNAL_NOT_FOUND);
+  }
+
+  @Test
+  @DisplayName("이미 처리된 Signal은 SIGNAL_NOT_FOUND를 던진다")
+  void throwsSignalNotFoundWhenProcessed() {
+    UUID signalId = insertSignal();
+    insertAction(signalId);
+
+    assertThatThrownBy(() -> signalDetailService.getDetail(signalId, CALLER_ID))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(SignalErrorCode.SIGNAL_NOT_FOUND);
@@ -83,21 +87,18 @@ class SignalDetailServiceImplTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
-  @DisplayName("근거를 sort_order 순으로 조립하고 summary 폴백을 채우며 원본 없는 근거는 제외한다")
-  void assemblesEvidenceInSortOrderWithFallbackAndSkipsMissing() {
+  @DisplayName("근거를 sort_order 순으로 조립해 의미 값은 evidence에서, source는 source_ref에서 채우고 원본 없는 근거는 제외한다")
+  void assemblesEvidenceInSortOrderFromEvidenceAndSourceRefAndSkipsMissing() {
     UUID signalId = insertSignal();
     UUID ref0 = UUID.randomUUID();
     UUID ref1 = UUID.randomUUID();
     UUID missing = UUID.randomUUID();
-    insertEvidence(signalId, ref1, 1);
-    insertEvidence(signalId, ref0, 0);
-    insertEvidence(signalId, missing, 2);
+    insertEvidence(signalId, ref1, 1, "대상1", "변화1", "영향1");
+    insertEvidence(signalId, ref0, 0, "대상0", "변화0", "영향0");
+    insertEvidence(signalId, missing, 2, "대상x", "변화x", "영향x");
 
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
-    when(projectReader.findSnapshot(PROJECT_ID))
-        .thenReturn(
-            Optional.of(new ProjectSnapshot(PROJECT_ID, WORKSPACE_ID, "Q2", null, 0, null)));
-    // snippet이 없는 ref0은 text로 폴백하고, missing은 source 원본이 반환되지 않아 제외된다.
+    // missing은 source 원본이 반환되지 않아 제외된다.
     when(sourceRefReader.findByIds(any(), any()))
         .thenReturn(
             List.of(
@@ -113,13 +114,20 @@ class SignalDetailServiceImplTest extends AbstractPostgresIntegrationTest {
 
     SignalDetail detail = signalDetailService.getDetail(signalId, CALLER_ID);
 
-    assertThat(detail.projectName()).isEqualTo("Q2");
-    assertThat(detail.evidence()).extracting(SignalDetail.Evidence::id).containsExactly(ref0, ref1);
-    assertThat(detail.evidence().get(0).summary()).isEqualTo("본문0");
-    assertThat(detail.evidence().get(0).occurredAt()).isNull();
-    assertThat(detail.evidence().get(1).summary()).isEqualTo("요약1");
-    assertThat(detail.evidence().get(1).occurredAt())
-        .isEqualTo(Instant.parse("2026-07-06T00:00:00Z"));
+    assertThat(detail.evidence())
+        .extracting(SignalDetail.Evidence::sourceRefId)
+        .containsExactly(ref0, ref1);
+    SignalDetail.Evidence first = detail.evidence().get(0);
+    assertThat(first.source()).isEqualTo("slack");
+    assertThat(first.occurredAt()).isNull();
+    assertThat(first.target()).isEqualTo("대상0");
+    assertThat(first.change()).isEqualTo("변화0");
+    assertThat(first.impact()).isEqualTo("영향0");
+    assertThat(first.sourceUrl()).isEqualTo("https://s/0");
+    SignalDetail.Evidence second = detail.evidence().get(1);
+    assertThat(second.source()).isEqualTo("figma");
+    assertThat(second.occurredAt()).isEqualTo(Instant.parse("2026-07-06T00:00:00Z"));
+    assertThat(second.target()).isEqualTo("대상1");
   }
 
   @Test
@@ -128,13 +136,10 @@ class SignalDetailServiceImplTest extends AbstractPostgresIntegrationTest {
     UUID signalId = insertSignal();
     UUID low = UUID.fromString("00000000-0000-0000-0000-000000000001");
     UUID high = UUID.fromString("00000000-0000-0000-0000-000000000002");
-    insertEvidence(signalId, high, 0);
-    insertEvidence(signalId, low, 0);
+    insertEvidence(signalId, high, 0, "대상h", "변화h", "영향h");
+    insertEvidence(signalId, low, 0, "대상l", "변화l", "영향l");
 
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
-    when(projectReader.findSnapshot(PROJECT_ID))
-        .thenReturn(
-            Optional.of(new ProjectSnapshot(PROJECT_ID, WORKSPACE_ID, "Q2", null, 0, null)));
     when(sourceRefReader.findByIds(any(), any()))
         .thenReturn(
             List.of(
@@ -143,7 +148,9 @@ class SignalDetailServiceImplTest extends AbstractPostgresIntegrationTest {
 
     SignalDetail detail = signalDetailService.getDetail(signalId, CALLER_ID);
 
-    assertThat(detail.evidence()).extracting(SignalDetail.Evidence::id).containsExactly(low, high);
+    assertThat(detail.evidence())
+        .extracting(SignalDetail.Evidence::sourceRefId)
+        .containsExactly(low, high);
   }
 
   private UUID insertSignal() {
@@ -164,16 +171,35 @@ class SignalDetailServiceImplTest extends AbstractPostgresIntegrationTest {
     return id;
   }
 
-  private void insertEvidence(UUID signalId, UUID sourceRefId, int sortOrder) {
+  private void insertAction(UUID signalId) {
     entityManager
         .getEntityManager()
         .createNativeQuery(
-            "INSERT INTO signal_evidence (workspace_id, signal_id, source_ref_id, sort_order)"
-                + " VALUES (?1, ?2, ?3, ?4)")
+            "INSERT INTO signal_actions (id, workspace_id, signal_id, action_type,"
+                + " processed_by_user_id) VALUES (?1, ?2, ?3, ?4, ?5)")
+        .setParameter(1, UUID.randomUUID())
+        .setParameter(2, WORKSPACE_ID)
+        .setParameter(3, signalId)
+        .setParameter(4, "dismiss")
+        .setParameter(5, UUID.randomUUID())
+        .executeUpdate();
+    entityManager.clear();
+  }
+
+  private void insertEvidence(
+      UUID signalId, UUID sourceRefId, int sortOrder, String target, String change, String impact) {
+    entityManager
+        .getEntityManager()
+        .createNativeQuery(
+            "INSERT INTO signal_evidence (workspace_id, signal_id, source_ref_id, sort_order,"
+                + " target, \"change\", impact) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
         .setParameter(1, WORKSPACE_ID)
         .setParameter(2, signalId)
         .setParameter(3, sourceRefId)
         .setParameter(4, sortOrder)
+        .setParameter(5, target)
+        .setParameter(6, change)
+        .setParameter(7, impact)
         .executeUpdate();
     entityManager.clear();
   }

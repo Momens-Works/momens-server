@@ -23,7 +23,6 @@ public record SignalListResponse(
   @Schema(description = "Signal 목록 카드 한 건")
   public record SignalItem(
       @Schema(description = "Signal 식별자") UUID id,
-      @Schema(description = "프로젝트 식별자") UUID projectId,
       @Schema(description = "Signal 유형", example = "risk") String type,
       @Schema(description = "제목") String title,
       @Schema(description = "프로젝트에 미칠 영향 요약. 미생산 시 null입니다.", nullable = true) String impact,
@@ -36,11 +35,6 @@ public record SignalListResponse(
 
   private static SignalItem toItem(SignalSummary signal) {
     return new SignalItem(
-        signal.id(),
-        signal.projectId(),
-        signal.type(),
-        signal.title(),
-        signal.impact(),
-        signal.minsuSuggestion());
+        signal.id(), signal.type(), signal.title(), signal.impact(), signal.minsuSuggestion());
   }
 }

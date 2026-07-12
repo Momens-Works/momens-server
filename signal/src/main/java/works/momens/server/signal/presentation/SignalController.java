@@ -1,6 +1,5 @@
 package works.momens.server.signal.presentation;
 
-import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.CurrentUser;
@@ -17,7 +15,6 @@ import works.momens.server.signal.SignalActionResult;
 import works.momens.server.signal.SignalActionService;
 import works.momens.server.signal.SignalDetailService;
 import works.momens.server.signal.SignalListService;
-import works.momens.server.signal.presentation.dto.request.ConvertToTaskRequest;
 import works.momens.server.signal.presentation.dto.response.ConvertToTaskResponse;
 import works.momens.server.signal.presentation.dto.response.DismissResponse;
 import works.momens.server.signal.presentation.dto.response.SignalDetailResponse;
@@ -55,15 +52,9 @@ class SignalController implements SignalControllerDocs {
   @Override
   @PostMapping(path = "/signals/{signalId}/actions/convert-to-task", version = "1")
   public ResponseEntity<ConvertToTaskResponse> convertToTask(
-      @PathVariable UUID signalId,
-      @Valid @RequestBody(required = false) ConvertToTaskRequest request,
-      Principal principal) {
-    SignalActionService.ConvertToTaskCommand command =
-        request != null
-            ? request.toCommand()
-            : new SignalActionService.ConvertToTaskCommand(null, null, null);
+      @PathVariable UUID signalId, Principal principal) {
     SignalActionResult result =
-        signalActionService.convertToTask(signalId, CurrentUser.id(principal), command);
+        signalActionService.convertToTask(signalId, CurrentUser.id(principal));
     HttpStatus status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
     return ResponseEntity.status(status).body(ConvertToTaskResponse.from(result));
   }
