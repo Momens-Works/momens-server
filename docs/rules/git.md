@@ -56,11 +56,9 @@ Git 워크플로는 GitFlow를 따르고, 커밋·브랜치·PR 형식은 아래
 `[Feature] / [Bug] / [Refactor] / [Chore] / [Docs] <제목>`
 
 - 예: `[Feature] 카테고리 생성 API 구현`
-- PR 본문의 `관련 Momens 작업`에 작업 라벨과 URL을 기록합니다. 예:
-  `MOM-0680 · https://app.momens.works/...`.
 - `Fixes MOM-0680`이나 브랜치 라벨만으로 Momens 작업이 자동 완료된다고 가정하지 않습니다.
-- `pr-format` CI는 일반 PR의 브랜치 라벨, 본문 작업 라벨, Momens URL이 일치하는지 검사합니다.
-  `develop` → `main` 릴리즈 PR은 이 검사에서 제외합니다.
+- `pr-format` CI는 모든 PR의 제목·본문 형식을, 일반 PR은 추가로 브랜치(`MOM-<번호>-<타입>/…`) 형식을
+  검사합니다. `develop` → `main` 릴리즈 PR은 브랜치 검사에서 제외합니다.
 
 ## 리뷰
 
