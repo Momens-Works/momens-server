@@ -17,9 +17,19 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           set -uo pipefail
           fail=0
+
+          release_pr=false
+          if [[ "$PR_HEAD_REF" == "develop" && "$PR_BASE_REF" == "main" ]]; then
+            release_pr=true
+          fi
+
+          # 템플릿 안내 주석의 예시 라벨·URL이 실제 입력으로 오인되지 않도록 제거합니다.
+          PR_BODY_VISIBLE="$(sed '/<!--/,/-->/d' <<<"$PR_BODY")"
 
           # 1) 제목: [Feature]/[Bug]/[Refactor]/[Chore]/[Docs] prefix + 제목
           if [[ ! "$PR_TITLE" =~ ^\[(Feature|Bug|Refactor|Chore|Docs)\]\ .+ ]]; then
@@ -29,21 +39,47 @@ jobs:
           fi
 
           # 2) 본문: 비어 있지 않아야 함
-          if [[ -z "${PR_BODY//[[:space:]]/}" ]]; then
+          if [[ -z "${PR_BODY_VISIBLE//[[:space:]]/}" ]]; then
             echo "::error::PR 본문이 비어 있습니다. PR 템플릿을 작성해주세요."
             fail=1
           else
             # 필수 섹션 존재 확인
-            for section in "## 요약" "## 작업 유형" "## 검증"; do
-              if ! grep -qF "$section" <<<"$PR_BODY"; then
+            required_sections=("## 요약" "## 작업 유형" "## 검증")
+            if [[ "$release_pr" != "true" ]]; then
+              required_sections+=("## 관련 Momens 작업")
+            fi
+            for section in "${required_sections[@]}"; do
+              if ! grep -qF "$section" <<<"$PR_BODY_VISIBLE"; then
                 echo "::error::PR 본문에 '$section' 섹션이 없습니다."
                 fail=1
               fi
             done
 
             # 작업 유형/체크리스트에 최소 1개 체크
-            if ! grep -qE '^[[:space:]]*- \[[xX]\]' <<<"$PR_BODY"; then
+            if ! grep -qE '^[[:space:]]*- \[[xX]\]' <<<"$PR_BODY_VISIBLE"; then
               echo "::error::체크된 항목(- [x])이 없습니다. 작업 유형을 최소 1개 체크해주세요."
+              fail=1
+            fi
+          fi
+
+          # 3) 일반 PR은 Momens 작업 라벨 브랜치와 작업 URL을 사용
+          if [[ "$release_pr" != "true" ]]; then
+            if [[ "$PR_HEAD_REF" =~ ^(MOM-[0-9]+)-(feat|fix|docs|refactor|chore)/[a-z0-9][a-z0-9-]*$ ]]; then
+              task_label="${BASH_REMATCH[1]}"
+            else
+              echo "::error::브랜치는 'MOM-<번호>-<타입>/<작업-내용>' 형식이어야 합니다."
+              echo "  현재 브랜치: $PR_HEAD_REF"
+              fail=1
+              task_label=""
+            fi
+
+            if [[ -n "$task_label" ]] && ! grep -qE "(^|[^A-Z0-9])${task_label}([^0-9]|$)" <<<"$PR_BODY_VISIBLE"; then
+              echo "::error::PR 본문에 브랜치와 같은 Momens 작업 라벨 '$task_label'이 없습니다."
+              fail=1
+            fi
+
+            if ! grep -qE 'https://app\.momens\.works/' <<<"$PR_BODY_VISIBLE"; then
+              echo "::error::PR 본문에 Momens 작업 URL(https://app.momens.works/...)이 없습니다."
               fail=1
             fi
           fi

@@ -29,13 +29,22 @@ Use `origin/main` only when the user specifically asks for release/main comparis
 
    ```bash
    git log --oneline origin/develop..HEAD
-   git diff --stat origin/develop...HEAD
-   git diff --name-status origin/develop...HEAD
-   git diff origin/develop...HEAD
+   git rev-list --left-right --count origin/develop...HEAD
+   MERGE_BASE="$(git merge-base origin/develop HEAD)"
+   git diff --stat "$MERGE_BASE"
+   git diff --name-status "$MERGE_BASE"
+   git diff "$MERGE_BASE"
    ```
+
+   Comparing the merge base to the worktree includes branch commits plus staged and
+   unstaged tracked changes without treating newer base-branch commits as deletions. Treat
+   a non-zero base-only count as a branch-update blocker before PR. Inspect untracked files
+   separately from `git status --short`.
 
 4. Review for:
    - branch and commit convention drift
+   - missing or incorrect Momens task label/URL in the PR context
+   - diff scope that does not match the linked Momens task
    - missing docs updates
    - unsettled decisions that were silently resolved
    - secret or local-only file leakage
@@ -71,13 +80,19 @@ For any service method annotated with `@Transactional`:
 
 Before creating or updating a PR:
 
-- Map each meaningful diff group to the requested Linear issue.
-- If another issue's deliverable appears in the diff, call it out before creating the
+- Map each meaningful diff group to the requested Momens task.
+- Fetch the task through the Momens MCP and confirm its label, title, current status,
+  scope, and completion criteria.
+- If another task's deliverable appears in the diff, call it out before creating the
   PR.
 - Do not silently absorb another ticket's scope just because it is technically
   adjacent.
-- If the extra work should stay, mention the related issue in the PR body or Linear
-  comments so ticket status remains explicit.
+- If the extra work should stay, mention the related Momens task in the PR body or task
+  updates so its status remains explicit.
+- Require the PR body to include the Momens task label and URL. A branch label or
+  `Fixes MOM-<number>` does not automatically link or complete the task.
+- Do not mark the task `done` while reviewing or opening the PR. Update it to `done`
+  only after the PR is actually merged.
 
 ### Commit convention check
 

@@ -127,5 +127,7 @@ Topic-specific docs:
 
 Agent skills (same skill set per agent, see `docs/onboarding.md` for the workflow):
 
-- `.codex/skills/` — project-local Codex skills (`sync`, `diff-review`, `migrate-slice`)
-- `.claude/skills/` — project-local Claude Code skills (`sync`, `diff-review`, `migrate-slice`)
+- `.codex/skills/` — project-local Codex skills (`sync`, `start-work`, `diff-review`,
+  `finish-work`, `migrate-slice`)
+- `.claude/skills/` — project-local Claude Code skills (`sync`, `start-work`, `diff-review`,
+  `finish-work`, `migrate-slice`)

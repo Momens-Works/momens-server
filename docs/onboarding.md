@@ -111,12 +111,17 @@ momens-server
 
 ### 브랜치 이름
 
-이슈는 Linear에서 관리합니다. 브랜치 앞에 Linear 이슈 ID를 둡니다.
+작업은 Momens에서 관리합니다. 브랜치를 만들기 전에 기존 Momens 작업을 조회하고, 없으면 Momens
+MCP 또는 웹에서 작업을 생성해 발급된 라벨을 브랜치 앞에 둡니다.
 
 ```text
-<Linear-이슈ID>-<type>/<work-description>
-# 예) MOM-15-feat/create-category
+<Momens-작업-라벨>-<type>/<work-description>
+# 예) MOM-0680-feat/create-category
 ```
+
+새 작업은 제목, 배경·목적, 작업 범위, 완료 조건을 기록하고 `backlog` 또는 `todo`로 만듭니다. 구현에
+착수하면 `in_progress`로 변경합니다. 라벨을 브랜치명에 넣는 것만으로 Momens와 GitHub가 자동 연결되지는
+않으므로 PR 본문에도 작업 라벨과 URL을 남깁니다.
 
 ### 커밋 메시지
 
@@ -137,7 +142,7 @@ docs: 문서 수정
 | 체크 | 내용 | 머지 차단? |
 | --- | --- | --- |
 | `build` | `spotlessCheck` → `test` → `bootJar` | ✅ 필수 |
-| `pr-format` | PR 제목/본문 형식 검증 | ✅ 필수 |
+| `pr-format` | PR 제목/본문, Momens 작업 라벨·URL, 브랜치 정합성 검증 | ✅ 필수 |
 | CodeQL | 보안 정적 분석 | ℹ️ 비차단(Security 탭 알림) |
 
 ### 머지
@@ -155,20 +160,24 @@ docs: 문서 수정
 ## 7. 첫 기여 따라하기
 
 ```bash
-# 1) Linear 이슈 생성 → 이슈 ID 확인 (예: MOM-15)
-# 2) 작업 브랜치 생성 (브랜치 앞에 Linear 이슈 ID)
+# 1) Momens에서 기존 작업 조회 또는 새 작업 생성 → 라벨 확인 (예: MOM-0680)
+# 2) 작업을 in_progress로 변경하고 브랜치 생성
 git switch develop && git pull
-git switch -c MOM-15-feat/create-category
+git switch -c MOM-0680-feat/create-category
 
 # 3) 작업 → 포맷 → 커밋
 ./gradlew spotlessApply
 git commit -m "feat (category): 카테고리 생성 API 추가"
 
-# 4) 푸시 후 PR 생성 (base: develop, 본문에 'Fixes MOM-15')
-git push -u origin MOM-15-feat/create-category
+# 4) 푸시 후 PR 생성 (base: develop, 본문에 Momens 작업 라벨·URL 기록)
+git push -u origin MOM-0680-feat/create-category
 
 # 5) CI(build, pr-format) 통과 + 승인 1 + 리뷰 대화 resolve → rebase 머지
+# 6) 실제 머지 확인 후 Momens 작업을 done으로 변경
 ```
+
+`Fixes MOM-0680`이나 브랜치 라벨은 Momens 작업을 자동 완료하지 않습니다. PR을 열거나 승인받은 시점이
+아니라 실제 머지된 뒤 `done`으로 변경합니다. 머지 없이 닫힌 PR은 완료 처리하지 않습니다.
 
 ---
 
@@ -188,20 +197,24 @@ git push -u origin MOM-15-feat/create-category
 ## 9. 에이전트 작업 흐름
 
 이 리포에는 프로젝트 종속 에이전트 스킬을 둡니다. Codex는 `.codex/skills/`, Claude Code는
-`.claude/skills/` 아래에 같은 스킬(`sync` / `diff-review` / `migrate-slice`)을 둡니다. 스킬은
-프로젝트 문서를 복제하지 않고, 필요한 문서를 어떤 순서로 읽고 어떤 검사를 실행할지 안내합니다.
+`.claude/skills/` 아래에 같은 스킬을 둡니다. 스킬은 프로젝트 문서를 복제하지 않고, 필요한 문서를
+어떤 순서로 읽고 어떤 검사와 작업 상태 변경을 수행할지 안내합니다.
 
 | 시점 | 스킬 | 목적 |
 | --- | --- | --- |
-| 작업 시작 전 | `sync` | 프로젝트 맥락, 브랜치 상태, 관련 문서 확인 |
-| PR 전 | `diff-review` | `develop`/`main` 대비 diff, 컨벤션, 테스트, 문서, 민감정보, API 계약 점검 |
+| 맥락 동기화 | `sync` | 프로젝트 맥락, 브랜치 상태, 기존 Momens 작업과 관련 문서 확인 |
+| 작업 착수 | `start-work` | Momens 작업 중복 조회·생성, `in_progress` 전환, 작업 브랜치 생성 |
+| PR 전 | `diff-review` | Momens 작업 범위와 diff 정합성, 컨벤션, 테스트, 문서, 민감정보, API 계약 점검 |
+| PR 머지 후 | `finish-work` | 실제 머지 검증, Momens 작업 `done` 전환, 머지 정보 댓글 기록 |
 | 레거시 이관 전 | `migrate-slice` | Go API에서 Spring으로 옮길 최소 수직 슬라이스 계획 |
 
 권장 흐름:
 
 ```text
-작업 시작 전: sync
+맥락 확인: sync
+작업 착수: start-work
 PR 전: diff-review
+PR 머지 후: finish-work
 레거시 기능 이관 전: migrate-slice
 ```
 
