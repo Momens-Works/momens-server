@@ -2,9 +2,12 @@ package works.momens.server.support.openapi;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import io.swagger.v3.core.jackson.ModelResolver;
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import java.util.List;
 import java.util.Map;
@@ -19,16 +22,31 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(OpenApiProperties.class)
 public class OpenApiConfig {
 
+  /** OpenAPI에서 Bearer 스킴을 가리키는 이름. 스킴 선언과 전역 SecurityRequirement가 같은 이름을 써야 연결되므로 상수로 모은다. */
+  private static final String BEARER_SCHEME_NAME = "bearerAuth";
+
   @Bean
   public OpenAPI openAPI(OpenApiProperties properties) {
+    // 런타임은 이미 Bearer 토큰(JWT)으로 보호하지만(SecurityConfig), springdoc이 이 사실을 자동으로 문서에
+    // 반영하지 않아 스킴을 직접 선언한다. 전역으로 적용해 모든 operation이 기본적으로 인증을 요구하게 하고(런타임의
+    // authenticated()와 맞춘다), 공개 엔드포인트만 @SecurityRequirements(빈 값)로 제외한다(docs/spec/openapi.md,
+    // MOM-83).
     return new OpenAPI()
         .info(
             new Info()
                 .title("Momens Server API")
                 .version("v1")
                 .description("Momens Java Spring 제품 API 서버 문서"))
-        .servers(
-            List.of(new Server().url(properties.serverUrl()).description("Configured Server")));
+        .servers(List.of(new Server().url(properties.serverUrl()).description("Configured Server")))
+        .components(
+            new Components()
+                .addSecuritySchemes(
+                    BEARER_SCHEME_NAME,
+                    new SecurityScheme()
+                        .type(SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT")))
+        .addSecurityItem(new SecurityRequirement().addList(BEARER_SCHEME_NAME));
   }
 
   @Bean

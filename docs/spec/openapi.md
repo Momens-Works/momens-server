@@ -26,6 +26,14 @@ app/src/main/java/works/momens/server/support/openapi
 
 기능 모듈에는 해당 기능의 controller, request/response DTO, controller docs interface를 둡니다.
 
+## 인증
+
+보호 API는 Bearer(JWT) 인증을 사용합니다. 문서에서는 이 스킴을 `app`의 `OpenApiConfig`에서 선언하고 전역 `SecurityRequirement`로 적용합니다. 그래서 모든 operation이 기본적으로 인증을 요구하는 것으로 문서에 표시됩니다.
+
+공개 엔드포인트(로그인, 토큰 재발급, 로그아웃 등)는 해당 `XxxControllerDocs`에서 `@SecurityRequirements`(빈 값)로 전역 요구에서 제외합니다.
+
+Swagger의 Authorize 입력창에는 토큰 값만 넣습니다. `Bearer ` 접두사는 springdoc이 붙입니다.
+
 ## 의존성 버전 정렬
 
 기능 모듈이 사용하는 `swagger-annotations`와 `app` 런타임의 `swagger-core`/`swagger-models`는 같은
