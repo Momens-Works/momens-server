@@ -42,7 +42,6 @@ Use `origin/main` only when the user specifically asks for release/main comparis
 
 4. Review for:
    - branch and commit convention drift
-   - missing or incorrect Momens task label/URL in the PR context
    - diff scope that does not match the linked Momens task
    - missing docs updates
    - unsettled decisions that were silently resolved
@@ -62,8 +61,7 @@ Before creating or updating a PR:
 - Do not silently absorb another task's scope just because it is technically adjacent.
 - If the extra work should stay, mention the related Momens task in the PR body or task
   updates so its status remains explicit.
-- Require the PR body to include the Momens task label and URL. A branch label or
-  `Fixes MOM-<number>` does not automatically link or complete the task.
+- A branch label or `Fixes MOM-<number>` does not automatically link or complete the task.
 - Do not mark the task `done` while reviewing or opening the PR. Update it to `done`
   only after the PR is actually merged.
 

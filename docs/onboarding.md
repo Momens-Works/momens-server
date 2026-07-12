@@ -120,8 +120,8 @@ MCP 또는 웹에서 작업을 생성해 발급된 라벨을 브랜치 앞에 �
 ```
 
 새 작업은 제목, 배경·목적, 작업 범위, 완료 조건을 기록하고 `backlog` 또는 `todo`로 만듭니다. 구현에
-착수하면 `in_progress`로 변경합니다. 라벨을 브랜치명에 넣는 것만으로 Momens와 GitHub가 자동 연결되지는
-않으므로 PR 본문에도 작업 라벨과 URL을 남깁니다.
+착수하면 `in_progress`로 변경합니다. 라벨을 브랜치명에 넣거나 `Fixes MOM-*`를 적어도 Momens 작업이
+자동으로 연결·완료되지는 않으므로, 실제 머지 후 Momens에서 직접 상태를 갱신합니다.
 
 ### 커밋 메시지
 
@@ -142,7 +142,7 @@ docs: 문서 수정
 | 체크 | 내용 | 머지 차단? |
 | --- | --- | --- |
 | `build` | `spotlessCheck` → `test` → `bootJar` | ✅ 필수 |
-| `pr-format` | PR 제목/본문, Momens 작업 라벨·URL, 브랜치 정합성 검증 | ✅ 필수 |
+| `pr-format` | PR 제목/본문 형식, 브랜치명 정합성 검증 | ✅ 필수 |
 | CodeQL | 보안 정적 분석 | ℹ️ 비차단(Security 탭 알림) |
 
 ### 머지
@@ -169,7 +169,7 @@ git switch -c MOM-0680-feat/create-category
 ./gradlew spotlessApply
 git commit -m "feat (category): 카테고리 생성 API 추가"
 
-# 4) 푸시 후 PR 생성 (base: develop, 본문에 Momens 작업 라벨·URL 기록)
+# 4) 푸시 후 PR 생성 (base: develop)
 git push -u origin MOM-0680-feat/create-category
 
 # 5) CI(build, pr-format) 통과 + 승인 1 + 리뷰 대화 resolve → rebase 머지
