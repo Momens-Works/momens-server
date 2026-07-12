@@ -1,0 +1,11 @@
+interface:
+  display_name: "Start Work"
+  short_description: "Start tracked work from a Momens task"
+  default_prompt: "Use $start-work to create or reuse a Momens task and start its branch."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "momens"
+      description: "Momens project and task management"
+      transport: "streamable_http"
+      url: "https://api.momens.works/mcp"
