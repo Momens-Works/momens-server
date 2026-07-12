@@ -115,12 +115,12 @@ class ProjectBriefServiceTest {
     MobileBrief brief = projectBriefService.getBrief(PROJECT_ID, CALLER_ID);
 
     assertThat(brief.project()).isEqualTo(snapshot);
-    // All이 맨 앞(전체 12), 나머지는 라벨 글자수 오름차순과 알파벳순(VOC, Risk, Decision, Question).
+    // All이 맨 앞(전체 12), 나머지는 라벨 글자수 오름차순과 알파벳순(Risk, Change, Decision, Question).
     assertThat(brief.filters())
         .containsExactly(
             new MobileBrief.FilterCount("all", "All", 12L),
-            new MobileBrief.FilterCount("change", "VOC", 7L),
             new MobileBrief.FilterCount("risk", "Risk", 1L),
+            new MobileBrief.FilterCount("change", "Change", 7L),
             new MobileBrief.FilterCount("decision", "Decision", 2L),
             new MobileBrief.FilterCount("question", "Question", 2L));
     assertThat(brief.items())

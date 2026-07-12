@@ -65,7 +65,6 @@ Momens Mobile은 기존 웹 기능을 축소 이식하는 앱이 아니다. 모�
 | Brief / 브리프 | 프로젝트 상태와 최근 맥락을 짧게 요약한 화면 단위 |
 | Task / 태스크 | 담당자와 상태를 가지고 진행되는 실행 항목 |
 | Decision / 결정 | 근거와 함께 보존되는 프로젝트 선택 |
-| VOC | 독립 Signal type이 아니라 `change` 신호의 화면 표시명으로 표현한다 |
 
 ## 시스템 책임
 
@@ -229,7 +228,7 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 - 브리프 signal summary는 당일(Asia/Seoul 기준) 생성된 시그널을 처리 여부와 무관하게 집계한다
   (2026-07-10 확정, MOM-81). 태스크 전환이나 dismiss와 상관없이 그날 온 개수를 유지하고, 소프트
   삭제된 시그널은 제외한다. 시그널 탭(미처리 누적 조회)과는 다른 조회 기준이다.
-- 브리프 signal summary는 `change`(VOC)를 포함해 저장된 모든 type을 노출한다(2026-07-10 기획
+- 브리프 signal summary는 `change`를 포함해 저장된 모든 type을 노출한다(2026-07-10 기획
   갱신으로 종전 change 제외를 번복). 필터 칩은 당일 시그널에 있는 type으로 데이터 기반 구성한다.
 
 ### R-READ-004. 프로젝트 태스크 목록 조회
@@ -344,13 +343,12 @@ suggestion, task draft)을 민수 구현 전까지 목으로 처리하는 것은
 - Minsu suggestion과 task draft는 민수 산출물이다. 민수는 서버 내 모듈로 구현할 계획이며, 구현되기
   전에는 목으로 처리한다.
 - Signal type은 `risk`, `decision`, `change`, `question`을 지원해야 한다.
-- VOC는 MVP에서 독립 Signal type으로 두지 않고 `change`의 화면 표시명으로 표현해야 한다.
 - Signal은 사용자가 어떤 검토를 해야 하는지 표현할 수 있어야 한다.
 - Signal description은 backing에 보존할 수 있지만 모바일 상세 응답에는 노출하지 않는다.
-- 화면 표시 라벨은 Signal type에서 파생한다. `risk`/`change`는 `Needs action`, `decision`은
+- 화면 표시 라벨은 Signal type으로 정한다. `risk`/`change`는 `Needs action`, `decision`은
   `Needs review`, `question`은 `Needs decision`이다.
-- 화면설계서의 카테고리 표시는 Signal type에서 파생한다. `risk`는 `Risk`, `decision`은 `Decision`,
-  `change`는 `VOC`, `question`은 `Question`으로 표시한다.
+- 화면설계서의 카테고리 표시도 Signal type으로 정한다. `risk`는 `Risk`, `decision`은 `Decision`,
+  `change`는 `Change`, `question`은 `Question`으로 표시한다.
 - Signal 표시 라벨은 처리 상태가 아니며, MVP 목록 필터로 제공하지 않는다.
 - Signal은 프로젝트 단위 처리 이력을 가질 수 있어야 한다.
 - Signal 처리 여부는 사용자별이 아니라 프로젝트 단위로 반영되어야 한다.
@@ -396,7 +394,7 @@ suggestion, task draft)을 민수 구현 전까지 목으로 처리하는 것은
 - MVP에서 push notification은 Signal 발생 알림까지만 포함한다.
 - task 생성, Signal 삭제(dismiss), task 상태 변경에 대한 push notification은 MVP 이후 요구사항이다.
 - Signal 발생 알림은 worker가 Signal backing을 생성한 뒤 사용할 수 있는 이벤트를 기준으로 한다.
-- Signal 발생 알림은 Signal type을 함께 참조해 앱이 `Risk`, `Decision`, `VOC`, `Question` 카테고리 태그를
+- Signal 발생 알림은 Signal type을 함께 참조해 앱이 `Risk`, `Change`, `Decision`, `Question` 카테고리 태그를
   표시할 수 있어야 한다.
 - FCM 디바이스 토큰 등록/해제 HTTP API 계약은 Signal 발생 알림 구현 전 별도 확정해야 한다.
 - 모바일 앱에서 이미 처리된 Signal을 다시 보는 inbox 흐름은 MVP 이후 요구사항이다.

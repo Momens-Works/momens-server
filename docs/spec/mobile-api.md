@@ -40,7 +40,7 @@
 `action_command`는 action endpoint의 path segment에 쓰는 명령 값입니다. `action`은 action 처리 결과와 저장
 ledger의 enum 값입니다.
 
-Signal type 기반 화면 라벨은 앱이 다음처럼 파생합니다. 이 라벨은 처리 상태나 목록 필터가 아닙니다.
+Signal type에 따라 앱이 다음처럼 화면 라벨을 정합니다. 이 라벨은 처리 상태나 목록 필터가 아닙니다.
 
 | type | 화면 라벨 |
 | --- | --- |
@@ -48,14 +48,13 @@ Signal type 기반 화면 라벨은 앱이 다음처럼 파생합니다. 이 라
 | `decision` | `Needs review` |
 | `question` | `Needs decision` |
 
-화면설계서의 Signal 카테고리 표시는 같은 `type`에서 파생합니다. 특히 VOC는 별도 API enum이 아니라
-`change` type의 화면 표시명입니다.
+화면설계서의 Signal 카테고리 표시는 `type`의 첫 글자만 대문자로 바꿔 씁니다.
 
 | type | 카테고리 표시 |
 | --- | --- |
 | `risk` | `Risk` |
 | `decision` | `Decision` |
-| `change` | `VOC` |
+| `change` | `Change` |
 | `question` | `Question` |
 
 ### Task
@@ -473,8 +472,8 @@ project는 모바일의 현재 context로 고정되어 있고, description·task
     "summary": "Android 권한 요청 이슈가 발견되었으며, 소셜 로그인은 MVP 범위에서 제외되었습니다. 이메일 회원가입과 온보딩 이탈 개선이 우선적으로 필요합니다.",
     "filters": [
       { "key": "all", "label": "All", "count": 6 },
-      { "key": "change", "label": "VOC", "count": 1 },
       { "key": "risk", "label": "Risk", "count": 1 },
+      { "key": "change", "label": "Change", "count": 1 },
       { "key": "decision", "label": "Decision", "count": 2 },
       { "key": "question", "label": "Question", "count": 2 }
     ],
@@ -530,9 +529,8 @@ Asia/Seoul 기준이라, `created_at`(UTC 저장)을 KST 하루로 잘라 그 �
 `filters`는 당일 시그널에 실제 있는 type으로 구성합니다. `key`가 `all`인 항목을 맨 앞에 고정하고 전체 개수를 담은 뒤,
 나머지 type 칩을 이어 붙입니다. 각 type 칩의 `key`는 signal type(`change`, `decision`, `risk`, `question`)이고
 `count`는 그 type의 당일 시그널 수입니다. 개수가 0인 type은 칩을 만들지 않습니다. type 목록을 서버가 고정하지 않아
-민수가 새 type을 만들면 칩이 자동으로 늘어납니다. `label`은 type에서 파생하며 첫 글자를 대문자로 바꾼 표기이고,
-`change`만 화면 표기 `VOC`로 둡니다(위 Signal 카테고리 표시 표와 같음). type 칩 순서는 `label` 글자수가 적은
-것부터이고 글자수가 같으면 `label` 알파벳순입니다.
+민수가 새 type을 만들면 칩이 자동으로 늘어납니다. `label`은 `type`의 첫 글자만 대문자로 바꾼 값입니다(위 Signal
+카테고리 표시 표와 같음). type 칩 순서는 `label` 글자수가 적은 것부터이고 글자수가 같으면 `label` 알파벳순입니다.
 
 `signal_summary.summary`는 시그널 요약 헤더 아래 문단(해당 프로젝트 이슈와 진행상황 요약)입니다. worker/Minsu
 산출물 후보로 MVP backing source가 없으면 `null`로 반환합니다(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
@@ -541,7 +539,7 @@ Asia/Seoul 기준이라, `created_at`(UTC 저장)을 KST 하루로 잘라 그 �
 `count`로 렌더링합니다(필터 선택과 무관하게 유지).
 
 `items`는 당일 시그널의 최신순(생성 시각 내림차순, 같으면 id 내림차순) 첫 페이지이고 기본 3개입니다
-(2026-07-10 화면설계서의 기본 노출 개수). change(VOC)도 다른 type과 똑같이 포함합니다. `next_cursor`는 다음
+(2026-07-10 화면설계서의 기본 노출 개수). change도 다른 type과 똑같이 포함합니다. `next_cursor`는 다음
 페이지를 여는 커서 문자열이고 다음 페이지가 없으면 `null`입니다. 커서는 서버만 해석하므로, 클라이언트는 내용을
 해석하지 않고 아래 하위 엔드포인트에 그대로 되돌려줍니다.
 
