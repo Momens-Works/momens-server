@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -64,10 +64,25 @@ class OpenApiSecuritySchemeTest extends AbstractPostgresIntegrationTest {
   void exemptsPublicAuthEndpointsFromSecurity() throws Exception {
     JsonNode paths = apiDocs().path("paths");
 
-    for (String path : List.of("/api/auth/google/token", "/api/auth/refresh", "/api/auth/logout")) {
-      JsonNode security = paths.path(path).path("post").path("security");
-      assertThat(security.isArray()).as(path + " must override global security").isTrue();
-      assertThat(security).as(path + " must have empty security so no padlock is shown").isEmpty();
+    // 공개 엔드포인트는 모바일 3개(POST)와 웹 4개(로그인과 콜백은 GET, 세션 갱신과 로그아웃은 POST)다.
+    Map<String, String> publicEndpoints =
+        Map.of(
+            "/api/auth/google/token", "post",
+            "/api/auth/refresh", "post",
+            "/api/auth/logout", "post",
+            "/api/auth/google/login", "get",
+            "/api/auth/google/callback", "get",
+            "/api/auth/web/refresh", "post",
+            "/api/auth/web/logout", "post");
+
+    for (Map.Entry<String, String> endpoint : publicEndpoints.entrySet()) {
+      JsonNode security = paths.path(endpoint.getKey()).path(endpoint.getValue()).path("security");
+      assertThat(security.isArray())
+          .as(endpoint.getKey() + " must override global security")
+          .isTrue();
+      assertThat(security)
+          .as(endpoint.getKey() + " must have empty security so no padlock is shown")
+          .isEmpty();
     }
   }
 
