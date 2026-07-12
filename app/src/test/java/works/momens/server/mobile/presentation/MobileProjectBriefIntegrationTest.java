@@ -23,7 +23,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import works.momens.server.auth.AccessTokenTestFactory;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
-import works.momens.server.mobile.internal.MobileClock;
+import works.momens.server.mobile.MobileClock;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 
