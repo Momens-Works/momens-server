@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.mobile.MobileClock;
 import works.momens.server.project.BoardTask;
 import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.project.ProjectReader;
@@ -55,6 +56,8 @@ class ProjectBriefServiceTest {
       Clock.fixed(Instant.parse("2026-07-10T05:00:00Z"), ZoneOffset.UTC);
   private static final Instant TODAY_FROM = Instant.parse("2026-07-09T15:00:00Z");
   private static final Instant TODAY_TO = Instant.parse("2026-07-10T15:00:00Z");
+  // FIXED_CLOCK 기준 오늘(KST). 커서에 실리는 기준일 앵커다.
+  private static final LocalDate TODAY = LocalDate.of(2026, 7, 10);
 
   @BeforeEach
   void setUp() {
@@ -122,7 +125,9 @@ class ProjectBriefServiceTest {
             new MobileBrief.FilterCount("question", "Question", 2L));
     assertThat(brief.items())
         .containsExactly(new MobileBrief.SignalItem(signalId, "change", "권한 요청 반복 문의"));
-    assertThat(brief.nextCursor()).isEqualTo("cursor-1");
+    // next_cursor는 signal 커서를 오늘 앵커와 함께 감싼 값이다.
+    assertThat(BriefSignalCursor.decode(brief.nextCursor()))
+        .isEqualTo(new BriefSignalCursor(TODAY, "cursor-1"));
     assertThat(brief.priorities())
         .containsExactly(new MobileBrief.Priority(1, "이메일 회원가입 완료율 개선", taskId));
   }
@@ -210,12 +215,37 @@ class ProjectBriefServiceTest {
                 List.of(new SignalSummary(signalId, PROJECT_ID, "change", "VOC 문의", null, null)),
                 null));
 
+    // 클라이언트가 되돌리는 커서는 오늘 앵커로 감싼 값이고, 서비스는 안쪽 signal 커서만 signal에 넘긴다.
     MobileBriefSignalPage page =
-        projectBriefService.getSignalSummaryPage(PROJECT_ID, CALLER_ID, "change", "cursor-1", null);
+        projectBriefService.getSignalSummaryPage(
+            PROJECT_ID, CALLER_ID, "change", BriefSignalCursor.encode(TODAY, "cursor-1"), null);
 
     assertThat(page.items())
         .containsExactly(new MobileBrief.SignalItem(signalId, "change", "VOC 문의"));
     assertThat(page.nextCursor()).isNull();
+  }
+
+  @Test
+  void getSignalSummaryPageUsesCursorAnchorRatherThanRequestTime() {
+    // 커서에 실린 기준일(어제)로 창을 잡고 요청 시각의 오늘(FIXED_CLOCK)로 밀리지 않는다.
+    LocalDate yesterday = LocalDate.of(2026, 7, 9);
+    Instant yesterdayFrom = Instant.parse("2026-07-08T15:00:00Z");
+    Instant yesterdayTo = Instant.parse("2026-07-09T15:00:00Z");
+    when(signalListService.listByCreatedRange(
+            eq(PROJECT_ID),
+            eq(CALLER_ID),
+            isNull(),
+            eq(yesterdayFrom),
+            eq(yesterdayTo),
+            eq("inner"),
+            eq(3)))
+        .thenReturn(new SignalSummaryPage(List.of(), null));
+
+    MobileBriefSignalPage page =
+        projectBriefService.getSignalSummaryPage(
+            PROJECT_ID, CALLER_ID, "all", BriefSignalCursor.encode(yesterday, "inner"), null);
+
+    assertThat(page.items()).isEmpty();
   }
 
   @Test
