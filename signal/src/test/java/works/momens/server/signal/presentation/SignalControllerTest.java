@@ -1,8 +1,6 @@
 package works.momens.server.signal.presentation;
 
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -21,7 +19,6 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
@@ -53,14 +50,13 @@ class SignalControllerTest {
   private final Principal principal = USER_ID::toString;
 
   @Test
-  @DisplayName("Signal 목록 고정 envelope와 snake_case 항목을 반환한다")
+  @DisplayName("Signal 목록 고정 envelope와 snake_case 항목을 반환하고 project_id는 담지 않는다")
   void listSignalsReturnsFixedEnvelopeWithSnakeCaseSignals() throws Exception {
     UUID signalId = UUID.randomUUID();
     when(signalListService.listUnprocessed(eq(PROJECT_ID), eq(USER_ID)))
         .thenReturn(
             List.of(
-                new SignalSummary(
-                    signalId, PROJECT_ID, "risk", "이탈 가능성 발견", "완료율에 영향을 줄 수 있습니다.", "점검 제안")));
+                new SignalSummary(signalId, "risk", "이탈 가능성 발견", "완료율에 영향을 줄 수 있습니다.", "점검 제안")));
 
     mockMvc
         .perform(
@@ -72,7 +68,7 @@ class SignalControllerTest {
         .andExpect(jsonPath("$.description").value("프로젝트의 의사결정에 영향을 줄 수 있는 변화입니다."))
         .andExpect(jsonPath("$.signals.length()").value(1))
         .andExpect(jsonPath("$.signals[0].id").value(signalId.toString()))
-        .andExpect(jsonPath("$.signals[0].project_id").value(PROJECT_ID.toString()))
+        .andExpect(jsonPath("$.signals[0].project_id").doesNotExist())
         .andExpect(jsonPath("$.signals[0].type").value("risk"))
         .andExpect(jsonPath("$.signals[0].title").value("이탈 가능성 발견"))
         .andExpect(jsonPath("$.signals[0].impact").value("완료율에 영향을 줄 수 있습니다."))
@@ -84,7 +80,7 @@ class SignalControllerTest {
   void listSignalsIncludesNullImpactAndMinsuSuggestion() throws Exception {
     UUID signalId = UUID.randomUUID();
     when(signalListService.listUnprocessed(eq(PROJECT_ID), eq(USER_ID)))
-        .thenReturn(List.of(new SignalSummary(signalId, PROJECT_ID, "decision", "제목", null, null)));
+        .thenReturn(List.of(new SignalSummary(signalId, "decision", "제목", null, null)));
 
     mockMvc
         .perform(
@@ -112,28 +108,26 @@ class SignalControllerTest {
   }
 
   @Test
-  @DisplayName("Signal 상세 중첩 응답을 반환한다")
-  void getSignalReturnsNestedDetail() throws Exception {
+  @DisplayName("Signal 상세를 근거의 대상·변화·영향과 함께 반환하고 미사용 필드는 담지 않는다")
+  void getSignalReturnsDetailWithEvidenceDetails() throws Exception {
     UUID signalId = UUID.randomUUID();
-    UUID evidenceId = UUID.randomUUID();
+    UUID sourceRefId = UUID.randomUUID();
     when(signalDetailService.getDetail(eq(signalId), eq(USER_ID)))
         .thenReturn(
             new SignalDetail(
                 signalId,
-                PROJECT_ID,
-                "Q2 Activation Readiness",
                 "risk",
                 "이탈 가능성",
-                "본문",
                 "완료율에 영향",
                 "점검 제안",
                 List.of(
                     new SignalDetail.Evidence(
-                        evidenceId,
+                        sourceRefId,
                         "figma",
-                        "권한 화면",
                         Instant.parse("2026-07-06T00:00:00Z"),
-                        "요약",
+                        "권한 요청 화면",
+                        "이탈률 증가",
+                        "완료율 저하 가능",
                         "https://f/1"))));
 
     mockMvc
@@ -143,32 +137,34 @@ class SignalControllerTest {
                 .header("API-Version", "1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(signalId.toString()))
-        .andExpect(jsonPath("$.project.id").value(PROJECT_ID.toString()))
-        .andExpect(jsonPath("$.project.name").value("Q2 Activation Readiness"))
-        .andExpect(jsonPath("$.description").value("본문"))
-        .andExpect(jsonPath("$.evidence[0].id").value(evidenceId.toString()))
+        .andExpect(jsonPath("$.type").value("risk"))
+        .andExpect(jsonPath("$.title").value("이탈 가능성"))
+        .andExpect(jsonPath("$.impact").value("완료율에 영향"))
+        .andExpect(jsonPath("$.minsu_suggestion").value("점검 제안"))
+        .andExpect(jsonPath("$.evidence[0].source_ref_id").value(sourceRefId.toString()))
         .andExpect(jsonPath("$.evidence[0].source").value("figma"))
-        .andExpect(jsonPath("$.evidence[0].source_title").value("권한 화면"))
-        .andExpect(jsonPath("$.evidence[0].relative_time_label").doesNotExist())
-        .andExpect(jsonPath("$.evidence[0].summary").value("요약"))
-        // fields는 MVP에서 항상 빈 배열이다(D3).
-        .andExpect(jsonPath("$.evidence[0].fields.length()").value(0))
+        .andExpect(jsonPath("$.evidence[0].occurred_at").value("2026-07-06T00:00:00Z"))
+        .andExpect(jsonPath("$.evidence[0].details.target").value("권한 요청 화면"))
+        .andExpect(jsonPath("$.evidence[0].details.change").value("이탈률 증가"))
+        .andExpect(jsonPath("$.evidence[0].details.impact").value("완료율 저하 가능"))
         .andExpect(jsonPath("$.evidence[0].source_url").value("https://f/1"))
-        .andExpect(jsonPath("$.minsu.suggestion").value("점검 제안"))
-        // task_draft는 Signal 제목 기반 최소 초안(roles 빈 배열, priority medium).
-        .andExpect(jsonPath("$.minsu.task_draft.title").value("이탈 가능성"))
-        .andExpect(jsonPath("$.minsu.task_draft.roles.length()").value(0))
-        .andExpect(jsonPath("$.minsu.task_draft.priority").value("medium"))
-        .andExpect(jsonPath("$.actions").value(contains("convert-to-task", "dismiss")))
-        .andExpect(jsonPath("$.primary_action").value("convert-to-task"));
+        // ADR-0011로 상세 응답에서 제외된 필드.
+        .andExpect(jsonPath("$.project").doesNotExist())
+        .andExpect(jsonPath("$.description").doesNotExist())
+        .andExpect(jsonPath("$.evidence[0].source_title").doesNotExist())
+        .andExpect(jsonPath("$.evidence[0].summary").doesNotExist())
+        .andExpect(jsonPath("$.evidence[0].fields").doesNotExist())
+        .andExpect(jsonPath("$.minsu").doesNotExist())
+        .andExpect(jsonPath("$.actions").doesNotExist())
+        .andExpect(jsonPath("$.primary_action").doesNotExist());
   }
 
   @Test
-  @DisplayName("convert-to-task 신규 처리는 201과 task를 반환한다")
+  @DisplayName("convert-to-task 신규 처리는 body 없이 201과 task를 반환한다")
   void convertToTaskReturnsCreatedWhenNewlyProcessed() throws Exception {
     UUID signalId = UUID.randomUUID();
     UUID taskId = UUID.randomUUID();
-    when(signalActionService.convertToTask(eq(signalId), eq(USER_ID), any()))
+    when(signalActionService.convertToTask(eq(signalId), eq(USER_ID)))
         .thenReturn(
             new SignalActionResult(
                 signalId,
@@ -180,9 +176,7 @@ class SignalControllerTest {
         .perform(
             post("/api/mobile/signals/{signalId}/actions/convert-to-task", signalId)
                 .principal(principal)
-                .header("API-Version", "1")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"role\":\"backend\"}"))
+                .header("API-Version", "1"))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.task.id").value(taskId.toString()))
         .andExpect(jsonPath("$.task.title").value("제목"))
@@ -196,7 +190,7 @@ class SignalControllerTest {
   void convertToTaskReturnsOkWhenReplayed() throws Exception {
     UUID signalId = UUID.randomUUID();
     UUID taskId = UUID.randomUUID();
-    when(signalActionService.convertToTask(eq(signalId), eq(USER_ID), any()))
+    when(signalActionService.convertToTask(eq(signalId), eq(USER_ID)))
         .thenReturn(
             new SignalActionResult(
                 signalId,
@@ -211,59 +205,6 @@ class SignalControllerTest {
                 .header("API-Version", "1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.task.id").value(taskId.toString()));
-  }
-
-  @Test
-  @DisplayName("convert-to-task body 생략은 command에 전부 null을 전달한다")
-  void convertToTaskWithoutBodyPassesAllNullCommand() throws Exception {
-    UUID signalId = UUID.randomUUID();
-    when(signalActionService.convertToTask(
-            eq(signalId),
-            eq(USER_ID),
-            eq(new SignalActionService.ConvertToTaskCommand(null, null, null))))
-        .thenReturn(
-            new SignalActionResult(
-                signalId,
-                "convert_to_task",
-                true,
-                new SignalActionResult.TaskResult(UUID.randomUUID(), "제목", "todo")));
-
-    mockMvc
-        .perform(
-            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signalId)
-                .principal(principal)
-                .header("API-Version", "1"))
-        .andExpect(status().isCreated());
-  }
-
-  @Test
-  @DisplayName("잘못된 role 패턴은 COMMON_VALIDATION_FAILED로 400을 반환한다")
-  void convertToTaskWithInvalidRolePatternReturns400() throws Exception {
-    UUID signalId = UUID.randomUUID();
-
-    mockMvc
-        .perform(
-            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signalId)
-                .principal(principal)
-                .header("API-Version", "1")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"role\":\"android\"}"))
-        .andExpect(status().isBadRequest());
-  }
-
-  @Test
-  @DisplayName("공백 title override는 400을 반환한다")
-  void convertToTaskWithBlankTitleReturns400() throws Exception {
-    UUID signalId = UUID.randomUUID();
-
-    mockMvc
-        .perform(
-            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signalId)
-                .principal(principal)
-                .header("API-Version", "1")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"title\":\"   \",\"role\":\"backend\"}"))
-        .andExpect(status().isBadRequest());
   }
 
   @Test

@@ -106,8 +106,7 @@ class ProjectBriefServiceTest {
             eq(PROJECT_ID), eq(CALLER_ID), isNull(), eq(TODAY_FROM), eq(TODAY_TO), isNull(), eq(3)))
         .thenReturn(
             new SignalSummaryPage(
-                List.of(
-                    new SignalSummary(signalId, PROJECT_ID, "change", "권한 요청 반복 문의", null, null)),
+                List.of(new SignalSummary(signalId, "change", "권한 요청 반복 문의", null, null)),
                 "cursor-1"));
     when(taskReader.listTasksByStatus(PROJECT_ID, PRIORITY_STATUSES))
         .thenReturn(List.of(task(taskId, "이메일 회원가입 완료율 개선", "high", "2026-07-01T00:00:00Z")));
@@ -212,8 +211,7 @@ class ProjectBriefServiceTest {
             eq(3)))
         .thenReturn(
             new SignalSummaryPage(
-                List.of(new SignalSummary(signalId, PROJECT_ID, "change", "VOC 문의", null, null)),
-                null));
+                List.of(new SignalSummary(signalId, "change", "VOC 문의", null, null)), null));
 
     // 클라이언트가 되돌리는 커서는 오늘 앵커로 감싼 값이고, 서비스는 안쪽 signal 커서만 signal에 넘긴다.
     MobileBriefSignalPage page =

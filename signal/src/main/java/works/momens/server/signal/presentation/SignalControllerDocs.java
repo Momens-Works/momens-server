@@ -13,7 +13,6 @@ import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.signal.SignalErrorCode;
-import works.momens.server.signal.presentation.dto.request.ConvertToTaskRequest;
 import works.momens.server.signal.presentation.dto.response.ConvertToTaskResponse;
 import works.momens.server.signal.presentation.dto.response.DismissResponse;
 import works.momens.server.signal.presentation.dto.response.SignalDetailResponse;
@@ -43,7 +42,9 @@ interface SignalControllerDocs {
 
   @Operation(
       summary = "시그널 상세 조회",
-      description = "시그널 상세 bottom sheet에 필요한 본문·근거·민수 제안·가능한 action을 조회합니다.")
+      description =
+          "시그널 상세 bottom sheet에 필요한 근거(대상·변화·영향)와 민수 제안을 조회합니다. 미처리 시그널만 대상이며, 처리·삭제된 시그널은"
+              + " SIGNAL_NOT_FOUND입니다.")
   @ApiResponse(
       responseCode = "200",
       description = "시그널 상세.",
@@ -55,9 +56,9 @@ interface SignalControllerDocs {
   @Operation(
       summary = "시그널을 태스크로 전환",
       description =
-          "시그널을 태스크로 전환합니다. title은 생략하면 시그널 제목으로, priority는 생략하면 medium으로 채웁니다. role은 폴백이 없어"
-              + " body에 없으면 COMMON_VALIDATION_FAILED를 반환합니다(사실상 필수). 같은 시그널에 같은 action을 재요청하면 새 태스크를"
-              + " 만들지 않고 기존 결과를 200으로 반환합니다.")
+          "시그널을 원탭으로 태스크에 등록합니다. 요청 body는 없습니다(ADR-0011). 서버가 민수 task draft(title은 시그널 제목, role은 pm,"
+              + " priority는 medium)로 태스크를 만듭니다. 같은 시그널에 같은 action을 재요청하면 새 태스크를 만들지 않고 기존 결과를 200으로"
+              + " 반환합니다.")
   @ApiResponse(
       responseCode = "201",
       description = "새로 전환됨.",
@@ -68,9 +69,7 @@ interface SignalControllerDocs {
       content = @Content(schema = @Schema(implementation = ConvertToTaskResponse.class)))
   @ApiExceptions({SignalErrorCode.class, CommonErrorCode.class})
   ResponseEntity<ConvertToTaskResponse> convertToTask(
-      @Parameter(description = "signal 식별자") UUID signalId,
-      ConvertToTaskRequest request,
-      Principal principal);
+      @Parameter(description = "signal 식별자") UUID signalId, Principal principal);
 
   @Operation(
       summary = "시그널을 처리하지 않고 닫음(dismiss)",

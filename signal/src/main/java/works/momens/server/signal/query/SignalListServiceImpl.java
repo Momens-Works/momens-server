@@ -123,7 +123,6 @@ class SignalListServiceImpl implements SignalListService {
   private static SignalSummary toSummary(Signal signal) {
     return new SignalSummary(
         signal.getId(),
-        signal.getProjectId(),
         signal.getType(),
         signal.getTitle(),
         signal.getImpact(),
