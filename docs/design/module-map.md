@@ -87,6 +87,7 @@
 - JWT 발급/검증
 - SecurityFilterChain, 인증 필터, 공개/보호 엔드포인트 분리
 - logout
+- dev 전용 토큰 발급 엔드포인트(`POST /api/auth/dev/token`, MOM-90). dev 계열 프로필(`@DevOnly`)에서만 등록되고 공유 시크릿 헤더와 테스트 사용자 allowlist로 제한한다. prod에는 존재하지 않는다.
 
 프로필 조회/수정(`/me`)은 `user`가 소유하고, `auth`는 세션·보안만 책임진다. 인증 세션·전송
 모델(모바일 Bearer / 웹 HttpOnly 쿠키 하이브리드, 공통 access+refresh)은 [ADR-0003](../adr/0003-auth-session-transport-model.md),
