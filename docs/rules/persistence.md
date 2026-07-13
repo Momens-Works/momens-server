@@ -58,6 +58,14 @@
 - 값은 JPA Auditing(`@CreatedDate`/`@LastModifiedDate`)으로 채웁니다. 스키마의
   `NOT NULL DEFAULT NOW()`는 안전망으로 둡니다.
 
+### Append-only 발행 로그 예외 (outbox)
+
+- append-only 발행 로그(`outbox_events`)는 위 PK·감사 규칙의 예외입니다. row가 불변이라 수정이
+  없어 `updated_at`을 두지 않고, PK는 발행 순서를 담는 `BIGSERIAL`을 씁니다(UUID 아님). consumer의
+  watermark 폴링에 단조 증가 순서가 필요하기 때문입니다([ADR-0008](../adr/0008-outbox-worker-projection-boundary.md),
+  [모듈 맵 > outbox](../design/module-map.md)). 이 예외는 append-only 발행 로그에 한정하며, 일반
+  도메인 테이블은 위 UUID PK·`created_at`/`updated_at` 규칙을 그대로 따릅니다.
+
 ### 소프트 삭제
 
 - `deleted_at`(`timestamptz`, nullable)로 소프트 삭제를 표현합니다. 적용 범위는
