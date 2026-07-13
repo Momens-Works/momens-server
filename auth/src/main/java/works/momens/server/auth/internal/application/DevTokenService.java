@@ -5,7 +5,6 @@ import java.security.MessageDigest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import works.momens.server.auth.AuthErrorCode;
 import works.momens.server.auth.internal.config.DevOnly;
 import works.momens.server.auth.internal.config.DevTokenProperties;
 import works.momens.server.auth.internal.jwt.JwtTokenService;
@@ -49,7 +48,7 @@ public class DevTokenService {
         || !MessageDigest.isEqual(
             providedSecret.getBytes(StandardCharsets.UTF_8),
             properties.secret().getBytes(StandardCharsets.UTF_8))) {
-      throw new BusinessException(AuthErrorCode.AUTH_DEV_TOKEN_SECRET_INVALID);
+      throw new BusinessException(DevTokenErrorCode.AUTH_DEV_TOKEN_SECRET_INVALID);
     }
   }
 
@@ -58,7 +57,7 @@ public class DevTokenService {
       return properties.allowedEmails().getFirst();
     }
     if (!properties.allowedEmails().contains(requestedEmail)) {
-      throw new BusinessException(AuthErrorCode.AUTH_DEV_TOKEN_EMAIL_NOT_ALLOWED);
+      throw new BusinessException(DevTokenErrorCode.AUTH_DEV_TOKEN_EMAIL_NOT_ALLOWED);
     }
     return requestedEmail;
   }
