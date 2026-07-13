@@ -159,6 +159,8 @@ Standard 모드의 에러 응답은 아래 형태를 사용합니다.
 | 401 | `AUTH_REFRESH_TOKEN_INVALID` | refresh token 형식·해시·만료·폐기 상태가 유효하지 않음 |
 | 400 | `AUTH_OAUTH_STATE_INVALID` | 웹 OAuth 콜백의 state 불일치·누락 또는 code 누락 |
 | 502 | `AUTH_OAUTH_EXCHANGE_FAILED` | 웹 OAuth code 교환·userinfo 조회 실패 |
+| 401 | `AUTH_DEV_TOKEN_SECRET_INVALID` | dev 토큰 발급 요청에서 공유 시크릿 헤더가 없거나 일치하지 않음 (dev 계열 프로필 전용) |
+| 403 | `AUTH_DEV_TOKEN_EMAIL_NOT_ALLOWED` | dev 토큰 발급 대상 이메일이 allowlist에 없음 (dev 계열 프로필 전용) |
 | 404 | `USER_NOT_FOUND` | 사용자를 찾을 수 없음 (`GET/PATCH /api/me` 등) |
 | 409 | `SIGNAL_INVALID_STATE` | 이미 다른 action으로 처리된 Signal에 다른 action을 요청함(같은 action 재요청은 200 멱등 응답) |
 
