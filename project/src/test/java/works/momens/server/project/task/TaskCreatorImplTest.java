@@ -2,9 +2,11 @@ package works.momens.server.project.task;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import works.momens.server.outbox.OutboxAppender;
 import works.momens.server.project.CreateTaskCommand;
 import works.momens.server.project.CreatedTask;
 import works.momens.server.workspace.LabelAllocator;
@@ -27,6 +30,7 @@ class TaskCreatorImplTest {
 
   @Mock private TaskRepository taskRepository;
   @Mock private LabelAllocator labelAllocator;
+  @Mock private OutboxAppender outboxAppender;
   @InjectMocks private TaskCreatorImpl taskCreator;
 
   @Test
@@ -37,7 +41,7 @@ class TaskCreatorImplTest {
 
     CreatedTask created =
         taskCreator.create(
-            new CreateTaskCommand(projectId, workspaceId, "권한 요청 점검", "backend", "high"));
+            CreateTaskCommand.manual(projectId, workspaceId, "권한 요청 점검", "backend", "high"));
 
     ArgumentCaptor<Task> captor = ArgumentCaptor.forClass(Task.class);
     verify(taskRepository).save(captor.capture());
@@ -63,10 +67,61 @@ class TaskCreatorImplTest {
     when(labelAllocator.allocateMomLabel(any())).thenReturn("MOM-0002");
 
     CreatedTask created =
-        taskCreator.create(new CreateTaskCommand(UUID.randomUUID(), workspaceId, "제목", "pm", null));
+        taskCreator.create(
+            CreateTaskCommand.manual(UUID.randomUUID(), workspaceId, "제목", "pm", null));
 
     assertThat(created.priority()).isEqualTo("medium");
     assertThat(created.role()).isEqualTo("pm");
     assertThat(created.status()).isEqualTo("todo");
+  }
+
+  @Test
+  void manualCreatePublishesTaskCreatedWithManualOrigin() {
+    UUID projectId = UUID.randomUUID();
+    UUID workspaceId = UUID.randomUUID();
+    when(labelAllocator.allocateMomLabel(workspaceId)).thenReturn("MOM-0003");
+
+    CreatedTask created =
+        taskCreator.create(CreateTaskCommand.manual(projectId, workspaceId, "제목", "pm", "high"));
+
+    Map<String, Object> expectedPayload = new java.util.LinkedHashMap<>();
+    expectedPayload.put("origin_type", "manual");
+    expectedPayload.put("origin_signal_id", null);
+    verify(outboxAppender)
+        .append(
+            eq(workspaceId),
+            eq("task"),
+            eq(created.id().toString()),
+            eq("task.created"),
+            eq(expectedPayload));
+  }
+
+  @Test
+  void signalOriginCreatePersistsOriginAndPublishesSignalId() {
+    UUID projectId = UUID.randomUUID();
+    UUID workspaceId = UUID.randomUUID();
+    UUID signalId = UUID.randomUUID();
+    when(labelAllocator.allocateMomLabel(workspaceId)).thenReturn("MOM-0004");
+
+    CreatedTask created =
+        taskCreator.create(
+            CreateTaskCommand.fromSignal(projectId, workspaceId, "제목", "pm", "high", signalId));
+
+    ArgumentCaptor<Task> captor = ArgumentCaptor.forClass(Task.class);
+    verify(taskRepository).save(captor.capture());
+    Task saved = captor.getValue();
+    assertThat(saved.getOriginType()).isEqualTo("signal");
+    assertThat(saved.getOriginSignalId()).isEqualTo(signalId);
+
+    Map<String, Object> expectedPayload = new java.util.LinkedHashMap<>();
+    expectedPayload.put("origin_type", "signal");
+    expectedPayload.put("origin_signal_id", signalId.toString());
+    verify(outboxAppender)
+        .append(
+            eq(workspaceId),
+            eq("task"),
+            eq(created.id().toString()),
+            eq("task.created"),
+            eq(expectedPayload));
   }
 }

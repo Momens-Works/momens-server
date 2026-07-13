@@ -138,6 +138,8 @@ class ProjectTaskServiceTest {
     assertThat(command.title()).isEqualTo("제목");
     assertThat(command.role()).isEqualTo("pm");
     assertThat(command.priority()).isEqualTo("high");
+    assertThat(command.origin()).isEqualTo(works.momens.server.project.TaskOrigin.MANUAL);
+    assertThat(command.originSignalId()).isNull();
     assertThat(result).isSameAs(created);
   }
 

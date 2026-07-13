@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -225,9 +226,32 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
         jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM tasks WHERE project_id = ?", Integer.class, project);
     assertThat(taskCount).isEqualTo(1);
-    String taskId =
+    Map<String, Object> taskRow =
+        jdbcTemplate.queryForMap(
+            "SELECT id, origin_type, origin_signal_id FROM tasks WHERE project_id = ?", project);
+    String taskId = taskRow.get("id").toString();
+
+    // task는 signal 출처와 origin Signal id를 보존한다.
+    assertThat(taskRow.get("origin_type")).isEqualTo("signal");
+    assertThat(taskRow.get("origin_signal_id")).isEqualTo(signal);
+
+    // outbox: task.created(signal 출처)와 signal.converted_to_task가 각각 발행된다.
+    Map<String, Object> taskCreated =
+        jdbcTemplate.queryForMap(
+            "SELECT issued_by, payload->>'origin_type' AS origin_type,"
+                + " payload->>'origin_signal_id' AS origin_signal_id FROM outbox_events"
+                + " WHERE event_type = 'task.created' AND aggregate_id = ?",
+            taskId);
+    assertThat(taskCreated.get("issued_by")).isEqualTo("api-server");
+    assertThat(taskCreated.get("origin_type")).isEqualTo("signal");
+    assertThat(taskCreated.get("origin_signal_id")).isEqualTo(signal.toString());
+    String convertedTaskId =
         jdbcTemplate.queryForObject(
-            "SELECT id FROM tasks WHERE project_id = ?", String.class, project);
+            "SELECT payload->>'task_id' FROM outbox_events"
+                + " WHERE event_type = 'signal.converted_to_task' AND aggregate_id = ?",
+            String.class,
+            signal.toString());
+    assertThat(convertedTaskId).isEqualTo(taskId);
 
     mockMvc
         .perform(
@@ -241,6 +265,21 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
         jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM tasks WHERE project_id = ?", Integer.class, project);
     assertThat(taskCountAfterRetry).isEqualTo(1);
+    // 재시도는 replay라 중복 이벤트를 만들지 않는다(멱등키 UNIQUE + facade replay).
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM outbox_events WHERE event_type = 'task.created'"
+                    + " AND aggregate_id = ?",
+                Integer.class,
+                taskId))
+        .isEqualTo(1);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM outbox_events WHERE event_type = 'signal.converted_to_task'"
+                    + " AND aggregate_id = ?",
+                Integer.class,
+                signal.toString()))
+        .isEqualTo(1);
   }
 
   @Test
@@ -274,6 +313,14 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
         jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM signal_actions WHERE signal_id = ?", Integer.class, signal);
     assertThat(actionCount).isEqualTo(1);
+    // outbox: signal.dismissed 한 건만 발행되고, 재요청 replay는 중복 이벤트를 만들지 않는다.
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM outbox_events WHERE event_type = 'signal.dismissed'"
+                    + " AND aggregate_id = ?",
+                Integer.class,
+                signal.toString()))
+        .isEqualTo(1);
 
     mockMvc
         .perform(

@@ -20,6 +20,8 @@ dependencies {
     implementation project(':source')
     // worker가 발행하는 Signal·Outbox 이벤트의 공용 protobuf 계약.
     implementation 'com.momens:momens-proto:1.0.0'
+    // Signal action 결과를 outbox로 발행합니다(MOM-0688, converted_to_task·dismissed).
+    implementation project(':outbox')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     // Signal 목록/action 컨트롤러(presentation).

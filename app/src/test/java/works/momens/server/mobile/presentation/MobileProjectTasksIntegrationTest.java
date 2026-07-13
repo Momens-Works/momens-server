@@ -97,13 +97,28 @@ class MobileProjectTasksIntegrationTest extends AbstractPostgresIntegrationTest 
 
     Map<String, Object> row =
         jdbcTemplate.queryForMap(
-            "SELECT status, priority, role, label, workspace_id FROM tasks WHERE project_id = ?",
+            "SELECT id, status, priority, role, label, workspace_id, origin_type, origin_signal_id"
+                + " FROM tasks WHERE project_id = ?",
             project);
     org.assertj.core.api.Assertions.assertThat(row.get("status")).isEqualTo("todo");
     org.assertj.core.api.Assertions.assertThat(row.get("priority")).isEqualTo("high");
     org.assertj.core.api.Assertions.assertThat(row.get("role")).isEqualTo("backend");
     org.assertj.core.api.Assertions.assertThat((String) row.get("label")).startsWith("MOM-");
     org.assertj.core.api.Assertions.assertThat(row.get("workspace_id")).isEqualTo(workspace);
+    // 일반 보드 생성은 manual 출처로 저장되고 origin Signal id는 없다.
+    org.assertj.core.api.Assertions.assertThat(row.get("origin_type")).isEqualTo("manual");
+    org.assertj.core.api.Assertions.assertThat(row.get("origin_signal_id")).isNull();
+
+    // outbox: task.created가 manual 출처 payload로 발행된다.
+    String taskId = row.get("id").toString();
+    Map<String, Object> taskCreated =
+        jdbcTemplate.queryForMap(
+            "SELECT payload->>'origin_type' AS origin_type,"
+                + " payload->>'origin_signal_id' AS origin_signal_id FROM outbox_events"
+                + " WHERE event_type = 'task.created' AND aggregate_id = ?",
+            taskId);
+    org.assertj.core.api.Assertions.assertThat(taskCreated.get("origin_type")).isEqualTo("manual");
+    org.assertj.core.api.Assertions.assertThat(taskCreated.get("origin_signal_id")).isNull();
   }
 
   @Test

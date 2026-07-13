@@ -16,6 +16,8 @@ dependencies {
     // 접근 범위(workspace 스코프) 자체는 여전히 호출하는 쪽이 멤버십을 한 번 조회해 넘깁니다(PR #42
     // 리뷰). 이 런타임 의존은 projects/tasks 의 workspace FK 마이그레이션도 테스트 클래스패스에 올립니다.
     implementation project(':workspace')
+    // task 생성 트랜잭션 안에서 task.created 이벤트를 발행합니다(MOM-0688, SD-5).
+    implementation project(':outbox')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 

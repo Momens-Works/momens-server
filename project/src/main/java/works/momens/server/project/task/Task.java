@@ -64,6 +64,12 @@ class Task extends BaseEntity {
   @Column(nullable = false)
   private String role;
 
+  @Column(name = "origin_type", nullable = false)
+  private String originType;
+
+  @Column(name = "origin_signal_id", columnDefinition = "uuid")
+  private UUID originSignalId;
+
   /**
    * 완료기준 항목. 자식 엔티티의 전체 생명주기를 이 aggregate가 소유하므로 cascade ALL과 orphanRemoval로 컬렉션 변경이 곧 저장 변경이 되게
    * 합니다. 리스트 순서가 저장 순서라(수정 화면이 전체 목록 순서로 저장) {@code @OrderColumn}을 부모 소유 단방향으로 둡니다. mappedBy 컬렉션의
@@ -85,7 +91,9 @@ class Task extends BaseEntity {
       String title,
       String status,
       String priority,
-      String role) {
+      String role,
+      String originType,
+      UUID originSignalId) {
     this.workspaceId = workspaceId;
     this.projectId = projectId;
     this.label = label;
@@ -94,6 +102,10 @@ class Task extends BaseEntity {
     this.status = status != null ? status : "backlog";
     this.priority = priority != null ? priority : "medium";
     this.role = role;
+    // 생성 API는 항상 출처를 넘기지만, 값이 없으면 status/priority처럼 레거시 DB DEFAULT('manual')와 같은
+    // 기본을 앱에서도 보장한다. signal 출처일 때만 origin_signal_id가 있다는 불변식은 DB CHECK가 지킨다.
+    this.originType = originType != null ? originType : "manual";
+    this.originSignalId = originSignalId;
   }
 
   /**
