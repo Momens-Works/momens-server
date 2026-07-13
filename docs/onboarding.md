@@ -25,6 +25,7 @@ Momens는 여러 레포로 나뉘어 있습니다.
 | **`momens-server`** | **새 Java Spring 제품 API 서버 (여기)** |
 | `momens-worker` | 외부 소스 수집·큐레이션 워커 |
 | `momens-retrieval` | 검색 read-model 서버 (gRPC) |
+| `momens-proto` | 서버·워커가 공유하는 protobuf 계약 (Git submodule) |
 | `k8s` | 쿠버네티스·인프라 정의 |
 
 제품 차원의 배경/용어가 궁금하면 먼저 `teams`를 보세요.
@@ -46,8 +47,11 @@ Momens는 여러 레포로 나뉘어 있습니다.
 
 ```bash
 # 1) 클론
-git clone https://github.com/Momens-Works/momens-server.git
+git clone --recurse-submodules https://github.com/Momens-Works/momens-server.git
 cd momens-server
+
+# 이미 클론한 리포라면 submodule 초기화
+git submodule update --init --recursive
 
 # 2) 로컬 환경변수 준비 (.env 는 커밋하지 않음)
 cp .env.example .env
@@ -58,6 +62,10 @@ docker compose up -d
 # 4) 빌드/테스트로 환경 검증 (Docker 실행 중이어야 함)
 ./gradlew test
 ```
+
+`momens-proto`는 private 리포이므로 로컬 GitHub 자격 증명에 읽기 권한이 필요합니다.
+GitHub Actions는 같은 권한을 가진 repository secret `CI_SUBMODULES_TOKEN`으로 submodule을
+checkout합니다.
 
 `.env` 키 설명과 프로필 구성은 [로컬 개발](local-development.md)을 참고하세요.
 
@@ -92,8 +100,10 @@ curl http://localhost:8080/actuator/health   # {"status":"UP"}
 momens-server
 ├── app/                       # 실행 애플리케이션 모듈 (Spring Boot main)
 │   └── src/main/java/works/momens/server/MomensServerApplication.java
+├── third_party/
+│   └── momens-proto/          # 공유 protobuf 계약 submodule
 ├── build.gradle               # 루트(공통 설정)
-├── settings.gradle            # 멀티모듈 정의 (현재 :app)
+├── settings.gradle            # 멀티모듈·composite build 정의
 ├── docker-compose.yml         # 로컬 pgvector PostgreSQL
 └── docs/                      # 문서 (이 폴더)
 ```
