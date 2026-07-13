@@ -1,0 +1,25 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    // Boot BOM으로 버전을 관리합니다(boot 플러그인은 app만 적용).
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // outbox_events는 append-only 발행 로그라 UUID PK·감사 필드(BaseEntity)를 쓰지 않습니다.
+    // 따라서 main은 :common에 의존하지 않고, 공유 테스트 베이스만 test 스코프로 재사용합니다.
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // payload(jsonb) 직렬화용. 웹 계층(Boot 4 기본 Jackson 3)에 의존하지 않고 appender가 전용
+    // ObjectMapper 인스턴스로 직렬화합니다.
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // common testFixtures의 Testcontainers 통합테스트 베이스를 재사용합니다.
+    testImplementation testFixtures(project(':common'))
+}

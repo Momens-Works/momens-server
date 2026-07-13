@@ -20,6 +20,7 @@
 | `workspace` | workspace·멤버·초대·RBAC·label 발급 (중심 모듈) | `workspace`·`access`·`label` |
 | `project` | project·milestone·task·decision·blocker 운영 흐름 | 동명 5개 패키지 |
 | `signal` | 모바일 Signal 원본 조회·사용자 action ledger·Signal action outbox | 신규 |
+| `outbox` | 확정 액션 결과의 append-only 발행 로그(`outbox_events`)·발행 API | 신규 |
 | `mobile` | 모바일 진입 API. 도메인 public API 조합(얇은 orchestration) | 없음 (신규 표면) |
 | `memory` | 메모리 후보 검토·confirmed memory lifecycle | `memory` |
 | `source` | 외부 연결 lifecycle·provider OAuth·source-ref verify | `source` |
@@ -40,6 +41,9 @@
   상세 응답의 evidence는 `source`의 source_ref 조회 public API로 hydrate한다.
   Signal을 task로 수용할 때는 `project`의 task 생성 public API를 사용한다.
 - `retrieval`은 `project`·`memory`의 도메인 write 이후 발행(event 또는 public API)을 받는다.
+- `outbox`은 발행 API(`OutboxAppender`)만 공개하고 다른 모듈에 의존하지 않는다. `project`(task 생성)와
+  `signal`(action)이 도메인 write 트랜잭션 안에서 이 API로 이벤트를 발행한다. `signal`이 `project`에도
+  의존하므로, 두 모듈이 공유하는 발행 로그를 `signal`에 두면 `project → signal` 순환이 생겨 별도 모듈로 둔다.
 - 다른 모듈의 `internal` package 참조와 순환 의존은 금지한다.
 
 ## 모듈별 책임
@@ -223,6 +227,19 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 신규 Signal backing은 `memory_candidates`와 분리한다. 이유와 결과는
 [ADR-0007](../adr/0007-signal-backing-and-module-boundary.md)에 기록한다.
 
+### outbox
+
+확정 액션 결과의 발행 로그를 담당한다.
+
+- `outbox_events`: 도메인 write 트랜잭션 안에서 append되는 append-only 발행 로그(ADR-0008, ADR-0010).
+  발행 주체(`issued_by`)가 자기 트랜잭션에서 INSERT하고, `status`/`updated_at` 없이 consumer가 소비 상태를
+  자체 관리한다. 멱등키(`{event_type}:{aggregate_id}`) `UNIQUE` + `ON CONFLICT DO NOTHING`이 중복 이벤트를
+  막는다(MOM-0688).
+- 발행 API(`OutboxAppender`)만 공개하고, 엔티티·리포지토리·발행 주체(`api-server`)·멱등키 생성은 은닉한다.
+- 어떤 이벤트를 언제 발행할지(event_type·payload)는 발행하는 모듈이 소유한다. `project`는 task 생성
+  트랜잭션에서 `task.created`를, `signal`은 action 트랜잭션에서 `signal.converted_to_task`·`signal.dismissed`를
+  이 API로 남긴다. worker의 `signal.created` 발행과 outbox 소비·재시도·DLQ는 이 모듈 밖(worker/retrieval)이다.
+
 내부는 도메인 하위 경계로 논리 분리한다(MOM-65). Signal 조회(`query`)와 action(`action`)은 각각
 Spring Modulith nested 논리 모듈이고, `project`의 `task`와 같은 방식을 따른다: 공개 계약(조회는
 `SignalListService`·`SignalDetailService`·`SignalReader` 인터페이스와 `SignalDetail`·
@@ -300,6 +317,7 @@ ownership과는 분리한다. 레거시 `slackbot`의 표면(Slack 이벤트 처
 | `workspace` | `workspace`, `access`(RBAC), `label` |
 | `project` | `project`, `milestone`, `task`, `decision`, `blocker` |
 | `signal` | 신규 |
+| `outbox` | 신규 |
 | `memory` | `memory` |
 | `source` | `source` |
 | `context` | `relation` |
