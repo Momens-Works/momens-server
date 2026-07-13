@@ -64,6 +64,11 @@ root
 - 단순한 경우 상대 모듈의 public API 직접 참조를 허용하되, 리뷰 단계에서 세부 논의합니다.
 - 다른 모듈의 `internal` package 참조와 순환 의존은 금지합니다.
 - event listener는 얇게 유지하고 application service를 호출합니다.
+- 위 "event 협력"은 한 프로세스 안의 **모듈 간** Spring Modulith application event를 뜻합니다. 서버 경계를
+  넘는 **서비스 간** 도메인 이벤트(worker/retrieval 소비)는 이와 별개로, 도메인 write 트랜잭션에서 append하는
+  `outbox` 발행 로그를 씁니다([ADR-0008](../adr/0008-outbox-worker-projection-boundary.md),
+  [ADR-0010](../adr/0010-event-contract-conventions.md)). outbox 발행은 커밋과 원자적이어야 해 registry
+  기반 커밋 후 처리가 아니라 발행 모듈의 트랜잭션 안에서 동기로 이뤄집니다.
 
 ## Spring Modulith 적용
 
