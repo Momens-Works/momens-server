@@ -2,6 +2,7 @@ package works.momens.server.user;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -19,6 +20,12 @@ public interface UserService {
    * 책임지고, 여기서는 검증된 정보로 upsert만 수행합니다.
    */
   UserProfile findOrCreate(String email, String name, String avatarUrl);
+
+  /**
+   * email로 사용자 프로필을 조회합니다. 없으면 빈 {@link Optional}을 돌려줍니다. 읽기만 하므로 {@link #findOrCreate}와 달리 기존 프로필을
+   * 바꾸지 않습니다.
+   */
+  Optional<UserProfile> findByEmail(String email);
 
   /** 사용자 프로필 조회. 없으면 {@link UserErrorCode#USER_NOT_FOUND}. */
   UserProfile getProfile(UUID userId);

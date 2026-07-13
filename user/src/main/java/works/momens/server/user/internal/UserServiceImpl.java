@@ -3,6 +3,7 @@ package works.momens.server.user.internal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,12 @@ class UserServiceImpl implements UserService {
     // (read-then-insert의 경합 회피). id는 신규 행에만 쓰이고 충돌 시 기존 행을 유지한다.
     userRepository.upsertByEmail(UUID.randomUUID(), email, name, avatarUrl);
     return toProfile(userRepository.findByEmail(email).orElseThrow());
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<UserProfile> findByEmail(String email) {
+    return userRepository.findByEmail(email).map(UserServiceImpl::toProfile);
   }
 
   @Override
