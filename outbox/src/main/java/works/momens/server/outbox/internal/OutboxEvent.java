@@ -51,7 +51,7 @@ class OutboxEvent {
   @Column(name = "payload", columnDefinition = "jsonb")
   private String payload;
 
-  @Column(name = "idempotency_key")
+  @Column(name = "idempotency_key", nullable = false)
   private String idempotencyKey;
 
   @Column(name = "created_at", nullable = false, updatable = false)

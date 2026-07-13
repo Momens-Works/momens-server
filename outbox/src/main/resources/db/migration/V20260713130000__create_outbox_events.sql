@@ -18,6 +18,6 @@ CREATE TABLE outbox_events (
     aggregate_id TEXT,
     event_type TEXT,
     payload JSONB,
-    idempotency_key TEXT UNIQUE,
+    idempotency_key TEXT NOT NULL UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
