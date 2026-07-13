@@ -36,9 +36,15 @@ public class DevTokenService {
   public String issueForTestUser(String providedSecret, String requestedEmail) {
     verifySecret(providedSecret);
     String email = resolveEmail(requestedEmail);
-    UserProfile user = userService.findOrCreate(email, email, null);
+    // 기존 사용자는 조회만 한다. findOrCreate는 upsert라 바로 부르면 기존 프로필(name/avatar)을 덮어쓰므로,
+    // 없을 때만 생성한다.
+    UserProfile user =
+        userService
+            .findByEmail(email)
+            .orElseGet(() -> userService.findOrCreate(email, email, null));
     String accessToken = jwtTokenService.issueAccessToken(user.id());
-    log.info("dev access token issued email={} userId={}", email, user.id());
+    // 개인정보(email)는 로그에 남기지 않는다(code-conventions 로깅 규칙). 식별은 userId로 한다.
+    log.info("dev access token issued userId={}", user.id());
     return accessToken;
   }
 
