@@ -10,7 +10,9 @@ public enum AuthErrorCode implements ErrorCode {
   AUTH_GOOGLE_EMAIL_NOT_VERIFIED(401, "Google 계정 이메일이 검증되지 않았습니다."),
   AUTH_REFRESH_TOKEN_INVALID(401, "Refresh token이 유효하지 않습니다."),
   AUTH_OAUTH_STATE_INVALID(400, "OAuth state가 유효하지 않습니다."),
-  AUTH_OAUTH_EXCHANGE_FAILED(502, "Google OAuth 코드 교환에 실패했습니다.");
+  AUTH_OAUTH_EXCHANGE_FAILED(502, "Google OAuth 코드 교환에 실패했습니다."),
+  AUTH_DEV_TOKEN_SECRET_INVALID(401, "dev 토큰 시크릿이 유효하지 않습니다."),
+  AUTH_DEV_TOKEN_EMAIL_NOT_ALLOWED(403, "허용되지 않은 테스트 사용자입니다.");
 
   private final int status;
   private final String defaultMessage;
