@@ -1,4 +1,4 @@
-package works.momens.server.outbox;
+package works.momens.server.outbox.internal;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

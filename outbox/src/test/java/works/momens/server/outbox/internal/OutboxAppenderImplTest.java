@@ -1,4 +1,4 @@
-package works.momens.server.outbox;
+package works.momens.server.outbox.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;

@@ -1,4 +1,4 @@
-package works.momens.server.outbox;
+package works.momens.server.outbox.internal;
 
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
