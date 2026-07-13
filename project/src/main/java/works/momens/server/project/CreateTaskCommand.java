@@ -20,6 +20,16 @@ public record CreateTaskCommand(
     TaskOrigin origin,
     UUID originSignalId) {
 
+  public CreateTaskCommand {
+    // 팩토리를 우회한 canonical 생성자 호출도 출처 불변식을 지키도록 생성 시점에 강제한다(DB CHECK 이전 fail-fast).
+    if (origin == TaskOrigin.SIGNAL && originSignalId == null) {
+      throw new IllegalArgumentException("signal 출처는 originSignalId가 필요합니다");
+    }
+    if (origin == TaskOrigin.MANUAL && originSignalId != null) {
+      throw new IllegalArgumentException("manual 출처는 originSignalId를 가질 수 없습니다");
+    }
+  }
+
   public static CreateTaskCommand manual(
       UUID projectId, UUID workspaceId, String title, String role, String priority) {
     return new CreateTaskCommand(
