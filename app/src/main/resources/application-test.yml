@@ -19,6 +19,7 @@ momens:
       allowed-emails:
         - jinsu@momens.works
         - gyuil@momens.works
+        - preserve@momens.works
     google:
       audiences: test-google-client-id.apps.googleusercontent.com
     web:

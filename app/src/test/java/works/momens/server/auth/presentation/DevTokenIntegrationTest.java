@@ -1,5 +1,6 @@
 package works.momens.server.auth.presentation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -14,6 +15,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 
 /**
@@ -114,5 +116,26 @@ class DevTokenIntegrationTest extends AbstractPostgresIntegrationTest {
                 .content("{\"email\":\"stranger@momens.works\"}"))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.error.code").value("AUTH_DEV_TOKEN_EMAIL_NOT_ALLOWED"));
+  }
+
+  @Test
+  void doesNotOverwriteExistingUserProfile() throws Exception {
+    UUID userId =
+        userService.findOrCreate("preserve@momens.works", "홍길동", "https://example.com/a.png").id();
+
+    mockMvc
+        .perform(
+            post("/api/auth/dev/token")
+                .header(SECRET_HEADER, SECRET)
+                .header(API_VERSION_HEADER, API_VERSION)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"preserve@momens.works\"}"))
+        .andExpect(status().isOk());
+
+    // findOrCreate는 upsert라 바로 부르면 기존 name/avatar를 덮어쓴다. dev 발급은 findByEmail 조회를 먼저 하므로
+    // 기존 프로필이 그대로 남아야 한다.
+    UserProfile after = userService.getProfile(userId);
+    assertThat(after.name()).isEqualTo("홍길동");
+    assertThat(after.avatarUrl()).isEqualTo("https://example.com/a.png");
   }
 }
