@@ -1,5 +1,6 @@
 package works.momens.server.project;
 
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -22,6 +23,7 @@ public record CreateTaskCommand(
 
   public CreateTaskCommand {
     // 팩토리를 우회한 canonical 생성자 호출도 출처 불변식을 지키도록 생성 시점에 강제한다(DB CHECK 이전 fail-fast).
+    Objects.requireNonNull(origin, "origin은 필수입니다");
     if (origin == TaskOrigin.SIGNAL && originSignalId == null) {
       throw new IllegalArgumentException("signal 출처는 originSignalId가 필요합니다");
     }
