@@ -63,7 +63,7 @@ Signal type에 따라 앱이 다음처럼 화면 라벨을 정합니다. 이 라
 | --- | --- |
 | `group_key` | `backlog`, `todo`, `in_progress`, `done`, `cancelled` |
 | `priority` | `high`, `medium`, `low` |
-| `role` | `pm`, `design`, `backend`, `frontend` (하나만 선택. android, qa는 2026-07-08 기획 확정으로 폐기) |
+| `role` | `pm`, `design`, `backend`, `frontend` (하나만 선택. android, qa는 2026-07-08 기획 확정으로 폐기. 응답에서는 웹에서 만든 태스크가 미지정이면 `null`) |
 
 ### Membership
 
@@ -633,7 +633,7 @@ id를 기준으로 하기 때문에, 페이지 사이에 시그널이 처리되�
 }
 ```
 
-보드는 backlog, todo, in_progress, done, cancelled 다섯 그룹을 순서대로 노출합니다. 태스크 수정 화면이 상태 5종을 모두 편집하므로, backlog나 cancelled로 바꾼 태스크가 보드에서 사라지지 않도록 다섯 그룹을 모두 담습니다(MOM-75). 다섯 그룹은 태스크가 없어도 항상 포함하며 그때 tasks는 빈 배열입니다. priority는 low, medium, high로 반환하고, 저장된 값이 레거시 전용인 urgent이면 high로 반환합니다(2026-07-06 가결정). material_count는 관련 자료 연결 데이터가 아직 없어 0으로 고정합니다(합성 필드 정책).
+보드는 backlog, todo, in_progress, done, cancelled 다섯 그룹을 순서대로 노출합니다. 태스크 수정 화면이 상태 5종을 모두 편집하므로, backlog나 cancelled로 바꾼 태스크가 보드에서 사라지지 않도록 다섯 그룹을 모두 담습니다(MOM-75). 다섯 그룹은 태스크가 없어도 항상 포함하며 그때 tasks는 빈 배열입니다. priority는 low, medium, high로 반환하고, 저장된 값이 레거시 전용인 urgent이면 high로 반환합니다(2026-07-06 가결정). material_count는 관련 자료 연결 데이터가 아직 없어 0으로 고정합니다(합성 필드 정책). 웹에서 만든 태스크는 역할이 없어 role을 null로 반환합니다(레거시와 공유하는 tasks에서 role은 nullable이고, 모바일 생성 API는 role을 필수로 받습니다).
 
 #### Errors
 
@@ -735,7 +735,7 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 `material_count`는 `0`입니다. `open_questions`, `next_action`은 MVP에서 backing source가 없으면 각각 `[]`,
 `null`로 반환합니다. 서버는 근거 없는 값을 임의 생성하지 않습니다(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
 
-담당자가 지정되지 않았으면 `assignee`는 `null`, 목적을 아직 작성하지 않았으면 `purpose`는 `null`입니다. 태스크 생성 시점에 민수가 담당자를 판단해 지정하는데, 판단에 걸리는 시간 동안에는 담당자가 없어 `assignee`가 `null`로 내려가고, 이후 지정되면 조회에 자동으로 반영됩니다. `assignee.avatar_url`은 담당자의 구글 계정 프로필 이미지이고, 없으면 `null`입니다.
+담당자가 지정되지 않았으면 `assignee`는 `null`, 목적을 아직 작성하지 않았으면 `purpose`는 `null`입니다. 웹에서 만든 태스크는 역할이 없어 `role`도 `null`입니다. 태스크 생성 시점에 민수가 담당자를 판단해 지정하는데, 판단에 걸리는 시간 동안에는 담당자가 없어 `assignee`가 `null`로 내려가고, 이후 지정되면 조회에 자동으로 반영됩니다. `assignee.avatar_url`은 담당자의 구글 계정 프로필 이미지이고, 없으면 `null`입니다.
 완료기준이 없으면 `checklist`는 `completed_count` 0, `total_count` 0, `items` 빈 배열입니다(2026-07-07 확정).
 `status`는 저장된 5종(backlog, todo, in_progress, done, cancelled)을 그대로 반환하고(상세 상태 칩이 5종 노출),
 `priority`는 보드와 같이 저장된 urgent를 high로 반환합니다. `purpose`는 레거시 `tasks.description`에 매핑됩니다.
