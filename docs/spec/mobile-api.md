@@ -179,7 +179,7 @@ Refresh token을 폐기합니다.
 ```json
 {
   "me": {
-    "id": "user-uuid",
+    "id": "0b3f8c1a-2d4e-4f6a-8b9c-1e2d3f4a5b6c",
     "name": "김민지",
     "avatar_url": null
   },
@@ -199,7 +199,7 @@ Refresh token을 폐기합니다.
 ```json
 {
   "me": {
-    "id": "user-uuid",
+    "id": "0b3f8c1a-2d4e-4f6a-8b9c-1e2d3f4a5b6c",
     "name": "김민지",
     "avatar_url": null
   },
@@ -705,8 +705,8 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
     "completed_count": 2,
     "total_count": 4,
     "items": [
-      { "id": "item-1", "title": "어쩌구어쩌구 반영", "completed": true },
-      { "id": "item-2", "title": "어쩌구어쩌구 반영", "completed": false }
+      { "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7", "title": "어쩌구어쩌구 반영", "completed": true },
+      { "id": "5a1b2c3d-4e5f-4061-8273-8495a6b7c8d9", "title": "어쩌구어쩌구 반영", "completed": false }
     ]
   },
   "materials": [
@@ -755,18 +755,18 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 {
   "title": "1차 와이어프레임",
   "role": "pm",
-  "assignee_id": "user-uuid",
+  "assignee_id": "b1c2d3e4-5f60-4711-8a22-99c0ab12cd34",
   "priority": "medium",
   "status": "in_progress",
   "purpose": "이번 범위에서 확인해야 할 화면 흐름을 정리합니다.",
   "checklist_items": [
-    { "id": "item-1", "title": "어쩌구어쩌구 반영", "completed": true },
+    { "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6", "title": "어쩌구어쩌구 반영", "completed": true },
     { "title": "새 완료기준", "completed": false }
   ]
 }
 ```
 
-담당자를 비우려면 `assignee_id`를 `null`로 보냅니다. `status`는 backlog, todo, in_progress, done, cancelled 다섯 값 중 하나입니다. `checklist_items`는 완료기준 최종 목록이고, `id`가 있으면 기존 항목의 제목과 완료 상태(`completed`)를 함께 갱신하고, `id`가 없으면 새 항목으로 만들며, 목록에서 빠진 기존 항목은 삭제합니다. `completed`를 생략하면 `false`로 처리합니다. `id`가 있는데 기존 항목에 없으면 잘못된 요청으로 보고 `TASK_CHECKLIST_ITEM_NOT_FOUND`로 응답하고, 같은 `id`가 목록에 두 번 오면 `COMMON_VALIDATION_FAILED`로 응답합니다. 완료기준은 0개에서 5개까지 허용하고, 5개를 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 글자 수는 공백을 포함해 태스크 제목 15자, 목적 300자, 완료기준 항목 50자로 제한하며, 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 상세 화면의 즉시 토글은 아래 별도 엔드포인트로 유지합니다. 같은 태스크를 두 요청이 거의 동시에 저장하면, 마지막에 저장한 요청이 먼저 저장된 내용을 덮어씁니다. 동시 수정 충돌을 막는 낙관적 잠금은 지금 두지 않습니다.
+담당자를 비우려면 `assignee_id`를 `null`로 보냅니다. `status`는 backlog, todo, in_progress, done, cancelled 다섯 값 중 하나입니다. `checklist_items`는 완료기준 최종 목록이고, `id`가 있으면 기존 항목의 제목과 완료 상태(`completed`)를 함께 갱신하고, `id`가 없으면 새 항목으로 만들며, 목록에서 빠진 기존 항목은 삭제합니다. `checklist_items[].id`는 선택 필드입니다. 기존 항목은 상세 조회에서 받은 `id`를 그대로 보내고, 새 항목은 `id`를 생략합니다. `completed`를 생략하면 `false`로 처리합니다. `id`가 있는데 기존 항목에 없으면 잘못된 요청으로 보고 `TASK_CHECKLIST_ITEM_NOT_FOUND`로 응답하고, 같은 `id`가 목록에 두 번 오면 `COMMON_VALIDATION_FAILED`로 응답합니다. 완료기준은 0개에서 5개까지 허용하고, 5개를 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 글자 수는 공백을 포함해 태스크 제목 15자, 목적 300자, 완료기준 항목 50자로 제한하며, 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 상세 화면의 즉시 토글은 아래 별도 엔드포인트로 유지합니다. 같은 태스크를 두 요청이 거의 동시에 저장하면, 마지막에 저장한 요청이 먼저 저장된 내용을 덮어씁니다. 동시 수정 충돌을 막는 낙관적 잠금은 지금 두지 않습니다.
 
 #### Response 204
 
@@ -799,7 +799,7 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
     "completed_count": 2,
     "total_count": 4,
     "item": {
-      "id": "item-1",
+      "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
       "title": "어쩌구어쩌구 반영",
       "completed": true
     }
