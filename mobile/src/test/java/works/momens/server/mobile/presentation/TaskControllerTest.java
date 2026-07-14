@@ -1,7 +1,5 @@
 package works.momens.server.mobile.presentation;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -106,22 +104,7 @@ class TaskControllerTest {
   }
 
   @Test
-  void updateTaskReturnsWrappedTaskWithStatus() throws Exception {
-    UUID itemId = UUID.randomUUID();
-    when(projectTaskService.updateTask(
-            eq(TASK_ID), eq(USER_ID), any(), any(), any(), any(), any(), any(), any()))
-        .thenReturn(
-            new MobileTaskDetail(
-                TASK_ID,
-                PROJECT_ID,
-                "수정된 제목",
-                "in_progress",
-                "backend",
-                null,
-                "high",
-                "수정한 목적",
-                List.of(new TaskDetail.ChecklistItem(itemId, "기준", false))));
-
+  void updateTaskReturnsNoContent() throws Exception {
     mockMvc
         .perform(
             patch("/api/mobile/tasks/{taskId}", TASK_ID)
@@ -130,24 +113,12 @@ class TaskControllerTest {
                 .content(
                     "{\"title\":\"수정된 제목\",\"role\":\"backend\",\"assignee_id\":null,"
                         + "\"priority\":\"high\",\"status\":\"in_progress\",\"purpose\":\"수정한 목적\","
-                        + "\"checklist_items\":[{\"title\":\"기준\"}]}"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.task.id").value(TASK_ID.toString()))
-        .andExpect(jsonPath("$.task.title").value("수정된 제목"))
-        .andExpect(jsonPath("$.task.status").value("in_progress"))
-        .andExpect(jsonPath("$.task.role").value("backend"))
-        .andExpect(jsonPath("$.task.priority").value("high"))
-        .andExpect(jsonPath("$.task.checklist.total_count").value(1));
+                        + "\"checklist_items\":[{\"title\":\"기준\",\"completed\":true}]}"))
+        .andExpect(status().isNoContent());
   }
 
   @Test
   void updateTaskAllowsEmptyTitle() throws Exception {
-    when(projectTaskService.updateTask(
-            eq(TASK_ID), eq(USER_ID), any(), any(), any(), any(), any(), any(), any()))
-        .thenReturn(
-            new MobileTaskDetail(
-                TASK_ID, PROJECT_ID, "", "todo", "pm", null, "medium", null, List.of()));
-
     mockMvc
         .perform(
             patch("/api/mobile/tasks/{taskId}", TASK_ID)
@@ -156,7 +127,7 @@ class TaskControllerTest {
                 .content(
                     "{\"title\":\"\",\"role\":\"pm\",\"priority\":\"medium\","
                         + "\"status\":\"todo\",\"checklist_items\":[]}"))
-        .andExpect(status().isOk());
+        .andExpect(status().isNoContent());
   }
 
   @Test
@@ -232,35 +203,6 @@ class TaskControllerTest {
                         + itemTitle
                         + "\"}]}"))
         .andExpect(status().isBadRequest());
-  }
-
-  @Test
-  void updateTaskAcceptsChecklistCompleted() throws Exception {
-    UUID itemId = UUID.randomUUID();
-    when(projectTaskService.updateTask(
-            eq(TASK_ID), eq(USER_ID), any(), any(), any(), any(), any(), any(), any()))
-        .thenReturn(
-            new MobileTaskDetail(
-                TASK_ID,
-                PROJECT_ID,
-                "제목",
-                "todo",
-                "pm",
-                null,
-                "medium",
-                null,
-                List.of(new TaskDetail.ChecklistItem(itemId, "기준", true))));
-
-    mockMvc
-        .perform(
-            patch("/api/mobile/tasks/{taskId}", TASK_ID)
-                .principal(principal)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    "{\"title\":\"제목\",\"role\":\"pm\",\"priority\":\"medium\",\"status\":\"todo\","
-                        + "\"checklist_items\":[{\"title\":\"기준\",\"completed\":true}]}"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.task.checklist.items[0].completed").value(true));
   }
 
   @Test
