@@ -17,8 +17,8 @@ momens:
     dev-token:
       secret: test-only-momens-auth-dev-token-secret
       allowed-emails:
-        - jinsu@momens.works
-        - gyuil@momens.works
+        - owner@momens.works
+        - member@momens.works
         - preserve@momens.works
     google:
       audiences: test-google-client-id.apps.googleusercontent.com

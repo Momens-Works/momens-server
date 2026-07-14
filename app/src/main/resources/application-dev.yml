@@ -26,8 +26,8 @@ momens:
       secret: ${MOMENS_AUTH_DEV_TOKEN_SECRET}
       # 토큰을 발급할 테스트 사용자 allowlist(모먼스 개발팀).
       allowed-emails:
-        - jinsu@momens.works
-        - gyuil@momens.works
+        - owner@momens.works
+        - member@momens.works
 
 logging:
   level:

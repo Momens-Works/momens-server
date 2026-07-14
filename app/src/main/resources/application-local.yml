@@ -18,8 +18,8 @@ momens:
     dev-token:
       secret: ${MOMENS_AUTH_DEV_TOKEN_SECRET}
       allowed-emails:
-        - jinsu@momens.works
-        - gyuil@momens.works
+        - owner@momens.works
+        - member@momens.works
     web:
       cookie:
         # 로컬은 http라 Secure 쿠키가 설정되지 않으므로 끕니다(운영 기본값은 true).

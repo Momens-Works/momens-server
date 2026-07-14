@@ -40,7 +40,7 @@ class DevTokenIntegrationTest extends AbstractPostgresIntegrationTest {
   @Test
   void issuesTokenForDefaultAllowlistUserThatAuthenticatesProtectedApi() throws Exception {
     UUID firstAllowedId =
-        userService.findOrCreate("jinsu@momens.works", "jinsu@momens.works", null).id();
+        userService.findOrCreate("owner@momens.works", "owner@momens.works", null).id();
 
     String response =
         mockMvc
@@ -64,7 +64,8 @@ class DevTokenIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   void issuesTokenForRequestedAllowlistEmail() throws Exception {
-    UUID gyuilId = userService.findOrCreate("gyuil@momens.works", "gyuil@momens.works", null).id();
+    UUID memberId =
+        userService.findOrCreate("member@momens.works", "member@momens.works", null).id();
 
     String response =
         mockMvc
@@ -73,7 +74,7 @@ class DevTokenIntegrationTest extends AbstractPostgresIntegrationTest {
                     .header(SECRET_HEADER, SECRET)
                     .header(API_VERSION_HEADER, API_VERSION)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"email\":\"gyuil@momens.works\"}"))
+                    .content("{\"email\":\"member@momens.works\"}"))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse()
@@ -83,7 +84,7 @@ class DevTokenIntegrationTest extends AbstractPostgresIntegrationTest {
     mockMvc
         .perform(get("/api/me").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.user.id").value(gyuilId.toString()));
+        .andExpect(jsonPath("$.user.id").value(memberId.toString()));
   }
 
   @Test

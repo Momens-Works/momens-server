@@ -8,6 +8,6 @@ public record DevTokenRequest(
     @Email
         @Schema(
             description = "토큰을 발급할 테스트 사용자 이메일(allowlist). 비우면 allowlist 첫 사용자로 발급합니다.",
-            example = "jinsu@momens.works",
+            example = "owner@momens.works",
             nullable = true)
         String email) {}
