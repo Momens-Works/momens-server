@@ -159,6 +159,24 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
+  @Test
+  void nullRoleTaskIsReadableOnBoardAndDetail() {
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "web-owner@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "web");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
+
+    // 웹에서 만든 태스크는 role 없이 저장된다. NOT NULL 제거로 role=null 저장이 CHECK를 통과하는지,
+    // 보드와 상세 조회가 role=null을 문제없이 내려주는지 확인한다.
+    UUID taskId = saveTask(workspaceId, projectId, "웹 태스크", "todo", "medium", null);
+
+    List<BoardTask> board = taskReader.listTasksByStatus(projectId, BOARD_STATUSES);
+    assertThat(board).extracting(BoardTask::title).containsExactly("웹 태스크");
+    assertThat(board.getFirst().role()).isNull();
+
+    TaskDetail detail = taskReader.findDetail(taskId).orElseThrow();
+    assertThat(detail.role()).isNull();
+  }
+
   private UUID saveTask(
       UUID workspaceId, UUID projectId, String title, String status, String priority, String role) {
     return taskRepository
