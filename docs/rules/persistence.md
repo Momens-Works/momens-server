@@ -57,6 +57,8 @@
 - 모든 테이블에 `created_at`/`updated_at`(`NOT NULL`)을 둡니다.
 - 값은 JPA Auditing(`@CreatedDate`/`@LastModifiedDate`)으로 채웁니다. 스키마의
   `NOT NULL DEFAULT NOW()`는 안전망으로 둡니다.
+- 예외: append-only 발행 로그(`outbox_events`)는 행이 수정되지 않으므로 `updated_at`을 두지 않고
+  `created_at`만 둡니다.
 
 ### 소프트 삭제
 

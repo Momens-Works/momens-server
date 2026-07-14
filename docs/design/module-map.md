@@ -20,6 +20,7 @@
 | `workspace` | workspace·멤버·초대·RBAC·label 발급 (중심 모듈) | `workspace`·`access`·`label` |
 | `project` | project·milestone·task·decision·blocker 운영 흐름 | 동명 5개 패키지 |
 | `signal` | 모바일 Signal 원본 조회·사용자 action ledger·Signal action outbox | 신규 |
+| `outbox` | append-only outbox 발행 로그 공용 모듈 (ADR-0008) | 신규 |
 | `mobile` | 모바일 진입 API. 도메인 public API 조합(얇은 orchestration) | 없음 (신규 표면) |
 | `memory` | 메모리 후보 검토·confirmed memory lifecycle | `memory` |
 | `source` | 외부 연결 lifecycle·provider OAuth·source-ref verify | `source` |
@@ -39,6 +40,8 @@
 - `signal`은 `project`의 project/workspace 해석 public API와 `workspace`의 RBAC public API를 사용한다.
   상세 응답의 evidence는 `source`의 source_ref 조회 public API로 hydrate한다.
   Signal을 task로 수용할 때는 `project`의 task 생성 public API를 사용한다.
+- `signal`과 `project`는 확정 액션 결과를 같은 트랜잭션에서 남기기 위해 `outbox`의
+  `OutboxAppender` public API를 사용한다(CO-6). `outbox`는 다른 도메인 모듈을 참조하지 않는다.
 - `retrieval`은 `project`·`memory`의 도메인 write 이후 발행(event 또는 public API)을 받는다.
 - 다른 모듈의 `internal` package 참조와 순환 의존은 금지한다.
 
@@ -161,6 +164,21 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   닫힌다. 예외는 태스크 생성 트랜잭션에 참여하는 라벨 발급 한 곳이고, 위 workspace 절에
   문서화했다. `Task`는 `Project`를 엔티티 연관이 아니라 projectId로만 참조한다.
 
+### outbox
+
+append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
+
+- `outbox_events` 엔티티·리포지토리·마이그레이션을 소유한다.
+- `OutboxAppender` public API 하나만 노출한다: 호출자 트랜잭션에 합류해(`Propagation.MANDATORY`)
+  `{workspace_id, aggregate_type, aggregate_id, event_type, payload}`를 append한다. 멱등키
+  (`"{event_type}:{aggregate_id}"`)는 이 모듈이 결정적으로 조립하고, `idempotency_key UNIQUE` +
+  `ON CONFLICT DO NOTHING`으로 dedup한다(SD-3).
+- `issued_by`는 이 서버가 발행하는 이벤트만 다루므로 `api-server`로 고정한다. worker가 발행하는
+  `signal.created`는 worker 쪽 책임이라 이 모듈이 쓰지 않는다.
+- 다른 도메인 모듈을 참조하지 않는다. `signal`과 `project`가 이 모듈의 public API를 사용한다.
+- outbox 소비(consumer)는 이 모듈의 책임이 아니다. worker의 projection 소비·재시도·DLQ는
+  ADR-0008, api-server의 `signal.created` notification 소비는 ADR-0009를 따르며 둘 다 별도 구현이다.
+
 ### mobile
 
 모바일 앱 진입 API를 담당하는 얇은 orchestration 모듈이다([아키텍처 > 모듈 경계](../rules/architecture.md)).
@@ -234,9 +252,10 @@ presentation(모듈 root)이 nested 모듈의 구현 타입을 직접 참조하�
 Modulith가 순환으로 판정한다. action은 query가 공개한 `SignalReader`로 Signal 스냅샷을 읽고,
 convert-to-task는 `project`의 `TaskCreator.create`/`TaskReader.findDetail`(둘 다 root-to-root,
 다른 top-level 모듈 참조라 표준 방향)을 쓴다. convert-to-task 트랜잭션(`tasks insert +
-signal_actions insert`)과 dismiss 트랜잭션(`signal_actions insert`)은 `SignalActionExecutor`가
-소유하고, facade(`SignalActionServiceImpl`)와 빈을 분리해 멱등·충돌 정책과 원자 쓰기를 나눈다.
-MOM-66의 outbox 이벤트 insert는 이 executor 메서드들에 추가되는 것으로 같은 트랜잭션에 합류한다.
+signal_actions insert + outbox_events insert 2건`)과 dismiss 트랜잭션(`signal_actions insert +
+outbox_events insert 1건`)은 `SignalActionExecutor`가 소유하고, facade(`SignalActionServiceImpl`)와
+빈을 분리해 멱등·충돌 정책과 원자 쓰기를 나눈다. outbox 이벤트 insert는 `outbox` 모듈의
+`OutboxAppender`를 호출자 트랜잭션에 합류시켜 남긴다(CO-6).
 
 ### memory
 
@@ -300,6 +319,7 @@ ownership과는 분리한다. 레거시 `slackbot`의 표면(Slack 이벤트 처
 | `workspace` | `workspace`, `access`(RBAC), `label` |
 | `project` | `project`, `milestone`, `task`, `decision`, `blocker` |
 | `signal` | 신규 |
+| `outbox` | 신규 |
 | `memory` | `memory` |
 | `source` | `source` |
 | `context` | `relation` |
