@@ -63,7 +63,8 @@ public class ProjectTaskService {
   public CreatedTask createTask(
       UUID projectId, UUID userId, String title, String role, String priority) {
     UUID workspaceId = requireProjectMember(projectId, userId);
-    return taskCreator.create(new CreateTaskCommand(projectId, workspaceId, title, role, priority));
+    return taskCreator.create(
+        CreateTaskCommand.manual(projectId, workspaceId, title, role, priority));
   }
 
   @Transactional(readOnly = true)
