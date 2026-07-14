@@ -766,37 +766,11 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 }
 ```
 
-담당자를 비우려면 `assignee_id`를 `null`로 보냅니다. `status`는 backlog, todo, in_progress, done, cancelled 다섯 값 중 하나입니다. `checklist_items`는 완료기준 최종 목록이고, `id`가 있으면 기존 항목의 제목과 완료 상태(`completed`)를 함께 갱신하고, `id`가 없으면 새 항목으로 만들며, 목록에서 빠진 기존 항목은 삭제합니다. `completed`를 생략하면 `false`로 처리합니다. `id`가 있는데 기존 항목에 없으면 잘못된 요청으로 보고 `TASK_CHECKLIST_ITEM_NOT_FOUND`로 응답하고, 같은 `id`가 목록에 두 번 오면 `COMMON_VALIDATION_FAILED`로 응답합니다. 완료기준은 0개에서 5개까지 허용하고, 5개를 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 글자 수는 공백을 포함해 태스크 제목 15자, 목적 300자, 완료기준 항목 50자로 제한하며, 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 상세 화면의 즉시 토글은 아래 별도 엔드포인트로 유지합니다.
+담당자를 비우려면 `assignee_id`를 `null`로 보냅니다. `status`는 backlog, todo, in_progress, done, cancelled 다섯 값 중 하나입니다. `checklist_items`는 완료기준 최종 목록이고, `id`가 있으면 기존 항목의 제목과 완료 상태(`completed`)를 함께 갱신하고, `id`가 없으면 새 항목으로 만들며, 목록에서 빠진 기존 항목은 삭제합니다. `completed`를 생략하면 `false`로 처리합니다. `id`가 있는데 기존 항목에 없으면 잘못된 요청으로 보고 `TASK_CHECKLIST_ITEM_NOT_FOUND`로 응답하고, 같은 `id`가 목록에 두 번 오면 `COMMON_VALIDATION_FAILED`로 응답합니다. 완료기준은 0개에서 5개까지 허용하고, 5개를 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 글자 수는 공백을 포함해 태스크 제목 15자, 목적 300자, 완료기준 항목 50자로 제한하며, 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 상세 화면의 즉시 토글은 아래 별도 엔드포인트로 유지합니다. 같은 태스크를 두 요청이 거의 동시에 저장하면, 마지막에 저장한 요청이 먼저 저장된 내용을 덮어씁니다. 동시 수정 충돌을 막는 낙관적 잠금은 지금 두지 않습니다.
 
-#### Response 200
+#### Response 204
 
-응답의 `task`는 상세 조회와 같은 형식이고 `status`까지 담습니다. 수정을 저장하면 앱이 상세 화면으로 돌아가므로, 다시 조회하지 않고 화면을 갱신할 수 있도록 상세 전체를 반환합니다. `materials`, `open_questions`, `next_action`은 상세와 동일하게 backing source가 생기기 전까지 각각 빈 배열, 빈 배열, null입니다.
-
-```json
-{
-  "task": {
-    "id": "27afd507-9c7f-4f0d-a2be-fcdab2477b19",
-    "project_id": "30d9e9fe-f43b-4097-a88e-dc19f0a5b025",
-    "title": "1차 와이어프레임",
-    "status": "in_progress",
-    "role": "pm",
-    "assignee": { "id": "user-uuid", "name": "김민지", "avatar_url": "https://lh3.googleusercontent.com/a/..." },
-    "priority": "medium",
-    "purpose": "이번 범위에서 확인해야 할 화면 흐름을 정리합니다.",
-    "checklist": {
-      "completed_count": 2,
-      "total_count": 4,
-      "items": [
-        { "id": "item-1", "title": "어쩌구어쩌구 반영", "completed": true },
-        { "id": "item-5", "title": "새 완료기준", "completed": false }
-      ]
-    },
-    "materials": [],
-    "open_questions": [],
-    "next_action": null
-  }
-}
-```
+저장만 하고 본문은 반환하지 않습니다. 쓰기와 읽기의 역할을 분리하기 위해서입니다. 저장 후 필요한 최신 상태는 태스크 상세 조회(`GET /api/mobile/tasks/{taskId}`)로 다시 읽습니다. 새로 추가한 완료기준의 서버 id도 이 조회에서 확인합니다.
 
 #### Errors
 

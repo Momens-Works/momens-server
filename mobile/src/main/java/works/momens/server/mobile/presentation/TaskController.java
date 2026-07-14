@@ -5,11 +5,13 @@ import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.CurrentUser;
 import works.momens.server.mobile.internal.ChecklistEdit;
@@ -19,7 +21,6 @@ import works.momens.server.mobile.presentation.dto.request.ToggleChecklistItemRe
 import works.momens.server.mobile.presentation.dto.request.UpdateTaskRequest;
 import works.momens.server.mobile.presentation.dto.response.ChecklistToggleResponse;
 import works.momens.server.mobile.presentation.dto.response.TaskDetailResponse;
-import works.momens.server.mobile.presentation.dto.response.TaskUpdateResponse;
 
 /**
  * 모바일 태스크 단건 엔드포인트. task 식별자로 접근하는 {@code /api/mobile/tasks/*} 표면을 담당하고, project 경로의 보드/생성은 {@link
@@ -43,8 +44,9 @@ class TaskController implements TaskControllerDocs {
   }
 
   @Override
+  @ResponseStatus(HttpStatus.NO_CONTENT)
   @PatchMapping(path = "/tasks/{taskId}", version = "1")
-  public TaskUpdateResponse updateTask(
+  public void updateTask(
       @PathVariable UUID taskId,
       @Valid @RequestBody UpdateTaskRequest request,
       Principal principal) {
@@ -52,18 +54,16 @@ class TaskController implements TaskControllerDocs {
         request.checklistItems().stream()
             .map(item -> new ChecklistEdit(item.id(), item.title(), item.completed()))
             .toList();
-    MobileTaskDetail updated =
-        projectTaskService.updateTask(
-            taskId,
-            CurrentUser.id(principal),
-            request.title(),
-            request.role(),
-            request.assigneeId(),
-            request.priority(),
-            request.status(),
-            request.purpose(),
-            checklistItems);
-    return TaskUpdateResponse.from(updated);
+    projectTaskService.updateTask(
+        taskId,
+        CurrentUser.id(principal),
+        request.title(),
+        request.role(),
+        request.assigneeId(),
+        request.priority(),
+        request.status(),
+        request.purpose(),
+        checklistItems);
   }
 
   @Override

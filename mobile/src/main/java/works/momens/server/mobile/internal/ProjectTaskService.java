@@ -85,7 +85,7 @@ public class ProjectTaskService {
   }
 
   @Transactional
-  public MobileTaskDetail updateTask(
+  public void updateTask(
       UUID taskId,
       UUID userId,
       String title,
@@ -103,11 +103,9 @@ public class ProjectTaskService {
                     new UpdateTaskCommand.ChecklistItemEdit(
                         edit.id(), edit.title(), edit.completed()))
             .toList();
-    TaskDetail updated =
-        taskEditor.update(
-            new UpdateTaskCommand(
-                taskId, title, role, assigneeId, priority, status, purpose, items));
-    return toMobileDetail(updated);
+    // 저장만 하고 상세는 반환하지 않는다. 저장 후 최신 상태는 클라이언트가 상세 조회로 다시 읽는다.
+    taskEditor.update(
+        new UpdateTaskCommand(taskId, title, role, assigneeId, priority, status, purpose, items));
   }
 
   @Transactional
