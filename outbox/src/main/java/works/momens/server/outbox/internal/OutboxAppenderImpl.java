@@ -24,7 +24,9 @@ class OutboxAppenderImpl implements OutboxAppender {
   private static final String ISSUED_BY = "api-server";
 
   private final OutboxEventRepository outboxEventRepository;
-  private final ObjectMapper outboxObjectMapper = new ObjectMapper();
+  // payload는 ID 중심의 작은 데이터라(ADR-0008) 시간 타입이 들어올 일이 없지만, 클래스패스에 있는 모듈
+  // (JavaTimeModule 등)을 등록해 두어 누가 시간 값을 넣어도 조용히 실패하지 않게 한다.
+  private final ObjectMapper outboxObjectMapper = new ObjectMapper().findAndRegisterModules();
 
   @Override
   @Transactional(propagation = Propagation.MANDATORY)
