@@ -766,7 +766,7 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 }
 ```
 
-담당자를 비우려면 `assignee_id`를 `null`로 보냅니다. `status`는 backlog, todo, in_progress, done, cancelled 다섯 값 중 하나입니다. `checklist_items`는 완료기준 최종 목록이고, `id`가 있으면 기존 항목의 제목과 완료 상태(`completed`)를 함께 갱신하고, `id`가 없으면 새 항목으로 만들며, 목록에서 빠진 기존 항목은 삭제합니다. `completed`를 생략하면 `false`로 처리합니다. `id`가 있는데 기존 항목에 없으면 잘못된 요청으로 보고 `TASK_CHECKLIST_ITEM_NOT_FOUND`로 응답합니다. 완료기준은 0개에서 5개까지 허용하고, 5개를 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 글자 수는 공백을 포함해 태스크 제목 15자, 목적 300자, 완료기준 항목 50자로 제한하며, 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 상세 화면의 즉시 토글은 아래 별도 엔드포인트로 유지합니다.
+담당자를 비우려면 `assignee_id`를 `null`로 보냅니다. `status`는 backlog, todo, in_progress, done, cancelled 다섯 값 중 하나입니다. `checklist_items`는 완료기준 최종 목록이고, `id`가 있으면 기존 항목의 제목과 완료 상태(`completed`)를 함께 갱신하고, `id`가 없으면 새 항목으로 만들며, 목록에서 빠진 기존 항목은 삭제합니다. `completed`를 생략하면 `false`로 처리합니다. `id`가 있는데 기존 항목에 없으면 잘못된 요청으로 보고 `TASK_CHECKLIST_ITEM_NOT_FOUND`로 응답하고, 같은 `id`가 목록에 두 번 오면 `COMMON_VALIDATION_FAILED`로 응답합니다. 완료기준은 0개에서 5개까지 허용하고, 5개를 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 글자 수는 공백을 포함해 태스크 제목 15자, 목적 300자, 완료기준 항목 50자로 제한하며, 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 상세 화면의 즉시 토글은 아래 별도 엔드포인트로 유지합니다.
 
 #### Response 200
 
