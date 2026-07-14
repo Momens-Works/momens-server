@@ -62,8 +62,7 @@ class Task extends BaseEntity {
   @Column(name = "assignee_id", columnDefinition = "uuid")
   private UUID assigneeId;
 
-  @Column(nullable = false)
-  private String role;
+  @Column private String role;
 
   @Column(name = "origin_type", nullable = false)
   private String originType;
