@@ -43,8 +43,9 @@ momens:
   auth:
     # HS256 대칭키(>=32바이트). 실제 값은 .env / 환경변수로 주입하고 커밋하지 않습니다.
     jwt-secret: ${MOMENS_AUTH_JWT_SECRET}
-    # access TTL을 짧게 둬 변경된 권한이 늦어도 TTL 안에는 반영되도록 합니다(stale 권한 상한).
-    access-ttl: 15m
+    # access token은 자체 검증(HS256)이라 매 요청 서버 상태를 조회하지 않으므로, TTL이 곧 변경된 권한의
+    # stale 상한이 됩니다. 데모·운영 편의를 위해 24h로 둡니다(그만큼 폐기/로그아웃 세션이 오래 유효).
+    access-ttl: 24h
     # refresh token은 서버 저장형으로 관리합니다(ADR-0005).
     refresh-ttl: 14d
     google:
