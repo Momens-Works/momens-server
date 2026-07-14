@@ -1,5 +1,9 @@
 package works.momens.server.mobile.presentation;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -10,6 +14,7 @@ import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -20,6 +25,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import works.momens.server.mobile.internal.ChecklistEdit;
 import works.momens.server.mobile.internal.MobileTaskDetail;
 import works.momens.server.mobile.internal.ProjectTaskService;
 import works.momens.server.project.TaskDetail;
@@ -115,6 +121,27 @@ class TaskControllerTest {
                         + "\"priority\":\"high\",\"status\":\"in_progress\",\"purpose\":\"수정한 목적\","
                         + "\"checklist_items\":[{\"title\":\"기준\",\"completed\":true}]}"))
         .andExpect(status().isNoContent());
+  }
+
+  @Test
+  void updateTaskPassesChecklistCompletedToService() throws Exception {
+    mockMvc
+        .perform(
+            patch("/api/mobile/tasks/{taskId}", TASK_ID)
+                .principal(principal)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"title\":\"제목\",\"role\":\"pm\",\"priority\":\"medium\",\"status\":\"todo\","
+                        + "\"checklist_items\":[{\"title\":\"체크됨\",\"completed\":true},"
+                        + "{\"title\":\"생략\"}]}"))
+        .andExpect(status().isNoContent());
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<ChecklistEdit>> captor = ArgumentCaptor.forClass(List.class);
+    verify(projectTaskService)
+        .updateTask(
+            eq(TASK_ID), eq(USER_ID), any(), any(), any(), any(), any(), any(), captor.capture());
+    assertThat(captor.getValue()).extracting(ChecklistEdit::completed).containsExactly(true, false);
   }
 
   @Test
