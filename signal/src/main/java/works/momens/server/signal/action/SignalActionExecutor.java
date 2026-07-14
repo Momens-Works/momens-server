@@ -1,9 +1,11 @@
 package works.momens.server.signal.action;
 
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import works.momens.server.outbox.OutboxAppender;
 import works.momens.server.project.CreateTaskCommand;
 import works.momens.server.project.CreatedTask;
 import works.momens.server.project.TaskCreator;
@@ -13,23 +15,32 @@ import works.momens.server.signal.SignalReader;
 /**
  * Signal action의 원자 쓰기 트랜잭션.
  *
- * <p>convert-to-task는 {@code tasks insert + signal_actions insert}, dismiss는 {@code signal_actions
- * insert}만 한 트랜잭션에 커밋한다. facade({@link SignalActionServiceImpl})와 빈을 분리해 self-invocation 없이
- * {@code @Transactional} 프록시가 걸리게 한다. MOM-66의 outbox 이벤트 insert는 이 메서드들에 추가되는 것으로 같은 트랜잭션에 합류한다.
+ * <p>convert-to-task는 {@code tasks insert + signal_actions insert + outbox_events insert(2건: task
+ * 생성이 남기는 task.created, 이 메서드가 남기는 signal.converted_to_task)}, dismiss는 {@code signal_actions
+ * insert + outbox_events insert(signal.dismissed)}를 한 트랜잭션에 커밋한다(CO-6). facade({@link
+ * SignalActionServiceImpl})와 빈을 분리해 self-invocation 없이 {@code @Transactional} 프록시가 걸리게 한다.
  */
 @Component
 @RequiredArgsConstructor
 class SignalActionExecutor {
 
+  private static final String AGGREGATE_SIGNAL = "signal";
+
+  private static final String EVENT_SIGNAL_CONVERTED_TO_TASK = "signal.converted_to_task";
+
+  private static final String EVENT_SIGNAL_DISMISSED = "signal.dismissed";
+
   private final SignalActionRepository signalActionRepository;
   private final TaskCreator taskCreator;
+  private final OutboxAppender outboxAppender;
 
   @Transactional
   SignalActionResult convert(
       SignalReader.Snapshot signal, UUID userId, String title, String role, String priority) {
     CreatedTask created =
         taskCreator.create(
-            new CreateTaskCommand(signal.projectId(), signal.workspaceId(), title, role, priority));
+            CreateTaskCommand.fromSignal(
+                signal.projectId(), signal.workspaceId(), title, role, priority, signal.id()));
     signalActionRepository.save(
         SignalAction.builder()
             .workspaceId(signal.workspaceId())
@@ -38,6 +49,12 @@ class SignalActionExecutor {
             .resultTaskId(created.id())
             .processedByUserId(userId)
             .build());
+    outboxAppender.append(
+        signal.workspaceId(),
+        AGGREGATE_SIGNAL,
+        signal.id().toString(),
+        EVENT_SIGNAL_CONVERTED_TO_TASK,
+        Map.of("task_id", created.id().toString()));
     return new SignalActionResult(
         signal.id(),
         SignalActionType.CONVERT_TO_TASK.value(),
@@ -54,6 +71,12 @@ class SignalActionExecutor {
             .actionType(SignalActionType.DISMISS.value())
             .processedByUserId(userId)
             .build());
+    outboxAppender.append(
+        signal.workspaceId(),
+        AGGREGATE_SIGNAL,
+        signal.id().toString(),
+        EVENT_SIGNAL_DISMISSED,
+        Map.of());
     return new SignalActionResult(signal.id(), SignalActionType.DISMISS.value(), true, null);
   }
 }
