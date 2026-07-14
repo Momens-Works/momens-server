@@ -747,7 +747,7 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 
 ### PATCH /api/mobile/tasks/{taskId}
 
-태스크 수정 화면에서 편집한 필드를 저장합니다. 요청은 리소스 전체가 아니라 편집 가능한 필드 전체(title, role, assignee_id, priority, status, purpose, checklist_items)를 담고, 서버가 관리하는 필드(materials, open_questions, next_action과 완료기준 항목의 completed 상태)는 요청에 없어 그대로 유지합니다. title, role, priority, status는 항상 채워 보냅니다. title은 생성과 달리 빈 문자열을 허용하고, title을 빈 문자열로 보내면 상세 화면이 '새 태스크'로 표시합니다.
+태스크 수정 화면에서 편집한 필드를 저장합니다. 요청은 리소스 전체가 아니라 편집 가능한 필드 전체(title, role, assignee_id, priority, status, purpose, checklist_items)를 담고, 서버가 관리하는 필드(materials, open_questions, next_action)는 요청에 없어 그대로 유지합니다. title, role, priority, status는 항상 채워 보냅니다. title은 생성과 달리 빈 문자열을 허용하고, title을 빈 문자열로 보내면 상세 화면이 '새 태스크'로 표시합니다.
 
 #### Request
 
@@ -760,13 +760,13 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
   "status": "in_progress",
   "purpose": "이번 범위에서 확인해야 할 화면 흐름을 정리합니다.",
   "checklist_items": [
-    { "id": "item-1", "title": "어쩌구어쩌구 반영" },
-    { "title": "새 완료기준" }
+    { "id": "item-1", "title": "어쩌구어쩌구 반영", "completed": true },
+    { "title": "새 완료기준", "completed": false }
   ]
 }
 ```
 
-담당자를 비우려면 `assignee_id`를 `null`로 보냅니다. `status`는 backlog, todo, in_progress, done, cancelled 다섯 값 중 하나입니다. `checklist_items`는 완료기준 최종 목록이고, `id`가 있으면 기존 항목을 갱신하고 `id`가 없으면 새로 만들며, 목록에서 빠진 기존 항목은 삭제합니다. 완료기준은 0개에서 5개까지 허용하고, 5개를 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 글자 수 제한은 별도 이슈로 보류되어 여기서 검증하지 않습니다.
+담당자를 비우려면 `assignee_id`를 `null`로 보냅니다. `status`는 backlog, todo, in_progress, done, cancelled 다섯 값 중 하나입니다. `checklist_items`는 완료기준 최종 목록이고, `id`가 있으면 기존 항목의 제목과 완료 상태(`completed`)를 함께 갱신하고, `id`가 없으면 새 항목으로 만들며, 목록에서 빠진 기존 항목은 삭제합니다. `completed`를 생략하면 `false`로 처리합니다. `id`가 있는데 기존 항목에 없으면 잘못된 요청으로 보고 `TASK_CHECKLIST_ITEM_NOT_FOUND`로 응답합니다. 완료기준은 0개에서 5개까지 허용하고, 5개를 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 글자 수는 공백을 포함해 태스크 제목 15자, 목적 300자, 완료기준 항목 50자로 제한하며, 넘기면 `COMMON_VALIDATION_FAILED`로 응답합니다. 상세 화면의 즉시 토글은 아래 별도 엔드포인트로 유지합니다.
 
 #### Response 200
 
@@ -801,6 +801,7 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 #### Errors
 
 - `TASK_NOT_FOUND`
+- `TASK_CHECKLIST_ITEM_NOT_FOUND`
 - `COMMON_VALIDATION_FAILED`
 - `AUTH_FORBIDDEN`
 

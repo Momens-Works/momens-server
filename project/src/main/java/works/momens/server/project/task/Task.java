@@ -116,9 +116,12 @@ class Task extends BaseEntity {
   }
 
   /**
-   * 완료기준 목록을 수정 화면이 저장한 최종 목록으로 교체합니다. id가 있고 기존에 있던 항목은 제목만 갱신해 완료 상태를 유지하고, id가 없으면 새 항목을 만듭니다.
-   * 최종 목록에서 빠진 기존 항목은 컬렉션에서 제거되어 orphanRemoval로 삭제됩니다. 리스트 순서가 곧 저장 순서라 {@code @OrderColumn}이
-   * position을 다시 매깁니다.
+   * 완료기준 목록을 수정 화면이 저장한 최종 목록으로 교체합니다. id가 없는 항목은 새로 만들고, id가 기존 항목과 맞으면 제목과 완료 상태를 함께 갱신합니다. 최종
+   * 목록에 없는 기존 항목은 컬렉션에서 빠지면서 orphanRemoval로 삭제됩니다. 리스트 순서가 그대로 저장 순서라, {@code @OrderColumn}이
+   * position을 순서대로 새로 부여합니다.
+   *
+   * <p>존재하지 않는 id를 거부하는 검증은 이 메서드를 부르는 {@code TaskEditor}가 먼저 합니다. 토글의 없는 항목 처리와 같은 계층에 두어, 엔티티는
+   * 검증한 입력을 저장만 합니다.
    */
   void replaceChecklist(List<UpdateTaskCommand.ChecklistItemEdit> edits) {
     Map<UUID, TaskChecklistItem> existingById =
@@ -128,9 +131,10 @@ class Task extends BaseEntity {
       TaskChecklistItem existing = edit.id() == null ? null : existingById.get(edit.id());
       if (existing != null) {
         existing.updateTitle(edit.title());
+        existing.changeCompleted(edit.completed());
         rebuilt.add(existing);
       } else {
-        rebuilt.add(new TaskChecklistItem(edit.title()));
+        rebuilt.add(new TaskChecklistItem(edit.title(), edit.completed()));
       }
     }
     checklistItems.clear();

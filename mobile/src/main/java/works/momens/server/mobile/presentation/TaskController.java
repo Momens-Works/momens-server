@@ -50,7 +50,7 @@ class TaskController implements TaskControllerDocs {
       Principal principal) {
     List<ChecklistEdit> checklistItems =
         request.checklistItems().stream()
-            .map(item -> new ChecklistEdit(item.id(), item.title()))
+            .map(item -> new ChecklistEdit(item.id(), item.title(), item.completed()))
             .toList();
     MobileTaskDetail updated =
         projectTaskService.updateTask(

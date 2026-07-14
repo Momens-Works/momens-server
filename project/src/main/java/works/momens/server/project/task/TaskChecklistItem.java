@@ -27,10 +27,10 @@ class TaskChecklistItem extends BaseEntity {
   @Column(nullable = false)
   private boolean completed;
 
-  /** 새 완료기준 항목은 아직 완료하지 않은 상태로 만듭니다. */
-  TaskChecklistItem(String title) {
+  /** 새 완료기준 항목의 완료 상태는 요청 값을 따릅니다. 수정 화면이 추가와 동시에 체크할 수 있어서입니다. */
+  TaskChecklistItem(String title, boolean completed) {
     this.title = title;
-    this.completed = false;
+    this.completed = completed;
   }
 
   void updateTitle(String title) {
