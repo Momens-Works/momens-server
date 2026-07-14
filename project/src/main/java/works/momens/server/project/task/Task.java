@@ -18,6 +18,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import works.momens.server.common.persistence.BaseEntity;
+import works.momens.server.project.TaskOrigin;
 import works.momens.server.project.UpdateTaskCommand;
 
 /**
@@ -64,6 +65,12 @@ class Task extends BaseEntity {
   @Column(nullable = false)
   private String role;
 
+  @Column(name = "origin_type", nullable = false)
+  private String originType;
+
+  @Column(name = "origin_signal_id", columnDefinition = "uuid")
+  private UUID originSignalId;
+
   /**
    * 완료기준 항목. 자식 엔티티의 전체 생명주기를 이 aggregate가 소유하므로 cascade ALL과 orphanRemoval로 컬렉션 변경이 곧 저장 변경이 되게
    * 합니다. 리스트 순서가 저장 순서라(수정 화면이 전체 목록 순서로 저장) {@code @OrderColumn}을 부모 소유 단방향으로 둡니다. mappedBy 컬렉션의
@@ -85,7 +92,9 @@ class Task extends BaseEntity {
       String title,
       String status,
       String priority,
-      String role) {
+      String role,
+      TaskOrigin origin,
+      UUID originSignalId) {
     this.workspaceId = workspaceId;
     this.projectId = projectId;
     this.label = label;
@@ -94,6 +103,10 @@ class Task extends BaseEntity {
     this.status = status != null ? status : "backlog";
     this.priority = priority != null ? priority : "medium";
     this.role = role;
+    // origin을 안 넘기는 호출부(기존 테스트 등)는 manual로 본다. CreateTaskCommand는 origin을
+    // 생성 시점에 이미 강제하므로, 여기 기본값은 origin을 모르는 호출부를 위한 안전망이다.
+    this.originType = origin != null ? origin.value() : TaskOrigin.MANUAL.value();
+    this.originSignalId = originSignalId;
   }
 
   /**
