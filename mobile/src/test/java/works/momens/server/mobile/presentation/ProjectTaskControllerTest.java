@@ -106,6 +106,21 @@ class ProjectTaskControllerTest {
   }
 
   @Test
+  void createTaskRejectsTitleOverFifteen() throws Exception {
+    // 제목은 공백 포함 15자 제한이고 수정과 같은 태스크 공통 규칙이다(task_001 화면설계서). 16자는 400으로 거절한다.
+    String sixteenChars = "가".repeat(16);
+    mockMvc
+        .perform(
+            post("/api/mobile/projects/{projectId}/tasks", PROJECT_ID)
+                .principal(principal)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"title\":\"" + sixteenChars + "\",\"role\":\"pm\",\"priority\":\"medium\"}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
   void createTaskRejectsMissingRoleOrPriority() throws Exception {
     // title, role, priority 모두 필수다(2026-07-06 기획 확정, 2026-07-07 role은 단일 선택으로 재확정).
     mockMvc

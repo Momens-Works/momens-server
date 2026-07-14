@@ -671,7 +671,7 @@ id를 기준으로 하기 때문에, 페이지 사이에 시그널이 처리되�
 }
 ```
 
-title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-07 역할은 하나만 선택하는 단일 값으로 재확정). role은 pm, design, backend, frontend 중 하나입니다(2026-07-08 기획 확정으로 android, qa는 폐기하고 역할은 4종만 둡니다). priority는 low, medium, high 중 하나입니다. 셋 중 하나라도 비거나 role이 4종 밖이면 COMMON_VALIDATION_FAILED로 응답합니다. 생성한 태스크는 todo 그룹에서 시작합니다. role은 레거시 tasks에 없는 신규 속성이라 CHECK 제약을 둔 문자열 컬럼으로 저장합니다.
+title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-07 역할은 하나만 선택하는 단일 값으로 재확정). role은 pm, design, backend, frontend 중 하나입니다(2026-07-08 기획 확정으로 android, qa는 폐기하고 역할은 4종만 둡니다). priority는 low, medium, high 중 하나입니다. 셋 중 하나라도 비거나 role이 4종 밖이면 COMMON_VALIDATION_FAILED로 응답합니다. 제목은 공백을 포함해 15자로 제한하며, 넘기면 COMMON_VALIDATION_FAILED로 응답합니다(수정 화면과 같은 태스크 공통 규칙). 생성한 태스크는 todo 그룹에서 시작합니다. role은 레거시 tasks에 없는 신규 속성이라 CHECK 제약을 둔 문자열 컬럼으로 저장합니다.
 
 #### Errors
 
