@@ -12,6 +12,7 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import works.momens.server.common.api.BusinessException;
+import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.ProjectErrorCode;
@@ -145,6 +146,41 @@ class TaskEditorIntegrationTest extends AbstractPostgresIntegrationTest {
         .isInstanceOf(BusinessException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ProjectErrorCode.TASK_CHECKLIST_ITEM_NOT_FOUND);
+  }
+
+  @Test
+  void updateRejectsDuplicateChecklistItemId() {
+    Fixture fixture = newTask();
+    TaskDetail seeded =
+        taskEditor.update(
+            command(
+                fixture.taskId(),
+                "제목",
+                "pm",
+                null,
+                "medium",
+                "todo",
+                null,
+                List.of(new ChecklistItemEdit(null, "A", false))));
+    UUID idA = seeded.checklistItems().get(0).id();
+
+    assertThatThrownBy(
+            () ->
+                taskEditor.update(
+                    command(
+                        fixture.taskId(),
+                        "제목",
+                        "pm",
+                        null,
+                        "medium",
+                        "todo",
+                        null,
+                        List.of(
+                            new ChecklistItemEdit(idA, "A", false),
+                            new ChecklistItemEdit(idA, "A 중복", true)))))
+        .isInstanceOf(BusinessException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(CommonErrorCode.COMMON_VALIDATION_FAILED);
   }
 
   @Test
