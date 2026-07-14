@@ -243,7 +243,7 @@ class ProjectTaskServiceTest {
     when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
     when(taskEditor.update(any())).thenReturn(detail(null, "수정한 목적", List.of()));
-    List<ChecklistEdit> items = List.of(new ChecklistEdit(null, "A"));
+    List<ChecklistEdit> items = List.of(new ChecklistEdit(null, "A", true));
 
     MobileTaskDetail result =
         projectTaskService.updateTask(
@@ -260,7 +260,7 @@ class ProjectTaskServiceTest {
     assertThat(command.status()).isEqualTo("in_progress");
     assertThat(command.purpose()).isEqualTo("수정한 목적");
     assertThat(command.checklistItems())
-        .containsExactly(new UpdateTaskCommand.ChecklistItemEdit(null, "A"));
+        .containsExactly(new UpdateTaskCommand.ChecklistItemEdit(null, "A", true));
     assertThat(result.assignee()).isNull();
   }
 

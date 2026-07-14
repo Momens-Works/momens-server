@@ -1,7 +1,10 @@
 package works.momens.server.project.task;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,8 +31,24 @@ class TaskEditorImpl implements TaskEditor {
         command.status(),
         command.purpose(),
         command.assigneeId());
+    rejectUnknownChecklistItems(task, command.checklistItems());
     task.replaceChecklist(command.checklistItems());
     return TaskDetailMapper.toDetail(task);
+  }
+
+  // 수정 화면이 보낸 완료기준에 존재하지 않는 id가 있으면 거부한다. 잘못된 id를 새 항목으로 만들면 원래 항목이 삭제 후 재생성되면서 완료 상태와 순서가
+  // 사라지기 때문이다. 토글의 없는 항목 처리와 같은 계층에서 검증한다.
+  private void rejectUnknownChecklistItems(
+      Task task, List<UpdateTaskCommand.ChecklistItemEdit> edits) {
+    Set<UUID> existingIds =
+        task.getChecklistItems().stream().map(TaskChecklistItem::getId).collect(Collectors.toSet());
+    for (UpdateTaskCommand.ChecklistItemEdit edit : edits) {
+      if (edit.id() != null && !existingIds.contains(edit.id())) {
+        throw new BusinessException(
+            ProjectErrorCode.TASK_CHECKLIST_ITEM_NOT_FOUND,
+            Map.of("checklist_item_id", edit.id().toString()));
+      }
+    }
   }
 
   @Override

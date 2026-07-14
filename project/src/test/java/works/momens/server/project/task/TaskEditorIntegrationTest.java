@@ -25,8 +25,8 @@ import works.momens.server.project.UpdateTaskCommand.ChecklistItemEdit;
 /**
  * task 수정 public API 검증.
  *
- * <p>실제 PostgreSQL(Testcontainers) 환경에서 본문 수정, 담당자 비우기, 완료기준 전체 교체(기존 항목 완료 상태 유지, 순서, 빠진 항목 삭제),
- * 완료 상태 토글, 없는 대상 처리까지 확인합니다. workspaces/users/projects는 다른 모듈 소유 테이블이라 FK 대상 행만 네이티브 SQL로 만듭니다.
+ * <p>실제 PostgreSQL(Testcontainers) 환경에서 본문 수정, 담당자 비우기, 완료기준 전체 교체(완료 상태 배치 갱신, 순서, 빠진 항목 삭제, 없는 id
+ * 거부), 즉시 토글, 없는 대상 처리까지 확인합니다. workspaces/users/projects는 다른 모듈 소유 테이블이라 FK 대상 행만 네이티브 SQL로 만듭니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -78,7 +78,7 @@ class TaskEditorIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
-  void updateReplacesChecklistKeepingCompletedStateAndOrder() {
+  void updateReplacesChecklistWithCompletedAndOrder() {
     Fixture fixture = newTask();
     TaskDetail seeded =
         taskEditor.update(
@@ -91,14 +91,13 @@ class TaskEditorIntegrationTest extends AbstractPostgresIntegrationTest {
                 "todo",
                 null,
                 List.of(
-                    new ChecklistItemEdit(null, "A"),
-                    new ChecklistItemEdit(null, "B"),
-                    new ChecklistItemEdit(null, "C"))));
+                    new ChecklistItemEdit(null, "A", false),
+                    new ChecklistItemEdit(null, "B", false),
+                    new ChecklistItemEdit(null, "C", false))));
     UUID idA = seeded.checklistItems().get(0).id();
     UUID idB = seeded.checklistItems().get(1).id();
-    taskEditor.toggleChecklistItem(fixture.taskId(), idB, true);
 
-    // A는 그대로 두고, B는 제목만 바꾸고, C는 목록에서 빼고, D를 새로 추가한다.
+    // A는 그대로 두고, B는 제목과 완료 상태를 함께 바꾸고, C는 목록에서 빼고, D를 완료 상태로 새로 추가한다.
     taskEditor.update(
         command(
             fixture.taskId(),
@@ -109,9 +108,9 @@ class TaskEditorIntegrationTest extends AbstractPostgresIntegrationTest {
             "todo",
             null,
             List.of(
-                new ChecklistItemEdit(idA, "A"),
-                new ChecklistItemEdit(idB, "B 수정"),
-                new ChecklistItemEdit(null, "D"))));
+                new ChecklistItemEdit(idA, "A", false),
+                new ChecklistItemEdit(idB, "B 수정", true),
+                new ChecklistItemEdit(null, "D", true))));
     entityManager.flush();
     entityManager.clear();
 
@@ -119,12 +118,33 @@ class TaskEditorIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(reloaded.checklistItems())
         .extracting(TaskDetail.ChecklistItem::title)
         .containsExactly("A", "B 수정", "D");
-    // 완료 상태는 id로 이어지는 B에서 유지되고, 새로 추가한 D는 미완료로 시작한다.
+    // 완료 상태는 배치가 보낸 값을 따른다. 기존 항목 B와 새로 추가한 D 모두 완료로 저장된다.
     assertThat(reloaded.checklistItems())
         .extracting(TaskDetail.ChecklistItem::completed)
-        .containsExactly(false, true, false);
+        .containsExactly(false, true, true);
     assertThat(reloaded.checklistItems().get(0).id()).isEqualTo(idA);
     assertThat(reloaded.checklistItems().get(1).id()).isEqualTo(idB);
+  }
+
+  @Test
+  void updateRejectsUnknownChecklistItemId() {
+    Fixture fixture = newTask();
+
+    assertThatThrownBy(
+            () ->
+                taskEditor.update(
+                    command(
+                        fixture.taskId(),
+                        "제목",
+                        "pm",
+                        null,
+                        "medium",
+                        "todo",
+                        null,
+                        List.of(new ChecklistItemEdit(UUID.randomUUID(), "없는 항목", false)))))
+        .isInstanceOf(BusinessException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(ProjectErrorCode.TASK_CHECKLIST_ITEM_NOT_FOUND);
   }
 
   @Test
@@ -140,7 +160,7 @@ class TaskEditorIntegrationTest extends AbstractPostgresIntegrationTest {
                 "medium",
                 "todo",
                 null,
-                List.of(new ChecklistItemEdit(null, "완료기준"))));
+                List.of(new ChecklistItemEdit(null, "완료기준", false))));
     UUID itemId = seeded.checklistItems().get(0).id();
 
     TaskDetail toggled = taskEditor.toggleChecklistItem(fixture.taskId(), itemId, true);

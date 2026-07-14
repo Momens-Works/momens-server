@@ -98,7 +98,10 @@ public class ProjectTaskService {
     requireTaskMember(taskId, userId);
     List<UpdateTaskCommand.ChecklistItemEdit> items =
         checklistItems.stream()
-            .map(edit -> new UpdateTaskCommand.ChecklistItemEdit(edit.id(), edit.title()))
+            .map(
+                edit ->
+                    new UpdateTaskCommand.ChecklistItemEdit(
+                        edit.id(), edit.title(), edit.completed()))
             .toList();
     TaskDetail updated =
         taskEditor.update(

@@ -187,6 +187,83 @@ class TaskControllerTest {
   }
 
   @Test
+  void updateTaskRejectsTitleLongerThan15() throws Exception {
+    String title = "가".repeat(16);
+    mockMvc
+        .perform(
+            patch("/api/mobile/tasks/{taskId}", TASK_ID)
+                .principal(principal)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"title\":\""
+                        + title
+                        + "\",\"role\":\"pm\",\"priority\":\"medium\",\"status\":\"todo\","
+                        + "\"checklist_items\":[]}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void updateTaskRejectsPurposeLongerThan300() throws Exception {
+    String purpose = "가".repeat(301);
+    mockMvc
+        .perform(
+            patch("/api/mobile/tasks/{taskId}", TASK_ID)
+                .principal(principal)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"title\":\"제목\",\"role\":\"pm\",\"priority\":\"medium\",\"status\":\"todo\","
+                        + "\"purpose\":\""
+                        + purpose
+                        + "\",\"checklist_items\":[]}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void updateTaskRejectsChecklistTitleLongerThan50() throws Exception {
+    String itemTitle = "가".repeat(51);
+    mockMvc
+        .perform(
+            patch("/api/mobile/tasks/{taskId}", TASK_ID)
+                .principal(principal)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"title\":\"제목\",\"role\":\"pm\",\"priority\":\"medium\",\"status\":\"todo\","
+                        + "\"checklist_items\":[{\"title\":\""
+                        + itemTitle
+                        + "\"}]}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void updateTaskAcceptsChecklistCompleted() throws Exception {
+    UUID itemId = UUID.randomUUID();
+    when(projectTaskService.updateTask(
+            eq(TASK_ID), eq(USER_ID), any(), any(), any(), any(), any(), any(), any()))
+        .thenReturn(
+            new MobileTaskDetail(
+                TASK_ID,
+                PROJECT_ID,
+                "제목",
+                "todo",
+                "pm",
+                null,
+                "medium",
+                null,
+                List.of(new TaskDetail.ChecklistItem(itemId, "기준", true))));
+
+    mockMvc
+        .perform(
+            patch("/api/mobile/tasks/{taskId}", TASK_ID)
+                .principal(principal)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"title\":\"제목\",\"role\":\"pm\",\"priority\":\"medium\",\"status\":\"todo\","
+                        + "\"checklist_items\":[{\"title\":\"기준\",\"completed\":true}]}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.task.checklist.items[0].completed").value(true));
+  }
+
+  @Test
   void toggleChecklistItemReturnsChecklistSummary() throws Exception {
     UUID itemId = UUID.randomUUID();
     UUID otherId = UUID.randomUUID();
