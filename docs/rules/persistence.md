@@ -45,6 +45,9 @@
 - UUID는 앱 측에서 생성합니다(엔티티 생성 시 `UUID.randomUUID()`). 스키마의
   `DEFAULT uuid_generate_v4()`는 안전망으로 둘 수 있습니다.
 - 조인 테이블은 복합 PK를 사용할 수 있습니다.
+- 예외: append-only 발행 로그(`outbox_events`)의 PK는 소비자의 polling watermark라
+  단조 증가하는 `bigserial`을 씁니다(ADR-0008). watermark는 순서가 보장되는 정수여야 하고
+  UUID로는 그 역할을 할 수 없습니다.
 
 ### 시간
 
