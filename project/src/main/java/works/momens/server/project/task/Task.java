@@ -5,7 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderColumn;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -72,12 +72,13 @@ class Task extends BaseEntity {
 
   /**
    * 완료기준 항목. 자식 엔티티의 전체 생명주기를 이 aggregate가 소유하므로 cascade ALL과 orphanRemoval로 컬렉션 변경이 곧 저장 변경이 되게
-   * 합니다. 리스트 순서가 저장 순서라(수정 화면이 전체 목록 순서로 저장) {@code @OrderColumn}을 부모 소유 단방향으로 둡니다. mappedBy 컬렉션의
-   * {@code @OrderColumn}은 Hibernate 7부터 리스트 위치를 자동 유지하지 않습니다(7.0 migration guide).
+   * 합니다. 저장 순서는 {@code position} 컬럼이 담고, 조회는 {@code @OrderBy}로 그 값 오름차순 정렬만 합니다. 순서 부여는 {@code
+   * replaceChecklist}가 0부터 연속으로 채웁니다. {@code @OrderColumn}(리스트 인덱스=position)은 저장 position이 0부터 연속이
+   * 아니면 빈 인덱스를 null 원소로 채워 조회를 깨뜨리므로 쓰지 않습니다.
    */
   @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
   @JoinColumn(name = "task_id", nullable = false, updatable = false)
-  @OrderColumn(name = "position")
+  @OrderBy("position ASC")
   private List<TaskChecklistItem> checklistItems = new ArrayList<>();
 
   @Column(name = "deleted_at")
@@ -129,24 +130,28 @@ class Task extends BaseEntity {
 
   /**
    * 완료기준 목록을 수정 화면이 저장한 최종 목록으로 교체합니다. id가 없는 항목은 새로 만들고, id가 기존 항목과 맞으면 제목과 완료 상태를 함께 갱신합니다. 최종
-   * 목록에 없는 기존 항목은 컬렉션에서 빠지면서 orphanRemoval로 삭제됩니다. 리스트 순서가 그대로 저장 순서라, {@code @OrderColumn}이
-   * position을 순서대로 새로 부여합니다.
+   * 목록에 없는 기존 항목은 컬렉션에서 빠지면서 orphanRemoval로 삭제됩니다. 리스트 순서가 그대로 저장 순서라, 각 항목의 position을 목록 인덱스대로 새로
+   * 부여합니다.
    *
    * <p>존재하지 않는 id를 거부하는 검증은 이 메서드를 부르는 {@code TaskEditor}가 먼저 합니다. 토글의 없는 항목 처리와 같은 계층에 두어, 엔티티는
    * 검증한 입력을 저장만 합니다.
+   *
+   * <p>{@code @OrderBy}는 조회 정렬만 하므로 순서(position)는 여기서 목록 인덱스대로 0부터 연속으로 직접 부여합니다.
    */
   void replaceChecklist(List<UpdateTaskCommand.ChecklistItemEdit> edits) {
     Map<UUID, TaskChecklistItem> existingById =
         checklistItems.stream().collect(Collectors.toMap(TaskChecklistItem::getId, item -> item));
     List<TaskChecklistItem> rebuilt = new ArrayList<>();
-    for (UpdateTaskCommand.ChecklistItemEdit edit : edits) {
+    for (int position = 0; position < edits.size(); position++) {
+      UpdateTaskCommand.ChecklistItemEdit edit = edits.get(position);
       TaskChecklistItem existing = edit.id() == null ? null : existingById.get(edit.id());
       if (existing != null) {
         existing.updateTitle(edit.title());
         existing.changeCompleted(edit.completed());
+        existing.changePosition(position);
         rebuilt.add(existing);
       } else {
-        rebuilt.add(new TaskChecklistItem(edit.title(), edit.completed()));
+        rebuilt.add(new TaskChecklistItem(edit.title(), edit.completed(), position));
       }
     }
     checklistItems.clear();
