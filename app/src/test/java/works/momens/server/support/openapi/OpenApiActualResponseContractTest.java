@@ -86,16 +86,69 @@ class OpenApiActualResponseContractTest extends AbstractPostgresIntegrationTest 
     assertActualKeysAreSnakeCase(body);
   }
 
-  /** 서버가 실제로 내보내는 스펙과 대조해야 하므로, 고정 파일이 아니라 /v3/api-docs에서 스펙을 가져온다. */
-  private OpenApiInteractionValidator validatorFromLiveSpec() throws Exception {
-    String spec =
+  /**
+   * bootstrap의 {@code me}는 중첩 record라 springdoc이 {@code /api/me}의 {@code user.MeResponse}와 같은 단순
+   * 클래스명 {@code MeResponse}로 스키마를 만들어 충돌했다({@code @Schema(name)}로 분리해 고쳤다). 충돌이 재발하면 문서의 bootstrap
+   * {@code me}가 {@code {"user": ...}} shape를 참조하게 되어 실제 응답과 어긋난다. 실제 응답 검증과 함께, 문서의 bootstrap
+   * {@code me} 스키마가 실제와 같은 shape인지 직접 확인해 이 회귀를 막는다.
+   */
+  @Test
+  void bootstrapResponseMatchesDocumentedContract() throws Exception {
+    String spec = fetchApiDocs();
+    OpenApiInteractionValidator validator =
+        OpenApiInteractionValidator.createForInlineApiSpecification(spec).build();
+    UserProfile user = userService.findOrCreate("bootstrap-contract-it@momens.works", "홍길동", null);
+    String token = accessTokens.issueAccessToken(user.id());
+
+    String body =
         mockMvc
-            .perform(get("/v3/api-docs"))
+            .perform(
+                get("/api/mobile/bootstrap")
+                    .header("Authorization", "Bearer " + token)
+                    .header("API-Version", "1"))
             .andExpect(status().isOk())
+            .andExpect(openApi().isValid(validator))
             .andReturn()
             .getResponse()
             .getContentAsString();
-    return OpenApiInteractionValidator.createForInlineApiSpecification(spec).build();
+
+    assertActualKeysAreSnakeCase(body);
+    assertThat(new ObjectMapper().readTree(body).path("me").path("email").asString())
+        .isEqualTo("bootstrap-contract-it@momens.works");
+
+    JsonNode schemas = new ObjectMapper().readTree(spec).path("components").path("schemas");
+    String meSchemaName =
+        schemas
+            .path("BootstrapResponse")
+            .path("properties")
+            .path("me")
+            .path("$ref")
+            .asString()
+            .substring("#/components/schemas/".length());
+    List<String> meProperties = new ArrayList<>();
+    schemas
+        .path(meSchemaName)
+        .path("properties")
+        .properties()
+        .forEach(e -> meProperties.add(e.getKey()));
+    assertThat(meProperties)
+        .as("documented bootstrap me must match the actual shape, not the /api/me MeResponse")
+        .contains("id", "email", "name", "avatar_url")
+        .doesNotContain("user");
+  }
+
+  /** 서버가 실제로 내보내는 스펙과 대조해야 하므로, 고정 파일이 아니라 /v3/api-docs에서 스펙을 가져온다. */
+  private OpenApiInteractionValidator validatorFromLiveSpec() throws Exception {
+    return OpenApiInteractionValidator.createForInlineApiSpecification(fetchApiDocs()).build();
+  }
+
+  private String fetchApiDocs() throws Exception {
+    return mockMvc
+        .perform(get("/v3/api-docs"))
+        .andExpect(status().isOk())
+        .andReturn()
+        .getResponse()
+        .getContentAsString();
   }
 
   private void assertActualKeysAreSnakeCase(String body) {
