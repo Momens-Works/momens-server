@@ -32,8 +32,8 @@ import works.momens.server.mobile.internal.ProjectTaskService;
 import works.momens.server.project.TaskDetail;
 
 /**
- * 태스크 상세 컨트롤러가 경로 변수와 Principal을 조합 서비스에 전달하고 명세의 snake_case 응답 형식(checklist 카운트 파생, 고정 빈 값 3종 포함)을
- * 내는지 검증합니다. versioning은 모듈 경계상 슬라이스 안에서 동일하게 구성합니다.
+ * 태스크 상세 컨트롤러가 경로 변수와 Principal을 조합 서비스에 전달하고 명세의 snake_case 응답 형식(checklist 카운트 파생 포함)을 내는지 검증합니다.
+ * versioning은 모듈 경계상 슬라이스 안에서 동일하게 구성합니다.
  */
 @WebMvcTest(TaskController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -48,6 +48,7 @@ class TaskControllerTest {
   private static final UUID PROJECT_ID = UUID.fromString("30d9e9fe-f43b-4097-a88e-dc19f0a5b025");
   private static final UUID MATERIAL_ID = UUID.fromString("9f1c2b3a-4d5e-4f60-8a71-2b3c4d5e6f70");
   private static final Instant OCCURRED_AT = Instant.parse("2026-06-28T00:48:00Z");
+  private static final UUID QUESTION_ID = UUID.fromString("3f2a1b4c-5d6e-4f70-8a91-b2c3d4e5f6a7");
   private final Principal principal = USER_ID::toString;
 
   @Test
@@ -77,7 +78,9 @@ class TaskControllerTest {
                         "설명 문구 변경",
                         "figma",
                         OCCURRED_AT,
-                        "https://figma.example/p"))));
+                        "https://figma.example/p")),
+                List.of(new TaskDetail.OpenQuestion(QUESTION_ID, "권한 거부 시 대체 흐름을 둘지 검토 필요")),
+                "권한 거부 흐름을 PM과 확정한 뒤 화면 카피를 수정하세요."));
 
     mockMvc
         .perform(get("/api/mobile/tasks/{taskId}", TASK_ID).principal(principal))
@@ -105,8 +108,10 @@ class TaskControllerTest {
         .andExpect(jsonPath("$.materials[0].source").value("figma"))
         .andExpect(jsonPath("$.materials[0].occurred_at").exists())
         .andExpect(jsonPath("$.materials[0].source_url").value("https://figma.example/p"))
-        .andExpect(jsonPath("$.open_questions.length()").value(0))
-        .andExpect(jsonPath("$.next_action").value((Object) null));
+        .andExpect(jsonPath("$.open_questions.length()").value(1))
+        .andExpect(jsonPath("$.open_questions[0].id").value(QUESTION_ID.toString()))
+        .andExpect(jsonPath("$.open_questions[0].body").value("권한 거부 시 대체 흐름을 둘지 검토 필요"))
+        .andExpect(jsonPath("$.next_action").value("권한 거부 흐름을 PM과 확정한 뒤 화면 카피를 수정하세요."));
   }
 
   @Test
@@ -123,7 +128,9 @@ class TaskControllerTest {
                 "low",
                 null,
                 List.of(),
-                List.of()));
+                List.of(),
+                List.of(),
+                null));
 
     mockMvc
         .perform(get("/api/mobile/tasks/{taskId}", TASK_ID).principal(principal))
@@ -133,7 +140,9 @@ class TaskControllerTest {
         .andExpect(jsonPath("$.checklist.completed_count").value(0))
         .andExpect(jsonPath("$.checklist.total_count").value(0))
         .andExpect(jsonPath("$.checklist.items.length()").value(0))
-        .andExpect(jsonPath("$.materials.length()").value(0));
+        .andExpect(jsonPath("$.materials.length()").value(0))
+        .andExpect(jsonPath("$.open_questions.length()").value(0))
+        .andExpect(jsonPath("$.next_action").value((Object) null));
   }
 
   @Test
@@ -277,7 +286,9 @@ class TaskControllerTest {
                 List.of(
                     new TaskDetail.ChecklistItem(itemId, "바꾼 기준", true),
                     new TaskDetail.ChecklistItem(otherId, "다른 기준", false)),
-                List.of()));
+                List.of(),
+                List.of(),
+                null));
 
     mockMvc
         .perform(

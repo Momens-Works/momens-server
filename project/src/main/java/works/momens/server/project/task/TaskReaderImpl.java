@@ -30,7 +30,7 @@ class TaskReaderImpl implements TaskReader {
   @Override
   @Transactional(readOnly = true)
   public Optional<TaskDetail> findDetail(UUID taskId) {
-    // checklistItems는 LAZY 컬렉션이라 이 트랜잭션 안에서 보조 SELECT로 초기화된다.
+    // checklistItems와 openQuestions는 LAZY 컬렉션이라 이 트랜잭션 안에서 보조 SELECT로 초기화된다.
     return taskRepository.findByIdAndDeletedAtIsNull(taskId).map(TaskDetailMapper::toDetail);
   }
 

@@ -328,8 +328,8 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 | --- | --- | --- |
 | `materials[]` | `source_refs` + `entity_relations`(task ↔ source_ref) | `[]` |
 | `material_count` | `materials[]` 개수 | `0` |
-| `open_questions[]` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `[]` |
-| `next_action` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `null` |
+| `open_questions[]` | `task_open_questions`. Minsu 산출물이고 MVP는 fixture가 채운다 | `[]` |
+| `next_action` | `tasks.next_action`. Minsu 산출물이고 MVP는 fixture가 채운다 | `null` |
 | `signal_summary.summary` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `null` |
 
 서버는 backing source가 없는 값을 임의 생성하지 않는다. worker가 준비되지 않은 MVP 환경에서는
