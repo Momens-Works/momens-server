@@ -229,6 +229,11 @@ append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
 - `signal_evidence`: Signal과 `source_refs`의 근거 연결 및 근거별 `대상`·`변화`·`영향`을 읽어 모바일
   상세 응답을 조립한다. 의미 값은 worker 또는 같은 backing 계약의 fixture가 생산한다(ADR-0011).
 - `signal_actions`: 사용자의 `convert-to-task`, `dismiss` 처리 기록과 멱등성을 소유한다.
+- `signal_digests`: 브리프의 시그널 요약 문단을 읽는다. 그날 신호 전체를 한 문단으로 요약한 민수
+  산출물이라 서버는 쓰지 않고, 민수 구현 전에는 fixture가 채운다(ADR-0011). 조회 public API는
+  `SignalDigestReader`이고 브리프가 시그널을 거르는 생성 시각 범위를 그대로 받는다. 문단과 그
+  문단이 설명하는 시그널이 같은 기준으로 걸러져 어긋날 수 없다(ADR-0012). 시그널 한 건을 뜻하는
+  `SignalSummary`와는 다른 값이다.
 - Signal 목록/상세 및 action API를 소유한다. 경로가 `/api/mobile/*`여도 Signal 도메인 정책과
   영속성은 `mobile`이 아니라 이 모듈에 둔다.
 - 시그널 탭의 미처리 목록 조회(`listUnprocessed`)와, 브리프가 쓰는 당일 생성 범위의 커서 페이지
