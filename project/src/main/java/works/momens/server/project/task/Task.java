@@ -17,6 +17,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Immutable;
 import works.momens.server.common.persistence.BaseEntity;
 import works.momens.server.project.TaskOrigin;
 import works.momens.server.project.UpdateTaskCommand;
@@ -80,6 +81,23 @@ class Task extends BaseEntity {
   @JoinColumn(name = "task_id", nullable = false, updatable = false)
   @OrderBy("position ASC")
   private List<TaskChecklistItem> checklistItems = new ArrayList<>();
+
+  /**
+   * 민수가 제안하는 열린질문. 완료기준과 달리 이 서버가 쓰지 않으므로 cascade와 orphanRemoval을 두지 않고 조회만 합니다. 생산자가 주는 {@code
+   * sortOrder}는 0부터 연속이라는 보장이 없어 값이 겹치면 id로 순서를 고정합니다.
+   */
+  @OneToMany
+  @JoinColumn(name = "task_id", insertable = false, updatable = false)
+  @OrderBy("sortOrder ASC, id ASC")
+  @Immutable
+  private List<TaskOpenQuestion> openQuestions = new ArrayList<>();
+
+  /**
+   * 민수가 제안하는 다음행동. 이 서버가 쓰지 않아 읽기 전용으로 매핑합니다. 값은 민수 구현 전까지 같은 backing 계약을 따르는 fixture가
+   * 채웁니다(ADR-0011).
+   */
+  @Column(name = "next_action", insertable = false, updatable = false)
+  private String nextAction;
 
   @Column(name = "deleted_at")
   private Instant deletedAt;

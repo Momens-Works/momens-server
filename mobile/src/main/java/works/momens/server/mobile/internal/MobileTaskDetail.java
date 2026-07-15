@@ -13,6 +13,10 @@ import works.momens.server.project.TaskDetail;
  * project public API 타입({@link TaskDetail.ChecklistItem})을 재사용합니다.
  *
  * <p>{@code materials}는 context의 연결과 source의 원본을 조합한 결과입니다. 연결된 자료가 없으면 빈 목록입니다.
+ *
+ * <p>{@code openQuestions}와 {@code nextAction}은 민수 산출물이라 모바일이 매핑 없이 그대로 내려주므로, 완료기준 항목과 같이 project
+ * public API 타입({@link TaskDetail.OpenQuestion})을 재사용합니다. 열린질문이 없으면 빈 목록이고, 다음행동을 아직 만들지 않았으면
+ * null입니다.
  */
 public record MobileTaskDetail(
     UUID id,
@@ -24,7 +28,9 @@ public record MobileTaskDetail(
     String priority,
     String purpose,
     List<TaskDetail.ChecklistItem> checklistItems,
-    List<Material> materials) {
+    List<Material> materials,
+    List<TaskDetail.OpenQuestion> openQuestions,
+    String nextAction) {
 
   /** 담당자 표시 정보. avatarUrl은 담당자의 구글 계정 프로필 이미지이고, 없으면 null입니다. */
   public record Assignee(UUID id, String name, String avatarUrl) {}
