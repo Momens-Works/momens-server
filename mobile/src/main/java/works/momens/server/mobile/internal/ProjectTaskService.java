@@ -4,12 +4,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.context.EntityRelationReader;
 import works.momens.server.project.BoardTask;
 import works.momens.server.project.CreateTaskCommand;
 import works.momens.server.project.CreatedTask;
@@ -20,6 +22,8 @@ import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskEditor;
 import works.momens.server.project.TaskReader;
 import works.momens.server.project.UpdateTaskCommand;
+import works.momens.server.source.SourceRefReader;
+import works.momens.server.source.SourceRefView;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 import works.momens.server.workspace.WorkspaceAccess;
@@ -42,16 +46,24 @@ public class ProjectTaskService {
   private final TaskCreator taskCreator;
   private final TaskEditor taskEditor;
   private final UserService userService;
+  private final EntityRelationReader entityRelationReader;
+  private final SourceRefReader sourceRefReader;
 
   @Transactional(readOnly = true)
   public List<MobileTaskGroup> getBoard(UUID projectId, UUID userId) {
-    requireProjectMember(projectId, userId);
+    UUID workspaceId = requireProjectMember(projectId, userId);
+    List<BoardTask> tasks = taskReader.listTasksByStatus(projectId, BoardStatus.keys());
+    Map<UUID, Integer> materialCounts =
+        entityRelationReader.countLinkedSourceRefs(
+            workspaceId, tasks.stream().map(BoardTask::id).toList());
     Map<String, List<MobileTaskCard>> cardsByStatus =
-        taskReader.listTasksByStatus(projectId, BoardStatus.keys()).stream()
+        tasks.stream()
             .collect(
                 Collectors.groupingBy(
                     BoardTask::status,
-                    Collectors.mapping(ProjectTaskService::toCard, Collectors.toList())));
+                    Collectors.mapping(
+                        task -> toCard(task, materialCounts.getOrDefault(task.id(), 0)),
+                        Collectors.toList())));
     return Arrays.stream(BoardStatus.values())
         .map(
             status ->
@@ -141,7 +153,29 @@ public class ProjectTaskService {
         toAssignee(detail.assigneeId()),
         MobilePriority.fromStored(detail.priority()).key(),
         detail.description(),
-        detail.checklistItems());
+        detail.checklistItems(),
+        hydrateMaterials(detail.workspaceId(), detail.id()));
+  }
+
+  private List<MobileTaskDetail.Material> hydrateMaterials(UUID workspaceId, UUID taskId) {
+    List<UUID> sourceRefIds = entityRelationReader.findLinkedSourceRefIds(workspaceId, taskId);
+    Map<UUID, SourceRefView> refs =
+        sourceRefReader.findByIds(workspaceId, sourceRefIds).stream()
+            .collect(Collectors.toMap(SourceRefView::id, Function.identity()));
+    return sourceRefIds.stream()
+        .filter(refs::containsKey)
+        .map(id -> toMaterial(refs.get(id)))
+        .toList();
+  }
+
+  private static MobileTaskDetail.Material toMaterial(SourceRefView ref) {
+    return new MobileTaskDetail.Material(
+        ref.id(),
+        ref.title(),
+        ref.snippet() != null ? ref.snippet() : ref.text(),
+        ref.sourceType(),
+        ref.sourceCreatedAt(),
+        ref.sourceUrl());
   }
 
   private MobileTaskDetail.Assignee toAssignee(UUID assigneeId) {
@@ -170,9 +204,12 @@ public class ProjectTaskService {
     return workspaceId;
   }
 
-  private static MobileTaskCard toCard(BoardTask task) {
-    // 관련 자료 연결(entity_relations)이 서버에 아직 없어 material_count는 0으로 둔다(명세 합성 필드 정책).
+  private static MobileTaskCard toCard(BoardTask task, int materialCount) {
     return new MobileTaskCard(
-        task.id(), task.title(), task.role(), MobilePriority.fromStored(task.priority()).key(), 0);
+        task.id(),
+        task.title(),
+        task.role(),
+        MobilePriority.fromStored(task.priority()).key(),
+        materialCount);
   }
 }

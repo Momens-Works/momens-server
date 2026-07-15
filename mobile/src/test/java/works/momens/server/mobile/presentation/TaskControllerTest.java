@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.security.Principal;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,8 @@ class TaskControllerTest {
   private static final UUID USER_ID = UUID.fromString("5d2f7f3a-5db1-4f2c-8b9e-13607dd1f5e8");
   private static final UUID TASK_ID = UUID.fromString("27afd507-9c7f-4f0d-a2be-fcdab2477b19");
   private static final UUID PROJECT_ID = UUID.fromString("30d9e9fe-f43b-4097-a88e-dc19f0a5b025");
+  private static final UUID MATERIAL_ID = UUID.fromString("9f1c2b3a-4d5e-4f60-8a71-2b3c4d5e6f70");
+  private static final Instant OCCURRED_AT = Instant.parse("2026-06-28T00:48:00Z");
   private final Principal principal = USER_ID::toString;
 
   @Test
@@ -66,7 +69,15 @@ class TaskControllerTest {
                 "이번 범위의 화면 흐름을 정리한다",
                 List.of(
                     new TaskDetail.ChecklistItem(doneItemId, "완료된 기준", true),
-                    new TaskDetail.ChecklistItem(openItemId, "남은 기준", false))));
+                    new TaskDetail.ChecklistItem(openItemId, "남은 기준", false)),
+                List.of(
+                    new MobileTaskDetail.Material(
+                        MATERIAL_ID,
+                        "권한 요청 화면 v2",
+                        "설명 문구 변경",
+                        "figma",
+                        OCCURRED_AT,
+                        "https://figma.example/p"))));
 
     mockMvc
         .perform(get("/api/mobile/tasks/{taskId}", TASK_ID).principal(principal))
@@ -87,7 +98,13 @@ class TaskControllerTest {
         .andExpect(jsonPath("$.checklist.items[0].id").value(doneItemId.toString()))
         .andExpect(jsonPath("$.checklist.items[0].completed").value(true))
         .andExpect(jsonPath("$.checklist.items[1].completed").value(false))
-        .andExpect(jsonPath("$.materials.length()").value(0))
+        .andExpect(jsonPath("$.materials.length()").value(1))
+        .andExpect(jsonPath("$.materials[0].id").value(MATERIAL_ID.toString()))
+        .andExpect(jsonPath("$.materials[0].title").value("권한 요청 화면 v2"))
+        .andExpect(jsonPath("$.materials[0].summary").value("설명 문구 변경"))
+        .andExpect(jsonPath("$.materials[0].source").value("figma"))
+        .andExpect(jsonPath("$.materials[0].occurred_at").exists())
+        .andExpect(jsonPath("$.materials[0].source_url").value("https://figma.example/p"))
         .andExpect(jsonPath("$.open_questions.length()").value(0))
         .andExpect(jsonPath("$.next_action").value((Object) null));
   }
@@ -97,7 +114,16 @@ class TaskControllerTest {
     when(projectTaskService.getTaskDetail(TASK_ID, USER_ID))
         .thenReturn(
             new MobileTaskDetail(
-                TASK_ID, PROJECT_ID, "빈 상세", "todo", "pm", null, "low", null, List.of()));
+                TASK_ID,
+                PROJECT_ID,
+                "빈 상세",
+                "todo",
+                "pm",
+                null,
+                "low",
+                null,
+                List.of(),
+                List.of()));
 
     mockMvc
         .perform(get("/api/mobile/tasks/{taskId}", TASK_ID).principal(principal))
@@ -106,7 +132,8 @@ class TaskControllerTest {
         .andExpect(jsonPath("$.purpose").value((Object) null))
         .andExpect(jsonPath("$.checklist.completed_count").value(0))
         .andExpect(jsonPath("$.checklist.total_count").value(0))
-        .andExpect(jsonPath("$.checklist.items.length()").value(0));
+        .andExpect(jsonPath("$.checklist.items.length()").value(0))
+        .andExpect(jsonPath("$.materials.length()").value(0));
   }
 
   @Test
@@ -249,7 +276,8 @@ class TaskControllerTest {
                 null,
                 List.of(
                     new TaskDetail.ChecklistItem(itemId, "바꾼 기준", true),
-                    new TaskDetail.ChecklistItem(otherId, "다른 기준", false))));
+                    new TaskDetail.ChecklistItem(otherId, "다른 기준", false)),
+                List.of()));
 
     mockMvc
         .perform(

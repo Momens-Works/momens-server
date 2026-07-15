@@ -37,8 +37,8 @@
 - `context`는 `entity_relations`를 읽어 연결된 식별자만 돌려준다. 지금은 도메인 모듈에 의존하지 않고,
   식별자로 본문을 채우는 조합은 소비하는 쪽이 한다(`mobile`이 `context`의 링크와 `source`의
   source_ref 조회를 엮어 태스크 관련자료를 만든다).
-- `mobile`은 `user`, `project`, `workspace`, `signal`의 public API만 조합한다(bootstrap,
-  멤버 조회, 브리프). 도메인 정책을 소유하지 않는다.
+- `mobile`은 `user`, `project`, `workspace`, `signal`, `context`, `source`의 public API만
+  조합한다(bootstrap, 멤버 조회, 브리프, 태스크 관련자료). 도메인 정책을 소유하지 않는다.
 - `signal`은 `project`의 project/workspace 해석 public API와 `workspace`의 RBAC public API를 사용한다.
   상세 응답의 evidence는 `source`의 source_ref 조회 public API로 hydrate한다.
   Signal을 task로 수용할 때는 `project`의 task 생성 public API를 사용한다.
@@ -209,9 +209,10 @@ append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
   소유한다(MOM-67).
 - `GET /api/mobile/tasks/{taskId}`: project의 태스크 상세(`TaskReader.findDetail`)와 workspace
   멤버십(태스크가 속한 workspace 기준), user 프로필(담당자 이름)을 조합한다. purpose 개명
-  (도메인 description), priority 매핑, 빈 값 고정(materials와 open_questions는 빈 배열,
-  next_action은 null)은 조합 규칙이라 이 모듈이 소유한다(MOM-63). 수정 계열은 MOM-75가 같은
-  `/tasks/*` 표면에 추가한다.
+  (도메인 description), priority 매핑, 빈 값 고정(open_questions는 빈 배열, next_action은 null)은
+  조합 규칙이라 이 모듈이 소유한다(MOM-63). 관련자료는 context의 링크와 source의 원본을 조합해
+  채우고, 연결이 없으면 빈 배열이다(MOM-0779). 수정 계열은 MOM-75가 같은 `/tasks/*` 표면에
+  추가한다.
 - 도메인 정책과 영속성을 소유하지 않는다. 엔티티, repository, 마이그레이션이 없다.
 - 어느 한 도메인의 capability가 아닌 모바일 조합 표면(진입처럼 여러 모듈을 가로지르는 조회)이
   이 모듈에 온다. 모바일 API 전부를 모으는 곳은 아니며, 도메인 스코프가 분명한 모바일 API는
