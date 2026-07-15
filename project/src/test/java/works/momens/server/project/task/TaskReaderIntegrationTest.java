@@ -312,27 +312,11 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   private void insertOpenQuestion(UUID taskId, UUID id, String body, int sortOrder) {
-    entityManager
-        .getEntityManager()
-        .createNativeQuery(
-            "INSERT INTO task_open_questions (id, task_id, body, sort_order)"
-                + " VALUES (?1, ?2, ?3, ?4)")
-        .setParameter(1, id)
-        .setParameter(2, taskId)
-        .setParameter(3, body)
-        .setParameter(4, sortOrder)
-        .executeUpdate();
-    entityManager.clear();
+    ProjectSeedSql.insertOpenQuestion(entityManager, id, taskId, body, sortOrder);
   }
 
   private void setNextAction(UUID taskId, String nextAction) {
-    entityManager
-        .getEntityManager()
-        .createNativeQuery("UPDATE tasks SET next_action = ?1 WHERE id = ?2")
-        .setParameter(1, nextAction)
-        .setParameter(2, taskId)
-        .executeUpdate();
-    entityManager.clear();
+    ProjectSeedSql.setNextAction(entityManager, taskId, nextAction);
   }
 
   private void softDelete(UUID taskId) {
