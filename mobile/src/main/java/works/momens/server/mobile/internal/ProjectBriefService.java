@@ -18,6 +18,7 @@ import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.ProjectSnapshot;
 import works.momens.server.project.TaskReader;
+import works.momens.server.signal.SignalDigestReader;
 import works.momens.server.signal.SignalListService;
 import works.momens.server.signal.SignalSummary;
 import works.momens.server.signal.SignalSummaryPage;
@@ -64,6 +65,7 @@ public class ProjectBriefService {
   private final ProjectReader projectReader;
   private final WorkspaceAccess workspaceAccess;
   private final SignalListService signalListService;
+  private final SignalDigestReader signalDigestReader;
   private final TaskReader taskReader;
   private final MobileClock mobileClock;
 
@@ -90,8 +92,14 @@ public class ProjectBriefService {
     SignalSummaryPage firstPage =
         signalListService.listByCreatedRange(
             projectId, userId, null, today.from(), today.toExclusive(), null, DEFAULT_PAGE_SIZE);
+    // 요약 문단은 시그널과 같은 하루 범위로 조회한다. 기준이 갈리면 어제 문단이 오늘 목록 위에 붙는다.
+    String digest =
+        signalDigestReader
+            .findByCreatedRange(projectId, userId, today.from(), today.toExclusive())
+            .orElse(null);
     return new MobileBrief(
         snapshot,
+        digest,
         toFilterCounts(countsByType),
         toItems(firstPage.items()),
         nextCursor(anchor, firstPage),
