@@ -8,10 +8,15 @@
 -- EntityRelation 엔티티 매핑만 검증한다([데이터] docs/rules/persistence.md).
 --
 -- 이 마이그레이션은 local/test 전용으로, 별도 DB에서 읽기 엔티티 매핑 검증과
--- fixture 구성을 위해 EntityRelation이 매핑하는 컬럼만 생성한다.
--- 서버는 entity_relations를 읽기 전용으로만 사용한다.
+-- fixture 구성을 위해 사용한다. 서버는 entity_relations를 읽기 전용으로만 사용한다.
+--
+-- 감사 필드(created_at, updated_at)는 모든 테이블에 NOT NULL로 둔다([데이터]
+-- docs/rules/persistence.md). updated_at은 EntityRelation이 매핑하지 않지만 레거시
+-- 실제 테이블에 있는 컬럼이라, local/test도 같은 스키마를 갖도록 함께 생성한다.
+-- signal_evidence 미러와 같은 방식이다.
+--
 -- 레거시의 workspaces FK와 EntityRelation이 매핑하지 않는 컬럼
--- (weight, source_ref_ids, metadata, updated_at)은 생성하지 않는다.
+-- (weight, source_ref_ids, metadata)은 생성하지 않는다.
 CREATE TABLE entity_relations (
     id UUID PRIMARY KEY,
     workspace_id UUID NOT NULL,
@@ -20,6 +25,7 @@ CREATE TABLE entity_relations (
     relation_type TEXT NOT NULL,
     to_entity_type TEXT NOT NULL,
     to_entity_id UUID NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
 );
