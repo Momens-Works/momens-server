@@ -7,12 +7,13 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 
 /**
- * 슬라이스 테스트용 부트스트랩.
+ * 슬라이스 테스트용 부트스트랩입니다.
  *
- * <p>feature 모듈에는 실행 가능한 {@code @SpringBootApplication}이 없으므로, 슬라이스 테스트가 위로 탐색해 찾을
- * {@code @SpringBootConfiguration}을 테스트 스코프에 둡니다. {@code @ComponentScan}에 {@code
- * TypeExcludeFilter}를 excludeFilters로 명시해, {@code @DataJpaTest} 슬라이스에 모듈의 모든 {@code @Service}가 자동으로
- * 올라오지 않게 합니다(source 부트스트랩과 동일).
+ * <p>feature 모듈에는 실행 가능한 {@code @SpringBootApplication}이 없으므로, 슬라이스 테스트가 탐색할
+ * {@code @SpringBootConfiguration}을 테스트 스코프에 제공합니다.
+ *
+ * <p>{@code @ComponentScan}에는 {@code TypeExcludeFilter}를 {@code excludeFilters}로 등록해
+ * {@code @DataJpaTest}에서 모듈의 {@code @Service}가 자동으로 등록되지 않도록 합니다. 구성은 source 모듈의 테스트 부트스트랩과 동일합니다.
  */
 @SpringBootConfiguration
 @EnableAutoConfiguration
