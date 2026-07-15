@@ -8,13 +8,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /**
- * 태스크와 source_ref의 연결 조회.
+ * 태스크와 source_ref의 연결을 조회합니다.
  *
- * <p>연결 종류는 레거시 상수를 그대로 씁니다(momens-api internal/domain/models.go): 태스크에서 나가는 연결은 {@code
- * from_entity_type='TASK'}, source_ref를 가리키는 연결은 {@code to_entity_type='SOURCE_OBJECT'}, 관련자료 연결은
- * {@code relation_type='LINKED_TO'}입니다. 지금 읽는 연결이 이 한 종류뿐이라 조건을 파라미터로 열지 않고 쿼리에 고정합니다.
+ * <p>연결 조건은 레거시 상수를 그대로 사용합니다(momens-api internal/domain/models.go). 태스크와 관련자료의 연결은 {@code
+ * from_entity_type='TASK'}, {@code to_entity_type='SOURCE_OBJECT'}, {@code
+ * relation_type='LINKED_TO'}로 정의됩니다. 현재 조회 대상이 이 연결뿐이라 조회 조건을 쿼리에 고정했습니다.
  *
- * <p>엔티티를 구체화하지 않고 id와 개수만 뽑고(첫 쿼리), group by가 필요해(둘째 쿼리) 파생 메서드 대신 {@link Query}를 씁니다.
+ * <p>관련자료 조합에 필요한 source_ref 식별자와 링크 개수만 조회합니다. 식별자는 projection으로 조회하고, 개수 집계는 {@code GROUP BY}가
+ * 필요해 파생 메서드 대신 {@link Query}를 사용했습니다.
  */
 interface EntityRelationRepository extends JpaRepository<EntityRelation, UUID> {
 

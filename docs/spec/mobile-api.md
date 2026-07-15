@@ -77,9 +77,11 @@ Signal type에 따라 앱이 다음처럼 화면 라벨을 정합니다. 이 라
 | --- | --- |
 | `source` | `slack`, `github`, `figma`, `notion`, `file` |
 
-`source`는 관련자료 원본의 출처입니다. Signal 근거의 `evidence.source`와 같은 값(source_ref의 출처)이라 값 집합이
-같습니다. 화면에 보이는 출처 라벨(피그마 등)과 아이콘은 앱이 `source`에서 파생합니다. 관련자료 화면은 figma, slack,
-github, file을 표시하지만 서버는 source_ref의 출처를 그대로 내려주므로, 앱은 모르는 값이 와도 깨지지 않게 다룹니다.
+`source`는 관련자료 원본의 출처입니다. Signal 근거의 `evidence.source`와 같은 source_ref의 출처이므로 값 집합도
+동일합니다. 화면에 표시하는 출처 라벨과 아이콘은 앱이 `source`에서 생성합니다.
+
+관련자료 화면은 figma, slack, github, file을 표시합니다. 다만 서버는 source_ref의 출처를 그대로 반환하므로, 앱은
+목록에 없는 값이 오더라도 화면이 깨지지 않도록 처리합니다.
 
 ## 인증
 
@@ -737,13 +739,16 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 
 `materials[].source_url`은 관련자료에서 원본 문서로 이동할 때 사용합니다.
 
-`materials`는 `entity_relations`(task ↔ source_ref)로 연결을 찾고 `source_refs`에서 원본을 채워 만들며, 연결된
-자료가 없으면 `[]`, `material_count`는 `0`입니다. `id`는 source_ref의 식별자입니다. `source`는 원본 출처이고 화면
-라벨은 앱이 파생합니다(위 Material enum 참고). `occurred_at`은 원본이 생성된 시각입니다. `summary`는 source_ref의
-snippet이며, snippet이 없으면 본문(text)을 대신 씁니다(Signal 근거와 같은 규칙). 원본에 값이 없으면 `title`,
-`summary`, `occurred_at`, `source_url`은 `null`로 내려갑니다. 표시 순서는 연결이 만들어진 시각의 내림차순입니다.
-`open_questions`, `next_action`은 MVP에서 backing source가 없으면 각각 `[]`, `null`로 반환합니다. 서버는 근거 없는
-값을 임의 생성하지 않습니다(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
+`materials`는 `entity_relations`(task ↔ source_ref)에서 연결을 찾고 `source_refs`에서 원본을 조회해 구성합니다.
+연결된 자료가 없으면 `[]`이고, `material_count`는 `0`입니다.
+
+`id`는 source_ref의 식별자입니다. `source`는 원본 출처이며 화면 라벨은 앱이 생성합니다(위 Material 참고).
+`occurred_at`은 원본이 생성된 시각입니다. `summary`는 source_ref의 snippet이고, snippet이 없으면 본문(text)을
+대신 사용합니다. 이 규칙은 Signal 근거와 동일합니다. 원본에 값이 없으면 `title`, `summary`, `occurred_at`,
+`source_url`은 `null`로 반환합니다. 표시 순서는 연결이 생성된 시각의 내림차순입니다.
+
+`open_questions`와 `next_action`은 MVP에서 backing source가 없으면 각각 `[]`, `null`로 반환합니다. 서버는 근거
+없는 값을 임의로 생성하지 않습니다(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
 
 담당자가 지정되지 않았으면 `assignee`는 `null`, 목적을 아직 작성하지 않았으면 `purpose`는 `null`입니다. 웹에서 만든 태스크는 역할이 없어 `role`도 `null`입니다. 태스크 생성 시점에 민수가 담당자를 판단해 지정하는데, 판단에 걸리는 시간 동안에는 담당자가 없어 `assignee`가 `null`로 내려가고, 이후 지정되면 조회에 자동으로 반영됩니다. `assignee.avatar_url`은 담당자의 구글 계정 프로필 이미지이고, 없으면 `null`입니다.
 완료기준이 없으면 `checklist`는 `completed_count` 0, `total_count` 0, `items` 빈 배열입니다(2026-07-07 확정).

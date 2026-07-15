@@ -29,12 +29,17 @@ import works.momens.server.user.UserService;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
- * 모바일 태스크 표면(보드 조회, 생성, 상세 조회)의 조합 서비스. project(태스크 도메인), workspace(멤버십), user(프로필) public API를
- * 조합하고 도메인 정책을 소유하지 않습니다.
+ * 모바일 태스크 표면(보드 조회, 생성, 상세 조회)의 조합 서비스입니다. project(태스크 도메인), workspace(멤버십), user(프로필),
+ * context(관련자료 연결), source(연결된 원본) public API를 조합하고 도메인 정책을 소유하지 않습니다.
  *
- * <p>보드 그룹 구성과 material_count 기본값, 상세의 purpose 개명은 모바일 조합 규칙이므로 이 서비스가 소유하고, 저장 priority 해석(urgent를
- * high로 반환)은 {@link MobilePriority}가 소유합니다. 조회는 read-only 트랜잭션에 두고, 생성은 라벨 발급과 저장이 한 트랜잭션으로 묶이도록 쓰기
- * 트랜잭션에 둡니다.
+ * <p>보드 그룹 구성과 상세의 purpose 개명은 모바일 조합 규칙이므로 이 서비스가 소유하고, 저장 priority 해석(urgent를 high로 반환)은 {@link
+ * MobilePriority}가 소유합니다.
+ *
+ * <p>관련자료는 context에서 연결된 source_ref 식별자를 조회한 뒤 source에서 원본을 배치로 조회해 조합합니다. 표시 순서는 연결이 정하므로 원본은
+ * map으로 찾고, 원본이 없는 연결은 제외합니다. 보드의 material_count도 태스크 전체를 한 번에 집계합니다. 링크 수와 무관하게 쿼리 수가 고정되어 N+1 조회가
+ * 발생하지 않습니다. Signal evidence 조립과 동일한 방식입니다.
+ *
+ * <p>조회는 read-only 트랜잭션에 두고, 생성은 라벨 발급과 저장이 한 트랜잭션으로 묶이도록 쓰기 트랜잭션에 둡니다.
  */
 @Service
 @RequiredArgsConstructor
