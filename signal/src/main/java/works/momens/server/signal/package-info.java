@@ -7,7 +7,8 @@
  * <ul>
  *   <li>조회 API — {@link works.momens.server.signal.SignalListService}, {@link
  *       works.momens.server.signal.SignalDetailService}, {@link
- *       works.momens.server.signal.SignalReader}(action 전용 최소 read 경계)와 {@link
+ *       works.momens.server.signal.SignalReader}(action 전용 최소 read 경계), {@link
+ *       works.momens.server.signal.SignalDaySummaryReader}(브리프 당일 요약 문단 조회, MOM-0787)와 {@link
  *       works.momens.server.signal.SignalDetail}, {@link works.momens.server.signal.SignalSummary}.
  *   <li>action API — {@link works.momens.server.signal.SignalActionService}와 {@link
  *       works.momens.server.signal.SignalActionResult}.
