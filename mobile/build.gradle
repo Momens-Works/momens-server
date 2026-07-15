@@ -19,6 +19,9 @@ dependencies {
     implementation project(':project')
     implementation project(':workspace')
     implementation project(':signal')
+    // 태스크 관련자료는 context(태스크와 연결된 source_ref 식별자)와 source(원본 정보)를 조합해 구성합니다(MOM-0779).
+    implementation project(':context')
+    implementation project(':source')
 
     // bootstrap 컨트롤러(presentation).
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'

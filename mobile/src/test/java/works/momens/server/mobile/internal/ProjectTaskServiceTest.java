@@ -2,12 +2,14 @@ package works.momens.server.mobile.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.context.EntityRelationReader;
 import works.momens.server.project.BoardTask;
 import works.momens.server.project.CreateTaskCommand;
 import works.momens.server.project.CreatedTask;
@@ -28,13 +31,15 @@ import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskEditor;
 import works.momens.server.project.TaskReader;
 import works.momens.server.project.UpdateTaskCommand;
+import works.momens.server.source.SourceRefReader;
+import works.momens.server.source.SourceRefView;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
  * 태스크 보드 조회와 생성, 상세 조회 조합 규칙 검증. 도메인 모듈 public API는 mock으로 두고, 조합 규칙(권한 검사 순서, 그룹 구성, priority 매핑,
- * material_count 기본값, 생성 command 전달, 상세의 assignee 결합과 purpose 개명)만 확인합니다.
+ * material_count 채우기, 생성 command 전달, 상세의 assignee 결합과 purpose 개명, 관련자료 조립)만 확인합니다.
  */
 @ExtendWith(MockitoExtension.class)
 class ProjectTaskServiceTest {
@@ -45,12 +50,15 @@ class ProjectTaskServiceTest {
   @Mock private TaskCreator taskCreator;
   @Mock private TaskEditor taskEditor;
   @Mock private UserService userService;
+  @Mock private EntityRelationReader entityRelationReader;
+  @Mock private SourceRefReader sourceRefReader;
   @InjectMocks private ProjectTaskService projectTaskService;
 
   private static final UUID PROJECT_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID CALLER_ID = UUID.randomUUID();
   private static final Instant CREATED_AT = Instant.parse("2026-07-01T00:00:00Z");
+  private static final Instant OCCURRED_AT = Instant.parse("2026-06-28T00:48:00Z");
   private static final UUID TASK_ID = UUID.randomUUID();
 
   @Test
@@ -107,7 +115,7 @@ class ProjectTaskServiceTest {
   }
 
   @Test
-  void getBoardMapsUrgentToHighAndZeroMaterialCount() {
+  void getBoardMapsUrgentToHigh() {
     stubMember();
     UUID taskId = UUID.randomUUID();
     when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
@@ -117,8 +125,27 @@ class ProjectTaskServiceTest {
     MobileTaskCard card = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(1).tasks().get(0);
 
     assertThat(card.priority()).isEqualTo("high");
-    assertThat(card.materialCount()).isZero();
     assertThat(card.role()).isEqualTo("pm");
+  }
+
+  @Test
+  void getBoardFillsMaterialCountFromLinksInOneBatch() {
+    stubMember();
+    UUID linked = UUID.randomUUID();
+    UUID unlinked = UUID.randomUUID();
+    when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
+        .thenReturn(
+            List.of(
+                new BoardTask(linked, "자료 있는 태스크", "todo", "medium", "pm", CREATED_AT),
+                new BoardTask(unlinked, "자료 없는 태스크", "todo", "medium", "pm", CREATED_AT)));
+    when(entityRelationReader.countLinkedSourceRefs(WORKSPACE_ID, List.of(linked, unlinked)))
+        .thenReturn(Map.of(linked, 2));
+
+    List<MobileTaskCard> cards = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(1).tasks();
+
+    assertThat(cards)
+        .extracting(MobileTaskCard::id, MobileTaskCard::materialCount)
+        .containsExactly(tuple(linked, 2), tuple(unlinked, 0));
   }
 
   @Test
@@ -209,6 +236,43 @@ class ProjectTaskServiceTest {
     assertThat(result.assignee()).isNull();
     assertThat(result.purpose()).isNull();
     assertThat(result.checklistItems()).isEmpty();
+    assertThat(result.materials()).isEmpty();
+  }
+
+  @Test
+  void getTaskDetailAssemblesMaterialsInLinkOrderAndSkipsMissingSourceRef() {
+    UUID figma = UUID.randomUUID();
+    UUID slack = UUID.randomUUID();
+    UUID gone = UUID.randomUUID();
+    when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
+    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
+    when(entityRelationReader.findLinkedSourceRefIds(WORKSPACE_ID, TASK_ID))
+        .thenReturn(List.of(figma, slack, gone));
+    // 원본 조회 순서는 보장되지 않으므로, 표시 순서는 링크 순서를 따라야 한다. 원본이 없는 링크(gone)는 빠진다.
+    when(sourceRefReader.findByIds(WORKSPACE_ID, List.of(figma, slack, gone)))
+        .thenReturn(
+            List.of(
+                new SourceRefView(
+                    slack, "slack", "스레드", null, "본문 전체", "https://slack.example/t", OCCURRED_AT),
+                new SourceRefView(
+                    figma,
+                    "figma",
+                    "권한 요청 화면 v2",
+                    "설명 문구 변경",
+                    "본문",
+                    "https://figma.example/p",
+                    OCCURRED_AT)));
+
+    List<MobileTaskDetail.Material> materials =
+        projectTaskService.getTaskDetail(TASK_ID, CALLER_ID).materials();
+
+    assertThat(materials).extracting(MobileTaskDetail.Material::id).containsExactly(figma, slack);
+    assertThat(materials.getFirst())
+        .isEqualTo(
+            new MobileTaskDetail.Material(
+                figma, "권한 요청 화면 v2", "설명 문구 변경", "figma", OCCURRED_AT, "https://figma.example/p"));
+    // snippet이 없으면 본문(text)을 요약으로 쓴다.
+    assertThat(materials.get(1).summary()).isEqualTo("본문 전체");
   }
 
   @Test

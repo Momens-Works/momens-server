@@ -29,8 +29,8 @@ interface TaskControllerDocs {
   @Operation(
       summary = "태스크 상세 조회",
       description =
-          "태스크 상세 화면에 필요한 정보를 조회합니다. materials, open_questions, next_action은 backing source가 생기기 전까지"
-              + " 각각 빈 배열, 빈 배열, null입니다.")
+          "태스크 상세 화면에 필요한 정보를 조회합니다. materials는 태스크에 연결된 관련자료이고 연결이 없으면 빈 배열입니다."
+              + " open_questions, next_action은 backing source가 생기기 전까지 각각 빈 배열, null입니다.")
   @ApiResponse(
       responseCode = "200",
       description = "상세 조회 성공. 담당자 미지정이면 assignee가, 목적 작성 전이면 purpose가 null입니다.",

@@ -75,7 +75,11 @@ Signal type에 따라 앱이 다음처럼 화면 라벨을 정합니다. 이 라
 
 | 이름 | 값 |
 | --- | --- |
-| `kind` | `doc`, `node`, `msg` |
+| `source` | `slack`, `github`, `figma`, `notion`, `file` |
+
+`source`는 관련자료 원본의 출처입니다. Signal 근거의 `evidence.source`와 같은 값(source_ref의 출처)이라 값 집합이
+같습니다. 화면에 보이는 출처 라벨(피그마 등)과 아이콘은 앱이 `source`에서 파생합니다. 관련자료 화면은 figma, slack,
+github, file을 표시하지만 서버는 source_ref의 출처를 그대로 내려주므로, 앱은 모르는 값이 와도 깨지지 않게 다룹니다.
 
 ## 인증
 
@@ -635,7 +639,7 @@ id를 기준으로 하기 때문에, 페이지 사이에 시그널이 처리되�
 }
 ```
 
-보드는 backlog, todo, in_progress, done, cancelled 다섯 그룹을 순서대로 노출합니다. 태스크 수정 화면이 상태 5종을 모두 편집하므로, backlog나 cancelled로 바꾼 태스크가 보드에서 사라지지 않도록 다섯 그룹을 모두 담습니다(MOM-75). 다섯 그룹은 태스크가 없어도 항상 포함하며 그때 tasks는 빈 배열입니다. priority는 low, medium, high로 반환하고, 저장된 값이 레거시 전용인 urgent이면 high로 반환합니다(2026-07-06 가결정). material_count는 관련 자료 연결 데이터가 아직 없어 0으로 고정합니다(합성 필드 정책). 웹에서 만든 태스크는 역할이 없어 role을 null로 반환합니다(레거시와 공유하는 tasks에서 role은 nullable이고, 모바일 생성 API는 role을 필수로 받습니다).
+보드는 backlog, todo, in_progress, done, cancelled 다섯 그룹을 순서대로 노출합니다. 태스크 수정 화면이 상태 5종을 모두 편집하므로, backlog나 cancelled로 바꾼 태스크가 보드에서 사라지지 않도록 다섯 그룹을 모두 담습니다(MOM-75). 다섯 그룹은 태스크가 없어도 항상 포함하며 그때 tasks는 빈 배열입니다. priority는 low, medium, high로 반환하고, 저장된 값이 레거시 전용인 urgent이면 high로 반환합니다(2026-07-06 가결정). material_count는 태스크에 연결된 관련 자료 수이고, 연결이 없으면 0입니다. 웹에서 만든 태스크는 역할이 없어 role을 null로 반환합니다(레거시와 공유하는 tasks에서 role은 nullable이고, 모바일 생성 API는 role을 필수로 받습니다).
 
 #### Errors
 
@@ -713,11 +717,11 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
   },
   "materials": [
     {
-      "id": "m-01",
+      "id": "9f1c2b3a-4d5e-4f60-8a71-2b3c4d5e6f70",
       "title": "회원가입 에러 메시지 정책 초안",
       "summary": "회원가입의 MVP 완료율과 온보딩 품질에 영향을 줄 수 있습니다.",
-      "roles": ["pm"],
-      "kind": "doc",
+      "source": "figma",
+      "occurred_at": "2026-06-28T09:48:00+09:00",
       "source_url": "https://..."
     }
   ],
@@ -733,9 +737,13 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 
 `materials[].source_url`은 관련자료에서 원본 문서로 이동할 때 사용합니다.
 
-`materials`는 `source_refs`와 `entity_relations`(task ↔ source_ref)로 합성하며, 연결된 자료가 없으면 `[]`,
-`material_count`는 `0`입니다. `open_questions`, `next_action`은 MVP에서 backing source가 없으면 각각 `[]`,
-`null`로 반환합니다. 서버는 근거 없는 값을 임의 생성하지 않습니다(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
+`materials`는 `entity_relations`(task ↔ source_ref)로 연결을 찾고 `source_refs`에서 원본을 채워 만들며, 연결된
+자료가 없으면 `[]`, `material_count`는 `0`입니다. `id`는 source_ref의 식별자입니다. `source`는 원본 출처이고 화면
+라벨은 앱이 파생합니다(위 Material enum 참고). `occurred_at`은 원본이 생성된 시각입니다. `summary`는 source_ref의
+snippet이며, snippet이 없으면 본문(text)을 대신 씁니다(Signal 근거와 같은 규칙). 원본에 값이 없으면 `title`,
+`summary`, `occurred_at`, `source_url`은 `null`로 내려갑니다. 표시 순서는 연결이 만들어진 시각의 내림차순입니다.
+`open_questions`, `next_action`은 MVP에서 backing source가 없으면 각각 `[]`, `null`로 반환합니다. 서버는 근거 없는
+값을 임의 생성하지 않습니다(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
 
 담당자가 지정되지 않았으면 `assignee`는 `null`, 목적을 아직 작성하지 않았으면 `purpose`는 `null`입니다. 웹에서 만든 태스크는 역할이 없어 `role`도 `null`입니다. 태스크 생성 시점에 민수가 담당자를 판단해 지정하는데, 판단에 걸리는 시간 동안에는 담당자가 없어 `assignee`가 `null`로 내려가고, 이후 지정되면 조회에 자동으로 반영됩니다. `assignee.avatar_url`은 담당자의 구글 계정 프로필 이미지이고, 없으면 `null`입니다.
 완료기준이 없으면 `checklist`는 `completed_count` 0, `total_count` 0, `items` 빈 배열입니다(2026-07-07 확정).
