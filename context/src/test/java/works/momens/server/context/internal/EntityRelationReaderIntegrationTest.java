@@ -43,7 +43,7 @@ class EntityRelationReaderIntegrationTest extends AbstractPostgresIntegrationTes
     insertLink(workspaceId, taskId, earlier, Instant.parse("2026-07-01T00:00:00Z"), null);
     insertLink(workspaceId, taskId, later, Instant.parse("2026-07-02T00:00:00Z"), null);
 
-    List<UUID> ids = entityRelationReader.findLinkedSourceRefIds(workspaceId, taskId);
+    List<UUID> ids = linkedIds(workspaceId, taskId);
 
     assertThat(ids).containsExactly(later, earlier);
   }
@@ -64,7 +64,7 @@ class EntityRelationReaderIntegrationTest extends AbstractPostgresIntegrationTes
     insertLink(
         UUID.randomUUID(), taskId, UUID.randomUUID(), Instant.parse("2026-07-03T00:00:00Z"), null);
 
-    List<UUID> ids = entityRelationReader.findLinkedSourceRefIds(workspaceId, taskId);
+    List<UUID> ids = linkedIds(workspaceId, taskId);
 
     assertThat(ids).containsExactly(live);
   }
@@ -106,35 +106,45 @@ class EntityRelationReaderIntegrationTest extends AbstractPostgresIntegrationTes
         Instant.parse("2026-07-04T00:00:00Z"),
         null);
 
-    List<UUID> ids = entityRelationReader.findLinkedSourceRefIds(workspaceId, taskId);
+    List<UUID> ids = linkedIds(workspaceId, taskId);
 
     assertThat(ids).containsExactly(linked);
   }
 
   @Test
-  @DisplayName("여러 태스크의 연결 개수를 한 번에 반환하고 연결이 없는 태스크는 담지 않는다")
-  void countLinkedSourceRefsReturnsCountsPerTask() {
+  @DisplayName("여러 태스크의 연결을 한 번에 태스크별로 묶어 반환하고 연결이 없는 태스크는 담지 않는다")
+  void findLinkedSourceRefIdsGroupsByTaskInOneQuery() {
     UUID workspaceId = UUID.randomUUID();
     UUID twoLinks = UUID.randomUUID();
     UUID oneLink = UUID.randomUUID();
     UUID noLink = UUID.randomUUID();
-    insertLink(
-        workspaceId, twoLinks, UUID.randomUUID(), Instant.parse("2026-07-01T00:00:00Z"), null);
-    insertLink(
-        workspaceId, twoLinks, UUID.randomUUID(), Instant.parse("2026-07-02T00:00:00Z"), null);
-    insertLink(
-        workspaceId, oneLink, UUID.randomUUID(), Instant.parse("2026-07-01T00:00:00Z"), null);
+    UUID earlier = UUID.randomUUID();
+    UUID later = UUID.randomUUID();
+    UUID single = UUID.randomUUID();
+    insertLink(workspaceId, twoLinks, earlier, Instant.parse("2026-07-01T00:00:00Z"), null);
+    insertLink(workspaceId, twoLinks, later, Instant.parse("2026-07-02T00:00:00Z"), null);
+    insertLink(workspaceId, oneLink, single, Instant.parse("2026-07-01T00:00:00Z"), null);
 
-    Map<UUID, Integer> counts =
-        entityRelationReader.countLinkedSourceRefs(workspaceId, List.of(twoLinks, oneLink, noLink));
+    Map<UUID, List<UUID>> byTask =
+        entityRelationReader.findLinkedSourceRefIds(
+            workspaceId, List.of(twoLinks, oneLink, noLink));
 
-    assertThat(counts).containsOnly(Map.entry(twoLinks, 2), Map.entry(oneLink, 1));
+    // 태스크별로 묶어도 각 목록은 표시 순서(링크 최신순)를 유지한다.
+    assertThat(byTask)
+        .containsOnly(
+            Map.entry(twoLinks, List.of(later, earlier)), Map.entry(oneLink, List.of(single)));
   }
 
   @Test
   @DisplayName("빈 태스크 목록이면 DB 조회 없이 빈 결과를 반환한다")
-  void countLinkedSourceRefsIsEmptyForEmptyTaskIds() {
-    assertThat(entityRelationReader.countLinkedSourceRefs(UUID.randomUUID(), List.of())).isEmpty();
+  void findLinkedSourceRefIdsIsEmptyForEmptyTaskIds() {
+    assertThat(entityRelationReader.findLinkedSourceRefIds(UUID.randomUUID(), List.of())).isEmpty();
+  }
+
+  private List<UUID> linkedIds(UUID workspaceId, UUID taskId) {
+    return entityRelationReader
+        .findLinkedSourceRefIds(workspaceId, List.of(taskId))
+        .getOrDefault(taskId, List.of());
   }
 
   private void insertLink(

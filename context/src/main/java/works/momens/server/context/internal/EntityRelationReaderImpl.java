@@ -1,6 +1,7 @@
 package works.momens.server.context.internal;
 
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -18,17 +19,16 @@ class EntityRelationReaderImpl implements EntityRelationReader {
 
   @Override
   @Transactional(readOnly = true)
-  public List<UUID> findLinkedSourceRefIds(UUID workspaceId, UUID taskId) {
-    return entityRelationRepository.findLinkedSourceRefIds(workspaceId, taskId);
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public Map<UUID, Integer> countLinkedSourceRefs(UUID workspaceId, Collection<UUID> taskIds) {
+  public Map<UUID, List<UUID>> findLinkedSourceRefIds(UUID workspaceId, Collection<UUID> taskIds) {
     if (taskIds.isEmpty()) {
       return Map.of();
     }
-    return entityRelationRepository.countLinkedSourceRefsByTaskId(workspaceId, taskIds).stream()
-        .collect(Collectors.toMap(row -> (UUID) row[0], row -> ((Number) row[1]).intValue()));
+    // 쿼리가 표시 순서로 정렬해 주므로, 순서를 유지하는 자료구조로 묶어 태스크별 목록에 그대로 담는다.
+    return entityRelationRepository.findLinkedSourceRefIdsByTaskIds(workspaceId, taskIds).stream()
+        .collect(
+            Collectors.groupingBy(
+                row -> (UUID) row[0],
+                LinkedHashMap::new,
+                Collectors.mapping(row -> (UUID) row[1], Collectors.toList())));
   }
 }
