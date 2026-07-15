@@ -123,6 +123,27 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  void findDetailReadsChecklistWithNonZeroBasedPositions() {
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "hole-owner@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "hole");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
+
+    UUID taskId =
+        saveTask(workspaceId, projectId, "비연속 position 완료기준", "todo", "medium", "backend");
+    // 앱 외부에서 1-based·gap으로 들어온 데이터. @OrderColumn(리스트 인덱스=position)이면 빈 인덱스가
+    // null 원소가 되어 매핑이 NPE로 죽지만, @OrderBy는 position 순서로 정렬만 하므로 실제 항목만
+    // 순서대로 내려주는지 확인한다.
+    insertChecklistItem(taskId, "뒤 항목", true, 3);
+    insertChecklistItem(taskId, "앞 항목", false, 1);
+
+    TaskDetail detail = taskReader.findDetail(taskId).orElseThrow();
+
+    assertThat(detail.checklistItems())
+        .extracting(TaskDetail.ChecklistItem::title)
+        .containsExactly("앞 항목", "뒤 항목");
+  }
+
+  @Test
   void findDetailReturnsEmptyValuesWhenOptionalFieldsAreMissing() {
     UUID ownerId = ProjectSeedSql.insertUser(entityManager, "empty-owner@momens.works");
     UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "empty");
