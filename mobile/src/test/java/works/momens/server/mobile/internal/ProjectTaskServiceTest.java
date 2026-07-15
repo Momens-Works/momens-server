@@ -133,19 +133,42 @@ class ProjectTaskServiceTest {
     stubMember();
     UUID linked = UUID.randomUUID();
     UUID unlinked = UUID.randomUUID();
+    UUID refA = UUID.randomUUID();
+    UUID refB = UUID.randomUUID();
     when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
         .thenReturn(
             List.of(
                 new BoardTask(linked, "자료 있는 태스크", "todo", "medium", "pm", CREATED_AT),
                 new BoardTask(unlinked, "자료 없는 태스크", "todo", "medium", "pm", CREATED_AT)));
-    when(entityRelationReader.countLinkedSourceRefs(WORKSPACE_ID, List.of(linked, unlinked)))
-        .thenReturn(Map.of(linked, 2));
+    when(entityRelationReader.findLinkedSourceRefIds(WORKSPACE_ID, List.of(linked, unlinked)))
+        .thenReturn(Map.of(linked, List.of(refA, refB)));
+    when(sourceRefReader.findByIds(WORKSPACE_ID, List.of(refA, refB)))
+        .thenReturn(List.of(sourceRef(refA), sourceRef(refB)));
 
     List<MobileTaskCard> cards = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(1).tasks();
 
     assertThat(cards)
         .extracting(MobileTaskCard::id, MobileTaskCard::materialCount)
         .containsExactly(tuple(linked, 2), tuple(unlinked, 0));
+  }
+
+  @Test
+  void getBoardCountsOnlyMaterialsThatDetailAlsoShows() {
+    stubMember();
+    UUID taskId = UUID.randomUUID();
+    UUID live = UUID.randomUUID();
+    UUID gone = UUID.randomUUID();
+    when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
+        .thenReturn(List.of(new BoardTask(taskId, "태스크", "todo", "medium", "pm", CREATED_AT)));
+    when(entityRelationReader.findLinkedSourceRefIds(WORKSPACE_ID, List.of(taskId)))
+        .thenReturn(Map.of(taskId, List.of(live, gone)));
+    // 연결은 둘 다 살아 있지만 원본 하나가 삭제된 상태다. 상세가 그 자료를 보여주지 못하므로 개수도 그것을 빼야 한다.
+    when(sourceRefReader.findByIds(WORKSPACE_ID, List.of(live, gone)))
+        .thenReturn(List.of(sourceRef(live)));
+
+    MobileTaskCard card = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(1).tasks().get(0);
+
+    assertThat(card.materialCount()).isEqualTo(1);
   }
 
   @Test
@@ -246,8 +269,8 @@ class ProjectTaskServiceTest {
     UUID gone = UUID.randomUUID();
     when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
-    when(entityRelationReader.findLinkedSourceRefIds(WORKSPACE_ID, TASK_ID))
-        .thenReturn(List.of(figma, slack, gone));
+    when(entityRelationReader.findLinkedSourceRefIds(WORKSPACE_ID, List.of(TASK_ID)))
+        .thenReturn(Map.of(TASK_ID, List.of(figma, slack, gone)));
     // 원본 조회 순서는 보장되지 않으므로, 표시 순서는 링크 순서를 따라야 한다. 원본이 없는 링크(gone)는 빠진다.
     when(sourceRefReader.findByIds(WORKSPACE_ID, List.of(figma, slack, gone)))
         .thenReturn(
@@ -378,6 +401,10 @@ class ProjectTaskServiceTest {
         "https://lh3.googleusercontent.com/a/gyuil",
         null,
         null);
+  }
+
+  private static SourceRefView sourceRef(UUID id) {
+    return new SourceRefView(id, "figma", "제목", "요약", null, "https://x", OCCURRED_AT);
   }
 
   private void stubMember() {
