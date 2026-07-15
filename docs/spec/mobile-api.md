@@ -180,6 +180,7 @@ Refresh token을 폐기합니다.
 {
   "me": {
     "id": "0b3f8c1a-2d4e-4f6a-8b9c-1e2d3f4a5b6c",
+    "email": "minji@example.com",
     "name": "김민지",
     "avatar_url": null
   },
@@ -200,6 +201,7 @@ Refresh token을 폐기합니다.
 {
   "me": {
     "id": "0b3f8c1a-2d4e-4f6a-8b9c-1e2d3f4a5b6c",
+    "email": "minji@example.com",
     "name": "김민지",
     "avatar_url": null
   },

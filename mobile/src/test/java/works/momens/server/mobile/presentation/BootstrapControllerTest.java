@@ -56,6 +56,7 @@ class BootstrapControllerTest {
         .perform(get("/api/mobile/bootstrap").principal(principal).header("API-Version", "1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.me.id").value(USER_ID.toString()))
+        .andExpect(jsonPath("$.me.email").value("minji@momens.works"))
         .andExpect(jsonPath("$.me.name").value("김민지"))
         // 신규 Standard 계약이라 avatar_url은 값이 없어도 null로 항상 포함된다(명세 예시와 동일).
         .andExpect(jsonPath("$.me.avatar_url", nullValue()))

@@ -63,6 +63,7 @@ class MobileBootstrapIntegrationTest extends AbstractPostgresIntegrationTest {
                 .header("API-Version", "1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.me.id").value(user.id().toString()))
+        .andExpect(jsonPath("$.me.email").value("bootstrap-it@momens.works"))
         .andExpect(jsonPath("$.me.name").value("김민지"))
         .andExpect(jsonPath("$.me.avatar_url", nullValue()))
         .andExpect(jsonPath("$.default_project_id").value(newest.toString()))
