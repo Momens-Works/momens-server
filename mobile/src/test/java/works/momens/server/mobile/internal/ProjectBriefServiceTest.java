@@ -28,6 +28,7 @@ import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.ProjectSnapshot;
 import works.momens.server.project.TaskReader;
+import works.momens.server.signal.SignalDaySummaryReader;
 import works.momens.server.signal.SignalListService;
 import works.momens.server.signal.SignalSummary;
 import works.momens.server.signal.SignalSummaryPage;
@@ -35,8 +36,8 @@ import works.momens.server.workspace.WorkspaceAccess;
 
 /**
  * 브리프 조합 규칙 검증. 도메인 모듈 public API는 각자 통합 테스트에서 검증하므로 여기서는 모두 mock으로 두고 조합 규칙만 확인합니다. project 확인과
- * 멤버십 검사 순서, 당일(KST) 범위로 signal을 조회하는지, 데이터 기반 필터 칩(구성과 라벨, 정렬), 페이지 기본값, 현재 우선순위 정렬과 상위 4개 제한이 그
- * 대상입니다. 하루 경계 계산은 고정 Clock으로 결정적으로 확인합니다.
+ * 멤버십 검사 순서, 당일(KST) 범위로 signal을 조회하는지, 데이터 기반 필터 칩(구성과 라벨, 정렬), 페이지 기본값, 현재 우선순위 정렬과 상위 4개 제한, 당일
+ * signal_day_summaries 조회 결과를 요약 문단으로 그대로 내리는지가 그 대상입니다. 하루 경계 계산은 고정 Clock으로 결정적으로 확인합니다.
  */
 @ExtendWith(MockitoExtension.class)
 class ProjectBriefServiceTest {
@@ -45,6 +46,7 @@ class ProjectBriefServiceTest {
   @Mock private WorkspaceAccess workspaceAccess;
   @Mock private SignalListService signalListService;
   @Mock private TaskReader taskReader;
+  @Mock private SignalDaySummaryReader signalDaySummaryReader;
   private ProjectBriefService projectBriefService;
 
   private static final UUID PROJECT_ID = UUID.randomUUID();
@@ -67,6 +69,7 @@ class ProjectBriefServiceTest {
             workspaceAccess,
             signalListService,
             taskReader,
+            signalDaySummaryReader,
             new MobileClock(FIXED_CLOCK));
   }
 
@@ -110,10 +113,13 @@ class ProjectBriefServiceTest {
                 "cursor-1"));
     when(taskReader.listTasksByStatus(PROJECT_ID, PRIORITY_STATUSES))
         .thenReturn(List.of(task(taskId, "이메일 회원가입 완료율 개선", "high", "2026-07-01T00:00:00Z")));
+    when(signalDaySummaryReader.findSummary(WORKSPACE_ID, PROJECT_ID, TODAY))
+        .thenReturn(Optional.of("오늘 진행 상황 요약 문단"));
 
     MobileBrief brief = projectBriefService.getBrief(PROJECT_ID, CALLER_ID);
 
     assertThat(brief.project()).isEqualTo(snapshot);
+    assertThat(brief.summary()).isEqualTo("오늘 진행 상황 요약 문단");
     // All이 맨 앞(전체 12), 나머지는 라벨 글자수 오름차순과 알파벳순(Risk, Change, Decision, Question).
     assertThat(brief.filters())
         .containsExactly(
@@ -129,6 +135,17 @@ class ProjectBriefServiceTest {
         .isEqualTo(new BriefSignalCursor(TODAY, "cursor-1"));
     assertThat(brief.priorities())
         .containsExactly(new MobileBrief.Priority(1, "이메일 회원가입 완료율 개선", taskId));
+  }
+
+  @Test
+  void getBriefReturnsNullSummaryWhenNoDaySummaryForAnchor() {
+    stubBriefBase();
+    when(signalDaySummaryReader.findSummary(WORKSPACE_ID, PROJECT_ID, TODAY))
+        .thenReturn(Optional.empty());
+
+    MobileBrief brief = projectBriefService.getBrief(PROJECT_ID, CALLER_ID);
+
+    assertThat(brief.summary()).isNull();
   }
 
   @Test

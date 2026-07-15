@@ -5,12 +5,15 @@ import java.util.UUID;
 import works.momens.server.project.ProjectSnapshot;
 
 /**
- * 브리프 화면 한 장을 채우는 조합 결과. 프로젝트 스냅샷, 시그널 요약(타입별 개수, 최신순 첫 페이지), 현재 우선순위를 담습니다.
+ * 브리프 화면 한 장을 채우는 조합 결과. 프로젝트 스냅샷, 시그널 요약 문단, 시그널 요약(타입별 개수, 최신순 첫 페이지), 현재 우선순위를 담습니다.
  *
- * <p>{@code nextCursor}는 시그널 요약 다음 페이지를 여는 커서 문자열이고, 다음 페이지가 없으면 null입니다.
+ * <p>{@code summary}는 signal의 {@code SignalDaySummaryReader.findSummary}(당일 signal_day_summaries
+ * 조회) 결과이고, 해당 날짜 요약이 없으면 null입니다(MOM-0787). {@code nextCursor}는 시그널 요약 다음 페이지를 여는 커서 문자열이고, 다음
+ * 페이지가 없으면 null입니다.
  */
 public record MobileBrief(
     ProjectSnapshot project,
+    String summary,
     List<FilterCount> filters,
     List<SignalItem> items,
     String nextCursor,

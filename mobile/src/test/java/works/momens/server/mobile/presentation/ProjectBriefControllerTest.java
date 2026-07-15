@@ -59,6 +59,7 @@ class ProjectBriefControllerTest {
                     LocalDate.of(2026, 6, 30),
                     64,
                     "목표일까지 Q2 Activation Readiness 범위의 회원 가입 MVP를 안정적으로 릴리즈한다."),
+                "오늘 진행 상황 요약 문단",
                 List.of(
                     new MobileBrief.FilterCount("all", "All", 12L),
                     new MobileBrief.FilterCount("risk", "Risk", 1L),
@@ -82,8 +83,8 @@ class ProjectBriefControllerTest {
         .andExpect(
             jsonPath("$.project.summary")
                 .value("목표일까지 Q2 Activation Readiness 범위의 회원 가입 MVP를 안정적으로 릴리즈한다."))
-        // 시그널 요약 문단은 backing source가 없어 null로 항상 포함된다(합성 필드 정책).
-        .andExpect(jsonPath("$.signal_summary.summary", nullValue()))
+        // 시그널 요약 문단은 signal_day_summaries 조회 결과를 그대로 내린다.
+        .andExpect(jsonPath("$.signal_summary.summary").value("오늘 진행 상황 요약 문단"))
         .andExpect(jsonPath("$.signal_summary.filters.length()").value(5))
         .andExpect(jsonPath("$.signal_summary.filters[0].key").value("all"))
         .andExpect(jsonPath("$.signal_summary.filters[0].label").value("All"))

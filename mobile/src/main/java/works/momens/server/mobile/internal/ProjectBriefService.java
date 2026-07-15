@@ -18,14 +18,15 @@ import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.ProjectSnapshot;
 import works.momens.server.project.TaskReader;
+import works.momens.server.signal.SignalDaySummaryReader;
 import works.momens.server.signal.SignalListService;
 import works.momens.server.signal.SignalSummary;
 import works.momens.server.signal.SignalSummaryPage;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
- * 모바일 브리프 표면의 조합 서비스. project(스냅샷, 태스크), signal(당일 시그널 요약), workspace(멤버십) public API를 조합하고 도메인 정책을
- * 소유하지 않습니다.
+ * 모바일 브리프 표면의 조합 서비스. project(스냅샷, 태스크), signal(당일 시그널 요약, 요약 문단), workspace(멤버십) public API를 조합하고
+ * 도메인 정책을 소유하지 않습니다.
  *
  * <p>project 조회 결과가 workspace id를 포함하므로(태스크 상세와 같은 방식) project가 있는지 확인한 뒤 workspace를 따로 조회하지 않고 바로
  * 멤버십을 검사합니다. signal 목록 서비스도 자체적으로 접근을 검사해 브리프의 검사와 일부 겹치지만, 단순 조회 수준이라 그대로 두었습니다.
@@ -65,6 +66,7 @@ public class ProjectBriefService {
   private final WorkspaceAccess workspaceAccess;
   private final SignalListService signalListService;
   private final TaskReader taskReader;
+  private final SignalDaySummaryReader signalDaySummaryReader;
   private final MobileClock mobileClock;
 
   @Transactional(readOnly = true)
@@ -90,8 +92,12 @@ public class ProjectBriefService {
     SignalSummaryPage firstPage =
         signalListService.listByCreatedRange(
             projectId, userId, null, today.from(), today.toExclusive(), null, DEFAULT_PAGE_SIZE);
+    // 요약 문단은 오늘(anchor)의 signal_day_summaries 한 건을 조회한다. 없으면 null로 내려간다(합성 필드 정책).
+    String summary =
+        signalDaySummaryReader.findSummary(snapshot.workspaceId(), projectId, anchor).orElse(null);
     return new MobileBrief(
         snapshot,
+        summary,
         toFilterCounts(countsByType),
         toItems(firstPage.items()),
         nextCursor(anchor, firstPage),
