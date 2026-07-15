@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Clock;
@@ -28,6 +29,7 @@ import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.ProjectSnapshot;
 import works.momens.server.project.TaskReader;
+import works.momens.server.signal.SignalDigestReader;
 import works.momens.server.signal.SignalListService;
 import works.momens.server.signal.SignalSummary;
 import works.momens.server.signal.SignalSummaryPage;
@@ -44,6 +46,7 @@ class ProjectBriefServiceTest {
   @Mock private ProjectReader projectReader;
   @Mock private WorkspaceAccess workspaceAccess;
   @Mock private SignalListService signalListService;
+  @Mock private SignalDigestReader signalDigestReader;
   @Mock private TaskReader taskReader;
   private ProjectBriefService projectBriefService;
 
@@ -66,6 +69,7 @@ class ProjectBriefServiceTest {
             projectReader,
             workspaceAccess,
             signalListService,
+            signalDigestReader,
             taskReader,
             new MobileClock(FIXED_CLOCK));
   }
@@ -129,6 +133,31 @@ class ProjectBriefServiceTest {
         .isEqualTo(new BriefSignalCursor(TODAY, "cursor-1"));
     assertThat(brief.priorities())
         .containsExactly(new MobileBrief.Priority(1, "이메일 회원가입 완료율 개선", taskId));
+  }
+
+  @Test
+  void getBriefReadsDigestWithTheSameDayRangeAsSignals() {
+    stubBriefBase();
+    when(signalDigestReader.findByCreatedRange(PROJECT_ID, CALLER_ID, TODAY_FROM, TODAY_TO))
+        .thenReturn(Optional.of("오늘은 회원가입 권한 요청 이탈이 주요 신호로 올라왔습니다."));
+
+    MobileBrief brief = projectBriefService.getBrief(PROJECT_ID, CALLER_ID);
+
+    assertThat(brief.signalDigest()).isEqualTo("오늘은 회원가입 권한 요청 이탈이 주요 신호로 올라왔습니다.");
+    // 문단을 시그널과 같은 범위(TODAY_FROM, TODAY_TO)로 조회해야 어제 문단이 오늘 목록 위에 붙지 않는다.
+    // 위 stub이 그 범위로 걸려 있어, 다른 범위로 조회하면 문단이 null이 되어 이 단언이 깨진다.
+    verify(signalDigestReader).findByCreatedRange(PROJECT_ID, CALLER_ID, TODAY_FROM, TODAY_TO);
+  }
+
+  @Test
+  void getBriefReturnsNullDigestWhenMinsuHasNotProducedOne() {
+    stubBriefBase();
+    when(signalDigestReader.findByCreatedRange(PROJECT_ID, CALLER_ID, TODAY_FROM, TODAY_TO))
+        .thenReturn(Optional.empty());
+
+    MobileBrief brief = projectBriefService.getBrief(PROJECT_ID, CALLER_ID);
+
+    assertThat(brief.signalDigest()).isNull();
   }
 
   @Test

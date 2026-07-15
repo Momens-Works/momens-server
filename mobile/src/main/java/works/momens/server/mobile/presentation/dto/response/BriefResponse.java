@@ -32,7 +32,7 @@ public record BriefResponse(
   @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
   @Schema(description = "시그널 요약")
   public record SignalSummaryResponse(
-      @Schema(description = "시그널 요약 문단. backing source가 없으면 null로 포함됩니다.", nullable = true)
+      @Schema(description = "시그널 요약 문단. 민수가 아직 만들지 않았으면 null로 포함됩니다.", nullable = true)
           String summary,
       @Schema(description = "필터 칩 목록. all이 맨 앞이고 나머지는 라벨 글자수 오름차순과 알파벳순")
           List<FilterResponse> filters,
@@ -63,11 +63,13 @@ public record BriefResponse(
       @Schema(description = "제목") String title) {}
 
   public static BriefResponse from(MobileBrief brief) {
-    // 시그널 요약 문단은 worker/Minsu 산출물의 backing source가 아직 없어 null로 내린다(합성 필드 정책, mock은 MOM-79).
     return new BriefResponse(
         toProject(brief.project()),
         new SignalSummaryResponse(
-            null, toFilters(brief.filters()), toItems(brief.items()), brief.nextCursor()),
+            brief.signalDigest(),
+            toFilters(brief.filters()),
+            toItems(brief.items()),
+            brief.nextCursor()),
         toPriorities(brief.priorities()));
   }
 
