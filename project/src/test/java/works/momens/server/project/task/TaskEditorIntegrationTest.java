@@ -234,8 +234,9 @@ class TaskEditorIntegrationTest extends AbstractPostgresIntegrationTest {
     // 민수 산출물은 수정 요청에 없고 이 서버가 쓰지 않는 값이라, 수정 화면이 저장해도 그대로 남아야 한다
     // (docs/spec/mobile-api.md 수정 API가 보존하는 필드).
     UUID questionId = UUID.randomUUID();
-    insertOpenQuestion(fixture.taskId(), questionId, "권한 거부 시 대체 흐름을 둘지 검토 필요");
-    setNextAction(fixture.taskId(), "권한 거부 흐름을 PM과 확정하세요.");
+    ProjectSeedSql.insertOpenQuestion(
+        entityManager, questionId, fixture.taskId(), "권한 거부 시 대체 흐름을 둘지 검토 필요", 0);
+    ProjectSeedSql.setNextAction(entityManager, fixture.taskId(), "권한 거부 흐름을 PM과 확정하세요.");
 
     taskEditor.update(
         command(
@@ -270,28 +271,6 @@ class TaskEditorIntegrationTest extends AbstractPostgresIntegrationTest {
 
     assertThat(taskReader.workspaceIdOf(fixture.taskId())).isEmpty();
     assertThat(taskReader.workspaceIdOf(UUID.randomUUID())).isEmpty();
-  }
-
-  private void insertOpenQuestion(UUID taskId, UUID id, String body) {
-    entityManager
-        .getEntityManager()
-        .createNativeQuery(
-            "INSERT INTO task_open_questions (id, task_id, body, sort_order) VALUES (?1, ?2, ?3, 0)")
-        .setParameter(1, id)
-        .setParameter(2, taskId)
-        .setParameter(3, body)
-        .executeUpdate();
-    entityManager.clear();
-  }
-
-  private void setNextAction(UUID taskId, String nextAction) {
-    entityManager
-        .getEntityManager()
-        .createNativeQuery("UPDATE tasks SET next_action = ?1 WHERE id = ?2")
-        .setParameter(1, nextAction)
-        .setParameter(2, taskId)
-        .executeUpdate();
-    entityManager.clear();
   }
 
   private Fixture newTask() {

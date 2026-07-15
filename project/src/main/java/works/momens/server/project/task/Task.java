@@ -83,8 +83,12 @@ class Task extends BaseEntity {
   private List<TaskChecklistItem> checklistItems = new ArrayList<>();
 
   /**
-   * 민수가 제안하는 열린질문. 완료기준과 달리 이 서버가 쓰지 않으므로 cascade와 orphanRemoval을 두지 않고 조회만 합니다. 생산자가 주는 {@code
-   * sortOrder}는 0부터 연속이라는 보장이 없어 값이 겹치면 id로 순서를 고정합니다.
+   * 민수가 제안하는 열린질문. 완료기준과 달리 이 서버가 쓰지 않으므로 cascade와 orphanRemoval을 두지 않고 조회만 합니다.
+   *
+   * <p>{@code insertable}과 {@code updatable}을 끄면 이 컬렉션이 inverse가 되어 Hibernate가 {@code task_id}를 쓰지
+   * 않습니다. 끄지 않으면 단방향 {@code @OneToMany}는 부모가 FK 주인이 되어 {@code task_id}를 직접 관리합니다.
+   *
+   * <p>{@code sortOrder}는 생산자가 주는 값이라 비거나 겹칠 수 있어, 겹칠 때는 id로 순서를 고정합니다.
    */
   @OneToMany
   @JoinColumn(name = "task_id", insertable = false, updatable = false)
