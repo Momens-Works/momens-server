@@ -540,8 +540,9 @@ Asia/Seoul 기준이라, `created_at`(UTC 저장)을 KST 하루로 잘라 그 �
 민수가 새 type을 만들면 칩이 자동으로 늘어납니다. `label`은 `type`의 첫 글자만 대문자로 바꾼 값입니다(위 Signal
 카테고리 표시 표와 같음). type 칩 순서는 `label` 글자수가 적은 것부터이고 글자수가 같으면 `label` 알파벳순입니다.
 
-`signal_summary.summary`는 시그널 요약 헤더 아래 문단(해당 프로젝트 이슈와 진행상황 요약)입니다. worker/Minsu
-산출물 후보로 MVP backing source가 없으면 `null`로 반환합니다(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
+`signal_summary.summary`는 시그널 요약 헤더 아래 문단(해당 프로젝트 이슈와 진행상황 요약)입니다. backing은
+`signal_day_summaries`(worker/Minsu 산출물의 read 미러)이고, 해당 날짜 요약이 없으면 `null`로 반환합니다
+(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
 2026-07-10 화면설계서는 이 문단을 시그널 요약이라 부르고 리뷰 요약이라는 개념이나 헤더는 따로 없어서, 별도
 `review_summary` 객체를 두지 않습니다. 화면의 "시그널 요약 · N" 헤더 숫자는 `filters`에서 `key`가 `all`인 항목의
 `count`로 렌더링합니다(필터 선택과 무관하게 유지).

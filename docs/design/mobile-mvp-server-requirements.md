@@ -330,7 +330,7 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 | `material_count` | `materials[]` 개수 | `0` |
 | `open_questions[]` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `[]` |
 | `next_action` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `null` |
-| `signal_summary.summary` | worker/Minsu 산출물 후보. MVP backing source 미확정 | `null` |
+| `signal_summary.summary` | `signal_day_summaries`(worker/Minsu 산출물의 read 미러) | `null` |
 
 서버는 backing source가 없는 값을 임의 생성하지 않는다. worker가 준비되지 않은 MVP 환경에서는
 production 코드 분기 대신 worker와 같은 backing 계약의 fixture를 사용한다. 민수 산출물(Minsu

@@ -198,11 +198,13 @@ append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
 - `GET /api/mobile/projects/{projectId}/brief`와 `GET .../brief/signal-summary`: project의
   스냅샷(`ProjectReader.findSnapshot`)과 태스크(`TaskReader.listTasksByStatus`), signal의
   당일 시그널 요약(타입별 개수와 커서 페이지, `SignalListService.countByCreatedRange`와
-  `listByCreatedRange`), workspace 멤버십을 조합해 브리프 화면 정보를 내린다. project 조회
-  결과에 workspace id가 포함되어 있어 workspace를 따로 조회하지 않고 바로 멤버십을 검사한다.
-  브리프는 오늘의 브리프라 당일 생성된 시그널을 처리 여부와 무관하게 집계한다(MOM-81). 하루
+  `listByCreatedRange`)과 당일 요약 문단(`SignalDaySummaryReader.findSummary`,
+  signal_day_summaries 조회, MOM-0787), workspace 멤버십을 조합해 브리프 화면 정보를 내린다.
+  project 조회 결과에 workspace id가 포함되어 있어 workspace를 따로 조회하지 않고 바로 멤버십을
+  검사한다. 브리프는 오늘의 브리프라 당일 생성된 시그널을 처리 여부와 무관하게 집계한다(MOM-81). 하루
   경계를 어떤 타임존으로 볼지(Asia/Seoul 고정)는 `BriefDay`가 소유하고, 시각은 `mobileClock`
-  으로 주입한다. 시그널 요약 필터 칩(당일 시그널의 type으로 데이터 기반 구성, 라벨은 type의 첫 글자만
+  으로 주입한다. 요약 문단은 `BriefDay`가 정한 오늘 날짜로 조회하며, 해당 날짜 요약이 없으면
+  null이다. 시그널 요약 필터 칩(당일 시그널의 type으로 데이터 기반 구성, 라벨은 type의 첫 글자만
   대문자로 바꾸고, All을 맨 앞에 둔 뒤 라벨 글자수와 알파벳순 정렬), 페이지
   기본 크기 3, 현재 우선순위 구성(진행 중인 todo와 in_progress만 후보, priority 높은 순과 생성
   오래된 순 정렬, 상위 4개)은 조합 규칙이라 `SignalTypeLabel`과 `MobilePriority`, 조합 서비스가
@@ -226,6 +228,10 @@ append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
 - `signal_evidence`: Signal과 `source_refs`의 근거 연결 및 근거별 `대상`·`변화`·`영향`을 읽어 모바일
   상세 응답을 조립한다. 의미 값은 worker 또는 같은 backing 계약의 fixture가 생산한다(ADR-0011).
 - `signal_actions`: 사용자의 `convert-to-task`, `dismiss` 처리 기록과 멱등성을 소유한다.
+- `signal_day_summaries`: worker(민수) 산출물인 프로젝트별 하루 요약 문단의 read 미러(MOM-0787).
+  `SignalDaySummaryReader.findSummary`가 workspace/project/날짜 스코프로 한 건을 조회해 브리프의
+  `signal_summary.summary`를 채운다. worker 구현 전까지는 같은 backing 계약의 fixture(dev 시드)가
+  채우고, 해당 날짜 요약이 없으면 null이다.
 - Signal 목록/상세 및 action API를 소유한다. 경로가 `/api/mobile/*`여도 Signal 도메인 정책과
   영속성은 `mobile`이 아니라 이 모듈에 둔다.
 - 시그널 탭의 미처리 목록 조회(`listUnprocessed`)와, 브리프가 쓰는 당일 생성 범위의 커서 페이지
