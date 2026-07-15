@@ -1,0 +1,24 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    // Boot BOM으로 버전을 관리합니다(boot 플러그인은 app만 적용).
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // entity_relations 읽기 엔티티는 외부 소유 테이블이라 BaseEntity(쓰기용 식별자와 감사)를 상속하지
+    // 않지만, 다른 기능 모듈과 같은 공유 베이스 위에 둡니다(source 모듈과 동일).
+    implementation project(':common')
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // common testFixtures의 Testcontainers 통합테스트 베이스를 재사용합니다.
+    testImplementation testFixtures(project(':common'))
+}

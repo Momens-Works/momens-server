@@ -34,7 +34,9 @@
 
 - `auth` → `user` public API (로그인 시 FindOrCreate·프로필).
 - `workspace`는 RBAC·label을 public API로 제공하고 `project`·`memory`·`source`·`minsu`가 사용한다.
-- `context`는 `project`·`memory`·`source`의 public API와 식별자를 조합하는 얇은 capability다.
+- `context`는 `entity_relations`를 읽어 연결된 식별자만 돌려준다. 지금은 도메인 모듈에 의존하지 않고,
+  식별자로 본문을 채우는 조합은 소비하는 쪽이 한다(`mobile`이 `context`의 링크와 `source`의
+  source_ref 조회를 엮어 태스크 관련자료를 만든다).
 - `mobile`은 `user`, `project`, `workspace`, `signal`의 public API만 조합한다(bootstrap,
   멤버 조회, 브리프). 도메인 정책을 소유하지 않는다.
 - `signal`은 `project`의 project/workspace 해석 public API와 `workspace`의 RBAC public API를 사용한다.
@@ -285,8 +287,12 @@ outbox_events insert 1건`)은 `SignalActionExecutor`가 소유하고, facade(`S
 - task context API, memory linked-tasks reverse lookup
 - entity_relations
 
-`project`·`memory`·`source`를 가로지르는 얇은 연결 capability다. 도메인 정책을 많이 소유하기보다
-각 모듈 public API와 식별자를 조합한다.
+여러 도메인을 가로지르는 얇은 연결 capability다. 도메인 정책을 소유하지 않고 연결 자체만 읽는다.
+
+현재 사실: `EntityRelationReader`가 태스크에 연결된 source_ref 식별자 목록과 개수를 돌려준다
+(`from_entity_type='TASK'`, `to_entity_type='SOURCE_OBJECT'`, `relation_type='LINKED_TO'`).
+식별자로 본문을 채우는 hydrate는 `source`의 public API로 소비하는 쪽이 한다. `entity_relations`는
+레거시가 소유하는 외부 테이블이라 읽기 전용이고, local/test는 미러를 쓴다([데이터](../rules/persistence.md)).
 
 ### retrieval
 
