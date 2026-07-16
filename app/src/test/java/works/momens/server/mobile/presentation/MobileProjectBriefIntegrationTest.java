@@ -232,6 +232,58 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
   }
 
   @Test
+  void briefPrefetchesFirstPageAndCursorContinuesToOverflowItem() throws Exception {
+    UserProfile jinsu = userService.findOrCreate("brief-it-overflow@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("brief-overflow");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "brief-overflow-project", null, 0, null);
+    // 당일 시그널 21개를 생성해 첫 페이지(20개)를 초과하는 상황을 재현합니다. i=0이 가장 오래된 시그널입니다.
+    UUID oldest = null;
+    for (int i = 0; i < 21; i++) {
+      UUID id =
+          insertSignal(
+              workspace,
+              project,
+              "decision",
+              "시그널 " + i,
+              String.format("2026-07-10T00:%02d:00Z", i));
+      if (i == 0) {
+        oldest = id;
+      }
+    }
+
+    // 브리프 조회는 최신 20개를 반환하고 next_cursor를 내려줍니다.
+    String briefBody =
+        mockMvc
+            .perform(
+                get("/api/mobile/projects/{projectId}/brief", project)
+                    .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                    .header("API-Version", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.signal_summary.items.length()").value(20))
+            .andExpect(jsonPath("$.signal_summary.items[0].title").value("시그널 20"))
+            .andExpect(jsonPath("$.signal_summary.items[19].title").value("시그널 1"))
+            .andExpect(jsonPath("$.signal_summary.next_cursor").isNotEmpty())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String nextCursor = JsonPath.read(briefBody, "$.signal_summary.next_cursor");
+
+    // next_cursor로 조회하면 남은 가장 오래된 1개가 이어지고, 다음 next_cursor는 null입니다.
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
+                .param("cursor", nextCursor)
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(1))
+        .andExpect(jsonPath("$.items[0].id").value(oldest.toString()))
+        .andExpect(jsonPath("$.items[0].title").value("시그널 0"))
+        .andExpect(jsonPath("$.next_cursor", nullValue()));
+  }
+
+  @Test
   void keepsTodayWindowAcrossMidnightWhenPaginating() throws Exception {
     UserProfile jinsu =
         userService.findOrCreate("brief-it-midnight-jinsu@momens.works", "신진수", null);
