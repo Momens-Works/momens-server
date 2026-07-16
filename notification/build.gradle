@@ -1,0 +1,23 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    // Boot BOM으로 버전을 관리합니다(boot 플러그인은 app만 적용).
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // 공유 영속성 베이스(BaseEntity)와 공유 에러 계약(BusinessException).
+    implementation project(':common')
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // common testFixtures의 Testcontainers 통합테스트 베이스를 재사용합니다.
+    testImplementation testFixtures(project(':common'))
+}
