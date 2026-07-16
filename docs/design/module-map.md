@@ -216,10 +216,15 @@ append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
   조합 규칙이라 이 모듈이 소유한다(MOM-63). 관련자료는 context의 링크와 source의 원본을 조합해
   채우고, 연결이 없으면 빈 배열이다(MOM-0779). 수정 계열은 MOM-75가 같은 `/tasks/*` 표면에
   추가한다.
+- `GET /api/mobile/projects/{projectId}/signals`, `GET /api/mobile/signals/{signalId}`,
+  `POST /api/mobile/signals/{signalId}/actions/convert-to-task`,
+  `POST /api/mobile/signals/{signalId}/actions/dismiss`: Signal 목록·상세·action 컨트롤러를 소유하고
+  signal의 public API(`SignalListService`·`SignalDetailService`·`SignalActionService`)에 위임한다.
+  Signal 도메인 정책·영속성은 여전히 `signal` 모듈이 소유한다(`/api/mobile/*` 표면 소유 원칙에 맞춰
+  MOM-0799에서 이관, ADR-0007의 backing 분리는 유지).
 - 도메인 정책과 영속성을 소유하지 않는다. 엔티티, repository, 마이그레이션이 없다.
-- 어느 한 도메인의 capability가 아닌 모바일 조합 표면(진입처럼 여러 모듈을 가로지르는 조회)이
-  이 모듈에 온다. 모바일 API 전부를 모으는 곳은 아니며, 도메인 스코프가 분명한 모바일 API는
-  해당 도메인 모듈이 소유한다. Signal API는 `signal` 모듈이 소유한다.
+- `/api/mobile/*` HTTP 표면은 도메인 스코프가 분명해도 이 모듈이 소유한다. 컨트롤러는 항상 이
+  모듈에 두고 해당 도메인의 public API에 위임한다.
 
 ### signal
 
@@ -234,8 +239,9 @@ append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
   `SignalDigestReader`이고 브리프가 시그널을 거르는 생성 시각 범위를 그대로 받는다. 문단과 그
   문단이 설명하는 시그널이 같은 기준으로 걸러져 어긋날 수 없다(ADR-0012). 시그널 한 건을 뜻하는
   `SignalSummary`와는 다른 값이다.
-- Signal 목록/상세 및 action API를 소유한다. 경로가 `/api/mobile/*`여도 Signal 도메인 정책과
-  영속성은 `mobile`이 아니라 이 모듈에 둔다.
+- Signal 목록/상세 및 action의 도메인 정책과 영속성을 소유하고 public API(`SignalListService`·
+  `SignalDetailService`·`SignalActionService`)로 노출한다. HTTP 표면(`/api/mobile/*` 컨트롤러)은
+  `mobile`이 소유하고 이 public API에 위임한다(MOM-0799).
 - 시그널 탭의 미처리 목록 조회(`listUnprocessed`)와, 브리프가 쓰는 당일 생성 범위의 커서 페이지
   조회(`listByCreatedRange`), 타입별 개수 집계(`countByCreatedRange`)를 `SignalListService`가
   소유한다. 당일 범위 조회는 처리 여부와 무관하게 담고 소프트 삭제는 제외한다(MOM-81). 정렬
@@ -259,7 +265,7 @@ Spring Modulith nested 논리 모듈이고, `project`의 `task`와 같은 방식
 인터페이스와 `SignalActionResult` 레코드)는 모듈 root에 두고, 구현체(`*Impl`)와
 엔티티·리포지토리만 각 nested 패키지 안에 package-private로 은닉한다. nested 모듈이 자기 구현에서
 root의 타입(`SignalErrorCode` 등)을 참조하는 것은 단방향(query/action → root)이라 순환이 아니다 —
-presentation(모듈 root)이 nested 모듈의 구현 타입을 직접 참조하는 반대 방향의 의존이 생겼을 때만
+모듈 root(공개 계약)가 nested 모듈의 구현 타입을 직접 참조하는 반대 방향의 의존이 생겼을 때만
 Modulith가 순환으로 판정한다. action은 query가 공개한 `SignalReader`로 Signal 스냅샷을 읽고,
 convert-to-task는 `project`의 `TaskCreator.create`/`TaskReader.findDetail`(둘 다 root-to-root,
 다른 top-level 모듈 참조라 표준 방향)을 쓴다. convert-to-task 트랜잭션(`tasks insert +

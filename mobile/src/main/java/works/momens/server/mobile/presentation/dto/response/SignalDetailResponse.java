@@ -1,4 +1,4 @@
-package works.momens.server.signal.presentation.dto.response;
+package works.momens.server.mobile.presentation.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
