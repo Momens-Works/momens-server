@@ -1,4 +1,4 @@
-package works.momens.server.auth.internal.config;
+package works.momens.server.common.config;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

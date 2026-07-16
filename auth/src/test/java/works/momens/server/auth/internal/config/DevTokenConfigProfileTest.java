@@ -7,6 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import works.momens.server.common.config.DevOnly;
 
 /**
  * {@link DevTokenConfig}가 {@link DevOnly} 게이트 밖에서는 등록되지 않는지, 너무 짧은 시크릿은 설정 바인딩 단계에서 걸러지는지 확인합니다.

@@ -8,9 +8,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.auth.internal.application.DevTokenService;
-import works.momens.server.auth.internal.config.DevOnly;
 import works.momens.server.auth.presentation.dto.request.DevTokenRequest;
 import works.momens.server.auth.presentation.dto.response.DevTokenResponse;
+import works.momens.server.common.config.DevOnly;
 
 /**
  * dev 전용 토큰 발급 컨트롤러. {@link DevOnly} 프로필에서만 등록되므로 prod에는 존재하지 않습니다. 시크릿 헤더가 없으면 서비스가 401을 내도록

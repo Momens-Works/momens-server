@@ -24,6 +24,12 @@ dependencies {
     implementation 'com.momens:momens-proto:1.0.0'
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // dev 데모용 Signal 생성 컨트롤러(@DevOnly, docs/design/signal-push-demo-design.md 11.2절).
+    // 앱이 호출하는 /api/mobile/* 표면과 달리 dev 도구 표면이라 이 모듈이 소유합니다.
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // OpenAPI 문서화 애너테이션만 사용합니다. Swagger UI와 공통 설정은 app이 소유합니다(docs/spec/openapi.md).
+    implementation 'io.swagger.core.v3:swagger-annotations-jakarta:2.2.52'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
@@ -32,4 +38,6 @@ dependencies {
     testImplementation testFixtures(project(':common'))
     // 슬라이스 통합 테스트에서 project/workspace Flyway 체인(users FK)을 만족시키기 위해 필요.
     testImplementation project(':user')
+    // dev 생성 컨트롤러 web 슬라이스 테스트(@WebMvcTest).
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 }

@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import works.momens.server.common.config.DevOnly;
 
 /**
  * dev 전용 토큰 발급 엔드포인트의 설정과 보안 체인. {@link DevOnly} 프로필에서만 등록되므로 prod에는 이 설정도, 아래 공개 경로 선언도 존재하지 않습니다.
