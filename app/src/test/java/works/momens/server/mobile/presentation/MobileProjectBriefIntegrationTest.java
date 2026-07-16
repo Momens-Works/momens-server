@@ -189,11 +189,12 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
     insertSignal(workspace, project, "question", "질문", "2026-07-10T03:00:00Z");
     insertSignal(workspace, project, "decision", "최신 결정", "2026-07-10T04:00:00Z");
 
-    // 첫 페이지(기본 3개)의 next_cursor로 나머지 1개를 이어서 조회한다.
+    // limit=3으로 첫 페이지 3개를 받고, next_cursor로 나머지 1개를 이어서 조회한다.
     String firstPageBody =
         mockMvc
             .perform(
                 get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
+                    .param("limit", "3")
                     .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
                     .header("API-Version", "1"))
             .andExpect(status().isOk())
@@ -207,6 +208,7 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
         .perform(
             get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
                 .param("cursor", nextCursor)
+                .param("limit", "3")
                 .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
                 .header("API-Version", "1"))
         .andExpect(status().isOk())
@@ -233,7 +235,8 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
     UUID workspace = insertWorkspace("brief-midnight");
     addMember(workspace, jinsu.id(), "owner");
     UUID project = insertProject(workspace, jinsu.id(), "brief-midnight-project", null, 0, null);
-    // 모두 당일(KST 2026-07-10) 범위 안. 첫 페이지에서 최신 3개를 보고 남은 가장 오래된 하나를 커서로 잇는다.
+    // 모두 KST 기준 2026-07-10 데이터입니다. limit=3으로 최신 3개를 조회하고,
+    // 남은 1개는 next_cursor로 이어 조회합니다.
     UUID oldest = insertSignal(workspace, project, "decision", "가장 오래된 결정", "2026-07-10T01:00:00Z");
     insertSignal(workspace, project, "risk", "리스크", "2026-07-10T02:00:00Z");
     insertSignal(workspace, project, "question", "질문", "2026-07-10T03:00:00Z");
@@ -243,6 +246,7 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
         mockMvc
             .perform(
                 get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
+                    .param("limit", "3")
                     .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
                     .header("API-Version", "1"))
             .andExpect(status().isOk())
@@ -260,6 +264,7 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
         .perform(
             get("/api/mobile/projects/{projectId}/brief/signal-summary", project)
                 .param("cursor", nextCursor)
+                .param("limit", "3")
                 .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
                 .header("API-Version", "1"))
         .andExpect(status().isOk())

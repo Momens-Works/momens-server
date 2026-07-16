@@ -40,7 +40,11 @@ interface ProjectBriefControllerDocs {
 
   @Operation(
       summary = "브리프 시그널 요약 페이지 조회",
-      description = "브리프 시그널 요약의 필터 전환과 더보기 페이지 이동에 사용합니다. 커서 기반 페이지네이션이고 정렬은 최신순입니다.")
+      description =
+          "브리프 시그널 요약의 필터 전환과 더보기에 사용합니다. 커서 기반 페이지네이션을 사용하며, 정렬은 최신순(생성 시각 내림차순, 같으면 id 내림차순)입니다.\n\n"
+              + "필터를 변경하면 해당 타입의 시그널만 조회합니다. 더보기를 누르면 접힌 상태의 3개 프리뷰를 목록으로 확장하며, 첫 요청은 기본 페이지 크기만큼 반환합니다. "
+              + "목록 끝까지 스크롤하면 직전 응답의 next_cursor를 cursor로 전달해 다음 페이지를 이어 조회하고, 새 항목을 기존 목록 뒤에 추가합니다. "
+              + "next_cursor가 null이면 더 조회할 데이터가 없습니다.")
   @ApiResponse(
       responseCode = "200",
       description = "페이지 조회 성공",
@@ -51,7 +55,13 @@ interface ProjectBriefControllerDocs {
       @Parameter(
               description = "필터 키. all 또는 signal type(change, decision, risk, question). 기본값은 all")
           String filter,
-      @Parameter(description = "이전 응답의 next_cursor. 없으면 첫 페이지") String cursor,
-      @Parameter(description = "페이지 크기. 없거나 0이면 기본값 3, 상한 50") Integer limit,
+      @Parameter(
+              description =
+                  "직전 응답의 next_cursor입니다. 없으면 첫 페이지를 조회하며, next_cursor가 null이 될 때까지 이어 조회하면 모든 항목을 받을 수 있습니다.")
+          String cursor,
+      @Parameter(
+              description =
+                  "페이지 크기입니다. 없거나 0이면 기본값 20을 사용합니다. 최대 50까지 요청할 수 있으며, 이를 초과하면 50으로 제한합니다.")
+          Integer limit,
       Principal principal);
 }
