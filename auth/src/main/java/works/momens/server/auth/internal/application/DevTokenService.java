@@ -5,10 +5,10 @@ import java.security.MessageDigest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import works.momens.server.auth.internal.config.DevOnly;
 import works.momens.server.auth.internal.config.DevTokenProperties;
 import works.momens.server.auth.internal.jwt.JwtTokenService;
 import works.momens.server.common.api.BusinessException;
+import works.momens.server.common.config.DevOnly;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 
