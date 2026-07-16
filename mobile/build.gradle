@@ -22,6 +22,8 @@ dependencies {
     // 태스크 관련자료는 context(태스크와 연결된 source_ref 식별자)와 source(원본 정보)를 조합해 구성합니다(MOM-0779).
     implementation project(':context')
     implementation project(':source')
+    // push 설치 등록·해제 HTTP 표면이 notification public API에 위임합니다(MOM-0690).
+    implementation project(':notification')
 
     // bootstrap 컨트롤러(presentation).
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
