@@ -31,15 +31,17 @@ class SignalDigestReaderImpl implements SignalDigestReader {
   @Transactional(readOnly = true)
   public Optional<String> findByCreatedRange(
       UUID projectId, UUID userId, Instant createdFrom, Instant createdToExclusive) {
-    requireMember(projectId, userId);
+    // 멤버십 검사에서 해석한 workspace로 조회도 스코프한다(교차 워크스페이스 방어, signals 조회와 같은 방식).
+    UUID workspaceId = requireMember(projectId, userId);
     return signalDigestRepository
-        .findByProjectIdAndCreatedRange(projectId, createdFrom, createdToExclusive, Limit.of(1))
+        .findByProjectIdAndCreatedRange(
+            workspaceId, projectId, createdFrom, createdToExclusive, Limit.of(1))
         .stream()
         .findFirst()
         .map(SignalDigest::getSummary);
   }
 
-  private void requireMember(UUID projectId, UUID userId) {
+  private UUID requireMember(UUID projectId, UUID userId) {
     UUID workspaceId =
         projectReader
             .workspaceIdOf(projectId)
@@ -52,5 +54,6 @@ class SignalDigestReaderImpl implements SignalDigestReader {
       throw new BusinessException(
           CommonErrorCode.AUTH_FORBIDDEN, Map.of("project_id", projectId.toString()));
     }
+    return workspaceId;
   }
 }
