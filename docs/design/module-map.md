@@ -72,6 +72,8 @@
 - `BaseEntity`, JPA Auditing
 - 공유 DB 확장 migration(`uuid-ossp` 등 — [데이터](../rules/persistence.md))
 - 공통 테스트 fixture
+- dev 도구 전용 빈 프로필 게이트 애너테이션 `@DevOnly`(`works.momens.server.common.config`). `auth`의
+  dev 토큰 발급, `signal`·`source`의 dev Signal 생성 쓰기 경로가 공유해서 쓴다(MOM-0690).
 
 `common`이 비대해지면 모듈 경계가 흐려지므로 domain helper나 business utility를 넣지 않는다.
 
@@ -195,6 +197,28 @@ append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
   ADR-0008, api-server의 `signal.created` notification 소비(`notification` 모듈)는 ADR-0009를
   따르며 둘 다 별도 구현이다.
 
+### notification
+
+Signal 발생 push notification의 소비·발송과 push 설치(FID/FCM token) lifecycle을 담당한다
+([설계](signal-push-demo-design.md) 7·8·10·11절, [ADR-0009](../adr/0009-notification-consumer-ownership.md)).
+
+- `push_installations`, `push_deliveries`, `notification_consumer_offsets` 테이블과 Flyway
+  마이그레이션을 소유한다.
+- `signal.created` outbox consumer: watermark를 관리하며 1초 주기로 폴링하고, 안전 지연(2초)을 지난
+  event만 소비한다. 최초 기동 시 watermark를 현재 outbox 끝으로 시드한다.
+- FCM 발송기: `FOR UPDATE SKIP LOCKED`로 delivery를 클레임하고, 일시 실패는 `1초 → 5초 → 30초`
+  백오프로 최초 전송 포함 최대 4회 시도한다. 무효·만료 token은 재시도 없이 installation을
+  비활성화한다. event 단위로 Signal·Project를 hydrate해 문구를 만들고, FCM multicast 요청은 최대
+  500 token 단위로 분할한다.
+- Firebase Admin SDK adapter: Application Default Credentials로 초기화한다.
+- public API는 설치 등록·해제 하나뿐이다 — `PushDeviceRegistrar`. consumer와 발송기는 다른 모듈에
+  공개할 계약이 없어 `internal`에만 있다.
+- 폴링과 발송은 `momens.notification.push.enabled` 프로퍼티로 게이트한다(기본 `false`, dev
+  `true`).
+- 의존 방향: `mobile`이 기기 등록·해제 HTTP 표면을 이 모듈의 public API에 위임하고, 이 모듈은
+  `outbox`(`OutboxEventReader`), `signal`(`SignalReader` hydrate), `project`(프로젝트명 조회),
+  `workspace`(`WorkspaceAccess.listMemberships` 수신자 결정)의 public API를 사용한다.
+
 ### mobile
 
 모바일 앱 진입 API를 담당하는 얇은 orchestration 모듈이다([아키텍처 > 모듈 경계](../rules/architecture.md)).
@@ -238,7 +262,7 @@ append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
   모듈에 두고 해당 도메인의 public API에 위임한다.
 
 내부는 화면(entry point) 단위로 논리 분리한다(MOM-0799). `bootstrap`·`roster`·`board`·`brief`·
-`signal`은 각각 Spring Modulith nested 논리 모듈이고, `workspace`/`project`/`signal`의 nested
+`signal`·`pushdevice`는 각각 Spring Modulith nested 논리 모듈이고, `workspace`/`project`/`signal`의 nested
 분리(MOM-70·MOM-71·MOM-65)와 달리 aggregate가 아니라 화면 단위 조합 슬라이스다. 다른 모듈에 공개할
 계약이 없으므로 각 nested 패키지는 Controller·Docs·조합 서비스·DTO를 한곳에 모은다. 조합 서비스처럼
 같은 nested 패키지 안에서만 쓰는 타입은 package-private으로 닫아 두고, `dto` 서브패키지가 참조하는
@@ -255,6 +279,9 @@ append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
   `brief`와 공유해 모듈 root에 둔다.
 - `brief` — `GET /api/mobile/projects/{projectId}/brief`, `.../brief/signal-summary`.
 - `signal` — Signal 목록·상세·action 컨트롤러. 위임 전용이라 조합 서비스가 없다.
+- `pushdevice` — `PUT`/`DELETE /api/me/push-devices/{firebaseInstallationId}`. push 설치 lifecycle
+  정책·영속성을 소유하는 `notification`의 public API(`PushDeviceRegistrar`)에 위임만 하는 얇은
+  표면이라 조합 서비스가 없다.
 
 ### signal
 
@@ -281,9 +308,15 @@ append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
   priority=`medium`)를 쓰고, draft는 `signals` backing에 저장하지 않는다(ADR-0011).
 - Signal action 결과 outbox 발행 계약을 소유한다. projection 경로의 outbox 소비 상태, 재시도, DLQ는
   worker 책임이고, retrieval indexing 상태는 retrieval 책임이다.
-- Signal 발생 push notification은 api-server가 worker의 `signal.created` outbox를 소비해 발송한다
-  ([ADR-0009](../adr/0009-notification-consumer-ownership.md)). 이 소비/발송을 `signal` 모듈이 소유할지
-  별도 notification 관심사로 둘지는 **미결정**이며 구현 PR에서 정한다.
+- Signal 발생 push notification은 api-server가 `signal.created` outbox를 소비해 발송한다
+  ([ADR-0009](../adr/0009-notification-consumer-ownership.md)). 이 소비/발송은 `signal` 모듈이 아니라
+  `notification` 모듈이 소유하는 것으로 확정했다([설계](signal-push-demo-design.md) 11.1절).
+- dev 데모용 Signal 생성 API(`POST /api/dev/projects/{projectId}/signals`, `@DevOnly`)와 그 전용
+  쓰기 경로는 `dev` nested 모듈이 소유한다([설계](signal-push-demo-design.md) 5·11.2절). `signals`·
+  `signal_evidence`는 `@Immutable` 읽기 엔티티를 재사용하지 않는 전용 insert 경로를 쓰고,
+  `source_refs` 쓰기는 `source`의 dev 쓰기 public API(`DevSourceRefWriter`)에 위임하며,
+  `signal.created` outbox 발행은 같은 트랜잭션에서 수행한다. prod 프로필에는 endpoint 자체가
+  등록되지 않는다.
 
 신규 Signal backing은 `memory_candidates`와 분리한다. 이유와 결과는
 [ADR-0007](../adr/0007-signal-backing-and-module-boundary.md)에 기록한다.
@@ -320,6 +353,8 @@ outbox_events insert 1건`)은 `SignalActionExecutor`가 소유하고, facade(`S
 - source connection lifecycle, source credentials custody
 - provider install/callback, sync states
 - source refs verify
+- dev 전용 `source_refs` 쓰기 public API `DevSourceRefWriter`(`@DevOnly`). `signal`의 dev Signal
+  생성 쓰기 경로가 호출자 트랜잭션에 합류시켜 사용한다([설계](signal-push-demo-design.md) 11.2절).
 
 외부 데이터 ingest·curation은 `momens-worker` 책임이다. `source` 모듈은 API 서버가 소유하는
 연결/토큰/참조 검증 계약만 담당한다.
@@ -371,6 +406,7 @@ ownership과는 분리한다. 레거시 `slackbot`의 표면(Slack 이벤트 처
 | `project` | `project`, `milestone`, `task`, `decision`, `blocker` |
 | `signal` | 신규 |
 | `outbox` | 신규 |
+| `notification` | 신규 |
 | `memory` | `memory` |
 | `source` | `source` |
 | `context` | `relation` |
