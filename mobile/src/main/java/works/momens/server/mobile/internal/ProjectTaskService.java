@@ -162,7 +162,9 @@ public class ProjectTaskService {
         MobilePriority.fromStored(detail.priority()).key(),
         detail.description(),
         detail.checklistItems(),
-        hydrateMaterials(detail.workspaceId(), detail.id()));
+        hydrateMaterials(detail.workspaceId(), detail.id()),
+        detail.openQuestions(),
+        detail.nextAction());
   }
 
   private List<MobileTaskDetail.Material> hydrateMaterials(UUID workspaceId, UUID taskId) {

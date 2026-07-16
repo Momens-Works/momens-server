@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.UUID;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -23,7 +24,8 @@ import works.momens.server.project.TaskReader;
  * task 조회 public API 검증.
  *
  * <p>실제 PostgreSQL(Testcontainers) 환경에서 보드 조회(상태 필터, 소프트 삭제 제외, 생성 시각 내림차순 정렬)와 상세 조회(저장 필드,
- * checklist 순서, 빈 값)를 확인합니다. workspaces/users/projects는 다른 모듈 소유 테이블이라 FK 대상 행만 네이티브 SQL로 만듭니다.
+ * checklist 순서, 민수 산출물, 빈 값)를 확인합니다. workspaces/users/projects는 다른 모듈 소유 테이블이라 FK 대상 행만 네이티브 SQL로
+ * 만듭니다. 민수 산출물(열린질문, 다음행동)도 이 서버에 쓰기 경로가 없어 네이티브 SQL로 넣습니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -155,6 +157,76 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(detail.assigneeId()).isNull();
     assertThat(detail.description()).isNull();
     assertThat(detail.checklistItems()).isEmpty();
+    assertThat(detail.openQuestions()).isEmpty();
+    assertThat(detail.nextAction()).isNull();
+  }
+
+  @Test
+  void findDetailReturnsMinsuFieldsInSortOrder() {
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "minsu-owner@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "minsu");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
+    UUID taskId = saveTask(workspaceId, projectId, "민수 산출물", "todo", "medium", "pm");
+
+    // 민수(MVP에서는 fixture)가 채우는 값이라 앱 쓰기 경로 없이 SQL로 넣는다. sort_order 역순으로 넣어
+    // 조회 순서가 삽입 순서가 아니라 sort_order 기준임을 확인한다.
+    insertOpenQuestion(taskId, UUID.randomUUID(), "권한 재요청 주기를 어떻게 정할지 미정", 1);
+    insertOpenQuestion(taskId, UUID.randomUUID(), "권한 거부 시 대체 흐름을 둘지 검토 필요", 0);
+    setNextAction(taskId, "권한 거부 흐름을 PM과 확정한 뒤 화면 카피를 수정하세요.");
+
+    TaskDetail detail = taskReader.findDetail(taskId).orElseThrow();
+
+    assertThat(detail.openQuestions())
+        .extracting(TaskDetail.OpenQuestion::body)
+        .containsExactly("권한 거부 시 대체 흐름을 둘지 검토 필요", "권한 재요청 주기를 어떻게 정할지 미정");
+    assertThat(detail.nextAction()).isEqualTo("권한 거부 흐름을 PM과 확정한 뒤 화면 카피를 수정하세요.");
+  }
+
+  @Test
+  void findDetailOrdersOpenQuestionsByIdWhenSortOrderTies() {
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "tie-owner@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "tie");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
+    UUID taskId = saveTask(workspaceId, projectId, "동률 열린질문", "todo", "medium", "pm");
+
+    // sort_order는 DEFAULT 0이라 생산자가 순서를 안 주면 전부 0이 된다. 그때도 조회 순서가 흔들리지
+    // 않도록 id로 보조 정렬하는지 확인한다(signal_evidence와 같은 이유).
+    UUID larger = UUID.fromString("ffffffff-ffff-4fff-8fff-ffffffffffff");
+    UUID smaller = UUID.fromString("00000000-0000-4000-8000-000000000001");
+    insertOpenQuestion(taskId, larger, "나중 질문", 0);
+    insertOpenQuestion(taskId, smaller, "먼저 질문", 0);
+
+    TaskDetail detail = taskReader.findDetail(taskId).orElseThrow();
+
+    assertThat(detail.openQuestions())
+        .extracting(TaskDetail.OpenQuestion::id)
+        .containsExactly(smaller, larger);
+  }
+
+  // 글자수는 생산 단계 계약이라 서버가 자르지 않고 CHECK가 막는다(ADR-0011, signal_evidence와 같은 방식). 생산자처럼
+  // 네이티브 SQL로 넣으므로 Spring 예외 변환을 타지 않고 Hibernate 예외가 그대로 올라온다. 제약 위반은 트랜잭션을
+  // abort시켜 뒤 쿼리가 전부 막히므로 두 필드를 한 테스트에 묶지 않는다.
+
+  @Test
+  void openQuestionRejectsBodyOverTheProducedLengthContract() {
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "question-length@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "question-length");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
+    UUID taskId = saveTask(workspaceId, projectId, "열린질문 글자수", "todo", "medium", "pm");
+
+    assertThatThrownBy(() -> insertOpenQuestion(taskId, UUID.randomUUID(), "질".repeat(51), 0))
+        .isInstanceOf(ConstraintViolationException.class);
+  }
+
+  @Test
+  void nextActionRejectsValueOverTheProducedLengthContract() {
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "action-length@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "action-length");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
+    UUID taskId = saveTask(workspaceId, projectId, "다음행동 글자수", "todo", "medium", "pm");
+
+    assertThatThrownBy(() -> setNextAction(taskId, "행".repeat(101)))
+        .isInstanceOf(ConstraintViolationException.class);
   }
 
   @Test
@@ -237,6 +309,14 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
         .setParameter(5, position)
         .executeUpdate();
     entityManager.clear();
+  }
+
+  private void insertOpenQuestion(UUID taskId, UUID id, String body, int sortOrder) {
+    ProjectSeedSql.insertOpenQuestion(entityManager, id, taskId, body, sortOrder);
+  }
+
+  private void setNextAction(UUID taskId, String nextAction) {
+    ProjectSeedSql.setNextAction(entityManager, taskId, nextAction);
   }
 
   private void softDelete(UUID taskId) {

@@ -27,7 +27,8 @@ import works.momens.server.project.UpdateTaskCommand.ChecklistItemEdit;
  * task 수정 public API 검증.
  *
  * <p>실제 PostgreSQL(Testcontainers) 환경에서 본문 수정, 담당자 비우기, 완료기준 전체 교체(완료 상태 배치 갱신, 순서, 빠진 항목 삭제, 없는 id
- * 거부), 즉시 토글, 없는 대상 처리까지 확인합니다. workspaces/users/projects는 다른 모듈 소유 테이블이라 FK 대상 행만 네이티브 SQL로 만듭니다.
+ * 거부), 즉시 토글, 민수 산출물 보존, 없는 대상 처리까지 확인합니다. workspaces/users/projects는 다른 모듈 소유 테이블이라 FK 대상 행만 네이티브
+ * SQL로 만듭니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -225,6 +226,34 @@ class TaskEditorIntegrationTest extends AbstractPostgresIntegrationTest {
         .isInstanceOf(BusinessException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ProjectErrorCode.TASK_NOT_FOUND);
+  }
+
+  @Test
+  void updateKeepsMinsuFields() {
+    Fixture fixture = newTask();
+    // 민수 산출물은 수정 요청에 없고 이 서버가 쓰지 않는 값이라, 수정 화면이 저장해도 그대로 남아야 한다
+    // (docs/spec/mobile-api.md 수정 API가 보존하는 필드).
+    UUID questionId = UUID.randomUUID();
+    ProjectSeedSql.insertOpenQuestion(
+        entityManager, questionId, fixture.taskId(), "권한 거부 시 대체 흐름을 둘지 검토 필요", 0);
+    ProjectSeedSql.setNextAction(entityManager, fixture.taskId(), "권한 거부 흐름을 PM과 확정하세요.");
+
+    taskEditor.update(
+        command(
+            fixture.taskId(),
+            "제목 수정",
+            "backend",
+            null,
+            "high",
+            "in_progress",
+            "수정한 목적",
+            List.of(new ChecklistItemEdit(null, "새 완료기준", false))));
+
+    TaskDetail detail = taskReader.findDetail(fixture.taskId()).orElseThrow();
+    assertThat(detail.openQuestions())
+        .extracting(TaskDetail.OpenQuestion::id)
+        .containsExactly(questionId);
+    assertThat(detail.nextAction()).isEqualTo("권한 거부 흐름을 PM과 확정하세요.");
   }
 
   @Test

@@ -733,11 +733,11 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
   ],
   "open_questions": [
     {
-      "id": "q-01",
-      "body": "약한 비밀번호 기준을 사용자에게 얼마나 구체적으로 알려줘야 할지 결정이 필요해보임"
+      "id": "3f2a1b4c-5d6e-4f70-8a91-b2c3d4e5f6a7",
+      "body": "약한 비밀번호 기준을 얼마나 구체적으로 안내할지 결정 필요"
     }
   ],
-  "next_action": "민수가 추천해주는 다음행동이에용"
+  "next_action": "에러 메시지 정책 초안을 검토하고 핵심 문구 다섯 가지를 먼저 확정하세요."
 }
 ```
 
@@ -751,8 +751,14 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 대신 사용합니다. 이 규칙은 Signal 근거와 동일합니다. 원본에 값이 없으면 `title`, `summary`, `occurred_at`,
 `source_url`은 `null`로 반환합니다. 표시 순서는 연결이 생성된 시각의 내림차순입니다.
 
-`open_questions`와 `next_action`은 MVP에서 backing source가 없으면 각각 `[]`, `null`로 반환합니다. 서버는 근거
-없는 값을 임의로 생성하지 않습니다(요구사항 명세 "합성/파생 필드 응답 정책" 참고).
+`open_questions`와 `next_action`은 민수 산출물입니다. `open_questions[]`는 `task_open_questions`에서, `next_action`은
+`tasks.next_action`에서 읽습니다. 민수가 만든 질문이 없으면 `[]`이고, 다음행동을 아직 만들지 않았으면 `null`입니다.
+`open_questions[].id`는 저장된 질문 행의 식별자입니다. 표시 순서는 생산자가 준 순서이고, 순서 값이 겹치면 `id` 순으로
+고정합니다.
+
+두 값은 생산 단계에서 공백을 포함해 각각 50자, 100자 이하로 만들고(2026-07-08 화면설계서 task_002 8번, 9번),
+서버는 값을 생성하거나 자르지 않고 저장된 값을 그대로 반환합니다. 민수가 구현되기 전에는 같은 backing 계약을
+따르는 fixture가 채웁니다(ADR-0011). 태스크 수정 API는 두 값을 요청에 받지 않고 그대로 유지합니다.
 
 담당자가 지정되지 않았으면 `assignee`는 `null`, 목적을 아직 작성하지 않았으면 `purpose`는 `null`입니다. 웹에서 만든 태스크는 역할이 없어 `role`도 `null`입니다. 태스크 생성 시점에 민수가 담당자를 판단해 지정하는데, 판단에 걸리는 시간 동안에는 담당자가 없어 `assignee`가 `null`로 내려가고, 이후 지정되면 조회에 자동으로 반영됩니다. `assignee.avatar_url`은 담당자의 구글 계정 프로필 이미지이고, 없으면 `null`입니다.
 완료기준이 없으면 `checklist`는 `completed_count` 0, `total_count` 0, `items` 빈 배열입니다(2026-07-07 확정).

@@ -260,6 +260,30 @@ class ProjectTaskServiceTest {
     assertThat(result.purpose()).isNull();
     assertThat(result.checklistItems()).isEmpty();
     assertThat(result.materials()).isEmpty();
+    assertThat(result.openQuestions()).isEmpty();
+    assertThat(result.nextAction()).isNull();
+  }
+
+  @Test
+  void getTaskDetailPassesMinsuFieldsThroughUnchanged() {
+    UUID questionId = UUID.randomUUID();
+    when(taskReader.findDetail(TASK_ID))
+        .thenReturn(
+            Optional.of(
+                detail(
+                    null,
+                    null,
+                    List.of(),
+                    List.of(new TaskDetail.OpenQuestion(questionId, "권한 거부 시 대체 흐름을 둘지 검토 필요")),
+                    "권한 거부 흐름을 PM과 확정하세요.")));
+    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
+
+    MobileTaskDetail result = projectTaskService.getTaskDetail(TASK_ID, CALLER_ID);
+
+    // 민수 산출물은 모바일 표기 매핑 없이 그대로 내려간다(priority의 urgent→high 매핑과 대비).
+    assertThat(result.openQuestions())
+        .containsExactly(new TaskDetail.OpenQuestion(questionId, "권한 거부 시 대체 흐름을 둘지 검토 필요"));
+    assertThat(result.nextAction()).isEqualTo("권한 거부 흐름을 PM과 확정하세요.");
   }
 
   @Test
@@ -379,6 +403,15 @@ class ProjectTaskServiceTest {
 
   private static TaskDetail detail(
       UUID assigneeId, String description, List<TaskDetail.ChecklistItem> checklistItems) {
+    return detail(assigneeId, description, checklistItems, List.of(), null);
+  }
+
+  private static TaskDetail detail(
+      UUID assigneeId,
+      String description,
+      List<TaskDetail.ChecklistItem> checklistItems,
+      List<TaskDetail.OpenQuestion> openQuestions,
+      String nextAction) {
     return new TaskDetail(
         TASK_ID,
         PROJECT_ID,
@@ -389,7 +422,9 @@ class ProjectTaskServiceTest {
         "pm",
         assigneeId,
         description,
-        checklistItems);
+        checklistItems,
+        openQuestions,
+        nextAction);
   }
 
   private static UserProfile profile(UUID id, String name) {
