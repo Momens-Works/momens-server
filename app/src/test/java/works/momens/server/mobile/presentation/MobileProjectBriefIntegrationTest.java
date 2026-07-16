@@ -169,13 +169,16 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
         .andExpect(jsonPath("$.signal_summary.filters[3].count").value(2))
         .andExpect(jsonPath("$.signal_summary.filters[4].key").value("question"))
         .andExpect(jsonPath("$.signal_summary.filters[4].count").value(2))
-        .andExpect(jsonPath("$.signal_summary.items.length()").value(3))
+        // 첫 조회는 한 페이지(20)를 미리 조회하므로 당일 데이터 6개가 모두 포함됩니다.
+        // 클라이언트는 이 중 최신 3개만 먼저 노출하고, 나머지는 더보기에서 펼칩니다.
+        // 첫 페이지에 모든 항목이 담겨 있으므로 next_cursor는 null입니다.
+        .andExpect(jsonPath("$.signal_summary.items.length()").value(6))
         .andExpect(jsonPath("$.signal_summary.items[0].id").value(voc.toString()))
         .andExpect(jsonPath("$.signal_summary.items[0].type").value("change"))
         .andExpect(jsonPath("$.signal_summary.items[0].title").value("권한 요청 반복 문의"))
         .andExpect(jsonPath("$.signal_summary.items[1].title").value("권한 요청 문구 결정 필요"))
         .andExpect(jsonPath("$.signal_summary.items[2].title").value("온보딩 단계 수 확정 필요"))
-        .andExpect(jsonPath("$.signal_summary.next_cursor").isNotEmpty());
+        .andExpect(jsonPath("$.signal_summary.next_cursor", nullValue()));
   }
 
   @Test
