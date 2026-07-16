@@ -394,9 +394,11 @@ suggestion, task draft)을 민수 구현 전까지 목으로 처리하는 것은
 - MVP에서 push notification은 Signal 발생 알림까지만 포함한다.
 - task 생성, Signal 삭제(dismiss), task 상태 변경에 대한 push notification은 MVP 이후 요구사항이다.
 - Signal 발생 알림은 worker가 Signal backing을 생성한 뒤 사용할 수 있는 이벤트를 기준으로 한다.
-- Signal 발생 알림은 Signal type을 함께 참조해 앱이 `Risk`, `Change`, `Decision`, `Question` 카테고리 태그를
-  표시할 수 있어야 한다.
-- FCM 디바이스 토큰 등록/해제 HTTP API 계약은 Signal 발생 알림 구현 전 별도 확정해야 한다.
+- Signal 발생 알림의 표시 문구와 data payload는
+  [MOM-0689 Signal push 데모 설계](signal-push-demo-design.md)를 따른다. FCM data payload에는 Signal type을
+  포함하지 않고, 앱은 상세 조회 후 type을 사용한다.
+- FCM 디바이스 토큰 등록/해제 HTTP API 계약은
+  [MOM-0689 Signal push 데모 설계](signal-push-demo-design.md)를 따른다.
 - 모바일 앱에서 이미 처리된 Signal을 다시 보는 inbox 흐름은 MVP 이후 요구사항이다.
 
 ## 권한 요구사항

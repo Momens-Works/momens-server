@@ -34,6 +34,7 @@ docs/
 - [서버 명세 > 모바일 API](spec/mobile-api.md)
 - [상세설계 > 모듈 맵](design/module-map.md)
 - [상세설계 > 모바일 MVP 서버 요구사항](design/mobile-mvp-server-requirements.md)
+- [상세설계 > MOM-0689 Signal push 데모](design/signal-push-demo-design.md)
 
 ## 제품 레벨 문서는 어디에?
 
