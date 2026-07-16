@@ -237,7 +237,7 @@ class ProjectBriefServiceTest {
             eq(TODAY_FROM),
             eq(TODAY_TO),
             eq("cursor-1"),
-            eq(3)))
+            eq(20)))
         .thenReturn(
             new SignalSummaryPage(
                 List.of(new SignalSummary(signalId, "change", "VOC 문의", null, null)), null));
@@ -265,7 +265,7 @@ class ProjectBriefServiceTest {
             eq(yesterdayFrom),
             eq(yesterdayTo),
             eq("inner"),
-            eq(3)))
+            eq(20)))
         .thenReturn(new SignalSummaryPage(List.of(), null));
 
     MobileBriefSignalPage page =
@@ -279,7 +279,13 @@ class ProjectBriefServiceTest {
   void getSignalSummaryPagePassesNullTypesForAllFilter() {
     // filter=all이나 빈 값이면 type을 가리지 않으므로 null을 넘긴다.
     when(signalListService.listByCreatedRange(
-            eq(PROJECT_ID), eq(CALLER_ID), isNull(), eq(TODAY_FROM), eq(TODAY_TO), isNull(), eq(3)))
+            eq(PROJECT_ID),
+            eq(CALLER_ID),
+            isNull(),
+            eq(TODAY_FROM),
+            eq(TODAY_TO),
+            isNull(),
+            eq(20)))
         .thenReturn(new SignalSummaryPage(List.of(), null));
 
     assertThat(projectBriefService.getSignalSummaryPage(PROJECT_ID, CALLER_ID, "all", null, null))
@@ -290,7 +296,7 @@ class ProjectBriefServiceTest {
 
   @Test
   void getSignalSummaryPageTreatsZeroLimitAsDefault() {
-    // AIP-158과 명세대로 0은 에러가 아니라 기본값 3으로 조회한다.
+    // AIP-158과 명세대로 0은 에러가 아니라 더보기 기본값 20으로 조회한다.
     when(signalListService.listByCreatedRange(
             eq(PROJECT_ID),
             eq(CALLER_ID),
@@ -298,7 +304,7 @@ class ProjectBriefServiceTest {
             eq(TODAY_FROM),
             eq(TODAY_TO),
             isNull(),
-            eq(3)))
+            eq(20)))
         .thenReturn(new SignalSummaryPage(List.of(), null));
 
     MobileBriefSignalPage page =
