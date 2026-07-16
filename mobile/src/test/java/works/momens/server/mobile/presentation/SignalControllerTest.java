@@ -1,4 +1,4 @@
-package works.momens.server.signal.presentation;
+package works.momens.server.mobile.presentation;
 
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.eq;

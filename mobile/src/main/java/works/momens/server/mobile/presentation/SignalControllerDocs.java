@@ -1,4 +1,4 @@
-package works.momens.server.signal.presentation;
+package works.momens.server.mobile.presentation;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -11,12 +11,12 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.mobile.presentation.dto.response.ConvertToTaskResponse;
+import works.momens.server.mobile.presentation.dto.response.DismissResponse;
+import works.momens.server.mobile.presentation.dto.response.SignalDetailResponse;
+import works.momens.server.mobile.presentation.dto.response.SignalListResponse;
 import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.signal.SignalErrorCode;
-import works.momens.server.signal.presentation.dto.response.ConvertToTaskResponse;
-import works.momens.server.signal.presentation.dto.response.DismissResponse;
-import works.momens.server.signal.presentation.dto.response.SignalDetailResponse;
-import works.momens.server.signal.presentation.dto.response.SignalListResponse;
 
 /**
  * {@code /api/mobile/projects/{projectId}/signals} OpenAPI 문서. Swagger 애너테이션을 컨트롤러 구현과

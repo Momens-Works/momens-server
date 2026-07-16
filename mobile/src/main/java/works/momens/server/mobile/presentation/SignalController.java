@@ -1,4 +1,4 @@
-package works.momens.server.signal.presentation;
+package works.momens.server.mobile.presentation;
 
 import java.security.Principal;
 import java.util.UUID;
@@ -11,14 +11,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.CurrentUser;
+import works.momens.server.mobile.presentation.dto.response.ConvertToTaskResponse;
+import works.momens.server.mobile.presentation.dto.response.DismissResponse;
+import works.momens.server.mobile.presentation.dto.response.SignalDetailResponse;
+import works.momens.server.mobile.presentation.dto.response.SignalListResponse;
 import works.momens.server.signal.SignalActionResult;
 import works.momens.server.signal.SignalActionService;
 import works.momens.server.signal.SignalDetailService;
 import works.momens.server.signal.SignalListService;
-import works.momens.server.signal.presentation.dto.response.ConvertToTaskResponse;
-import works.momens.server.signal.presentation.dto.response.DismissResponse;
-import works.momens.server.signal.presentation.dto.response.SignalDetailResponse;
-import works.momens.server.signal.presentation.dto.response.SignalListResponse;
 
 /**
  * 모바일 Signal 조회·action 엔드포인트.
