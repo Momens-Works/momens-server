@@ -229,9 +229,11 @@ append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
 내부는 화면(entry point) 단위로 논리 분리한다(MOM-0799). `bootstrap`·`roster`·`board`·`brief`·
 `signal`은 각각 Spring Modulith nested 논리 모듈이고, `workspace`/`project`/`signal`의 nested
 분리(MOM-70·MOM-71·MOM-65)와 달리 aggregate가 아니라 화면 단위 조합 슬라이스다. 다른 모듈에 공개할
-계약이 없으므로 각 nested 패키지는 Controller·Docs·조합 서비스·DTO를 한곳에 모아 package-private로
-닫아 두고, 모듈 root에는 두 개 이상의 nested 모듈이 공유하거나 모듈 밖에서 참조해야 하는 계약만
-남긴다(`MobileClock`, `MobilePriority`).
+계약이 없으므로 각 nested 패키지는 Controller·Docs·조합 서비스·DTO를 한곳에 모은다. 조합 서비스처럼
+같은 nested 패키지 안에서만 쓰는 타입은 package-private으로 닫아 두고, `dto` 서브패키지가 참조하는
+타입은 Java package-private이 서브패키지까지 뻗지 않아 부득이 public으로 남긴다. 모듈 root에는 두
+개 이상의 nested 모듈이 공유하거나 모듈 밖에서 참조해야 하는 계약만 남긴다(`MobileClock`,
+`MobilePriority`).
 
 - `bootstrap` — `GET /api/mobile/bootstrap`.
 - `roster` — `GET /api/mobile/projects/{projectId}/members`. `workspace`의 멤버십, `user`의 프로필
