@@ -21,6 +21,7 @@
 | `project` | project·milestone·task·decision·blocker 운영 흐름 | 동명 5개 패키지 |
 | `signal` | 모바일 Signal 원본 조회·사용자 action ledger·Signal action outbox | 신규 |
 | `outbox` | append-only outbox 발행 로그 공용 모듈 (ADR-0008) | 신규 |
+| `notification` | Signal 발생 push notification 소비·발송, push 설치(FID/FCM token) lifecycle | 신규 |
 | `mobile` | 모바일 진입 API. 도메인 public API 조합(얇은 orchestration) | 없음 (신규 표면) |
 | `memory` | 메모리 후보 검토·confirmed memory lifecycle | `memory` |
 | `source` | 외부 연결 lifecycle·provider OAuth·source-ref verify | `source` |
@@ -37,13 +38,18 @@
 - `context`는 `entity_relations`를 읽어 연결된 식별자만 돌려준다. 지금은 도메인 모듈에 의존하지 않고,
   식별자로 본문을 채우는 조합은 소비하는 쪽이 한다(`mobile`이 `context`의 링크와 `source`의
   source_ref 조회를 엮어 태스크 관련자료를 만든다).
-- `mobile`은 `user`, `project`, `workspace`, `signal`, `context`, `source`의 public API만
-  조합한다(bootstrap, 멤버 조회, 브리프, 태스크 관련자료). 도메인 정책을 소유하지 않는다.
+- `mobile`은 `user`, `project`, `workspace`, `signal`, `context`, `source`, `notification`의 public
+  API만 조합한다(bootstrap, 멤버 조회, 브리프, 태스크 관련자료, push 설치 등록·해제). 도메인 정책을
+  소유하지 않는다.
 - `signal`은 `project`의 project/workspace 해석 public API와 `workspace`의 RBAC public API를 사용한다.
   상세 응답의 evidence는 `source`의 source_ref 조회 public API로 hydrate한다.
   Signal을 task로 수용할 때는 `project`의 task 생성 public API를 사용한다.
 - `signal`과 `project`는 확정 액션 결과를 같은 트랜잭션에서 남기기 위해 `outbox`의
-  `OutboxAppender` public API를 사용한다(CO-6). `outbox`는 다른 도메인 모듈을 참조하지 않는다.
+  `OutboxAppender` public API를 사용한다(CO-6). `signal`의 dev Signal 생성 쓰기 경로는 `source`의
+  dev 쓰기 public API(`DevSourceRefWriter`)에도 위임한다.
+- `notification`은 `outbox`의 조회 public API(`OutboxEventReader`)로 `signal.created`를 소비하고,
+  `signal`의 `SignalReader`로 Signal을 hydrate하며, `project`의 프로젝트명 조회와 `workspace`의
+  `WorkspaceAccess.listMemberships`로 수신자를 결정한다. `outbox`는 다른 도메인 모듈을 참조하지 않는다.
 - `retrieval`은 `project`·`memory`의 도메인 write 이후 발행(event 또는 public API)을 받는다.
 - 다른 모듈의 `internal` package 참조와 순환 의존은 금지한다.
 
@@ -174,15 +180,20 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
 
 - `outbox_events` 엔티티·리포지토리·마이그레이션을 소유한다.
-- `OutboxAppender` public API 하나만 노출한다: 호출자 트랜잭션에 합류해(`Propagation.MANDATORY`)
+- 쓰기 public API `OutboxAppender`: 호출자 트랜잭션에 합류해(`Propagation.MANDATORY`)
   `{workspace_id, aggregate_type, aggregate_id, event_type, payload}`를 append한다. 멱등키
   (`"{event_type}:{aggregate_id}"`)는 이 모듈이 결정적으로 조립하고, `idempotency_key UNIQUE` +
   `ON CONFLICT DO NOTHING`으로 dedup한다(SD-3).
+- 조회 public API `OutboxEventReader`(`readAfter`, `latestIdCreatedBefore`, `findById`)와
+  `OutboxEventView`(docs/design/signal-push-demo-design.md 10절). watermark 이후 + 안전 지연을 지난
+  event를 id 오름차순으로 읽는다. watermark 등 소비 상태 관리는 이 모듈이 아니라 consumer가 소유한다.
 - `issued_by`는 이 서버가 발행하는 이벤트만 다루므로 `api-server`로 고정한다. worker가 발행하는
   `signal.created`는 worker 쪽 책임이라 이 모듈이 쓰지 않는다.
-- 다른 도메인 모듈을 참조하지 않는다. `signal`과 `project`가 이 모듈의 public API를 사용한다.
-- outbox 소비(consumer)는 이 모듈의 책임이 아니다. worker의 projection 소비·재시도·DLQ는
-  ADR-0008, api-server의 `signal.created` notification 소비는 ADR-0009를 따르며 둘 다 별도 구현이다.
+- 다른 도메인 모듈을 참조하지 않는다. `signal`과 `project`가 쓰기 public API를, `notification`이
+  조회 public API를 사용한다.
+- outbox 소비(consumer)의 상태 관리·재시도·DLQ는 이 모듈의 책임이 아니다. worker의 projection 소비는
+  ADR-0008, api-server의 `signal.created` notification 소비(`notification` 모듈)는 ADR-0009를
+  따르며 둘 다 별도 구현이다.
 
 ### mobile
 

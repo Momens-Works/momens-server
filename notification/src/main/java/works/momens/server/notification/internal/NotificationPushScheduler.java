@@ -3,8 +3,6 @@ package works.momens.server.notification.internal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -34,10 +32,4 @@ class NotificationPushScheduler {
       log.error("signal push 폴링 실패", e);
     }
   }
-
-  /** push 활성 환경에서만 스케줄링 인프라를 켠다. 다른 모듈에는 아직 @Scheduled 빈이 없다. */
-  @Configuration
-  @EnableScheduling
-  @ConditionalOnProperty(name = "momens.notification.push.enabled", havingValue = "true")
-  static class SchedulingConfig {}
 }
