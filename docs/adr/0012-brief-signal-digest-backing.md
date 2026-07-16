@@ -29,7 +29,10 @@ ADR-0011은 같은 상황을 이미 정했다. `signal_evidence`의 대상, 변�
 - 하루 경계 지식은 계속 `BriefDay` 한 곳에만 둔다. 생산자도 `signal_digests`도 타임존을 알 필요가 없다.
 - 같은 범위에 문단이 여러 건이면 가장 최근 것을 반환한다. 민수가 다시 만들면 최신이 이긴다.
 - 서버는 이 테이블에 쓰지 않으므로 `SignalDigest`는 `@Immutable`이고 `BaseEntity`를 상속하지 않는다. 식별자를
-  앱이 만들지 않아 `id` DEFAULT도 두지 않는다. `signals`, `signal_evidence` 미러와 같은 취급이다.
+  앱이 만들지 않아 `id` DEFAULT도 두지 않는다. `signals`, `signal_evidence` 미러와 같은 취급이며, 같은 관례로
+  `workspace_id`(멤버십 검사와 별개로 쿼리 단계에서 교차 워크스페이스 노출을 막는 방어 스코프)와
+  `deleted_at`(서버가 쓰지 않는 테이블에서 생산자가 문단을 철회하는 유일한 경로, 조회는 없는 것으로 취급)을
+  둔다.
 - `SignalListService`에 메서드를 더하지 않고 `SignalDigestReader`를 따로 둔다. 그 인터페이스는 Signal 목록
   조회 API인데 이 문단은 목록이 아니다.
 - 운영 공유 DB의 스키마 반영은 기존 규칙대로 레거시 마이그레이션이 소유하고, 반영 위치는 `signals`와 함께

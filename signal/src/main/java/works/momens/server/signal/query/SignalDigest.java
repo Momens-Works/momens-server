@@ -34,6 +34,9 @@ class SignalDigest {
   @Column(columnDefinition = "uuid")
   private UUID id;
 
+  @Column(name = "workspace_id", nullable = false, columnDefinition = "uuid")
+  private UUID workspaceId;
+
   @Column(name = "project_id", nullable = false, columnDefinition = "uuid")
   private UUID projectId;
 
@@ -43,4 +46,8 @@ class SignalDigest {
   /** 생산 시각. 브리프가 하루 범위로 거르는 기준입니다. */
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
+
+  /** 생산자가 문단을 철회하는 유일한 경로. 조회는 소프트 삭제를 없는 것으로 취급합니다(signals 미러와 같은 규칙). */
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
 }

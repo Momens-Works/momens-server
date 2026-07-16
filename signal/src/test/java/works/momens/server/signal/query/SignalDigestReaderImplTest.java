@@ -99,12 +99,13 @@ class SignalDigestReaderImplTest extends AbstractPostgresIntegrationTest {
     entityManager
         .getEntityManager()
         .createNativeQuery(
-            "INSERT INTO signal_digests (id, project_id, summary, created_at)"
-                + " VALUES (?1, ?2, ?3, ?4)")
+            "INSERT INTO signal_digests (id, workspace_id, project_id, summary, created_at)"
+                + " VALUES (?1, ?2, ?3, ?4, ?5)")
         .setParameter(1, UUID.randomUUID())
-        .setParameter(2, PROJECT_ID)
-        .setParameter(3, summary)
-        .setParameter(4, createdAt)
+        .setParameter(2, WORKSPACE_ID)
+        .setParameter(3, PROJECT_ID)
+        .setParameter(4, summary)
+        .setParameter(5, createdAt)
         .executeUpdate();
     entityManager.clear();
   }

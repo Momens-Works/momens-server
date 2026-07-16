@@ -12,13 +12,21 @@
 -- signals 미러와 같은 방식으로 외부(민수)가 쓰는 테이블이라 workspaces/projects FK는 미러에서 생략하고,
 -- 식별자도 앱이 만들지 않아 id DEFAULT를 두지 않는다. 운영(prod) 공유 스키마 반영 위치는 signals와 함께
 -- MOM-74에서 확정한다([데이터] docs/rules/persistence.md).
+--
+-- workspace_id와 deleted_at은 signals·signal_evidence·source_refs 미러와 같은 관례다. workspace_id는
+-- 교차 워크스페이스 노출을 쿼리 단계에서 한 번 더 막는 방어 스코프이고(멤버십 검사와 별개로, signals
+-- 조회와 같은 방어), deleted_at은 서버가 쓰지 않는 이 테이블에서 생산자가 문단을 철회할 수 있는 유일한
+-- 경로다. 조회는 소프트 삭제를 없는 것으로 취급한다.
 CREATE TABLE signal_digests (
     id UUID PRIMARY KEY,
+    workspace_id UUID NOT NULL,
     project_id UUID NOT NULL,
     summary TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
--- 조회는 프로젝트 스코프 + 생성 시각 범위 + 최신순(동률 시 id 내림차순)이다.
-CREATE INDEX idx_signal_digests_project_created ON signal_digests(project_id, created_at DESC);
+-- 조회는 프로젝트 스코프 + 생성 시각 범위 + 최신순(동률 시 id 내림차순)이고 소프트 삭제는 제외한다.
+CREATE INDEX idx_signal_digests_project_created
+    ON signal_digests(project_id, created_at DESC) WHERE deleted_at IS NULL;
