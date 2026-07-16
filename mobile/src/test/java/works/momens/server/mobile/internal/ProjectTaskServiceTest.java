@@ -102,15 +102,15 @@ class ProjectTaskServiceTest {
     assertThat(groups)
         .extracting(MobileTaskGroup::status)
         .containsExactly(
-            BoardStatus.BACKLOG,
             BoardStatus.TODO,
             BoardStatus.IN_PROGRESS,
             BoardStatus.DONE,
+            BoardStatus.BACKLOG,
             BoardStatus.CANCELLED);
-    assertThat(groups.get(0).tasks()).extracting(MobileTaskCard::id).containsExactly(backlogId);
-    assertThat(groups.get(1).tasks()).extracting(MobileTaskCard::id).containsExactly(todoId);
-    assertThat(groups.get(2).tasks()).extracting(MobileTaskCard::id).containsExactly(inProgressId);
-    assertThat(groups.get(3).tasks()).isEmpty();
+    assertThat(groups.get(0).tasks()).extracting(MobileTaskCard::id).containsExactly(todoId);
+    assertThat(groups.get(1).tasks()).extracting(MobileTaskCard::id).containsExactly(inProgressId);
+    assertThat(groups.get(2).tasks()).isEmpty();
+    assertThat(groups.get(3).tasks()).extracting(MobileTaskCard::id).containsExactly(backlogId);
     assertThat(groups.get(4).tasks()).extracting(MobileTaskCard::id).containsExactly(cancelledId);
   }
 
@@ -121,8 +121,8 @@ class ProjectTaskServiceTest {
     when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
         .thenReturn(List.of(new BoardTask(taskId, "긴급 태스크", "todo", "urgent", "pm", CREATED_AT)));
 
-    // 보드 그룹 순서는 backlog, todo, ... 이므로 todo 그룹은 인덱스 1이다.
-    MobileTaskCard card = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(1).tasks().get(0);
+    // 보드 그룹 순서는 todo, in_progress, ... 이므로 todo 그룹은 인덱스 0이다.
+    MobileTaskCard card = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(0).tasks().get(0);
 
     assertThat(card.priority()).isEqualTo("high");
     assertThat(card.role()).isEqualTo("pm");
@@ -145,7 +145,7 @@ class ProjectTaskServiceTest {
     when(sourceRefReader.findByIds(WORKSPACE_ID, List.of(refA, refB)))
         .thenReturn(List.of(sourceRef(refA), sourceRef(refB)));
 
-    List<MobileTaskCard> cards = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(1).tasks();
+    List<MobileTaskCard> cards = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(0).tasks();
 
     assertThat(cards)
         .extracting(MobileTaskCard::id, MobileTaskCard::materialCount)
@@ -166,7 +166,7 @@ class ProjectTaskServiceTest {
     when(sourceRefReader.findByIds(WORKSPACE_ID, List.of(live, gone)))
         .thenReturn(List.of(sourceRef(live)));
 
-    MobileTaskCard card = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(1).tasks().get(0);
+    MobileTaskCard card = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(0).tasks().get(0);
 
     assertThat(card.materialCount()).isEqualTo(1);
   }

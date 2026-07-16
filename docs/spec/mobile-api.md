@@ -623,7 +623,6 @@ id를 기준으로 하기 때문에, 페이지 사이에 시그널이 처리되�
   "title": "프로젝트 태스크",
   "description": "업무를 한눈에 확인하고 상세 내용을 확인하세요.",
   "groups": [
-    { "group_key": "backlog", "label": "백로그", "count": 0, "tasks": [] },
     {
       "group_key": "todo",
       "label": "투두",
@@ -640,12 +639,13 @@ id를 기준으로 하기 때문에, 페이지 사이에 시그널이 처리되�
     },
     { "group_key": "in_progress", "label": "진행중", "count": 2, "tasks": [] },
     { "group_key": "done", "label": "완료", "count": 2, "tasks": [] },
+    { "group_key": "backlog", "label": "백로그", "count": 0, "tasks": [] },
     { "group_key": "cancelled", "label": "취소", "count": 0, "tasks": [] }
   ]
 }
 ```
 
-보드는 backlog, todo, in_progress, done, cancelled 다섯 그룹을 순서대로 노출합니다. 태스크 수정 화면이 상태 5종을 모두 편집하므로, backlog나 cancelled로 바꾼 태스크가 보드에서 사라지지 않도록 다섯 그룹을 모두 담습니다(MOM-75). 다섯 그룹은 태스크가 없어도 항상 포함하며 그때 tasks는 빈 배열입니다. priority는 low, medium, high로 반환하고, 저장된 값이 레거시 전용인 urgent이면 high로 반환합니다(2026-07-06 가결정). material_count는 태스크에 연결된 관련 자료 수이고, 연결이 없으면 0입니다. 웹에서 만든 태스크는 역할이 없어 role을 null로 반환합니다(레거시와 공유하는 tasks에서 role은 nullable이고, 모바일 생성 API는 role을 필수로 받습니다).
+보드는 todo, in_progress, done, backlog, cancelled 다섯 그룹을 순서대로 노출합니다. 태스크 수정 화면이 상태 5종을 모두 편집하므로, backlog나 cancelled로 바꾼 태스크가 보드에서 사라지지 않도록 다섯 그룹을 모두 담습니다(MOM-75). 다섯 그룹은 태스크가 없어도 항상 포함하며 그때 tasks는 빈 배열입니다. priority는 low, medium, high로 반환하고, 저장된 값이 레거시 전용인 urgent이면 high로 반환합니다(2026-07-06 가결정). material_count는 태스크에 연결된 관련 자료 수이고, 연결이 없으면 0입니다. 웹에서 만든 태스크는 역할이 없어 role을 null로 반환합니다(레거시와 공유하는 tasks에서 role은 nullable이고, 모바일 생성 API는 role을 필수로 받습니다).
 
 #### Errors
 

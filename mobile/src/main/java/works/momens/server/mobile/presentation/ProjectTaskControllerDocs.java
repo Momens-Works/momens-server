@@ -28,7 +28,7 @@ interface ProjectTaskControllerDocs {
   @Operation(
       summary = "프로젝트 태스크 보드 조회",
       description =
-          "태스크를 backlog, todo, in_progress, done, cancelled 다섯 그룹으로 조회합니다. 수정 화면이 상태 5종을 모두 편집하므로 보드도"
+          "태스크를 todo, in_progress, done, backlog, cancelled 다섯 그룹으로 조회합니다. 수정 화면이 상태 5종을 모두 편집하므로 보드도"
               + " 5종을 담습니다.")
   @ApiResponse(
       responseCode = "200",
