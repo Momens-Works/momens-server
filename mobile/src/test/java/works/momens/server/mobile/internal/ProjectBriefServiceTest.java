@@ -105,9 +105,15 @@ class ProjectBriefServiceTest {
     // change도 all 개수에 포함되고, 칩과 items에도 나온다.
     when(signalListService.countByCreatedRange(PROJECT_ID, CALLER_ID, TODAY_FROM, TODAY_TO))
         .thenReturn(Map.of("decision", 2L, "risk", 1L, "question", 2L, "change", 7L));
-    // filter=all은 type을 가리지 않으므로 null을 넘긴다.
+    // filter=all은 type으로 필터링하지 않으므로 null을 전달합니다. 첫 조회는 한 페이지(20)를 미리 가져옵니다.
     when(signalListService.listByCreatedRange(
-            eq(PROJECT_ID), eq(CALLER_ID), isNull(), eq(TODAY_FROM), eq(TODAY_TO), isNull(), eq(3)))
+            eq(PROJECT_ID),
+            eq(CALLER_ID),
+            isNull(),
+            eq(TODAY_FROM),
+            eq(TODAY_TO),
+            isNull(),
+            eq(20)))
         .thenReturn(
             new SignalSummaryPage(
                 List.of(new SignalSummary(signalId, "change", "권한 요청 반복 문의", null, null)),
@@ -337,7 +343,7 @@ class ProjectBriefServiceTest {
                 eq(TODAY_FROM),
                 eq(TODAY_TO),
                 isNull(),
-                eq(3)))
+                eq(20)))
         .thenReturn(new SignalSummaryPage(List.of(), null));
   }
 

@@ -39,21 +39,19 @@ import works.momens.server.workspace.WorkspaceAccess;
 @RequiredArgsConstructor
 public class ProjectBriefService {
 
-  /** 브리프 본체에서 보여주는 시그널 요약 프리뷰 개수입니다. 접힌 상태에서는 최신 3개만 노출합니다(2026-07-10 화면설계서). */
-  private static final int PREVIEW_PAGE_SIZE = 3;
-
   /**
-   * 더보기 목록의 기본 페이지 크기입니다.
+   * 시그널 요약 한 페이지의 기본 크기입니다.
    *
-   * <p>더보기를 누르면 이 개수만큼을 담은 목록을 반환하고, 목록 끝까지 스크롤하면 {@code next_cursor}로 다음 페이지를 이어 조회합니다.
+   * <p>브리프 조회는 첫 페이지를 이 크기로 반환하고, 더보기 엔드포인트도 {@code limit}이 없으면 이 값을 사용합니다.
    *
-   * <p>클라이언트가 {@code limit}을 지정하지 않으면 이 값을 기본으로 사용합니다. {@code limit}을 지정한 경우에는 signal 모듈의 방어
-   * 상한({@code MAX_PAGE_SIZE})까지 허용합니다.
+   * <p>접힌 상태에서는 클라이언트가 이 중 최신 3개만 노출합니다. 더보기를 누르면 이미 받은 항목을 먼저 펼쳐 보여주고, 모두 표시한 뒤에는 {@code
+   * next_cursor}로 다음 페이지를 조회해 무한 스크롤을 이어갑니다(2026-07-10 화면설계서). 최신 3개만 노출하는 규칙은 화면 정책이므로, 서버는 응답을
+   * 자르지 않고 클라이언트가 처리합니다.
    *
-   * <p>이 값은 화면의 기본 노출 개수를 결정하는 UX 설정이고, {@code MAX_PAGE_SIZE}는 서버 보호를 위한 상한이므로 서로 다른 목적의 값으로 관리합니다.
-   * 기획이 정한 20입니다(2026-07-16 확정).
+   * <p>이 값은 화면의 기본 페이지 크기를 정하는 UX 설정이고, {@code MAX_PAGE_SIZE}는 서버 보호를 위한 상한입니다. 두 값은 목적이 다르므로 별도로
+   * 관리합니다. 현재 기획 확정값은 20입니다(2026-07-16).
    */
-  private static final int MORE_PAGE_SIZE = 20;
+  private static final int SIGNAL_SUMMARY_PAGE_SIZE = 20;
 
   /** 타입 칩 정렬. 라벨 글자수 오름차순, 같으면 라벨 알파벳순입니다(2026-07-10 기획 확정). All 칩은 정렬에서 빼고 맨 앞에 둡니다. */
   private static final Comparator<MobileBrief.FilterCount> CHIP_ORDER =
@@ -104,7 +102,13 @@ public class ProjectBriefService {
     // filter=all은 type을 가리지 않고 전체를 조회하므로 null을 넘긴다. change도 items에 포함된다.
     SignalSummaryPage firstPage =
         signalListService.listByCreatedRange(
-            projectId, userId, null, today.from(), today.toExclusive(), null, PREVIEW_PAGE_SIZE);
+            projectId,
+            userId,
+            null,
+            today.from(),
+            today.toExclusive(),
+            null,
+            SIGNAL_SUMMARY_PAGE_SIZE);
     // 요약 문단은 시그널과 같은 하루 범위로 조회한다. 기준이 갈리면 어제 문단이 오늘 목록 위에 붙는다.
     String digest =
         signalDigestReader
@@ -153,7 +157,7 @@ public class ProjectBriefService {
   private static int resolvePageSize(Integer limit) {
     // limit이 없거나 0이면 더보기 기본 페이지 크기를 사용합니다. 음수만 잘못된 요청으로 처리합니다(AIP-158).
     if (limit == null || limit == 0) {
-      return MORE_PAGE_SIZE;
+      return SIGNAL_SUMMARY_PAGE_SIZE;
     }
     if (limit < 0) {
       throw new BusinessException(
