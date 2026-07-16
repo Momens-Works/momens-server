@@ -1,12 +1,21 @@
 package works.momens.server.outbox.internal;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> {
+
+  List<OutboxEvent> findByIdGreaterThanAndCreatedAtLessThanEqualOrderByIdAsc(
+      long afterId, Instant createdBefore, Limit limit);
+
+  @Query("select coalesce(max(e.id), 0) from OutboxEvent e where e.createdAt <= :createdBefore")
+  long findMaxIdCreatedBefore(@Param("createdBefore") Instant createdBefore);
 
   /**
    * {@code idempotency_key UNIQUE} 위반은 저장이 아니라 무시로 처리한다(SD-3). JPA {@code save()}는 이 시맨틱을 표현할 수 없어

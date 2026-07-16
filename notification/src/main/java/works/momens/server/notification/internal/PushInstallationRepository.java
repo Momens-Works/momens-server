@@ -1,5 +1,6 @@
 package works.momens.server.notification.internal;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -10,4 +11,7 @@ interface PushInstallationRepository extends JpaRepository<PushInstallation, UUI
   Optional<PushInstallation> findByFirebaseInstallationId(String firebaseInstallationId);
 
   List<PushInstallation> findByFcmRegistrationTokenAndActiveTrue(String fcmRegistrationToken);
+
+  List<PushInstallation> findByUserIdInAndPlatformAndActiveTrue(
+      Collection<UUID> userIds, String platform);
 }

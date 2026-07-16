@@ -18,8 +18,13 @@ spring:
     # prod 는 off. dev 는 이 서버가 스키마 소유자이므로 명시적으로 on 을 재확인합니다(안전 가드).
     enabled: true
 
-# dev 전용 토큰 발급 엔드포인트(MOM-90). @DevOnly 프로필에서만 로드됩니다.
 momens:
+  # dev는 Firebase dev 프로젝트로 signal.created push를 발송합니다(MOM-0690). 서비스 계정 JSON은
+  # Kubernetes Secret 파일 마운트 + GOOGLE_APPLICATION_CREDENTIALS 경로 지정으로 주입합니다.
+  notification:
+    push:
+      enabled: true
+  # dev 전용 토큰 발급 엔드포인트(MOM-90). @DevOnly 프로필에서만 로드됩니다.
   auth:
     dev-token:
       # 호출자 제한용 공유 시크릿. Kubernetes Secret 으로 주입하고 커밋하지 않습니다.

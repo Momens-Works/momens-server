@@ -9,5 +9,8 @@
  *   <li>설치 등록·해제 API — {@link works.momens.server.notification.PushDeviceRegistrar}. HTTP 표면({@code
  *       /api/me/push-devices/*})은 mobile 모듈이 소유하고 이 API에 위임한다.
  * </ul>
+ *
+ * <p>{@code signal.created} consumer(watermark 관리 포함)와 FCM 발송기는 다른 모듈에 공개할 계약이 없어 {@code
+ * internal}에만 있다. outbox 조회, Signal·Project hydrate, 수신자 결정은 각 모듈의 public API를 사용한다(11.1절 의존 방향).
  */
 package works.momens.server.notification;
