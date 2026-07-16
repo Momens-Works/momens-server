@@ -851,3 +851,78 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
 - `TASK_CHECKLIST_ITEM_NOT_FOUND`
 - `COMMON_VALIDATION_FAILED`
 - `AUTH_FORBIDDEN`
+
+## Push 설치
+
+### PUT /api/me/push-devices/{firebaseInstallationId}
+
+Android 기기의 Firebase Installation ID(FID)와 FCM registration token을 등록하거나 갱신합니다.
+
+#### Request
+
+```json
+{
+  "fcm_registration_token": "...",
+  "platform": "android"
+}
+```
+
+| 필드 | 필수 | 규칙 |
+| --- | --- | --- |
+| `fcm_registration_token` | 필수 | 공백 문자열 불가 |
+| `platform` | 필수 | `android`만 허용 |
+
+같은 FID의 재요청은 token을 갱신하고 활성화합니다. 다른 사용자에게 귀속된 FID면 현재 인증 사용자에게
+소유권을 원자적으로 이전합니다. 동일한 활성 FCM token이 다른 FID에 연결돼 있으면 이전 연결을
+비활성화합니다.
+
+#### Response 204
+
+생성과 갱신 모두 본문 없이 `204 No Content`를 반환합니다.
+
+#### Errors
+
+- `COMMON_VALIDATION_FAILED`
+- `AUTH_UNAUTHORIZED`
+- `AUTH_INVALID_TOKEN`
+
+### DELETE /api/me/push-devices/{firebaseInstallationId}
+
+현재 인증 사용자가 소유한 설치를 비활성화합니다. 로그아웃과 별도 endpoint이며, 앱은 로그아웃 직전에
+호출합니다.
+
+#### Response 204
+
+자기 소유 설치만 비활성화하고, 이미 비활성화됐거나 없는 설치도 `204 No Content`로 멱등 처리합니다.
+다른 사용자가 소유한 활성 설치는 해제하지 않습니다. 물리 삭제하지 않아 같은 사용자의 재등록과 token
+lifecycle을 안전하게 처리합니다.
+
+#### Errors
+
+- `AUTH_UNAUTHORIZED`
+- `AUTH_INVALID_TOKEN`
+
+### FCM push notification 계약
+
+Signal 생성 시 소비 시점 workspace 구성원의 등록된 Android 기기로 FCM push를 발송합니다. 제목과
+본문은 저장된 Project와 Signal을 기준으로 서버가 생성합니다.
+
+```text
+제목: {프로젝트명}에 새 시그널이 발견되었습니다.
+본문: {시그널 제목}
+```
+
+data payload:
+
+```json
+{
+  "notification_type": "signal_created",
+  "destination": "signal_detail",
+  "signal_id": "signal-uuid",
+  "project_id": "project-uuid",
+  "workspace_id": "workspace-uuid"
+}
+```
+
+`notification_type`은 알림이 발생한 이유이고, `destination`은 클릭 시 이동할 화면입니다. 앱은 알림
+클릭 시 `signal_id`로 Signal 상세 화면을 엽니다.
