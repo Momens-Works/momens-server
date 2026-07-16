@@ -79,4 +79,6 @@ dependencies {
     testImplementation testFixtures(project(':auth'))
     // 실제 request/response를 /v3/api-docs 스펙과 대조하는 계약 검증(문서-응답 드리프트 방지).
     testImplementation "com.atlassian.oai:openapi-request-validator-mockmvc:${openapiRequestValidatorVersion}"
+    // push 활성 배선 통합 테스트가 FirebaseMessaging을 mock으로 대체할 때 필요합니다(notification 모듈과 버전 일치).
+    testImplementation 'com.google.firebase:firebase-admin:9.10.0'
 }
