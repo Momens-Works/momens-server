@@ -8,6 +8,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.minsu.Minsu;
+import works.momens.server.minsu.MinsuSignalContext;
+import works.momens.server.minsu.MinsuTaskDraft;
 import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
 import works.momens.server.signal.SignalActionResult;
@@ -28,20 +31,12 @@ import works.momens.server.workspace.WorkspaceAccess;
 @RequiredArgsConstructor
 class SignalActionServiceImpl implements SignalActionService {
 
-  /**
-   * convert-to-task 고정 목 draft(ADR-0011). task draft(title·role·priority)는 민수 산출물이며, 민수가 서버 모듈로
-   * 구현되기 전까지 서버가 이 고정 값으로 task를 만든다. role·priority는 클라이언트가 보내지 않고, title은 Signal 제목을 쓴다. 고정 값이라 같은
-   * Signal 요청은 결정적이다. 실제 민수 연동은 MOM-0691·MOM-0692에서 이 상수를 대체한다.
-   */
-  private static final String MOCK_DRAFT_ROLE = "pm";
-
-  private static final String MOCK_DRAFT_PRIORITY = "medium";
-
   private final SignalReader signalReader;
   private final WorkspaceAccess workspaceAccess;
   private final SignalActionRepository signalActionRepository;
   private final SignalActionExecutor executor;
   private final TaskReader taskReader;
+  private final Minsu minsu;
 
   @Override
   public SignalActionResult convertToTask(UUID signalId, UUID userId) {
@@ -51,13 +46,24 @@ class SignalActionServiceImpl implements SignalActionService {
       return replayOrConflict(existing.get(), SignalActionType.CONVERT_TO_TASK);
     }
 
+    // draft(title·role·priority)는 민수가 Signal 컨텍스트(제목·근거)로 생성한다(ADR-0011, MOM-0692). 최초
+    // 변환에서만 호출하고 재요청은 멱등 replay라 다시 생성하지 않는다. 민수는 하드 의존이라 실패 시 변환도 실패한다.
+    MinsuTaskDraft draft = minsu.draftTask(buildContext(signal, signalId));
     try {
-      return executor.convert(signal, userId, signal.title(), MOCK_DRAFT_ROLE, MOCK_DRAFT_PRIORITY);
+      return executor.convert(signal, userId, draft.title(), draft.role(), draft.priority());
     } catch (DataIntegrityViolationException raced) {
       return replayOrConflict(
           signalActionRepository.findBySignalId(signalId).orElseThrow(() -> raced),
           SignalActionType.CONVERT_TO_TASK);
     }
+  }
+
+  private MinsuSignalContext buildContext(SignalReader.Snapshot signal, UUID signalId) {
+    return new MinsuSignalContext(
+        signal.title(),
+        signalReader.readEvidence(signalId).stream()
+            .map(e -> new MinsuSignalContext.Evidence(e.target(), e.change(), e.impact()))
+            .toList());
   }
 
   @Override

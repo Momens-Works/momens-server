@@ -163,6 +163,8 @@ Standard 모드의 에러 응답은 아래 형태를 사용합니다.
 | 403 | `AUTH_DEV_TOKEN_EMAIL_NOT_ALLOWED` | dev 토큰 발급 대상 이메일이 allowlist에 없음 (dev 계열 프로필 전용) |
 | 404 | `USER_NOT_FOUND` | 사용자를 찾을 수 없음 (`GET/PATCH /api/me` 등) |
 | 409 | `SIGNAL_INVALID_STATE` | 이미 다른 action으로 처리된 Signal에 다른 action을 요청함(같은 action 재요청은 200 멱등 응답) |
+| 503 | `MINSU_UNAVAILABLE` | 민수(Vertex AI)가 비활성이거나 배선되지 않은 환경에서 draft·suggestion 생성을 요청함(하드 의존, 목 폴백 없음) |
+| 502 | `MINSU_GENERATION_FAILED` | 민수 Vertex 호출 또는 응답 파싱 실패 |
 
 ### 모바일 MVP 예정 도메인 코드
 

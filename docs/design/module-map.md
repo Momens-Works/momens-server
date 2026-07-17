@@ -27,7 +27,7 @@
 | `source` | 외부 연결 lifecycle·provider OAuth·source-ref verify | `source` |
 | `context` | task-memory/source-ref 연결·context API (얇은 orchestration) | `relation` |
 | `retrieval` | 검색 read-model projection·document/event schema 소유 | `retrieval` |
-| `minsu` | Minsu 질의 usecase·LLM·gRPC client·Slack 표면 | `minsu`·`slackbot` |
+| `minsu` | Signal→task draft·상세 suggestion 생성(Vertex AI Gemini). 질의 usecase·gRPC·Slack 표면은 후속 | `minsu`·`minsu.internal` |
 
 ## 의존 방향
 
@@ -47,6 +47,9 @@
 - `signal`과 `project`는 확정 액션 결과를 같은 트랜잭션에서 남기기 위해 `outbox`의
   `OutboxAppender` public API를 사용한다(CO-6). `signal`의 dev Signal 생성 쓰기 경로는 `source`의
   dev 쓰기 public API(`DevSourceRefWriter`)에도 위임한다.
+- `signal`은 convert-to-task draft(title·role·priority)와 상세 `minsu_suggestion` 생성을 `minsu`의
+  public API(`Minsu`)에 위임한다(MOM-0692). 컨텍스트(제목·근거)를 조립해 넘기므로 `minsu`는 `signal`에
+  역의존하지 않는 단방향 의존이다. `minsu`는 `common`(에러 계약)만 참조하고 Vertex AI를 ADC로 호출한다.
 - `notification`은 `outbox`의 조회 public API(`OutboxEventReader`)로 `signal.created`를 소비하고,
   `signal`의 `SignalReader`로 Signal을 hydrate하며, `project`의 프로젝트명 조회와 `workspace`의
   `WorkspaceAccess.listMemberships`로 수신자를 결정한다. `outbox`는 다른 도메인 모듈을 참조하지 않는다.
@@ -400,14 +403,19 @@ public API 또는 application event로 발행한다.
 
 ### minsu
 
-Minsu query experience를 담당한다.
+Minsu 생성 유스케이스를 담당한다. 현재 구현된 범위는 Signal→태스크 draft·상세 suggestion 생성이다(MOM-0692).
 
-- `/workspaces/:id/minsu/query`
-- retrieval SearchRequest assembly, PermissionContext assembly, answer synthesis
-- Slack bot 표면, LLM adapter, retrieval gRPC client adapter
+- public API `Minsu`: `draftTask`(convert-to-task용 title·role·priority), `suggest`(상세 화면
+  `minsu_suggestion`). 입력은 `MinsuSignalContext`(Signal 제목·근거)이고, `signal` 모듈이 조립해 넘긴다.
+- `internal` nested 모듈: GCP Vertex AI(Gemini) 클라이언트 배선·프롬프트·JSON draft 파싱·정규화. 인증은
+  ADC(레거시 momens-api llm 패턴과 동일, API 키 없음). `momens.minsu.enabled`로 게이트한다(기본 `false`,
+  dev on). role은 `pm/design/backend/frontend`, priority는 `low/medium/high`로 정규화한다.
+- 하드 의존: 비활성·실패 시 목값 폴백 없이 `MINSU_UNAVAILABLE`/`MINSU_GENERATION_FAILED`를 던진다.
+- `common`(에러 계약)만 참조하고 다른 도메인 모듈에 의존하지 않는다(순환 없음).
 
-Minsu는 검색을 호출하고 답변을 만드는 유스케이스를 소유한다. retrieval projection schema
-ownership과는 분리한다. 레거시 `slackbot`의 표면(Slack 이벤트 처리)도 이 모듈이 흡수한다.
+후속(미구현): Minsu query experience(`/workspaces/:id/minsu/query`, retrieval SearchRequest·
+PermissionContext assembly, answer synthesis), Slack bot 표면, retrieval gRPC client adapter. 모듈 경계·
+suggestion 생성 시점·실패 정책의 공식 설계는 MOM-0691에서 확정한다. 레거시 `slackbot` 표면도 이 모듈이 흡수한다.
 
 ## 레거시 매핑 요약
 

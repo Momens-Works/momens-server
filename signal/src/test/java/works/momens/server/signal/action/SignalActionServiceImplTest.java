@@ -9,6 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.minsu.Minsu;
+import works.momens.server.minsu.MinsuErrorCode;
+import works.momens.server.minsu.MinsuTaskDraft;
 import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
 import works.momens.server.signal.SignalActionResult;
@@ -37,6 +41,7 @@ class SignalActionServiceImplTest {
   private final SignalActionRepository signalActionRepository = mock(SignalActionRepository.class);
   private final SignalActionExecutor executor = mock(SignalActionExecutor.class);
   private final TaskReader taskReader = mock(TaskReader.class);
+  private final Minsu minsu = mock(Minsu.class);
 
   private SignalActionServiceImpl service;
 
@@ -44,7 +49,7 @@ class SignalActionServiceImplTest {
   void setUp() {
     service =
         new SignalActionServiceImpl(
-            signalReader, workspaceAccess, signalActionRepository, executor, taskReader);
+            signalReader, workspaceAccess, signalActionRepository, executor, taskReader, minsu);
   }
 
   @Test
@@ -73,25 +78,47 @@ class SignalActionServiceImplTest {
   }
 
   @Test
-  @DisplayName("convert는 Signal 제목과 고정 목 draft(role=pm, priority=medium)로 executor를 호출한다")
-  void convertUsesFixedMockDraft() {
+  @DisplayName("convert는 민수가 Signal 제목·근거로 생성한 draft로 executor를 호출한다")
+  void convertUsesMinsuDraft() {
     SignalReader.Snapshot signal =
         new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "시그널 제목");
     when(signalReader.findLive(SIGNAL_ID)).thenReturn(Optional.of(signal));
     when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
     when(signalActionRepository.findBySignalId(SIGNAL_ID)).thenReturn(Optional.empty());
-    when(executor.convert(signal, USER_ID, "시그널 제목", "pm", "medium"))
+    when(signalReader.readEvidence(SIGNAL_ID))
+        .thenReturn(List.of(new SignalReader.EvidenceRow("권한 요청", "이탈 증가", "가입 감소")));
+    when(minsu.draftTask(any())).thenReturn(new MinsuTaskDraft("권한 이탈 점검", "backend", "high"));
+    when(executor.convert(signal, USER_ID, "권한 이탈 점검", "backend", "high"))
         .thenReturn(
             new SignalActionResult(
                 SIGNAL_ID,
                 "convert_to_task",
                 true,
-                new SignalActionResult.TaskResult(UUID.randomUUID(), "시그널 제목", "todo")));
+                new SignalActionResult.TaskResult(UUID.randomUUID(), "권한 이탈 점검", "todo")));
 
     SignalActionResult result = service.convertToTask(SIGNAL_ID, USER_ID);
 
     assertThat(result.created()).isTrue();
-    verify(executor).convert(signal, USER_ID, "시그널 제목", "pm", "medium");
+    verify(executor).convert(signal, USER_ID, "권한 이탈 점검", "backend", "high");
+  }
+
+  @Test
+  @DisplayName("민수 draft 생성이 실패하면 executor를 호출하지 않고 에러를 전파한다(하드 의존)")
+  void propagatesMinsuFailureWithoutConverting() {
+    SignalReader.Snapshot signal =
+        new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "시그널 제목");
+    when(signalReader.findLive(SIGNAL_ID)).thenReturn(Optional.of(signal));
+    when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
+    when(signalActionRepository.findBySignalId(SIGNAL_ID)).thenReturn(Optional.empty());
+    when(signalReader.readEvidence(SIGNAL_ID)).thenReturn(List.of());
+    when(minsu.draftTask(any()))
+        .thenThrow(new BusinessException(MinsuErrorCode.MINSU_GENERATION_FAILED));
+
+    assertThatThrownBy(() -> service.convertToTask(SIGNAL_ID, USER_ID))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).getErrorCode())
+        .isEqualTo(MinsuErrorCode.MINSU_GENERATION_FAILED);
+    verify(executor, never()).convert(any(), any(), any(), any(), any());
   }
 
   @Test
@@ -201,6 +228,8 @@ class SignalActionServiceImplTest {
     when(signalActionRepository.findBySignalId(SIGNAL_ID))
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of(racedRow));
+    when(signalReader.readEvidence(SIGNAL_ID)).thenReturn(List.of());
+    when(minsu.draftTask(any())).thenReturn(new MinsuTaskDraft("제목", "pm", "medium"));
     when(executor.convert(signal, USER_ID, "제목", "pm", "medium"))
         .thenThrow(new DataIntegrityViolationException("unique violation"));
     when(taskReader.findDetail(taskId))

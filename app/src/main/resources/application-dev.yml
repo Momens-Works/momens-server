@@ -9,6 +9,7 @@
 # - MOMENS_AUTH_JWT_SECRET
 # - MOMENS_AUTH_GOOGLE_AUDIENCES : prod Android client-id 만(모바일 ID token aud allowlist)
 # - MOMENS_NOTIFICATION_PUSH_FIREBASE_PROJECT_ID : FCM 대상 Firebase 프로젝트
+# - GOOGLE_CLOUD_PROJECT / GOOGLE_CLOUD_LOCATION : 민수 Vertex AI 대상 프로젝트·리전(ConfigMap)
 # - CORS_ALLOWED_ORIGINS 미주입 → base 기본값(빈 목록). 모바일은 네이티브라 CORS 대상 아님.
 # - web OAuth(MOMENS_AUTH_GOOGLE_CLIENT_ID / _SECRET / _REDIRECT_URI,
 #   MOMENS_AUTH_WEB_SUCCESS_REDIRECT_URI / _FAILURE_REDIRECT_URI)는 dev 미사용이지만
@@ -26,6 +27,10 @@ momens:
   notification:
     push:
       enabled: true
+  # dev는 민수(Vertex AI Gemini)로 실제 draft·suggestion을 생성합니다(MOM-0692). GKE Workload
+  # Identity가 ADC를 공급하고 대상 project·location은 ConfigMap(GOOGLE_CLOUD_*)으로 주입합니다.
+  minsu:
+    enabled: true
   # dev 전용 토큰 발급 엔드포인트(MOM-90). @DevOnly 프로필에서만 로드됩니다.
   auth:
     dev-token:

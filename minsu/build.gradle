@@ -1,0 +1,31 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    // Boot BOM으로 버전을 관리합니다(boot 플러그인은 app만 적용).
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // 공유 에러 계약(BusinessException/ErrorCode). 도메인 영속성은 없으므로 common만 씁니다.
+    implementation project(':common')
+
+    // 빈 등록·설정 바인딩·조건부 자동구성(@Service/@Configuration/@ConfigurationProperties).
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // 민수 JSON draft 파싱. app 컨텍스트의 ObjectMapper 빈을 주입해 재사용합니다.
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    // Vertex AI Gemini(Boot BOM 비관리, 명시적 버전). 인증은 ADC를 씁니다(레거시 momens-api llm 패턴과
+    // 동일: API 키 없음, GKE Workload Identity/GOOGLE_APPLICATION_CREDENTIALS).
+    implementation 'com.google.genai:google-genai:1.61.0'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // Gradle 9 + JUnit5 테스트 실행에 필요한 플랫폼 런처(다른 모듈은 common testFixtures로 상속).
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}

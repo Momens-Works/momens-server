@@ -20,6 +20,8 @@ dependencies {
     implementation project(':source')
     // Signal action 결과(signal.converted_to_task/signal.dismissed) outbox 발행(CO-6, ADR-0008).
     implementation project(':outbox')
+    // convert-to-task draft와 상세 suggestion 생성(민수, MOM-0692). 컨텍스트를 조립해 넘기므로 단방향 의존.
+    implementation project(':minsu')
     // worker가 발행하는 Signal·Outbox 이벤트의 공용 protobuf 계약.
     implementation 'com.momens:momens-proto:1.0.0'
 

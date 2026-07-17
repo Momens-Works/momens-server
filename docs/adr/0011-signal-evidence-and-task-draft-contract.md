@@ -4,6 +4,10 @@
 - 날짜: 2026-07-11
 - 작성자: Kimgyuilli
 
+> 구현 현황(2026-07-17, MOM-0692): 아래 "고정 목 draft"와 "목 suggestion"은 서버 내 `minsu` 모듈(Vertex
+> AI Gemini)로 교체되었다. 계약(원탭 body 없음, role·priority 허용값, draft 미저장)은 그대로다. 민수 모듈
+> 경계·실패 정책의 공식 설계는 MOM-0691에서 확정하며, 그 시점에 후속 ADR을 둘 수 있다.
+
 ## 맥락
 
 ADR-0007은 worker가 신규 `signals`와 `signal_evidence`를 생성하고 api-server가 이를

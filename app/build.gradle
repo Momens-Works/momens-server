@@ -31,6 +31,7 @@ dependencies {
     implementation project(':signal')
     implementation project(':outbox')
     implementation project(':notification')
+    implementation project(':minsu')
     implementation project(':mobile')
 
     // Core (Boot BOM 관리, 버전 생략)

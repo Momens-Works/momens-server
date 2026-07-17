@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.minsu.Minsu;
+import works.momens.server.minsu.MinsuSignalContext;
 import works.momens.server.signal.SignalDetail;
 import works.momens.server.signal.SignalDetailService;
 import works.momens.server.signal.SignalErrorCode;
@@ -34,6 +36,7 @@ class SignalDetailServiceImpl implements SignalDetailService {
   private final SignalEvidenceRepository signalEvidenceRepository;
   private final WorkspaceAccess workspaceAccess;
   private final SourceRefReader sourceRefReader;
+  private final Minsu minsu;
 
   @Override
   @Transactional(readOnly = true)
@@ -50,13 +53,31 @@ class SignalDetailServiceImpl implements SignalDetailService {
       throw new BusinessException(
           CommonErrorCode.AUTH_FORBIDDEN, Map.of("signal_id", signalId.toString()));
     }
+    List<SignalDetail.Evidence> evidence = hydrateEvidence(signal.getWorkspaceId(), signal.getId());
     return new SignalDetail(
         signal.getId(),
         signal.getType(),
         signal.getTitle(),
         signal.getImpact(),
-        signal.getMinsuSuggestion(),
-        hydrateEvidence(signal.getWorkspaceId(), signal.getId()));
+        resolveSuggestion(signal, evidence),
+        evidence);
+  }
+
+  /**
+   * minsu_suggestion은 민수 산출물이라(ADR-0011) backing에 이미 있으면 그대로 쓰고, 없으면 민수가 Signal 제목·근거로 생성한다
+   * (MOM-0692). 민수는 하드 의존이라 생성 실패 시 상세 조회도 실패한다.
+   */
+  private String resolveSuggestion(Signal signal, List<SignalDetail.Evidence> evidence) {
+    String stored = signal.getMinsuSuggestion();
+    if (stored != null && !stored.isBlank()) {
+      return stored;
+    }
+    return minsu.suggest(
+        new MinsuSignalContext(
+            signal.getTitle(),
+            evidence.stream()
+                .map(e -> new MinsuSignalContext.Evidence(e.target(), e.change(), e.impact()))
+                .toList()));
   }
 
   private List<SignalDetail.Evidence> hydrateEvidence(UUID workspaceId, UUID signalId) {

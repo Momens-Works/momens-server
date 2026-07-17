@@ -352,6 +352,10 @@ Signal과 함께 생산하고, worker가 준비되지 않은 MVP 환경에서는
 `occurred_at`, `source_url`은 원천에 값이 없으면 `null`일 수 있습니다. 상대 시간 라벨은 앱이
 `occurred_at`으로 렌더합니다. 근거 개수에 따른 펼침·접힘·빈 상태도 앱이 담당합니다.
 
+`minsu_suggestion`은 민수 산출물입니다(ADR-0011). backing에 저장된 값이 있으면 그대로 내려주고, 없으면 상세
+조회 시점에 민수(`minsu` 모듈, Vertex AI Gemini)가 Signal 제목·근거로 생성합니다(MOM-0692). 민수는 하드
+의존이라 생성 실패 시 `MINSU_UNAVAILABLE`/`MINSU_GENERATION_FAILED`로 응답합니다.
+
 project는 모바일의 현재 context로 고정되어 있고, description·task draft·action 목록은 상세 화면에서 사용하지
 않으므로 응답하지 않습니다. 이는 응답 계약에서만 제외하는 것이며 backing의 `project_id`는 목록 필터와 task
 귀속에 계속 사용합니다. 처리된 Signal을 다시 보는 inbox는 MVP 이후 범위이므로 이미 처리된 Signal도
@@ -363,14 +367,19 @@ project는 모바일의 현재 context로 고정되어 있고, description·task
 - `AUTH_INVALID_TOKEN`
 - `SIGNAL_NOT_FOUND`
 - `AUTH_FORBIDDEN`
+- `MINSU_UNAVAILABLE`
+- `MINSU_GENERATION_FAILED`
 
 ### POST /api/mobile/signals/{signalId}/actions/convert-to-task
 
 시그널을 원탭으로 태스크에 등록합니다. 요청 body는 없습니다.
 
-서버는 태스크 등록 시점에 민수가 생성하는 task draft(`title`, `role`, `priority`)를 사용합니다. 민수는
-서버 내 모듈로 구현 예정이며, 구현되기 전 MVP에서는 고정 목 draft를 사용합니다: `title`은 Signal title,
-`role`은 `pm`, `priority`는 `medium`. draft는 Signal backing에 저장하지 않습니다.
+서버는 태스크 등록 시점에 민수가 생성하는 task draft(`title`, `role`, `priority`)를 사용합니다. 민수는 서버
+내 모듈(`minsu`)로 구현되어 있고, Signal 제목과 근거(evidence)를 GCP Vertex AI(Gemini)에 보내 draft를
+생성합니다(MOM-0692). `role`은 `pm`/`design`/`backend`/`frontend`, `priority`는 `low`/`medium`/`high` 중
+하나로 정규화됩니다. draft는 최초 변환에서만 생성하고(재요청은 멱등 replay), Signal backing에 저장하지 않습니다.
+민수는 하드 의존이라 비활성·실패 시 목값으로 폴백하지 않고 `MINSU_UNAVAILABLE`/`MINSU_GENERATION_FAILED`로
+응답합니다.
 
 클라이언트는 title·role·priority를 선택하거나 전송하지 않습니다.
 
@@ -415,6 +424,8 @@ project는 모바일의 현재 context로 고정되어 있고, description·task
 - `SIGNAL_NOT_FOUND`
 - `SIGNAL_INVALID_STATE`
 - `AUTH_FORBIDDEN`
+- `MINSU_UNAVAILABLE`
+- `MINSU_GENERATION_FAILED`
 
 ### POST /api/mobile/signals/{signalId}/actions/dismiss
 

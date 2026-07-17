@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -19,6 +21,7 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.minsu.Minsu;
 import works.momens.server.signal.SignalDetail;
 import works.momens.server.signal.SignalDetailService;
 import works.momens.server.signal.SignalErrorCode;
@@ -44,13 +47,15 @@ class SignalDetailServiceImplTest extends AbstractPostgresIntegrationTest {
 
   private final WorkspaceAccess workspaceAccess = mock(WorkspaceAccess.class);
   private final SourceRefReader sourceRefReader = mock(SourceRefReader.class);
+  private final Minsu minsu = mock(Minsu.class);
   private SignalDetailService signalDetailService;
 
   @BeforeEach
   void setUp() {
+    when(minsu.suggest(any())).thenReturn("민수 제안");
     signalDetailService =
         new SignalDetailServiceImpl(
-            signalRepository, signalEvidenceRepository, workspaceAccess, sourceRefReader);
+            signalRepository, signalEvidenceRepository, workspaceAccess, sourceRefReader, minsu);
   }
 
   @Test
@@ -153,6 +158,31 @@ class SignalDetailServiceImplTest extends AbstractPostgresIntegrationTest {
         .containsExactly(low, high);
   }
 
+  @Test
+  @DisplayName("backing에 minsu_suggestion이 없으면 민수가 제목·근거로 생성한 제안을 채운다")
+  void generatesSuggestionWhenBackingMissing() {
+    UUID signalId = insertSignal();
+    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
+    when(sourceRefReader.findByIds(any(), any())).thenReturn(List.of());
+
+    SignalDetail detail = signalDetailService.getDetail(signalId, CALLER_ID);
+
+    assertThat(detail.minsuSuggestion()).isEqualTo("민수 제안");
+  }
+
+  @Test
+  @DisplayName("backing에 minsu_suggestion이 있으면 민수를 호출하지 않고 저장된 값을 그대로 쓴다")
+  void usesStoredSuggestionWithoutCallingMinsu() {
+    UUID signalId = insertSignalWithSuggestion("저장된 제안");
+    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
+    when(sourceRefReader.findByIds(any(), any())).thenReturn(List.of());
+
+    SignalDetail detail = signalDetailService.getDetail(signalId, CALLER_ID);
+
+    assertThat(detail.minsuSuggestion()).isEqualTo("저장된 제안");
+    verify(minsu, never()).suggest(any());
+  }
+
   private UUID insertSignal() {
     UUID id = UUID.randomUUID();
     entityManager
@@ -166,6 +196,25 @@ class SignalDetailServiceImplTest extends AbstractPostgresIntegrationTest {
         .setParameter(4, "risk")
         .setParameter(5, "제목")
         .setParameter(6, "본문")
+        .executeUpdate();
+    entityManager.clear();
+    return id;
+  }
+
+  private UUID insertSignalWithSuggestion(String suggestion) {
+    UUID id = UUID.randomUUID();
+    entityManager
+        .getEntityManager()
+        .createNativeQuery(
+            "INSERT INTO signals (id, workspace_id, project_id, type, title, description,"
+                + " minsu_suggestion) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")
+        .setParameter(1, id)
+        .setParameter(2, WORKSPACE_ID)
+        .setParameter(3, PROJECT_ID)
+        .setParameter(4, "risk")
+        .setParameter(5, "제목")
+        .setParameter(6, "본문")
+        .setParameter(7, suggestion)
         .executeUpdate();
     entityManager.clear();
     return id;
