@@ -18,6 +18,8 @@ dependencies {
     implementation project(':workspace')
     // 상세 API의 evidence hydrate에 필요한 source_ref 조회 public API(module-map 의존 방향).
     implementation project(':source')
+    // dev convert-to-task 시 Signal evidence를 태스크 관련자료로 연결하는 public API.
+    implementation project(':context')
     // Signal action 결과(signal.converted_to_task/signal.dismissed) outbox 발행(CO-6, ADR-0008).
     implementation project(':outbox')
     // worker가 발행하는 Signal·Outbox 이벤트의 공용 protobuf 계약.
