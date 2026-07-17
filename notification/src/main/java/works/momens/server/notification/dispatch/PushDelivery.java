@@ -51,6 +51,9 @@ public class PushDelivery {
   @Column(name = "next_attempt_at", nullable = false)
   private Instant nextAttemptAt;
 
+  @Column(name = "claim_token", columnDefinition = "uuid")
+  private UUID claimToken;
+
   @Column(name = "failure_category")
   private String failureCategory;
 
@@ -69,31 +72,44 @@ public class PushDelivery {
     return attemptCount >= MAX_ATTEMPTS;
   }
 
-  /** 전송 시도를 클레임한다. 시도 횟수를 올리고 처리 lease 만료 시각을 기록한다(10.3절). */
-  void claimAttempt(Instant leaseUntil) {
+  /** 전송 시도를 클레임한다. 시도 횟수와 claim token, 처리 lease 만료 시각을 기록한다(10.3절). */
+  void claimAttempt(UUID claimToken, Instant leaseUntil) {
     this.attemptCount++;
+    this.claimToken = claimToken;
+    this.nextAttemptAt = leaseUntil;
+  }
+
+  boolean isClaimedBy(UUID claimToken) {
+    return isPending() && claimToken.equals(this.claimToken);
+  }
+
+  void renewLease(Instant leaseUntil) {
     this.nextAttemptAt = leaseUntil;
   }
 
   /** 일시 실패 결과를 기록한 시점부터 계산한 다음 재시도 시각을 반영한다. */
   void scheduleRetry(Instant nextAttemptAt) {
+    this.claimToken = null;
     this.nextAttemptAt = nextAttemptAt;
   }
 
   void markSent() {
     this.status = DeliveryStatus.SENT.value();
+    this.claimToken = null;
     this.sentAt = Instant.now();
     this.failureCategory = null;
   }
 
   void markFailed(String failureCategory) {
     this.status = DeliveryStatus.FAILED.value();
+    this.claimToken = null;
     this.failureCategory = failureCategory;
   }
 
   /** 계정 간 오발송 방지 등 전송 대상에서 제외한다(10.2절). */
   void cancel(String failureCategory) {
     this.status = DeliveryStatus.CANCELLED.value();
+    this.claimToken = null;
     this.failureCategory = failureCategory;
   }
 }

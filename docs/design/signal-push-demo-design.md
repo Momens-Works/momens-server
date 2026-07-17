@@ -398,6 +398,7 @@ watermark가 아직 commit되지 않은 앞 id를 지나쳐 그 event를 영구�
 - `attempt_count`
 - `next_attempt_at`: materialization 시각으로 초기화. 클레임 중에는 처리 lease 만료 시각, 일시 실패
   결과 기록 후에는 다음 재시도 시각
+- `claim_token`: 현재 전송 시도 소유권. 결과 기록·취소·lease 갱신은 token이 일치할 때만 반영
 - `failure_category`
 - `sent_at`, `created_at`, `updated_at`
 
@@ -414,7 +415,12 @@ delivery는 token을 복제하지 않고 installation을 참조한다. 매 전�
 - 발송기는 `status = pending`이고 `next_attempt_at`이 지난 delivery를 주기 스캔하고, `FOR UPDATE SKIP
   LOCKED`로 클레임해 여러 인스턴스가 같은 delivery를 이중 발송하지 않게 한다.
 - 클레임 트랜잭션 안에서 `attempt_count`를 올리고 DB 시계 기준 처리 lease(30초) 만료 시각을
-  `next_attempt_at`에 먼저 기록한 뒤 commit한다. FCM 호출은 DB 트랜잭션 밖에서 수행한다.
+  `next_attempt_at`에, 새 `claim_token`을 소유권으로 먼저 기록한 뒤 commit한다. FCM 호출은 DB
+  트랜잭션 밖에서 수행한다.
+- 한 번에 클레임한 delivery를 event별로 발송하기 직전, 아직 claim token을 소유한 행의 lease를 갱신한다.
+  배치 뒤쪽 event가 앞선 event 발송을 기다리다 lease를 잃으면 해당 인스턴스는 이를 발송하지 않는다.
+- 결과 기록과 취소는 현재 `claim_token`이 클레임 값과 일치할 때만 반영한다. lease 만료 후 다른
+  인스턴스가 재클레임했다면 이전 전송 결과가 최신 상태를 덮어쓰지 않는다.
 - 일시 실패 결과를 기록하면 `next_attempt_at`을 결과 기록 DB 시각부터 계산한 재시도 백오프로 교체한다.
   처리 lease와 실패 후 재시도 간격을 같은 1초 값으로 겸용하지 않는다.
 - materialization commit 직후 같은 인스턴스가 발송 패스를 즉시 실행해 지연을 줄인다. 이때도 클레임 경로를
@@ -425,7 +431,8 @@ delivery는 token을 복제하지 않고 installation을 참조한다. 매 전�
 - 최초 1회 전송 후 일시 실패는 `1초 → 5초 → 30초` 간격으로 최대 3회 재시도한다.
 - 총 시도 횟수는 최초 전송을 포함해 최대 4회다.
 - 한 기기의 실패가 다른 기기의 발송을 막지 않는다.
-- 무효·만료 token은 재시도하지 않고 installation을 비활성화한다.
+- 무효·만료 token은 재시도하지 않는다. installation은 클레임한 token이 현재 token과 일치할 때만
+  비활성화해, token refresh 후 도착한 이전 token의 실패가 새 token을 닫지 않게 한다.
 - 최종 실패는 delivery에 `failed`와 오류 분류를 남기고 별도 DLQ는 만들지 않는다.
 - FCM multicast 요청은 Admin SDK 한도에 맞춰 최대 500개 token 단위로 분할한다.
 - token, Firebase private key, notification 본문 원문을 오류 로그에 남기지 않는다.

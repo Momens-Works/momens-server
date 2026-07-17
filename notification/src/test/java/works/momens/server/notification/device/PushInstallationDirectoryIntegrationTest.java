@@ -18,7 +18,11 @@ import works.momens.server.notification.device.PushInstallationDirectory.Install
 /** delivery nested 모듈에 여는 설치 원장 계약(활성 android 조회·id 조회·무효 token 비활성화)을 실제 PostgreSQL로 검증합니다. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({JpaAuditingConfig.class, PushInstallationDirectoryImpl.class})
+@Import({
+  JpaAuditingConfig.class,
+  PushInstallationDirectoryImpl.class,
+  PushDeviceRegistrarImpl.class
+})
 class PushInstallationDirectoryIntegrationTest extends AbstractPostgresIntegrationTest {
 
   private static final UUID USER_A = UUID.randomUUID();
@@ -26,6 +30,7 @@ class PushInstallationDirectoryIntegrationTest extends AbstractPostgresIntegrati
   private static final UUID OTHER_USER = UUID.randomUUID();
 
   @Autowired private PushInstallationDirectoryImpl directory;
+  @Autowired private PushDeviceRegistrarImpl registrar;
   @Autowired private PushInstallationRepository repository;
   @Autowired private TestEntityManager entityManager;
 
@@ -55,13 +60,21 @@ class PushInstallationDirectoryIntegrationTest extends AbstractPostgresIntegrati
   }
 
   @Test
-  @DisplayName("비활성화는 설치를 발송 대상에서 제외하고 없는 id는 무시한다")
-  void deactivatesInstallation() {
-    PushInstallation installation = saveInstallation("fid-a", USER_A, "token-a", true);
+  @DisplayName("token refresh 후 도착한 이전 token 실패는 갱신된 설치를 비활성화하지 않는다")
+  void staleTokenFailureDoesNotDeactivateRefreshedInstallation() {
+    registrar.register(USER_A, "fid-a", "token-a", "android");
+    PushInstallation installation = repository.findByFirebaseInstallationId("fid-a").orElseThrow();
+    registrar.register(USER_A, "fid-a", "token-b", "android");
 
-    directory.deactivate(installation.getId());
-    directory.deactivate(UUID.randomUUID());
-    entityManager.flush();
+    directory.deactivateIfTokenMatches(installation.getId(), "token-a");
+    entityManager.clear();
+
+    PushInstallation refreshed = repository.findById(installation.getId()).orElseThrow();
+    assertThat(refreshed.getFcmRegistrationToken()).isEqualTo("token-b");
+    assertThat(refreshed.isActive()).isTrue();
+
+    directory.deactivateIfTokenMatches(installation.getId(), "token-b");
+    directory.deactivateIfTokenMatches(UUID.randomUUID(), "token-b");
     entityManager.clear();
 
     PushInstallation reloaded = repository.findById(installation.getId()).orElseThrow();

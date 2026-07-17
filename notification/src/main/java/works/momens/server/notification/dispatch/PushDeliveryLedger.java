@@ -71,14 +71,36 @@ class PushDeliveryLedger {
         delivery.cancel(CATEGORY_INSTALLATION_MISMATCH);
         continue;
       }
-      delivery.claimAttempt(leaseUntil);
+      UUID claimToken = UUID.randomUUID();
+      delivery.claimAttempt(claimToken, leaseUntil);
       claimed.add(
           new ClaimedPushDelivery(
               delivery.getOutboxEventId(),
               delivery.getInstallationId(),
-              installation.fcmRegistrationToken()));
+              installation.fcmRegistrationToken(),
+              claimToken));
     }
     return claimed;
+  }
+
+  /** event 그룹 발송 직전에 아직 소유한 claim의 처리 lease를 갱신한다. 이미 재클레임된 delivery는 결과에서 제외한다. */
+  @Transactional
+  public List<ClaimedPushDelivery> renewLease(List<ClaimedPushDelivery> claims) {
+    Instant leaseUntil = pushDeliveryRepository.currentDatabaseTime().plus(PROCESSING_LEASE);
+    List<ClaimedPushDelivery> renewed = new ArrayList<>();
+    for (ClaimedPushDelivery claim : claims) {
+      PushDelivery delivery = lock(claim);
+      if (!delivery.isClaimedBy(claim.claimToken())) {
+        log.warn(
+            "만료된 push claim lease 갱신 무시 outboxEventId={} installationId={}",
+            claim.outboxEventId(),
+            claim.installationId());
+        continue;
+      }
+      delivery.renewLease(leaseUntil);
+      renewed.add(claim);
+    }
+    return renewed;
   }
 
   /** token별 전송 결과를 기록한다. 무효 token은 재시도하지 않고 설치를 비활성화한다(10.3절). */
@@ -87,12 +109,20 @@ class PushDeliveryLedger {
     Instant recordedAt = pushDeliveryRepository.currentDatabaseTime();
     for (int i = 0; i < claims.size(); i++) {
       ClaimedPushDelivery claim = claims.get(i);
-      PushDelivery delivery = load(claim);
+      PushDelivery delivery = lock(claim);
+      if (!delivery.isClaimedBy(claim.claimToken())) {
+        log.warn(
+            "만료된 push claim 결과 무시 outboxEventId={} installationId={}",
+            claim.outboxEventId(),
+            claim.installationId());
+        continue;
+      }
       switch (results.get(i)) {
         case SENT -> delivery.markSent();
         case INVALID_TOKEN -> {
           delivery.markFailed(CATEGORY_INVALID_TOKEN);
-          pushInstallationDirectory.deactivate(claim.installationId());
+          pushInstallationDirectory.deactivateIfTokenMatches(
+              claim.installationId(), claim.fcmRegistrationToken());
         }
         case TRANSIENT_FAILURE -> {
           if (delivery.isExhausted()) {
@@ -110,12 +140,17 @@ class PushDeliveryLedger {
   /** event 본문(Signal·Project)을 더는 hydrate할 수 없는 delivery를 종결한다. */
   @Transactional
   public void cancelAll(List<ClaimedPushDelivery> claims, String failureCategory) {
-    claims.forEach(claim -> load(claim).cancel(failureCategory));
+    for (ClaimedPushDelivery claim : claims) {
+      PushDelivery delivery = lock(claim);
+      if (delivery.isClaimedBy(claim.claimToken())) {
+        delivery.cancel(failureCategory);
+      }
+    }
   }
 
-  private PushDelivery load(ClaimedPushDelivery claim) {
+  private PushDelivery lock(ClaimedPushDelivery claim) {
     return pushDeliveryRepository
-        .findById(new PushDeliveryId(claim.outboxEventId(), claim.installationId()))
+        .lockById(claim.outboxEventId(), claim.installationId())
         .orElseThrow();
   }
 

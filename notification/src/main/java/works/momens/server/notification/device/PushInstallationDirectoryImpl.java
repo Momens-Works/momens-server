@@ -39,8 +39,8 @@ class PushInstallationDirectoryImpl implements PushInstallationDirectory {
 
   @Override
   @Transactional
-  public void deactivate(UUID installationId) {
-    pushInstallationRepository.findById(installationId).ifPresent(PushInstallation::deactivate);
+  public void deactivateIfTokenMatches(UUID installationId, String claimedToken) {
+    pushInstallationRepository.deactivateIfTokenMatches(installationId, claimedToken);
   }
 
   private static InstallationSnapshot toSnapshot(PushInstallation installation) {

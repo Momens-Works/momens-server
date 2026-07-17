@@ -21,6 +21,7 @@ CREATE TABLE push_deliveries (
     status TEXT NOT NULL CHECK (status IN ('pending', 'sent', 'failed', 'cancelled')),
     attempt_count INT NOT NULL DEFAULT 0,
     next_attempt_at TIMESTAMPTZ NOT NULL,
+    claim_token UUID,
     failure_category TEXT,
     sent_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

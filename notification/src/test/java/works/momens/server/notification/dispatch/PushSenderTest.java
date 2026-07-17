@@ -59,11 +59,9 @@ class PushSenderTest {
   @Test
   @DisplayName("event 단위로 Signal·Project를 hydrate해 계약된 문구·data payload로 발송하고 결과를 기록한다")
   void sendsHydratedMessageAndRecordsResults() {
-    List<ClaimedPushDelivery> claims =
-        List.of(
-            new ClaimedPushDelivery(EVENT_ID, UUID.randomUUID(), "token-1"),
-            new ClaimedPushDelivery(EVENT_ID, UUID.randomUUID(), "token-2"));
+    List<ClaimedPushDelivery> claims = List.of(claim("token-1"), claim("token-2"));
     when(ledger.claimDue(anyInt())).thenReturn(claims).thenReturn(List.of());
+    when(ledger.renewLease(claims)).thenReturn(claims);
     stubHydration();
     when(fcmClient.send(anyList(), any()))
         .thenReturn(List.of(FcmSendResult.SENT, FcmSendResult.TRANSIENT_FAILURE));
@@ -86,8 +84,7 @@ class PushSenderTest {
   @Test
   @DisplayName("발송 시점에 event 본문을 hydrate할 수 없으면 delivery를 종결하고 FCM을 호출하지 않는다")
   void cancelsWhenEventUnavailable() {
-    List<ClaimedPushDelivery> claims =
-        List.of(new ClaimedPushDelivery(EVENT_ID, UUID.randomUUID(), "token-1"));
+    List<ClaimedPushDelivery> claims = List.of(claim("token-1"));
     when(ledger.claimDue(anyInt())).thenReturn(claims).thenReturn(List.of());
     when(outboxEventReader.findById(EVENT_ID)).thenReturn(Optional.of(signalCreatedEvent()));
     when(signalReader.findLive(SIGNAL_ID)).thenReturn(Optional.empty());
@@ -96,6 +93,20 @@ class PushSenderTest {
 
     verify(ledger).cancelAll(claims, "event_unavailable");
     verify(fcmClient, never()).send(anyList(), any());
+  }
+
+  @Test
+  @DisplayName("event 그룹이 발송 전에 lease를 잃었으면 FCM을 호출하지 않는다")
+  void skipsClaimsWhoseLeaseWasLost() {
+    List<ClaimedPushDelivery> claims = List.of(claim("token-1"));
+    when(ledger.claimDue(anyInt())).thenReturn(claims).thenReturn(List.of());
+    when(ledger.renewLease(claims)).thenReturn(List.of());
+    stubHydration();
+
+    pushSender.runSendPass();
+
+    verify(fcmClient, never()).send(anyList(), any());
+    verify(ledger, never()).record(anyList(), anyList());
   }
 
   private void stubHydration() {
@@ -114,5 +125,9 @@ class PushSenderTest {
   private static OutboxEventView signalCreatedEvent() {
     return new OutboxEventView(
         EVENT_ID, WORKSPACE_ID, "signal", SIGNAL_ID.toString(), "signal.created", Instant.now());
+  }
+
+  private static ClaimedPushDelivery claim(String token) {
+    return new ClaimedPushDelivery(EVENT_ID, UUID.randomUUID(), token, UUID.randomUUID());
   }
 }
