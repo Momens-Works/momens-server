@@ -1,7 +1,6 @@
 package works.momens.server.notification.consume;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +19,9 @@ import works.momens.server.workspace.WorkspaceMembership;
  * {@code signal.created} outbox event를 기기별 pending delivery로 materialize하는 consumer
  * 트랜잭션(docs/design/signal-push-demo-design.md 10.1절, ADR-0009).
  *
- * <p>consumer 상태 행을 잠근 채 watermark 이후이면서 안전 지연(2초)을 지난 event를 읽고, 소비 시점 workspace 전체 구성원의 활성
- * Android 설치로 pending delivery를 원자 생성한 뒤 watermark를 전진시킨다. 최초 기동 시 watermark는 현재 outbox 끝으로 시드해 배포
- * 이전의 과거 event를 소급 발송하지 않는다.
+ * <p>consumer 상태 행을 잠근 채 watermark 이후 event를 id 순서로 읽되 안전 지연(2초)을 지나지 않은 첫 event에서 멈추고, 소비 시점
+ * workspace 전체 구성원의 활성 Android 설치로 pending delivery를 원자 생성한 뒤 watermark를 전진시킨다. 최초 기동 시 watermark도
+ * 같은 안전 prefix의 끝으로 시드해 배포 이전의 과거 event를 소급 발송하지 않는다.
  *
  * <p>Signal이 이미 없거나 활성 설치가 없는 구성원은 정상적으로 건너뛰며 event 실패로 처리하지 않는다(9절). hydrate 중 오류가 나면 트랜잭션이
  * rollback되어 watermark가 전진하지 않으므로 다음 폴링이 다시 시도한다(at-least-once).
@@ -44,37 +43,30 @@ class SignalCreatedDeliveryMaterializer {
   private final SignalReader signalReader;
   private final WorkspaceAccess workspaceAccess;
 
-  /**
-   * 한 폴링 구간을 materialize한다.
-   *
-   * @return 새로 만들어졌을 수 있는 delivery가 있으면 true(발송 패스 즉시 트리거용).
-   */
+  /** 한 폴링 구간을 materialize한다. */
   @Transactional
-  public boolean materialize() {
-    Instant createdBefore = Instant.now().minus(SAFETY_LAG);
-    NotificationConsumerOffset offset = lockOrSeed(createdBefore);
+  public void materialize() {
+    NotificationConsumerOffset offset = lockOrSeed();
     List<OutboxEventView> events =
-        outboxEventReader.readAfter(offset.getLastOutboxId(), createdBefore, BATCH_SIZE);
+        outboxEventReader.readAfter(offset.getLastOutboxId(), SAFETY_LAG, BATCH_SIZE);
     if (events.isEmpty()) {
-      return false;
+      return;
     }
-    boolean materialized = false;
     for (OutboxEventView event : events) {
       if (EVENT_SIGNAL_CREATED.equals(event.eventType())) {
-        materialized |= materializeOne(event);
+        materializeOne(event);
       }
     }
     offset.advanceTo(events.getLast().id());
-    return materialized;
   }
 
-  private NotificationConsumerOffset lockOrSeed(Instant createdBefore) {
+  private NotificationConsumerOffset lockOrSeed() {
     return offsetRepository
         .lockByName(CONSUMER_NAME)
         .orElseGet(
             () -> {
               offsetRepository.seedIgnoringConflict(
-                  CONSUMER_NAME, outboxEventReader.latestIdCreatedBefore(createdBefore));
+                  CONSUMER_NAME, outboxEventReader.latestIdBefore(SAFETY_LAG));
               return offsetRepository.lockByName(CONSUMER_NAME).orElseThrow();
             });
   }
