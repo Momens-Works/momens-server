@@ -1,4 +1,4 @@
-package works.momens.server.notification.delivery;
+package works.momens.server.notification.consume;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

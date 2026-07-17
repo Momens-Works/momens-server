@@ -1,10 +1,11 @@
-package works.momens.server.notification.delivery;
+package works.momens.server.notification.consume;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import works.momens.server.notification.dispatch.PushDispatcher;
 
 /**
  * signal.created 소비·발송 스케줄링(docs/design/signal-push-demo-design.md 10.1절).
@@ -20,13 +21,13 @@ import org.springframework.stereotype.Component;
 class NotificationPushScheduler {
 
   private final SignalCreatedDeliveryMaterializer materializer;
-  private final PushSender pushSender;
+  private final PushDispatcher pushDispatcher;
 
   @Scheduled(fixedDelayString = "1s")
   void poll() {
     try {
       materializer.materialize();
-      pushSender.runSendPass();
+      pushDispatcher.runSendPass();
     } catch (RuntimeException e) {
       // watermark가 전진하지 않았으므로 다음 주기가 같은 구간을 다시 시도한다(at-least-once).
       log.error("signal push 폴링 실패", e);

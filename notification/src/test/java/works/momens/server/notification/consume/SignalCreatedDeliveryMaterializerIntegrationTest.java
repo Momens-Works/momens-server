@@ -1,4 +1,4 @@
-package works.momens.server.notification.delivery;
+package works.momens.server.notification.consume;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -6,6 +6,9 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -24,6 +27,7 @@ import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.notification.device.PushInstallationDirectory;
 import works.momens.server.notification.device.PushInstallationDirectory.InstallationSnapshot;
+import works.momens.server.notification.dispatch.PushDispatcher;
 import works.momens.server.outbox.OutboxEventReader;
 import works.momens.server.outbox.OutboxEventView;
 import works.momens.server.signal.SignalReader;
@@ -31,8 +35,9 @@ import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceMembership;
 
 /**
- * signal.created materialization의 수신자 결정, 기기별 중복 방지(복합 PK), watermark 전진·시드를 실제 PostgreSQL로 검증합니다.
- * outbox·signal·workspace public API와 device nested 모듈의 설치 원장 계약은 이 경계 밖 소유라 mock으로 둡니다.
+ * signal.created 소비의 수신자 결정(발송 위임), watermark 전진·시드를 실제 PostgreSQL(offset 원장)로 검증합니다.
+ * outbox·signal·workspace public API와 device·dispatch nested 모듈의 계약은 이 경계 밖 소유라 mock으로 둡니다. 동일
+ * event replay의 중복 발송 방지는 dispatch(enqueue 멱등)가 소유하고 그쪽 테스트가 검증합니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -49,9 +54,9 @@ class SignalCreatedDeliveryMaterializerIntegrationTest extends AbstractPostgresI
   private static final long EVENT_ID = 11L;
 
   @Autowired private SignalCreatedDeliveryMaterializer materializer;
-  @Autowired private PushDeliveryRepository deliveryRepository;
   @Autowired private NotificationConsumerOffsetRepository offsetRepository;
 
+  @MockitoBean private PushDispatcher pushDispatcher;
   @MockitoBean private PushInstallationDirectory pushInstallationDirectory;
   @MockitoBean private OutboxEventReader outboxEventReader;
   @MockitoBean private SignalReader signalReader;
@@ -65,8 +70,8 @@ class SignalCreatedDeliveryMaterializerIntegrationTest extends AbstractPostgresI
   }
 
   @Test
-  @DisplayName("workspace 구성원의 활성 android 설치별 pending delivery를 만들고 watermark를 전진시킨다")
-  void materializesDeliveriesForActiveInstallations() {
+  @DisplayName("workspace 구성원의 활성 android 설치를 발송에 위임하고 watermark를 전진시킨다")
+  void enqueuesRecipientsAndAdvancesWatermark() {
     stubSignalCreatedEvent();
     when(pushInstallationDirectory.findActiveAndroid(List.of(MEMBER_A, MEMBER_B)))
         .thenReturn(
@@ -77,31 +82,32 @@ class SignalCreatedDeliveryMaterializerIntegrationTest extends AbstractPostgresI
     boolean materialized = materializer.materialize();
 
     assertThat(materialized).isTrue();
-    List<PushDelivery> deliveries = deliveryRepository.findAll();
-    assertThat(deliveries)
-        .extracting(PushDelivery::getInstallationId)
-        .containsExactlyInAnyOrder(INSTALLATION_A, INSTALLATION_B);
-    assertThat(deliveries)
-        .allSatisfy(
-            delivery -> {
-              assertThat(delivery.isPending()).isTrue();
-              assertThat(delivery.getAttemptCount()).isZero();
-              assertThat(delivery.getOutboxEventId()).isEqualTo(EVENT_ID);
-            });
+    verify(pushDispatcher)
+        .enqueue(
+            EVENT_ID,
+            List.of(
+                new PushDispatcher.Recipient(INSTALLATION_A, MEMBER_A),
+                new PushDispatcher.Recipient(INSTALLATION_B, MEMBER_B)));
     assertThat(offsetOf()).isEqualTo(EVENT_ID);
   }
 
   @Test
-  @DisplayName("같은 event를 다시 소비해도 delivery가 중복 생성되지 않는다")
-  void replayDoesNotDuplicateDeliveries() {
+  @DisplayName("같은 event replay는 같은 수신자로 다시 위임한다(중복 방지는 dispatch 소유)")
+  void replayDelegatesSameRecipientsAgain() {
     stubSignalCreatedEvent();
     when(pushInstallationDirectory.findActiveAndroid(List.of(MEMBER_A, MEMBER_B)))
         .thenReturn(List.of(new InstallationSnapshot(INSTALLATION_A, MEMBER_A, "token-a", true)));
 
     materializer.materialize();
+    // 소비 트랜잭션이 commit 전에 종료된 상황(at-least-once replay)을 watermark 되감기로 재현한다.
+    NotificationConsumerOffset offset =
+        offsetRepository.findById(SignalCreatedDeliveryMaterializer.CONSUMER_NAME).orElseThrow();
+    offset.advanceTo(0);
+    offsetRepository.saveAndFlush(offset);
     materializer.materialize();
 
-    assertThat(deliveryRepository.count()).isEqualTo(1);
+    verify(pushDispatcher, times(2))
+        .enqueue(EVENT_ID, List.of(new PushDispatcher.Recipient(INSTALLATION_A, MEMBER_A)));
   }
 
   @Test
@@ -114,12 +120,12 @@ class SignalCreatedDeliveryMaterializerIntegrationTest extends AbstractPostgresI
     boolean materialized = materializer.materialize();
 
     assertThat(materialized).isFalse();
-    assertThat(deliveryRepository.count()).isZero();
+    verifyNoInteractions(pushDispatcher);
     assertThat(offsetOf()).isEqualTo(EVENT_ID);
   }
 
   @Test
-  @DisplayName("signal.created가 아닌 event는 delivery 없이 watermark만 전진시킨다")
+  @DisplayName("signal.created가 아닌 event는 발송 위임 없이 watermark만 전진시킨다")
   void ignoresOtherEventTypes() {
     when(outboxEventReader.readAfter(eq(0L), any(), anyInt()))
         .thenReturn(
@@ -133,7 +139,7 @@ class SignalCreatedDeliveryMaterializerIntegrationTest extends AbstractPostgresI
                     Instant.now())));
 
     assertThat(materializer.materialize()).isFalse();
-    assertThat(deliveryRepository.count()).isZero();
+    verifyNoInteractions(pushDispatcher);
     assertThat(offsetOf()).isEqualTo(EVENT_ID);
   }
 
