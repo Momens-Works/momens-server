@@ -883,6 +883,7 @@ Android 기기의 Firebase Installation ID(FID)와 FCM registration token을 등
 #### Errors
 
 - `COMMON_VALIDATION_FAILED`
+- `COMMON_CONFLICT`
 - `AUTH_UNAUTHORIZED`
 - `AUTH_INVALID_TOKEN`
 

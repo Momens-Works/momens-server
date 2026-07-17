@@ -301,6 +301,10 @@ Content-Type: application/json
 - 동일한 활성 FCM token이 다른 FID에 연결돼 있으면 이전 연결을 비활성화한다.
 - token 또는 Firebase 인증 정보를 application log에 남기지 않는다.
 
+등록·해제는 존재하지 않는 FID/token에도 동시 요청이 들어올 수 있어 row lock만으로 직렬화할 수 없다.
+PostgreSQL transaction advisory lock으로 설치 원장 등록·해제 흐름을 직렬화하고, 제약 위반이 남으면 token이
+포함될 수 있는 DB 원인 예외를 로그로 넘기지 않고 `409 COMMON_CONFLICT`로 반환한다.
+
 ### 8.3 설치 해제
 
 ```http
@@ -353,7 +357,8 @@ owner, admin, member 역할을 구분하지 않는다. Signal 생성자도 works
 
 ```text
 1초 주기 outbox polling
-  → watermark 이후이면서 안전 지연(2초)을 지난 event 조회
+  → watermark 이후 event를 id 순서로 조회
+  → 안전 지연(2초)을 지나지 않은 첫 event에서 스캔 중단(prefix-cap)
   → signal.created 필터
   → Signal·Project hydrate
   → 수신 사용자와 활성 설치 결정
@@ -366,9 +371,16 @@ api-server가 여러 인스턴스로 실행돼도 같은 outbox 구간을 동시
 잠근다. outbox row에는 처리 상태를 쓰지 않고 api-server가 자기 consumer 상태를 관리한다.
 
 outbox `id`는 BIGSERIAL이라 id 발급 순서와 commit 순서가 다를 수 있다. 나중 id의 event가 먼저 commit되면
-watermark가 아직 commit되지 않은 앞 id를 지나쳐 그 event를 영구히 건너뛴다. 이를 막기 위해 consumer는
-`created_at`이 안전 지연(2초)을 지난 event만 소비한다. 생산자 트랜잭션이 안전 지연보다 오래 열려 있는
-경우는 보장 범위 밖으로 두며, worker 전환 후에도 같은 규칙을 적용한다.
+watermark가 아직 commit되지 않은 앞 id를 지나쳐 그 event를 영구히 건너뛴다. 또한 PostgreSQL `NOW()`는
+트랜잭션 시작 시각이라 낮은 id의 짧은 트랜잭션보다 높은 id의 긴 트랜잭션이 더 오래된 `created_at`을 가질 수
+있다. 따라서 중간 event를 `created_at`으로 걸러내지 않고, watermark 이후를 id 순서로 읽다가 DB 시계
+기준 안전 지연(2초)을 지나지 않은 첫 event에서 멈춘다(prefix-cap). 최초 watermark 시드도 같은 prefix의
+끝만 사용한다.
+
+생산자 트랜잭션이 안전 지연보다 오래 열려 있으면 아직 commit되지 않은 낮은 id를 consumer가 관찰할 수
+없으므로 보장 범위 밖이다. 생산자 트랜잭션이 안전 지연 안에 종료된다는 전제에서는 낮은 id의 event가 최대
+안전 지연만큼 처리가 늦어질 수는 있어도 높은 id가 watermark를 건너뛰게 만들 수 없다. worker 전환 후에도
+같은 규칙을 적용한다.
 
 ### 10.2 최소 상태 모델
 
@@ -384,7 +396,8 @@ watermark가 아직 commit되지 않은 앞 id를 지나쳐 그 event를 영구�
 - `target_user_id`
 - `status`: `pending`, `sent`, `failed`, `cancelled`
 - `attempt_count`
-- `next_attempt_at`: materialization 시각으로 초기화
+- `next_attempt_at`: materialization 시각으로 초기화. 클레임 중에는 처리 lease 만료 시각, 일시 실패
+  결과 기록 후에는 다음 재시도 시각
 - `failure_category`
 - `sent_at`, `created_at`, `updated_at`
 
@@ -400,12 +413,14 @@ delivery는 token을 복제하지 않고 installation을 참조한다. 매 전�
 
 - 발송기는 `status = pending`이고 `next_attempt_at`이 지난 delivery를 주기 스캔하고, `FOR UPDATE SKIP
   LOCKED`로 클레임해 여러 인스턴스가 같은 delivery를 이중 발송하지 않게 한다.
-- 클레임 트랜잭션 안에서 `attempt_count`를 올리고 다음 백오프 시각을 `next_attempt_at`에 먼저 기록한 뒤
-  commit한다. FCM 호출은 DB 트랜잭션 밖에서 수행한다.
+- 클레임 트랜잭션 안에서 `attempt_count`를 올리고 DB 시계 기준 처리 lease(30초) 만료 시각을
+  `next_attempt_at`에 먼저 기록한 뒤 commit한다. FCM 호출은 DB 트랜잭션 밖에서 수행한다.
+- 일시 실패 결과를 기록하면 `next_attempt_at`을 결과 기록 DB 시각부터 계산한 재시도 백오프로 교체한다.
+  처리 lease와 실패 후 재시도 간격을 같은 1초 값으로 겸용하지 않는다.
 - materialization commit 직후 같은 인스턴스가 발송 패스를 즉시 실행해 지연을 줄인다. 이때도 클레임 경로를
   그대로 거친다.
 - 서버가 최초 발송 전에 종료돼도 `pending` 행이 남아 있으므로 다음 스캔이 자연히 회수한다. 클레임 후 전송
-  전에 종료되면 선반영된 `next_attempt_at`에 재시도되며, 이는 10.4의 at-least-once 특성 안에 있다.
+  전에 종료되면 처리 lease 만료 후 재시도되며, 이는 10.4의 at-least-once 특성 안에 있다.
 - 정상적인 최초 발송 목표는 Signal 생성 API 성공 후 2~4초다(1초 폴링 + 2초 안전 지연).
 - 최초 1회 전송 후 일시 실패는 `1초 → 5초 → 30초` 간격으로 최대 3회 재시도한다.
 - 총 시도 횟수는 최초 전송을 포함해 최대 4회다.
