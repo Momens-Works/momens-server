@@ -213,7 +213,8 @@ Signal 발생 push notification의 소비·발송과 push 설치(FID/FCM token) 
   전환해 최초 전송 포함 최대 4회 시도한다. 무효·만료 token은 재시도 없이 installation을
   비활성화한다. event 단위로 Signal·Project를 hydrate해 문구를 만들고, FCM multicast 요청은 최대
   500 token 단위로 분할한다.
-- Firebase Admin SDK adapter: Application Default Credentials로 초기화한다.
+- Firebase Admin SDK adapter: Application Default Credentials와 명시적인 FCM 대상 project ID로
+  초기화한다.
 - public API는 설치 등록·해제 하나뿐이다 — `PushDeviceRegistrar`. consumer와 발송기는 다른 모듈에
   공개할 계약이 없다.
 - 폴링과 발송은 `momens.notification.push.enabled` 프로퍼티로 게이트한다(기본 `false`, dev

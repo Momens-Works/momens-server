@@ -490,22 +490,23 @@ presentation이 소유하고 notification의 public API에 위임한다. 앱이 
 
 ## 12. Firebase와 배포 선행 작업
 
-현재 Firebase 프로젝트가 없으므로 아래 작업은 데모 구현·시연의 선행 조건이다.
+dev FCM 대상은 Android 팀이 생성한 Firebase 프로젝트 `momens-f4c02`이고, Android
+applicationId는 `com.momens.android`이다. 아래 작업은 데모 구현·시연의 선행 조건이다.
 
-1. dev 전용 Firebase 프로젝트 생성
+1. dev 전용 Firebase 프로젝트 확인
 2. Android 앱의 `applicationId` 확인
-3. 해당 applicationId로 Firebase Android 앱 등록
+3. 해당 applicationId로 Firebase Android 앱 등록 확인
 4. Android 앱에 같은 프로젝트의 `google-services.json` 적용
-5. FCM 전송 권한만 가진 서버용 서비스 계정 준비
+5. FCM 전송 권한만 가진 서버용 서비스 계정을 대상 Firebase 프로젝트 IAM에 등록
 6. `momens-k8s-dev`의 전용 Kubernetes ServiceAccount와 GKE Workload Identity로 연결
-7. api-server가 Firebase Admin SDK를 Application Default Credentials로 초기화
-
-Android applicationId는 설계 작성 시점에 확정하지 않아도 되지만 Firebase Android 앱 등록 전에는 반드시
-모바일팀에서 확인해야 한다.
+7. api-server가 Firebase Admin SDK를 Application Default Credentials와 명시적인 대상 project ID로 초기화
 
 FCM token과 `X-Dev-Token-Secret`은 서로 다른 인증 정보다. 실제 값은 저장소,
 `application.yml`, `.env.example`에 넣지 않는다. dev GKE는 조직 정책상 서비스 계정 키 생성이 금지되어
 있으므로 JSON 키나 credential Secret을 만들지 않고 Workload Identity가 ADC를 공급한다.
+ADC 서비스 계정은 `momens-dev-mvp`에 있고 FCM 대상은 `momens-f4c02`이므로, 대상 프로젝트에서
+`momens-server-fcm@momens-dev-mvp.iam.gserviceaccount.com`에
+`roles/firebasecloudmessaging.admin`을 부여한다.
 
 참고: [Firebase Admin SDK 설정](https://firebase.google.com/docs/admin/setup),
 [FCM Admin SDK 전송](https://firebase.google.com/docs/cloud-messaging/send/admin-sdk)
