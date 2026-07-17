@@ -3,14 +3,18 @@
  *
  * <p>모듈 root package는 Spring Modulith 공개 표면이다(docs/rules/architecture.md). Signal 발생 push
  * notification의 소비·발송과 push 설치(FID/FCM token) lifecycle을 이 모듈이 소유한다
- * (docs/design/signal-push-demo-design.md, ADR-0009). 엔티티·리포지토리·구현체는 {@code internal}에 은닉한다.
+ * (docs/design/signal-push-demo-design.md, ADR-0009).
  *
  * <ul>
  *   <li>설치 등록·해제 API — {@link works.momens.server.notification.PushDeviceRegistrar}. HTTP 표면({@code
  *       /api/me/push-devices/*})은 mobile 모듈이 소유하고 이 API에 위임한다.
  * </ul>
  *
- * <p>{@code signal.created} consumer(watermark 관리 포함)와 FCM 발송기는 다른 모듈에 공개할 계약이 없어 {@code
- * internal}에만 있다. outbox 조회, Signal·Project hydrate, 수신자 결정은 각 모듈의 public API를 사용한다(11.1절 의존 방향).
+ * <p>내부는 변경 이유가 다른 세 하위 도메인을 Spring Modulith nested 모듈로 분리한다. {@code device}(설치 원장, aggregate
+ * {@code PushInstallation}), {@code delivery}(소비·발송 원장, aggregate {@code PushDelivery}·{@code
+ * NotificationConsumerOffset}), {@code fcm}(외부 Firebase adapter). nested 간 협력은 {@code delivery →
+ * device}({@code PushInstallationDirectory}), {@code delivery → fcm}({@code FcmClient}) 단방향 계약으로만
+ * 한다. consumer와 발송기는 다른 모듈에 공개할 계약이 없고, outbox 조회·Signal·Project hydrate·수신자 결정은 각 모듈의 public API를
+ * 사용한다(11.1절 의존 방향).
  */
 package works.momens.server.notification;
