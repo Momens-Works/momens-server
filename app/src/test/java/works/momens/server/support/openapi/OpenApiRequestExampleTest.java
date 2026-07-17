@@ -55,6 +55,46 @@ class OpenApiRequestExampleTest extends AbstractPostgresIntegrationTest {
     assertThat(apiVersion.path("schema").path("type").asString()).isEqualTo("string");
   }
 
+  /**
+   * Dev Signal 생성 엔드포인트는 Swagger의 request body에 예시를 제공해 Try it out만으로 바로 호출할 수 있도록 한다.
+   *
+   * <p>예시가 누락되거나 필드 계약과 달라지면 데모와 수동 테스트를 진행하기 어렵다. 따라서 api-docs에 예시가 포함되는지와 각 필드에 의도한 예시 값이 노출되는지를
+   * 확인한다.
+   */
+  @Test
+  void devSignalCreateCarriesRequestExample() throws Exception {
+    String body =
+        mockMvc
+            .perform(get("/v3/api-docs"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode examples =
+        mapper
+            .readTree(body)
+            .path("paths")
+            .path("/api/dev/projects/{projectId}/signals")
+            .path("post")
+            .path("requestBody")
+            .path("content")
+            .path("application/json")
+            .path("examples");
+
+    assertThat(examples.isMissingNode()).as("dev signal 생성은 request 예시를 문서화해야 한다").isFalse();
+
+    // springdoc는 example value를 JSON으로 파싱한 뒤 다시 직렬화한다.
+    // 문자열 형태는 달라질 수 있으므로 JSON 전체가 아니라 각 필드의 값을 검증한다.
+    JsonNode value = examples.properties().iterator().next().getValue().path("value");
+    JsonNode json = value.isObject() ? value : mapper.readTree(value.asString());
+    assertThat(json.path("type").asString()).isEqualTo("change");
+    assertThat(json.path("title").asString()).contains("할인 쿠폰 적용 실패 문의");
+    assertThat(json.has("minsu_suggestion")).as("snake_case 필드명이 그대로 나와야 한다").isTrue();
+    assertThat(json.path("evidence").size()).as("evidence 3건이 그대로 실려야 한다").isEqualTo(3);
+  }
+
   private JsonNode findParameter(JsonNode operation, String name) {
     for (JsonNode parameter : operation.path("parameters")) {
       if (name.equals(parameter.path("name").asString())) {
