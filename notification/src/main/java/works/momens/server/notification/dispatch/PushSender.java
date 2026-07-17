@@ -61,13 +61,18 @@ class PushSender {
       pushDeliveryLedger.cancelAll(claims, CATEGORY_EVENT_UNAVAILABLE);
       return;
     }
-    List<String> tokens = claims.stream().map(ClaimedPushDelivery::fcmRegistrationToken).toList();
+    List<ClaimedPushDelivery> renewedClaims = pushDeliveryLedger.renewLease(claims);
+    if (renewedClaims.isEmpty()) {
+      return;
+    }
+    List<String> tokens =
+        renewedClaims.stream().map(ClaimedPushDelivery::fcmRegistrationToken).toList();
     List<FcmClient.FcmSendResult> results = fcmClient.send(tokens, message.get());
-    pushDeliveryLedger.record(claims, results);
+    pushDeliveryLedger.record(renewedClaims, results);
     log.info(
         "signal push 발송 시도 outboxEventId={} devices={} sent={}",
         outboxEventId,
-        claims.size(),
+        renewedClaims.size(),
         results.stream().filter(FcmClient.FcmSendResult.SENT::equals).count());
   }
 

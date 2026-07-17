@@ -2,6 +2,7 @@ package works.momens.server.notification.dispatch;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -43,4 +44,12 @@ interface PushDeliveryRepository extends JpaRepository<PushDelivery, PushDeliver
               + "ORDER BY next_attempt_at ASC LIMIT :limit FOR UPDATE SKIP LOCKED",
       nativeQuery = true)
   List<PushDelivery> lockDue(@Param("limit") int limit);
+
+  @Query(
+      value =
+          "SELECT * FROM push_deliveries WHERE outbox_event_id = :outboxEventId "
+              + "AND installation_id = :installationId FOR UPDATE",
+      nativeQuery = true)
+  Optional<PushDelivery> lockById(
+      @Param("outboxEventId") long outboxEventId, @Param("installationId") UUID installationId);
 }

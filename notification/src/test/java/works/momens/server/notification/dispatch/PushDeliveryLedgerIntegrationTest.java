@@ -2,6 +2,7 @@ package works.momens.server.notification.dispatch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -18,6 +19,10 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.notification.device.PushInstallationDirectory;
@@ -41,6 +46,7 @@ class PushDeliveryLedgerIntegrationTest extends AbstractPostgresIntegrationTest 
   @Autowired private PushDeliveryLedger ledger;
   @Autowired private PushDeliveryRepository deliveryRepository;
   @Autowired private EntityManager entityManager;
+  @Autowired private PlatformTransactionManager transactionManager;
 
   @MockitoBean private PushInstallationDirectory pushInstallationDirectory;
 
@@ -60,10 +66,12 @@ class PushDeliveryLedgerIntegrationTest extends AbstractPostgresIntegrationTest 
 
     assertThat(claims).hasSize(1);
     assertThat(claims.getFirst().fcmRegistrationToken()).isEqualTo("token-1");
+    assertThat(claims.getFirst().claimToken()).isNotNull();
     PushDelivery delivery = reload();
     assertThat(delivery.getAttemptCount()).isEqualTo(1);
     assertThat(delivery.isPending()).isTrue();
     assertThat(delivery.getNextAttemptAt()).isEqualTo(databaseNow.plus(Duration.ofSeconds(30)));
+    assertThat(delivery.getClaimToken()).isEqualTo(claims.getFirst().claimToken());
     // 처리 lease가 선반영돼 즉시 재클레임되지 않는다.
     assertThat(ledger.claimDue(10)).isEmpty();
   }
@@ -121,7 +129,59 @@ class PushDeliveryLedgerIntegrationTest extends AbstractPostgresIntegrationTest 
     PushDelivery delivery = reload();
     assertThat(delivery.getStatus()).isEqualTo("failed");
     assertThat(delivery.getFailureCategory()).isEqualTo(PushDeliveryLedger.CATEGORY_INVALID_TOKEN);
-    verify(pushInstallationDirectory).deactivate(INSTALLATION_ID);
+    verify(pushInstallationDirectory).deactivateIfTokenMatches(INSTALLATION_ID, "token-1");
+  }
+
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  @DisplayName("lease 만료 후 재클레임되면 이전 claim의 결과를 무시한다")
+  void staleClaimCannotOverwriteNewClaim() {
+    try {
+      inTransaction(this::materializePending);
+      List<ClaimedPushDelivery> staleClaims = ledger.claimDue(10);
+      inTransaction(this::backdateNextAttempt);
+      List<ClaimedPushDelivery> currentClaims = ledger.claimDue(10);
+
+      assertThat(currentClaims).hasSize(1);
+      assertThat(currentClaims.getFirst().claimToken())
+          .isNotEqualTo(staleClaims.getFirst().claimToken());
+
+      ledger.record(staleClaims, List.of(FcmSendResult.INVALID_TOKEN));
+
+      PushDelivery afterStaleResult =
+          deliveryRepository.findById(new PushDeliveryId(EVENT_ID, INSTALLATION_ID)).orElseThrow();
+      assertThat(afterStaleResult.isPending()).isTrue();
+      assertThat(afterStaleResult.getAttemptCount()).isEqualTo(2);
+      assertThat(afterStaleResult.getClaimToken()).isEqualTo(currentClaims.getFirst().claimToken());
+      verify(pushInstallationDirectory, never())
+          .deactivateIfTokenMatches(INSTALLATION_ID, "token-1");
+
+      ledger.record(currentClaims, List.of(FcmSendResult.SENT));
+      assertThat(
+              deliveryRepository
+                  .findById(new PushDeliveryId(EVENT_ID, INSTALLATION_ID))
+                  .orElseThrow()
+                  .getStatus())
+          .isEqualTo("sent");
+    } finally {
+      inTransaction(
+          () -> deliveryRepository.deleteById(new PushDeliveryId(EVENT_ID, INSTALLATION_ID)));
+    }
+  }
+
+  @Test
+  @DisplayName("event 그룹 발송 직전 lease를 갱신하면 즉시 재클레임되지 않는다")
+  void renewsLeaseBeforeSendingEventGroup() {
+    materializePending();
+    List<ClaimedPushDelivery> claims = ledger.claimDue(10);
+    backdateNextAttempt();
+    Instant databaseNow = deliveryRepository.currentDatabaseTime();
+
+    assertThat(ledger.renewLease(claims)).containsExactlyElementsOf(claims);
+
+    PushDelivery delivery = reload();
+    assertThat(delivery.getNextAttemptAt()).isEqualTo(databaseNow.plus(Duration.ofSeconds(30)));
+    assertThat(ledger.claimDue(10)).isEmpty();
   }
 
   @Test
@@ -194,5 +254,10 @@ class PushDeliveryLedgerIntegrationTest extends AbstractPostgresIntegrationTest 
     entityManager.flush();
     entityManager.clear();
     return deliveryRepository.findById(new PushDeliveryId(EVENT_ID, INSTALLATION_ID)).orElseThrow();
+  }
+
+  private void inTransaction(Runnable action) {
+    new TransactionTemplate(transactionManager)
+        .executeWithoutResult(transactionStatus -> action.run());
   }
 }

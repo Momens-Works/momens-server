@@ -19,8 +19,11 @@ public interface PushInstallationDirectory {
   /** 설치 id로 현재 상태를 조회한다(전송 직전 활성·소유 사용자 재확인, 설계 10.2절). 없는 id는 결과에서 빠진다. */
   List<InstallationSnapshot> findByIds(Collection<UUID> installationIds);
 
-  /** 무효·만료 token의 설치를 발송 대상에서 제외한다(설계 10.3절). 이미 비활성이면 아무것도 바꾸지 않는다. */
-  void deactivate(UUID installationId);
+  /**
+   * 클레임한 token이 아직 현재 token일 때만 무효·만료 설치를 발송 대상에서 제외한다(설계 10.3절). token refresh가 먼저 반영됐거나 이미 비활성이면
+   * 아무것도 바꾸지 않는다.
+   */
+  void deactivateIfTokenMatches(UUID installationId, String claimedToken);
 
   /** 발송이 필요로 하는 설치 최소 스냅샷. */
   record InstallationSnapshot(UUID id, UUID userId, String fcmRegistrationToken, boolean active) {}
