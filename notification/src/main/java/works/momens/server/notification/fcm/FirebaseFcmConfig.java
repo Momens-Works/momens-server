@@ -12,9 +12,8 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Firebase Admin SDK 초기화(docs/design/signal-push-demo-design.md 12절).
  *
- * <p>인증 정보는 Application Default Credentials로 읽는다. dev 배포는 서비스 계정 JSON을 Kubernetes Secret으로 파일 마운트하고
- * {@code GOOGLE_APPLICATION_CREDENTIALS}에 경로를 지정한다. 배포 환경이 Workload Identity를 제공하게 되면 초기화 코드는 유지한 채
- * 인증 정보 공급 방식만 교체한다.
+ * <p>인증 정보는 Application Default Credentials로 읽는다. dev 배포는 GKE Workload Identity로 전용 서비스 계정을 연결하며
+ * 서비스 계정 JSON이나 credential Secret을 사용하지 않는다.
  */
 @Configuration
 @ConditionalOnProperty(name = "momens.notification.push.enabled", havingValue = "true")

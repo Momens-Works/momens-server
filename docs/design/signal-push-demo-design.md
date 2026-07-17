@@ -496,18 +496,16 @@ presentation이 소유하고 notification의 public API에 위임한다. 앱이 
 2. Android 앱의 `applicationId` 확인
 3. 해당 applicationId로 Firebase Android 앱 등록
 4. Android 앱에 같은 프로젝트의 `google-services.json` 적용
-5. FCM 전송 권한을 가진 서버용 서비스 계정 인증 정보 준비
-6. 인증 정보를 `momens-k8s-dev` Kubernetes Secret으로 파일 마운트
-7. `GOOGLE_APPLICATION_CREDENTIALS`에 마운트된 JSON 파일 경로 지정
-8. api-server가 Firebase Admin SDK를 Application Default Credentials로 초기화
+5. FCM 전송 권한만 가진 서버용 서비스 계정 준비
+6. `momens-k8s-dev`의 전용 Kubernetes ServiceAccount와 GKE Workload Identity로 연결
+7. api-server가 Firebase Admin SDK를 Application Default Credentials로 초기화
 
 Android applicationId는 설계 작성 시점에 확정하지 않아도 되지만 Firebase Android 앱 등록 전에는 반드시
 모바일팀에서 확인해야 한다.
 
-서비스 계정 JSON, FCM token, `X-Dev-Token-Secret`은 서로 다른 인증 정보다. 실제 값은 저장소,
-`application.yml`, `.env.example`에 넣지 않는다. dev에서는 Kubernetes Secret 또는 External Secrets로
-주입한다. 배포 환경이 장기적으로 Workload Identity를 제공하면 ADC 초기화 코드는 유지한 채 인증 정보 공급
-방식만 교체할 수 있다.
+FCM token과 `X-Dev-Token-Secret`은 서로 다른 인증 정보다. 실제 값은 저장소,
+`application.yml`, `.env.example`에 넣지 않는다. dev GKE는 조직 정책상 서비스 계정 키 생성이 금지되어
+있으므로 JSON 키나 credential Secret을 만들지 않고 Workload Identity가 ADC를 공급한다.
 
 참고: [Firebase Admin SDK 설정](https://firebase.google.com/docs/admin/setup),
 [FCM Admin SDK 전송](https://firebase.google.com/docs/cloud-messaging/send/admin-sdk)
