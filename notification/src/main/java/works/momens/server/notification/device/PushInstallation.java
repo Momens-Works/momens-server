@@ -60,12 +60,17 @@ class PushInstallation extends BaseEntity {
     this.deactivatedAt = null;
   }
 
-  /** 발송 대상에서 제외한다(로그아웃 해제·token 이동·무효 token). 이미 비활성이면 최초 비활성화 시각을 유지한다. */
-  void deactivate() {
+  /**
+   * 발송 대상에서 제외한다(로그아웃 해제·token 이동·무효 token). 이미 비활성이면 최초 비활성화 시각을 유지한다.
+   *
+   * @return 이번 호출에서 활성 설치를 비활성화했으면 true.
+   */
+  boolean deactivate() {
     if (!active) {
-      return;
+      return false;
     }
     this.active = false;
     this.deactivatedAt = Instant.now();
+    return true;
   }
 }

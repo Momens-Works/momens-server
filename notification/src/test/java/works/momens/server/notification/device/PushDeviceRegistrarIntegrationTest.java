@@ -4,6 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +17,8 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
@@ -100,6 +107,46 @@ class PushDeviceRegistrarIntegrationTest extends AbstractPostgresIntegrationTest
   }
 
   @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  @DisplayName("같은 token을 서로 다른 FID가 동시에 등록해도 한 활성 설치로 직렬화한다")
+  void concurrentRegistrationSerializesActiveTokenTransfer() throws Exception {
+    String token = "concurrent-token-" + UUID.randomUUID();
+    String firstFid = "concurrent-fid-a-" + UUID.randomUUID();
+    String secondFid = "concurrent-fid-b-" + UUID.randomUUID();
+    CountDownLatch ready = new CountDownLatch(2);
+    CountDownLatch start = new CountDownLatch(1);
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      Future<?> first =
+          executor.submit(
+              () -> {
+                awaitStart(ready, start);
+                registrar.register(USER_ID, firstFid, token, ANDROID);
+              });
+      Future<?> second =
+          executor.submit(
+              () -> {
+                awaitStart(ready, start);
+                registrar.register(OTHER_USER_ID, secondFid, token, ANDROID);
+              });
+
+      assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+      start.countDown();
+      first.get(10, TimeUnit.SECONDS);
+      second.get(10, TimeUnit.SECONDS);
+
+      assertThat(repository.findByFcmRegistrationTokenAndActiveTrue(token)).hasSize(1);
+      assertThat(repository.findByFirebaseInstallationId(firstFid)).isPresent();
+      assertThat(repository.findByFirebaseInstallationId(secondFid)).isPresent();
+    } finally {
+      repository.findByFirebaseInstallationId(firstFid).ifPresent(repository::delete);
+      repository.findByFirebaseInstallationId(secondFid).ifPresent(repository::delete);
+      repository.flush();
+      executor.shutdownNow();
+    }
+  }
+
+  @Test
   @DisplayName("platform이 android가 아니면 검증 실패로 거부한다")
   void registerRejectsNonAndroidPlatform() {
     assertThatThrownBy(() -> registrar.register(USER_ID, FID, TOKEN, "ios"))
@@ -164,5 +211,17 @@ class PushDeviceRegistrarIntegrationTest extends AbstractPostgresIntegrationTest
                         .platform(ANDROID)
                         .build()))
         .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  private static void awaitStart(CountDownLatch ready, CountDownLatch start) {
+    ready.countDown();
+    try {
+      if (!start.await(5, TimeUnit.SECONDS)) {
+        throw new IllegalStateException("동시 등록 시작 대기 시간 초과");
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("동시 등록 대기 중 중단", e);
+    }
   }
 }
