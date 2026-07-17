@@ -255,7 +255,7 @@ dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패
   경계를 어떤 타임존으로 볼지(Asia/Seoul 고정)는 `BriefDay`가 소유하고, 시각은 `mobileClock`
   으로 주입한다. 시그널 요약 필터 칩(당일 시그널의 type으로 데이터 기반 구성, 라벨은 type의 첫 글자만
   대문자로 바꾸고, All을 맨 앞에 둔 뒤 라벨 글자수와 알파벳순 정렬), 페이지
-  기본 크기 3, 현재 우선순위 구성(진행 중인 todo와 in_progress만 후보, priority 높은 순과 생성
+  기본 크기 20, 현재 우선순위 구성(진행 중인 todo와 in_progress만 후보, priority 높은 순과 생성
   오래된 순 정렬, 상위 4개)은 조합 규칙이라 `SignalTypeLabel`과 `MobilePriority`, 조합 서비스가
   소유한다(MOM-67).
 - `GET /api/mobile/tasks/{taskId}`: project의 태스크 상세(`TaskReader.findDetail`)와 workspace
