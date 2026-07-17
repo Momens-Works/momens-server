@@ -158,9 +158,10 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   이렇게 하면 상태가 추가되더라도 별도 수정 없이 계산 대상에 포함된다.
 - 보드의 그룹, 노출 순서, 라벨은 화면 정책이므로 계속 mobile의 `BoardStatus`에서 관리한다. `BoardStatus`와
   수정 요청 검증(`@Pattern`)을 `TaskStatus`를 기준으로 생성하도록 개선하는 작업은 후속으로 진행한다.
-- 진행률은 별도 집계 쿼리를 사용하지 않는다. `TaskReader.listTasksByStatus`가 반환한 같은 조회 결과를
-  기준으로 전체 태스크 수와 `done` 태스크 수를 계산해 목록과 진행률이 서로 어긋나지 않도록 했다
-  (MOM-0779의 `material_count`와 같은 이유).
+- 진행률은 `TaskReader.countByStatus` 한 번의 조회로 전체 태스크 수와 `done` 태스크 수를 함께 계산한다. 목록
+  조회와 동일한 조건(projectId, status, 소프트 삭제 제외)을 한 쿼리에 고정해 목록과 진행률이 항상 같은 기준을
+  쓰게 하고, 개수만 필요하므로 본문과 정렬은 읽지 않는다. 두 값을 각각 조회하면 기준이 갈릴 수 있다
+  (MOM-0779의 `material_count`와 같은 유형).
 - 태스크 도메인은 MOM-62에서 시작했다. `tasks` 테이블은 레거시와 호환되는 범위(모바일 보드와
   생성이 쓰는 컬럼)로 시작했고, 상세(MOM-63)가 읽는 레거시 컬럼(description, assignee_id)을
   더했다. 모바일이 안 쓰는 레거시 컬럼(milestone_id, due_date)은 웹 이관에서 추가한다. role은
@@ -171,7 +172,7 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   (`task_open_questions`)과 다음행동(`tasks.next_action`)도 이 모듈이 소유하지만, 완료기준과 달리
   이 서버에 쓰기 경로가 없어 읽기 전용으로 매핑한다(MOM-0788). 민수 구현 전에는 같은 backing
   계약을 따르는 fixture가 채운다(ADR-0011). 조회 public API는
-  `TaskReader`(listTasksByStatus, findDetail)와 `BoardTask`, `TaskDetail`이고, 어떤 상태를
+  `TaskReader`(listTasksByStatus, countByStatus, findDetail)와 `BoardTask`, `TaskDetail`이고, 어떤 상태를
   보일지와 표기 매핑은 표면이 정한다. `BoardTask`는 표면이 생성 시각 기준으로 다시 정렬할 수
   있게 createdAt을 포함한다(MOM-67). 생성 public API는 `TaskCreator`(create)이고, 생성 시
   workspace의 `LabelAllocator`로 MOM 라벨을 발급한다.
