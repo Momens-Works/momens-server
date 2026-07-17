@@ -186,9 +186,10 @@ append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
   `{workspace_id, aggregate_type, aggregate_id, event_type, payload}`를 append한다. 멱등키
   (`"{event_type}:{aggregate_id}"`)는 이 모듈이 결정적으로 조립하고, `idempotency_key UNIQUE` +
   `ON CONFLICT DO NOTHING`으로 dedup한다(SD-3).
-- 조회 public API `OutboxEventReader`(`readAfter`, `latestIdCreatedBefore`, `findById`)와
-  `OutboxEventView`(docs/design/signal-push-demo-design.md 10절). watermark 이후 + 안전 지연을 지난
-  event를 id 오름차순으로 읽는다. watermark 등 소비 상태 관리는 이 모듈이 아니라 consumer가 소유한다.
+- 조회 public API `OutboxEventReader`(`readAfter`, `latestIdBefore`, `findById`)와
+  `OutboxEventView`(docs/design/signal-push-demo-design.md 10절). watermark 이후 event를 id
+  오름차순으로 읽되 DB 시계 기준 안전 지연을 지나지 않은 첫 event에서 멈춘다(prefix-cap).
+  watermark 등 소비 상태 관리는 이 모듈이 아니라 consumer가 소유한다.
 - `issued_by`는 이 서버가 발행하는 이벤트만 다루므로 `api-server`로 고정한다. worker가 발행하는
   `signal.created`는 worker 쪽 책임이라 이 모듈이 쓰지 않는다.
 - 다른 도메인 모듈을 참조하지 않는다. `signal`과 `project`가 쓰기 public API를, `notification`이
@@ -204,10 +205,12 @@ Signal 발생 push notification의 소비·발송과 push 설치(FID/FCM token) 
 
 - `push_installations`, `push_deliveries`, `notification_consumer_offsets` 테이블과 Flyway
   마이그레이션을 소유한다.
-- `signal.created` outbox consumer: watermark를 관리하며 1초 주기로 폴링하고, 안전 지연(2초)을 지난
-  event만 소비한다. 최초 기동 시 watermark를 현재 outbox 끝으로 시드한다.
-- FCM 발송기: `FOR UPDATE SKIP LOCKED`로 delivery를 클레임하고, 일시 실패는 `1초 → 5초 → 30초`
-  백오프로 최초 전송 포함 최대 4회 시도한다. 무효·만료 token은 재시도 없이 installation을
+- `signal.created` outbox consumer: watermark를 관리하며 1초 주기로 폴링하고, id 순서로 읽다가 DB
+  시계 기준 안전 지연(2초)을 지나지 않은 첫 event에서 멈춘다(prefix-cap). 최초 기동 시 watermark도
+  같은 안전 prefix의 끝으로 시드한다.
+- FCM 발송기: `FOR UPDATE SKIP LOCKED`로 delivery를 클레임하고 DB 시계 기준 30초 처리 lease로
+  다중 인스턴스의 동시 재클레임을 막는다. 일시 실패 결과를 기록하면 `1초 → 5초 → 30초` 백오프로
+  전환해 최초 전송 포함 최대 4회 시도한다. 무효·만료 token은 재시도 없이 installation을
   비활성화한다. event 단위로 Signal·Project를 hydrate해 문구를 만들고, FCM multicast 요청은 최대
   500 token 단위로 분할한다.
 - Firebase Admin SDK adapter: Application Default Credentials로 초기화한다.
