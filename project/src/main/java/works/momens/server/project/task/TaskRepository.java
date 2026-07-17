@@ -22,4 +22,21 @@ interface TaskRepository extends JpaRepository<Task, UUID> {
    */
   List<Task> findByProjectIdAndStatusInAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(
       UUID projectId, Collection<String> statuses);
+
+  /**
+   * 진행률 계산용 조회. 주어진 상태의 소프트 삭제되지 않은 태스크 수를 상태별로 조회합니다.
+   *
+   * <p>보드 조회와 동일한 조건(projectId, status, 소프트 삭제 제외)을 사용합니다. 전체 태스크 수와 done 태스크 수를 같은 조회 결과를 기준으로 계산해
+   * 목록과 진행률이 항상 같은 기준을 사용하도록 합니다. 진행률 계산에는 개수만 필요하므로 본문과 정렬은 조회하지 않습니다.
+   */
+  @Query(
+      """
+      select new works.momens.server.project.task.StatusCount(t.status, count(t))
+      from Task t
+      where t.projectId = :projectId
+        and t.status in :statuses
+        and t.deletedAt is null
+      group by t.status
+      """)
+  List<StatusCount> countByStatus(UUID projectId, Collection<String> statuses);
 }

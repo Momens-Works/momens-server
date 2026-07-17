@@ -7,20 +7,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import java.time.Instant;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
-import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import works.momens.server.project.BoardTask;
 import works.momens.server.project.TaskReader;
 import works.momens.server.project.TaskStatus;
 
@@ -43,22 +41,22 @@ class ProjectReaderImplTest {
   @Test
   void progressOfCountsDoneAgainstEveryStatusExceptCancelled() {
     liveProject();
-    when(taskReader.listTasksByStatus(eq(PROJECT_ID), any())).thenReturn(List.of());
+    when(taskReader.countByStatus(eq(PROJECT_ID), any())).thenReturn(Map.of());
 
     projectReader.progressOf(PROJECT_ID);
 
-    // cancelled를 목록에 넣지 않아서 분모에서 빠진다. 이 단언이 그 설계 의도를 고정한다.
+    // cancelled를 조회 대상에 넣지 않아서 분모에서 빠진다. 이 단언이 그 설계 의도를 고정한다.
     // 상태가 추가되면 PROGRESS_STATUSES도 함께 변경되어 이 테스트가 실패한다.
     // 새 상태가 계산 대상에서 빠지는 것을 바로 확인할 수 있으므로,
     // 분모에 포함할지 결정한 뒤 기대값을 수정한다.
     ArgumentCaptor<List<String>> statuses = ArgumentCaptor.captor();
-    verify(taskReader).listTasksByStatus(eq(PROJECT_ID), statuses.capture());
+    verify(taskReader).countByStatus(eq(PROJECT_ID), statuses.capture());
     assertThat(statuses.getValue()).containsExactly("backlog", "todo", "in_progress", "done");
     assertThat(statuses.getValue()).doesNotContain(TaskStatus.CANCELLED.value());
   }
 
   @Test
-  void progressOfReturnsDoneRatioOfTheSameList() {
+  void progressOfReturnsDoneRatioOfCountedStatuses() {
     liveProject();
     stubTasks(2, 81);
 
@@ -85,7 +83,7 @@ class ProjectReaderImplTest {
   @Test
   void progressOfIsZeroForProjectWithoutTasks() {
     liveProject();
-    when(taskReader.listTasksByStatus(eq(PROJECT_ID), any())).thenReturn(List.of());
+    when(taskReader.countByStatus(eq(PROJECT_ID), any())).thenReturn(Map.of());
 
     assertThat(projectReader.progressOf(PROJECT_ID)).hasValue(0);
   }
@@ -104,13 +102,14 @@ class ProjectReaderImplTest {
   }
 
   private void stubTasks(int done, int notDone) {
-    List<BoardTask> tasks = new ArrayList<>();
-    IntStream.range(0, done).forEach(index -> tasks.add(task("done")));
-    IntStream.range(0, notDone).forEach(index -> tasks.add(task("todo")));
-    when(taskReader.listTasksByStatus(eq(PROJECT_ID), any())).thenReturn(tasks);
-  }
-
-  private static BoardTask task(String status) {
-    return new BoardTask(UUID.randomUUID(), "제목", status, "medium", "backend", Instant.now());
+    // 개수가 0인 상태는 집계 결과에 없다. countByStatus 계약과 같게 만든다.
+    Map<String, Long> counts = new HashMap<>();
+    if (done > 0) {
+      counts.put(TaskStatus.DONE.value(), (long) done);
+    }
+    if (notDone > 0) {
+      counts.put(TaskStatus.TODO.value(), (long) notDone);
+    }
+    when(taskReader.countByStatus(eq(PROJECT_ID), any())).thenReturn(counts);
   }
 }
