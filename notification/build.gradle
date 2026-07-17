@@ -21,7 +21,7 @@ dependencies {
     implementation project(':workspace')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    // FCM 발송(Boot BOM 비관리, 명시적 버전). 인증은 ADC(GOOGLE_APPLICATION_CREDENTIALS)를 씁니다(12절).
+    // FCM 발송(Boot BOM 비관리, 명시적 버전). 인증은 ADC를 씁니다(12절).
     implementation 'com.google.firebase:firebase-admin:9.10.0'
 
     compileOnly 'org.projectlombok:lombok'
