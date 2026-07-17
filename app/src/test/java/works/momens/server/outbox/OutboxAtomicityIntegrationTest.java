@@ -12,10 +12,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import works.momens.server.auth.AccessTokenTestFactory;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.support.StubMinsuConfig;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 
@@ -26,6 +28,7 @@ import works.momens.server.user.UserService;
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(StubMinsuConfig.class)
 class OutboxAtomicityIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Autowired private MockMvc mockMvc;
