@@ -1,6 +1,7 @@
 package works.momens.server.source.internal;
 
-import java.sql.Timestamp;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -43,7 +44,11 @@ class DevSourceRefWriterImpl implements DevSourceRefWriter {
     return id;
   }
 
-  private static Timestamp timestampOf(NewSourceRef sourceRef) {
-    return sourceRef.sourceCreatedAt() == null ? null : Timestamp.from(sourceRef.sourceCreatedAt());
+  // timestamptz 컬럼에 오프셋 없는 java.sql.Timestamp를 바인딩하면 드라이버가 JVM 기본 타임존으로 해석해
+  // 값이 밀릴 수 있다. UTC OffsetDateTime으로 바인딩해 원천 발생 순간(Instant)을 그대로 보존한다.
+  private static OffsetDateTime timestampOf(NewSourceRef sourceRef) {
+    return sourceRef.sourceCreatedAt() == null
+        ? null
+        : sourceRef.sourceCreatedAt().atOffset(ZoneOffset.UTC);
   }
 }
