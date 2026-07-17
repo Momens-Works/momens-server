@@ -2,8 +2,10 @@ package works.momens.server.project.task;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,13 @@ class TaskReaderImpl implements TaskReader {
         .stream()
         .map(TaskReaderImpl::toBoardTask)
         .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Map<String, Long> countByStatus(UUID projectId, Collection<String> statuses) {
+    return taskRepository.countByStatus(projectId, statuses).stream()
+        .collect(Collectors.toMap(StatusCount::status, StatusCount::count));
   }
 
   @Override
