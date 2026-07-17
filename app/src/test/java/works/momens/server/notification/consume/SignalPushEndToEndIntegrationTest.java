@@ -47,6 +47,7 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
   @Autowired private UserService userService;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private SignalCreatedDeliveryMaterializer materializer;
+  @Autowired private NotificationConsumerOffsetRepository offsetRepository;
   @Autowired private PushDispatcher pushDispatcher;
   @Autowired private RecordingFcmClient recordingFcmClient;
 
@@ -56,23 +57,25 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
     // 배포 시점처럼 watermark를 현재 outbox 끝으로 먼저 시드한다.
     materializer.materialize();
 
-    UserProfile gyuil = userService.findOrCreate("push-e2e-owner@momens.works", "홍길동", null);
-    UserProfile jinsu = userService.findOrCreate("push-e2e-member@momens.works", "신진수", null);
-    UserProfile noDevice = userService.findOrCreate("push-e2e-nodevice@momens.works", "임꺽정", null);
+    UserProfile owner = userService.findOrCreate("push-e2e-owner@momens.works", "홍길동", null);
+    UserProfile memberWithDevice =
+        userService.findOrCreate("push-e2e-member@momens.works", "김철수", null);
+    UserProfile memberWithoutDevice =
+        userService.findOrCreate("push-e2e-nodevice@momens.works", "이영희", null);
     UUID workspace = insertWorkspace("push-e2e");
-    addMember(workspace, gyuil.id(), "owner");
-    addMember(workspace, jinsu.id(), "member");
-    addMember(workspace, noDevice.id(), "member");
-    UUID project = insertProject(workspace, gyuil.id(), "Q2 Activation Readiness");
+    addMember(workspace, owner.id(), "owner");
+    addMember(workspace, memberWithDevice.id(), "member");
+    addMember(workspace, memberWithoutDevice.id(), "member");
+    UUID project = insertProject(workspace, owner.id(), "Q2 Activation Readiness");
 
-    registerDevice(gyuil.id(), "fid-gyuil", "token-gyuil");
-    registerDevice(jinsu.id(), "fid-jinsu", "token-jinsu");
+    registerDevice(owner.id(), "fid-owner", "token-owner");
+    registerDevice(memberWithDevice.id(), "fid-member", "token-member");
 
     MvcResult created =
         mockMvc
             .perform(
                 post("/api/dev/projects/{projectId}/signals", project)
-                    .header("Authorization", "Bearer " + accessTokens.issueAccessToken(gyuil.id()))
+                    .header("Authorization", "Bearer " + accessTokens.issueAccessToken(owner.id()))
                     .header("API-Version", "1")
                     .contentType("application/json")
                     .content(
@@ -131,7 +134,7 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
 
     // workspace 구성원 중 활성 기기를 등록한 2명에게만, 계약된 문구·data payload로 발송된다(7·9절).
     assertThat(recordingFcmClient.sentTokens())
-        .containsExactlyInAnyOrder("token-gyuil", "token-jinsu");
+        .containsExactlyInAnyOrder("token-owner", "token-member");
     PushMessage message = recordingFcmClient.lastMessage();
     assertThat(message.title()).isEqualTo("Q2 Activation Readiness에 새 시그널이 발견되었습니다.");
     assertThat(message.body()).isEqualTo("결제 정책 결정 3일째 보류");
@@ -150,6 +153,10 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
 
     // 같은 event를 다시 소비해도 중복 push가 생기지 않는다.
     recordingFcmClient.reset();
+    NotificationConsumerOffset offset =
+        offsetRepository.findById(SignalCreatedDeliveryMaterializer.CONSUMER_NAME).orElseThrow();
+    offset.advanceTo(outboxEventId - 1);
+    offsetRepository.saveAndFlush(offset);
     materializer.materialize();
     pushDispatcher.runSendPass();
     assertThat(recordingFcmClient.sentTokens()).isEmpty();
