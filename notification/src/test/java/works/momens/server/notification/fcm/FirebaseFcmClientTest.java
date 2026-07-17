@@ -52,6 +52,22 @@ class FirebaseFcmClientTest {
   }
 
   @Test
+  @DisplayName("INVALID_ARGUMENT는 무효 token으로 단정하지 않고 일시 실패로 둔다")
+  void invalidArgumentIsTransientNotInvalidToken() throws Exception {
+    // INVALID_ARGUMENT는 메시지 payload 오류로도 발생하므로, 서버 payload 버그로 멀쩡한 기기가
+    // 비활성화되지 않도록 무효 token(설치 비활성화)이 아니라 일시 실패로 분류해야 한다.
+    FirebaseFcmClient client = new FirebaseFcmClient(firebaseMessaging);
+    BatchResponse batch = mock(BatchResponse.class);
+    when(batch.getResponses())
+        .thenReturn(List.of(FcmTestResponses.failure(MessagingErrorCode.INVALID_ARGUMENT)));
+    when(firebaseMessaging.sendEachForMulticast(any(MulticastMessage.class))).thenReturn(batch);
+
+    List<FcmSendResult> results = client.send(List.of("t1"), MESSAGE);
+
+    assertThat(results).containsExactly(FcmSendResult.TRANSIENT_FAILURE);
+  }
+
+  @Test
   @DisplayName("500개를 넘는 token은 multicast 한도 단위로 분할 전송한다")
   void chunksTokensAtMulticastLimit() throws Exception {
     FirebaseFcmClient client = new FirebaseFcmClient(firebaseMessaging);

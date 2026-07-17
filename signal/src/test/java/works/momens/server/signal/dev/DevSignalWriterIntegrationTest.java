@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -94,6 +95,8 @@ class DevSignalWriterIntegrationTest extends AbstractPostgresIntegrationTest {
         .containsEntry("impact", "Q2 Activation 일정 지연 가능성")
         .containsEntry("minsu_suggestion", "결제 정책 의사결정 미팅 제안");
     assertThat(signal.get("metadata")).isNull();
+    // occurred_at이 타임존 이동 없이 저장 순간(Instant) 그대로 왕복하는지 확인한다.
+    assertThat(((Timestamp) signal.get("occurred_at")).toInstant()).isEqualTo(occurredAt);
 
     List<Map<String, Object>> evidence =
         jdbcClient

@@ -67,10 +67,11 @@ class FirebaseFcmClient implements FcmClient {
     }
     MessagingErrorCode errorCode =
         response.getException() == null ? null : response.getException().getMessagingErrorCode();
-    // UNREGISTERED는 만료·삭제된 token, INVALID_ARGUMENT는 형식이 깨진 token,
-    // SENDER_ID_MISMATCH는 다른 Firebase 프로젝트의 token이다. 셋 다 재시도해도 회복되지 않는다.
+    // UNREGISTERED는 만료·삭제된 token, SENDER_ID_MISMATCH는 다른 Firebase 프로젝트의 token이다. 둘 다
+    // token 자체가 무효라 재시도해도 회복되지 않으므로 설치를 비활성화한다. INVALID_ARGUMENT는 token뿐
+    // 아니라 메시지 payload 오류로도 발생하므로 여기서 무효 token으로 단정하지 않는다. 서버 payload 버그로
+    // 멀쩡한 기기를 무더기로 비활성화하는 오작동을 막기 위해 일시 실패로 두고 재시도 경로에 맡긴다.
     if (errorCode == MessagingErrorCode.UNREGISTERED
-        || errorCode == MessagingErrorCode.INVALID_ARGUMENT
         || errorCode == MessagingErrorCode.SENDER_ID_MISMATCH) {
       return FcmSendResult.INVALID_TOKEN;
     }
