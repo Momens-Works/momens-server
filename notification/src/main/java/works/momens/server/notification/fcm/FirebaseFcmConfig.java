@@ -6,6 +6,7 @@ import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
 import java.io.IOException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -17,15 +18,17 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @ConditionalOnProperty(name = "momens.notification.push.enabled", havingValue = "true")
+@EnableConfigurationProperties(FirebaseFcmProperties.class)
 class FirebaseFcmConfig {
 
   @Bean
-  FirebaseMessaging firebaseMessaging() throws IOException {
+  FirebaseMessaging firebaseMessaging(FirebaseFcmProperties properties) throws IOException {
     FirebaseApp app =
         FirebaseApp.getApps().isEmpty()
             ? FirebaseApp.initializeApp(
                 FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.getApplicationDefault())
+                    .setProjectId(properties.projectId())
                     .build())
             : FirebaseApp.getInstance();
     return FirebaseMessaging.getInstance(app);
