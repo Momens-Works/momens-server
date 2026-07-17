@@ -1,4 +1,4 @@
-package works.momens.server.notification.delivery;
+package works.momens.server.notification.dispatch;
 
 import java.io.Serializable;
 import java.util.UUID;

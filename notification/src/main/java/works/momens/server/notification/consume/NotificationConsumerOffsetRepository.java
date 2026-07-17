@@ -1,4 +1,4 @@
-package works.momens.server.notification.delivery;
+package works.momens.server.notification.consume;
 
 import jakarta.persistence.LockModeType;
 import java.util.Optional;

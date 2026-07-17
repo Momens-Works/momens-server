@@ -217,11 +217,13 @@ Signal 발생 push notification의 소비·발송과 push 설치(FID/FCM token) 
   `true`).
 
 내부는 변경 이유가 다른 하위 도메인 경계로 논리 분리한다(MOM-0690). `device`(설치 원장, aggregate
-`PushInstallation`), `delivery`(소비·발송 원장, aggregate `PushDelivery`·`NotificationConsumerOffset`),
-`fcm`(외부 Firebase adapter)은 각각 Spring Modulith nested 논리 모듈이다. nested 간 협력은
-`delivery → device`(`PushInstallationDirectory`: 수신자 조회·전송 직전 재확인·무효 token 비활성화)와
-`delivery → fcm`(`FcmClient`·`PushMessage`) 단방향 계약으로만 하고, delivery가 설치 엔티티·리포지토리를
-직접 참조하지 않는다. Firebase SDK 타입은 `fcm` 밖으로 새지 않는다.
+`PushInstallation`), `consume`(outbox 소비 진행 위치와 폴링, aggregate `NotificationConsumerOffset`),
+`dispatch`(기기별 발송 상태와 배달 실행, aggregate `PushDelivery`), `fcm`(외부 Firebase adapter)은 각각
+Spring Modulith nested 논리 모듈이다. nested 간 협력은 단방향 계약으로만 한다: `consume →
+dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패스 트리거),
+`consume`·`dispatch → device`(`PushInstallationDirectory`: 수신자 조회·전송 직전 재확인·무효 token
+비활성화), `dispatch → fcm`(`FcmClient`·`PushMessage`). 소비 replay의 중복 발송 방지(복합 PK 멱등
+기록)는 dispatch가 소유하고, Firebase SDK 타입은 `fcm` 밖으로 새지 않는다.
 - 의존 방향: `mobile`이 기기 등록·해제 HTTP 표면을 이 모듈의 public API에 위임하고, 이 모듈은
   `outbox`(`OutboxEventReader`), `signal`(`SignalReader` hydrate), `project`(프로젝트명 조회),
   `workspace`(`WorkspaceAccess.listMemberships` 수신자 결정)의 public API를 사용한다.

@@ -1,4 +1,4 @@
-package works.momens.server.notification.delivery;
+package works.momens.server.notification.consume;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.notification.device.PushInstallationDirectory;
+import works.momens.server.notification.dispatch.PushDispatcher;
 import works.momens.server.outbox.OutboxEventReader;
 import works.momens.server.outbox.OutboxEventView;
 import works.momens.server.signal.SignalReader;
@@ -37,7 +38,7 @@ class SignalCreatedDeliveryMaterializer {
   private static final int BATCH_SIZE = 100;
 
   private final NotificationConsumerOffsetRepository offsetRepository;
-  private final PushDeliveryRepository pushDeliveryRepository;
+  private final PushDispatcher pushDispatcher;
   private final PushInstallationDirectory pushInstallationDirectory;
   private final OutboxEventReader outboxEventReader;
   private final SignalReader signalReader;
@@ -107,17 +108,18 @@ class SignalCreatedDeliveryMaterializer {
         workspaceAccess.listMemberships(signal.workspaceId()).stream()
             .map(WorkspaceMembership::userId)
             .toList();
-    List<PushInstallationDirectory.InstallationSnapshot> installations =
-        pushInstallationDirectory.findActiveAndroid(memberIds);
-    installations.forEach(
-        installation ->
-            pushDeliveryRepository.insertPendingIgnoringConflict(
-                outboxEventId, installation.id(), installation.userId()));
+    List<PushDispatcher.Recipient> recipients =
+        pushInstallationDirectory.findActiveAndroid(memberIds).stream()
+            .map(
+                installation ->
+                    new PushDispatcher.Recipient(installation.id(), installation.userId()))
+            .toList();
+    pushDispatcher.enqueue(outboxEventId, recipients);
     log.info(
         "signal.created delivery materialized outboxEventId={} signalId={} devices={}",
         outboxEventId,
         signal.id(),
-        installations.size());
-    return !installations.isEmpty();
+        recipients.size());
+    return !recipients.isEmpty();
   }
 }

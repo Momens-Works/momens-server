@@ -1,4 +1,4 @@
-package works.momens.server.notification.delivery;
+package works.momens.server.notification.consume;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import works.momens.server.auth.AccessTokenTestFactory;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.notification.dispatch.PushDispatcher;
 import works.momens.server.notification.fcm.FcmClient;
 import works.momens.server.notification.fcm.PushMessage;
 import works.momens.server.user.UserProfile;
@@ -46,7 +47,7 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
   @Autowired private UserService userService;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private SignalCreatedDeliveryMaterializer materializer;
-  @Autowired private PushSender pushSender;
+  @Autowired private PushDispatcher pushDispatcher;
   @Autowired private RecordingFcmClient recordingFcmClient;
 
   @Test
@@ -126,7 +127,7 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
         outboxEventId);
 
     materializer.materialize();
-    pushSender.runSendPass();
+    pushDispatcher.runSendPass();
 
     // workspace 구성원 중 활성 기기를 등록한 2명에게만, 계약된 문구·data payload로 발송된다(7·9절).
     assertThat(recordingFcmClient.sentTokens())
@@ -150,7 +151,7 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
     // 같은 event를 다시 소비해도 중복 push가 생기지 않는다.
     recordingFcmClient.reset();
     materializer.materialize();
-    pushSender.runSendPass();
+    pushDispatcher.runSendPass();
     assertThat(recordingFcmClient.sentTokens()).isEmpty();
   }
 
