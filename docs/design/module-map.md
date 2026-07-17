@@ -212,9 +212,16 @@ Signal 발생 push notification의 소비·발송과 push 설치(FID/FCM token) 
   500 token 단위로 분할한다.
 - Firebase Admin SDK adapter: Application Default Credentials로 초기화한다.
 - public API는 설치 등록·해제 하나뿐이다 — `PushDeviceRegistrar`. consumer와 발송기는 다른 모듈에
-  공개할 계약이 없어 `internal`에만 있다.
+  공개할 계약이 없다.
 - 폴링과 발송은 `momens.notification.push.enabled` 프로퍼티로 게이트한다(기본 `false`, dev
   `true`).
+
+내부는 변경 이유가 다른 하위 도메인 경계로 논리 분리한다(MOM-0690). `device`(설치 원장, aggregate
+`PushInstallation`), `delivery`(소비·발송 원장, aggregate `PushDelivery`·`NotificationConsumerOffset`),
+`fcm`(외부 Firebase adapter)은 각각 Spring Modulith nested 논리 모듈이다. nested 간 협력은
+`delivery → device`(`PushInstallationDirectory`: 수신자 조회·전송 직전 재확인·무효 token 비활성화)와
+`delivery → fcm`(`FcmClient`·`PushMessage`) 단방향 계약으로만 하고, delivery가 설치 엔티티·리포지토리를
+직접 참조하지 않는다. Firebase SDK 타입은 `fcm` 밖으로 새지 않는다.
 - 의존 방향: `mobile`이 기기 등록·해제 HTTP 표면을 이 모듈의 public API에 위임하고, 이 모듈은
   `outbox`(`OutboxEventReader`), `signal`(`SignalReader` hydrate), `project`(프로젝트명 조회),
   `workspace`(`WorkspaceAccess.listMemberships` 수신자 결정)의 public API를 사용한다.
