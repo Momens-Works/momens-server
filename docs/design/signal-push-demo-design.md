@@ -504,7 +504,7 @@ applicationId는 `com.momens.android`이다. 아래 작업은 데모 구현·시
 FCM token과 `X-Dev-Token-Secret`은 서로 다른 인증 정보다. 실제 값은 저장소,
 `application.yml`, `.env.example`에 넣지 않는다. dev GKE는 조직 정책상 서비스 계정 키 생성이 금지되어
 있으므로 JSON 키나 credential Secret을 만들지 않고 Workload Identity가 ADC를 공급한다.
-ADC 서비스 계정은 `momens-dev-mvp`에 있고 FCM 대상은 `momens-f4c02`이므로, 대상 프로젝트에서
+ADC 서비스 계정은 `momens-dev-mvp`에 있다. 대상 프로젝트에서
 `momens-server-fcm@momens-dev-mvp.iam.gserviceaccount.com`에
 `roles/firebasecloudmessaging.admin`을 부여한다.
 
