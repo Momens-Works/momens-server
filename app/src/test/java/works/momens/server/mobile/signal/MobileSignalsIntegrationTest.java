@@ -304,7 +304,7 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
         .andExpect(jsonPath("$.purpose").value("고객이 결제 전에 쿠폰 적용 가능 여부와 실패 이유를 이해할 수 있게 한다."))
         .andExpect(jsonPath("$.status").value("todo"))
         .andExpect(jsonPath("$.priority").value("high"))
-        .andExpect(jsonPath("$.role").value("design"))
+        .andExpect(jsonPath("$.role").value("pm"))
         .andExpect(jsonPath("$.assignee.id").value(user.id().toString()))
         .andExpect(jsonPath("$.checklist.total_count").value(4))
         .andExpect(jsonPath("$.checklist.items[0].title").value("쿠폰 제외 브랜드와 최소 주문 금액 확정"))
