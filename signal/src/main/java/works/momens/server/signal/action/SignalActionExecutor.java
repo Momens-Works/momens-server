@@ -67,7 +67,7 @@ class SignalActionExecutor {
             && taskDetailWriter != null
             && relationWriter != null;
     String taskTitle = isDemo ? DEMO_TASK_TITLE : title;
-    String taskRole = isDemo ? "design" : role;
+    String taskRole = isDemo ? "pm" : role;
     String taskPriority = isDemo ? "high" : priority;
     CreatedTask created =
         taskCreator.create(
