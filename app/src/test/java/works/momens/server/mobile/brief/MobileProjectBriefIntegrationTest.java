@@ -78,7 +78,8 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
         .andExpect(jsonPath("$.project.id").value(project.toString()))
         .andExpect(jsonPath("$.project.name").value("Q2 Activation Readiness"))
         .andExpect(jsonPath("$.project.target_date").value("2026-06-30"))
-        .andExpect(jsonPath("$.project.progress").value(64))
+        // progress 컬럼에 64가 저장돼 있어도 응답은 태스크에서 계산한다. 태스크가 없으므로 0이다.
+        .andExpect(jsonPath("$.project.progress").value(0))
         .andExpect(
             jsonPath("$.project.summary")
                 .value("목표일까지 Q2 Activation Readiness 범위의 회원 가입 MVP를 안정적으로 릴리즈한다."))
@@ -421,6 +422,80 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
   }
 
   @Test
+  void progressCountsDoneAmongTasksExceptCancelledAndDeleted() throws Exception {
+    UserProfile jinsu =
+        userService.findOrCreate("brief-it-progress-jinsu@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("brief-progress");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "brief-progress-project", null, 0, null);
+    insertTask(workspace, project, "완료 1", "done", "medium", "2026-07-10T01:00:00Z");
+    insertTask(workspace, project, "완료 2", "done", "medium", "2026-07-10T02:00:00Z");
+    insertTask(workspace, project, "할 일", "todo", "medium", "2026-07-10T03:00:00Z");
+    insertTask(workspace, project, "진행 중", "in_progress", "medium", "2026-07-10T04:00:00Z");
+    // 취소한 태스크는 분모에서 빠진다. 넣지 않았다면 2/6이라 33이 됐을 것이다.
+    insertTask(workspace, project, "취소 1", "cancelled", "medium", "2026-07-10T05:00:00Z");
+    insertTask(workspace, project, "취소 2", "cancelled", "medium", "2026-07-10T06:00:00Z");
+    // 소프트 삭제한 완료 태스크도 세지 않는다. 셌다면 3/5이라 60이 됐을 것이다.
+    insertDeletedTask(workspace, project, "삭제된 완료", "done", "2026-07-10T07:00:00Z");
+
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/brief", project)
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        // done 2건 대비 분모 4건(done 2, todo 1, in_progress 1)이라 50이다.
+        .andExpect(jsonPath("$.project.progress").value(50));
+  }
+
+  @Test
+  void progressIsHundredWhenEveryTaskExceptCancelledIsDone() throws Exception {
+    UserProfile jinsu =
+        userService.findOrCreate("brief-it-cancelled-jinsu@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("brief-cancelled");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "brief-cancelled-project", null, 0, null);
+    insertTask(workspace, project, "완료 1", "done", "medium", "2026-07-10T01:00:00Z");
+    insertTask(workspace, project, "완료 2", "done", "medium", "2026-07-10T02:00:00Z");
+    // cancelled를 분모에 포함하면 진행률이 40%(2/5)에 머물러 100이 될 수 없다.
+    insertTask(workspace, project, "취소 1", "cancelled", "medium", "2026-07-10T03:00:00Z");
+    insertTask(workspace, project, "취소 2", "cancelled", "medium", "2026-07-10T04:00:00Z");
+    insertTask(workspace, project, "취소 3", "cancelled", "medium", "2026-07-10T05:00:00Z");
+
+    assertProgress(project, jinsu.id(), 100);
+  }
+
+  @Test
+  void progressDecreasesWhenDoneTaskGoesBackToTodo() throws Exception {
+    UserProfile jinsu =
+        userService.findOrCreate("brief-it-regress-jinsu@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("brief-regress");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "brief-regress-project", null, 0, null);
+    UUID done = insertTask(workspace, project, "완료 1", "done", "medium", "2026-07-10T01:00:00Z");
+    insertTask(workspace, project, "완료 2", "done", "medium", "2026-07-10T02:00:00Z");
+    insertTask(workspace, project, "할 일 1", "todo", "medium", "2026-07-10T03:00:00Z");
+    insertTask(workspace, project, "할 일 2", "todo", "medium", "2026-07-10T04:00:00Z");
+
+    assertProgress(project, jinsu.id(), 50);
+
+    // 완료를 되돌리면 진행률도 줄어야 한다. 진행률은 조회 시 태스크 상태를 기준으로 계산하므로 별도 갱신 없이 바로 반영된다.
+    jdbcTemplate.update("UPDATE tasks SET status = 'todo' WHERE id = ?", done);
+
+    assertProgress(project, jinsu.id(), 25);
+  }
+
+  private void assertProgress(UUID projectId, UUID userId, int expected) throws Exception {
+    mockMvc
+        .perform(
+            get("/api/mobile/projects/{projectId}/brief", projectId)
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(userId))
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.project.progress").value(expected));
+  }
+
+  @Test
   void returnsForbiddenWhenCallerIsNotWorkspaceMember() throws Exception {
     UserProfile gyuil = userService.findOrCreate("brief-it-owner-gyuil@momens.works", "김규일", null);
     UserProfile jinsu =
@@ -532,6 +607,15 @@ class MobileProjectBriefIntegrationTest extends AbstractPostgresIntegrationTest 
     UUID id = insertSignal(workspaceId, projectId, type, title, createdAt);
     jdbcTemplate.update(
         "UPDATE signals SET deleted_at = ? WHERE id = ?",
+        Timestamp.from(Instant.parse(createdAt)),
+        id);
+  }
+
+  private void insertDeletedTask(
+      UUID workspaceId, UUID projectId, String title, String status, String createdAt) {
+    UUID id = insertTask(workspaceId, projectId, title, status, "medium", createdAt);
+    jdbcTemplate.update(
+        "UPDATE tasks SET deleted_at = ? WHERE id = ?",
         Timestamp.from(Instant.parse(createdAt)),
         id);
   }

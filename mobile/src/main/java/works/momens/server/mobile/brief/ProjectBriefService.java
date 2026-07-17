@@ -95,6 +95,15 @@ class ProjectBriefService {
       throw new BusinessException(
           CommonErrorCode.AUTH_FORBIDDEN, Map.of("project_id", projectId.toString()));
     }
+    // 진행률 계산 책임은 project 모듈에 있다. 여기서는 계산된 값을 그대로 사용한다.
+    int progress =
+        projectReader
+            .progressOf(projectId)
+            .orElseThrow(
+                () ->
+                    new BusinessException(
+                        ProjectErrorCode.PROJECT_NOT_FOUND,
+                        Map.of("project_id", projectId.toString())));
     // 브리프는 오늘의 브리프라 그날 온 시그널을 처리 여부와 무관하게 센다(MOM-81).
     LocalDate anchor = BriefDay.today(mobileClock.clock());
     BriefDay.Range today = BriefDay.rangeOf(anchor);
@@ -117,6 +126,7 @@ class ProjectBriefService {
             .orElse(null);
     return new MobileBrief(
         snapshot,
+        progress,
         digest,
         toFilterCounts(countsByType),
         toItems(firstPage.items()),

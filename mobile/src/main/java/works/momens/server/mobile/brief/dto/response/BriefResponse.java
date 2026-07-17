@@ -26,7 +26,10 @@ public record BriefResponse(
       @Schema(description = "project 식별자") UUID id,
       @Schema(description = "이름", example = "Q2 Activation Readiness") String name,
       @Schema(description = "목표일. 미설정이면 null로 포함됩니다.", nullable = true) LocalDate targetDate,
-      @Schema(description = "진행률(0~100 정수 퍼센트)", example = "64") int progress,
+      @Schema(
+              description = "진행률(0~100 정수 퍼센트). cancelled를 제외한 태스크 중 done 비율이고, 소수점은 버립니다.",
+              example = "64")
+          int progress,
       @Schema(description = "핵심 목표 요약. 작성 전이면 null로 포함됩니다.", nullable = true) String summary) {}
 
   @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
@@ -64,7 +67,7 @@ public record BriefResponse(
 
   public static BriefResponse from(MobileBrief brief) {
     return new BriefResponse(
-        toProject(brief.project()),
+        toProject(brief.project(), brief.progress()),
         new SignalSummaryResponse(
             brief.signalDigest(),
             toFilters(brief.filters()),
@@ -73,13 +76,9 @@ public record BriefResponse(
         toPriorities(brief.priorities()));
   }
 
-  private static ProjectResponse toProject(ProjectSnapshot snapshot) {
+  private static ProjectResponse toProject(ProjectSnapshot snapshot, int progress) {
     return new ProjectResponse(
-        snapshot.id(),
-        snapshot.name(),
-        snapshot.targetDate(),
-        snapshot.progress(),
-        snapshot.summary());
+        snapshot.id(), snapshot.name(), snapshot.targetDate(), progress, snapshot.summary());
   }
 
   private static List<FilterResponse> toFilters(List<MobileBrief.FilterCount> filters) {

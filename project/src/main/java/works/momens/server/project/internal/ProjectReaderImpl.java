@@ -3,18 +3,33 @@ package works.momens.server.project.internal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import works.momens.server.project.BoardTask;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.ProjectSnapshot;
+import works.momens.server.project.TaskReader;
 
 @Service
 @RequiredArgsConstructor
 class ProjectReaderImpl implements ProjectReader {
 
+  /**
+   * 진행률 계산에 포함되는 상태입니다. {@code cancelled}는 제외합니다.
+   *
+   * <p>진행률은 같은 조회 결과에서 전체 태스크 수와 {@code done} 태스크 수를 함께 계산합니다. 별도 집계 쿼리를 사용하지 않는 이유는 목록과 계산 기준을
+   * 일치시키기 위해서입니다(MOM-0779).
+   */
+  private static final List<String> PROGRESS_STATUSES =
+      List.of("backlog", "todo", "in_progress", "done");
+
+  private static final String DONE_STATUS = "done";
+
   private final ProjectRepository projectRepository;
+  private final TaskReader taskReader;
 
   @Override
   @Transactional(readOnly = true)
@@ -28,6 +43,21 @@ class ProjectReaderImpl implements ProjectReader {
     return projectRepository
         .findByIdAndDeletedAtIsNull(projectId)
         .map(ProjectReaderImpl::toSnapshot);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public OptionalInt progressOf(UUID projectId) {
+    if (projectRepository.findByIdAndDeletedAtIsNull(projectId).isEmpty()) {
+      return OptionalInt.empty();
+    }
+    List<BoardTask> tasks = taskReader.listTasksByStatus(projectId, PROGRESS_STATUSES);
+    if (tasks.isEmpty()) {
+      return OptionalInt.of(0);
+    }
+    long done = tasks.stream().filter(task -> DONE_STATUS.equals(task.status())).count();
+    // 정수 나눗셈을 사용하므로 소수점은 버립니다. 따라서 진행률을 올림하지 않으며, 100은 모든 태스크가 done일 때만 반환됩니다.
+    return OptionalInt.of((int) (done * 100 / tasks.size()));
   }
 
   @Override
@@ -49,7 +79,6 @@ class ProjectReaderImpl implements ProjectReader {
         project.getWorkspaceId(),
         project.getName(),
         project.getTargetDate(),
-        project.getProgress(),
         project.getSummary());
   }
 }

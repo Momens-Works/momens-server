@@ -41,7 +41,6 @@ class ProjectRepositoryIntegrationTest extends AbstractPostgresIntegrationTest {
                 .description("모바일 MVP 준비")
                 .ownerId(ownerId)
                 .targetDate(LocalDate.of(2026, 6, 30))
-                .progress(64)
                 .summary("요약")
                 .build());
     entityManager.clear();
@@ -53,7 +52,6 @@ class ProjectRepositoryIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(found.getStatus()).isEqualTo("active");
     assertThat(found.getOwnerId()).isEqualTo(ownerId);
     assertThat(found.getTargetDate()).isEqualTo(LocalDate.of(2026, 6, 30));
-    assertThat(found.getProgress()).isEqualTo(64);
     assertThat(found.getSummary()).isEqualTo("요약");
     assertThat(found.getCreatedAt()).isNotNull();
     assertThat(found.getUpdatedAt()).isNotNull();

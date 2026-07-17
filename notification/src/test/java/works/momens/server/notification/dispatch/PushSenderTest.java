@@ -119,7 +119,7 @@ class PushSenderTest {
         .thenReturn(
             Optional.of(
                 new ProjectSnapshot(
-                    PROJECT_ID, WORKSPACE_ID, "Q2 Activation Readiness", null, 0, null)));
+                    PROJECT_ID, WORKSPACE_ID, "Q2 Activation Readiness", null, null)));
   }
 
   private static OutboxEventView signalCreatedEvent() {

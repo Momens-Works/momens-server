@@ -54,8 +54,8 @@ class ProjectBriefControllerTest {
                     WORKSPACE_ID,
                     "Q2 Activation Readiness",
                     LocalDate.of(2026, 6, 30),
-                    64,
                     "목표일까지 Q2 Activation Readiness 범위의 회원 가입 MVP를 안정적으로 릴리즈한다."),
+                64,
                 "Android 권한 요청 이슈가 발견되었으며, 소셜 로그인은 MVP 범위에서 제외되었습니다.",
                 List.of(
                     new MobileBrief.FilterCount("all", "All", 12L),
