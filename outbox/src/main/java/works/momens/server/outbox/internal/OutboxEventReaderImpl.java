@@ -1,10 +1,9 @@
 package works.momens.server.outbox.internal;
 
-import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.outbox.OutboxEventReader;
@@ -19,19 +18,16 @@ class OutboxEventReaderImpl implements OutboxEventReader {
 
   @Override
   @Transactional(readOnly = true)
-  public List<OutboxEventView> readAfter(long afterId, Instant createdBefore, int limit) {
-    return outboxEventRepository
-        .findByIdGreaterThanAndCreatedAtLessThanEqualOrderByIdAsc(
-            afterId, createdBefore, Limit.of(limit))
-        .stream()
+  public List<OutboxEventView> readAfter(long afterId, Duration safetyLag, int limit) {
+    return outboxEventRepository.findDuePrefixAfter(afterId, safetyLag.toMillis(), limit).stream()
         .map(OutboxEventReaderImpl::toView)
         .toList();
   }
 
   @Override
   @Transactional(readOnly = true)
-  public long latestIdCreatedBefore(Instant createdBefore) {
-    return outboxEventRepository.findMaxIdCreatedBefore(createdBefore);
+  public long latestIdBefore(Duration safetyLag) {
+    return outboxEventRepository.findLatestIdBeforeFreshPrefix(safetyLag.toMillis());
   }
 
   @Override

@@ -65,7 +65,7 @@ class SignalCreatedDeliveryMaterializerIntegrationTest extends AbstractPostgresI
   @BeforeEach
   void stubDefaults() {
     when(outboxEventReader.readAfter(anyLong(), any(), anyInt())).thenReturn(List.of());
-    when(outboxEventReader.latestIdCreatedBefore(any())).thenReturn(0L);
+    when(outboxEventReader.latestIdBefore(any())).thenReturn(0L);
     when(pushInstallationDirectory.findActiveAndroid(anyCollection())).thenReturn(List.of());
   }
 
@@ -79,9 +79,8 @@ class SignalCreatedDeliveryMaterializerIntegrationTest extends AbstractPostgresI
                 new InstallationSnapshot(INSTALLATION_A, MEMBER_A, "token-a", true),
                 new InstallationSnapshot(INSTALLATION_B, MEMBER_B, "token-b", true)));
 
-    boolean materialized = materializer.materialize();
+    materializer.materialize();
 
-    assertThat(materialized).isTrue();
     verify(pushDispatcher)
         .enqueue(
             EVENT_ID,
@@ -117,9 +116,8 @@ class SignalCreatedDeliveryMaterializerIntegrationTest extends AbstractPostgresI
         .thenReturn(List.of(signalCreatedEvent()));
     when(signalReader.findLive(SIGNAL_ID)).thenReturn(Optional.empty());
 
-    boolean materialized = materializer.materialize();
+    materializer.materialize();
 
-    assertThat(materialized).isFalse();
     verifyNoInteractions(pushDispatcher);
     assertThat(offsetOf()).isEqualTo(EVENT_ID);
   }
@@ -138,7 +136,7 @@ class SignalCreatedDeliveryMaterializerIntegrationTest extends AbstractPostgresI
                     "signal.dismissed",
                     Instant.now())));
 
-    assertThat(materializer.materialize()).isFalse();
+    materializer.materialize();
     verifyNoInteractions(pushDispatcher);
     assertThat(offsetOf()).isEqualTo(EVENT_ID);
   }
@@ -146,7 +144,7 @@ class SignalCreatedDeliveryMaterializerIntegrationTest extends AbstractPostgresI
   @Test
   @DisplayName("최초 실행은 watermark를 현재 outbox 끝으로 시드해 과거 event를 소급 발송하지 않는다")
   void firstRunSeedsWatermarkAtCurrentTail() {
-    when(outboxEventReader.latestIdCreatedBefore(any())).thenReturn(42L);
+    when(outboxEventReader.latestIdBefore(any())).thenReturn(42L);
     when(outboxEventReader.readAfter(eq(42L), any(), anyInt())).thenReturn(List.of());
 
     materializer.materialize();

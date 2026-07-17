@@ -3,6 +3,7 @@ package works.momens.server.outbox.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import jakarta.persistence.EntityManager;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -17,7 +18,7 @@ import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.outbox.OutboxEventView;
 
 /**
- * consumer 조회의 watermark(id) 필터, 안전 지연(createdBefore) 필터, id 오름차순을 실제 PostgreSQL로
+ * consumer 조회의 watermark(id) 필터, DB 시계 기반 안전 지연 prefix-cap, id 오름차순을 실제 PostgreSQL로
  * 검증합니다(docs/design/signal-push-demo-design.md 10.1절).
  */
 @DataJpaTest
@@ -32,35 +33,59 @@ class OutboxEventReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   @Autowired private EntityManager entityManager;
 
   @Test
-  @DisplayName("watermark 이후이면서 안전 지연을 지난 event만 id 오름차순으로 읽는다")
-  void readsAfterWatermarkAndBeforeSafetyLag() {
+  @DisplayName("watermark 이후 event를 안전 지연을 지나지 않은 첫 event 전까지 id 오름차순으로 읽는다")
+  void readsDuePrefixAfterWatermark() {
     Instant now = Instant.now();
     long oldEvent = insertEventCreatedAt("signal.created", "a", now.minus(10, ChronoUnit.SECONDS));
     long dueEvent = insertEventCreatedAt("signal.created", "b", now.minus(5, ChronoUnit.SECONDS));
     long freshEvent = insertEventCreatedAt("signal.created", "c", now);
 
-    List<OutboxEventView> events = reader.readAfter(oldEvent, now.minus(2, ChronoUnit.SECONDS), 10);
+    List<OutboxEventView> events = reader.readAfter(oldEvent, Duration.ofSeconds(2), 10);
 
     assertThat(events).extracting(OutboxEventView::id).containsExactly(dueEvent);
     assertThat(events.getFirst().workspaceId()).isEqualTo(WORKSPACE_ID);
     assertThat(events.getFirst().aggregateType()).isEqualTo("signal");
     assertThat(events.getFirst().eventType()).isEqualTo("signal.created");
-    assertThat(reader.readAfter(0, now.plus(1, ChronoUnit.MINUTES), 10))
+    updateCreatedAt(freshEvent, now.minus(5, ChronoUnit.SECONDS));
+    assertThat(reader.readAfter(0, Duration.ofSeconds(2), 10))
         .extracting(OutboxEventView::id)
         .containsExactly(oldEvent, dueEvent, freshEvent);
   }
 
   @Test
-  @DisplayName("최초 watermark 시드는 안전 지연을 지난 event의 최대 id이고, 없으면 0이다")
-  void latestIdSeedsWatermark() {
+  @DisplayName("안전 지연을 지나지 않은 낮은 id는 오래된 높은 id가 watermark를 건너뛰지 못하게 막는다")
+  void freshLowerIdCapsDueHigherId() {
     Instant now = Instant.now();
-    assertThat(reader.latestIdCreatedBefore(now)).isZero();
+    long watermark =
+        insertEventCreatedAt("signal.created", "prefix", now.minus(10, ChronoUnit.SECONDS));
+    long freshLowerId = insertEventCreatedAt("signal.created", "fresh", now);
+    long oldHigherId =
+        insertEventCreatedAt("signal.created", "old-higher", now.minus(10, ChronoUnit.SECONDS));
 
-    insertEventCreatedAt("signal.created", "a", now.minus(10, ChronoUnit.SECONDS));
-    long latest = insertEventCreatedAt("signal.created", "b", now.minus(5, ChronoUnit.SECONDS));
-    insertEventCreatedAt("signal.created", "c", now.plus(5, ChronoUnit.SECONDS));
+    assertThat(reader.readAfter(watermark, Duration.ofSeconds(2), 10)).isEmpty();
 
-    assertThat(reader.latestIdCreatedBefore(now)).isEqualTo(latest);
+    updateCreatedAt(freshLowerId, now.minus(5, ChronoUnit.SECONDS));
+
+    assertThat(reader.readAfter(watermark, Duration.ofSeconds(2), 10))
+        .extracting(OutboxEventView::id)
+        .containsExactly(freshLowerId, oldHigherId);
+  }
+
+  @Test
+  @DisplayName("최초 watermark 시드도 안전 지연 prefix만 전진하고, event가 없으면 0이다")
+  void latestIdSeedsAtDuePrefix() {
+    Instant now = Instant.now();
+    assertThat(reader.latestIdBefore(Duration.ofSeconds(2))).isZero();
+
+    long oldPrefix = insertEventCreatedAt("signal.created", "a", now.minus(10, ChronoUnit.SECONDS));
+    long fresh = insertEventCreatedAt("signal.created", "b", now);
+    long oldHigher = insertEventCreatedAt("signal.created", "c", now.minus(10, ChronoUnit.SECONDS));
+
+    assertThat(reader.latestIdBefore(Duration.ofSeconds(2))).isEqualTo(oldPrefix);
+
+    updateCreatedAt(fresh, now.minus(5, ChronoUnit.SECONDS));
+
+    assertThat(reader.latestIdBefore(Duration.ofSeconds(2))).isEqualTo(oldHigher);
   }
 
   @Test
@@ -82,17 +107,22 @@ class OutboxEventReaderIntegrationTest extends AbstractPostgresIntegrationTest {
         eventType,
         "{}",
         eventType + ":" + aggregateId);
+    long id =
+        ((Number)
+                entityManager
+                    .createNativeQuery("SELECT id FROM outbox_events WHERE idempotency_key = :key")
+                    .setParameter("key", eventType + ":" + aggregateId)
+                    .getSingleResult())
+            .longValue();
+    updateCreatedAt(id, createdAt);
+    return id;
+  }
+
+  private void updateCreatedAt(long id, Instant createdAt) {
     entityManager
-        .createNativeQuery(
-            "UPDATE outbox_events SET created_at = :createdAt WHERE idempotency_key = :key")
+        .createNativeQuery("UPDATE outbox_events SET created_at = :createdAt WHERE id = :id")
         .setParameter("createdAt", createdAt)
-        .setParameter("key", eventType + ":" + aggregateId)
+        .setParameter("id", id)
         .executeUpdate();
-    return ((Number)
-            entityManager
-                .createNativeQuery("SELECT id FROM outbox_events WHERE idempotency_key = :key")
-                .setParameter("key", eventType + ":" + aggregateId)
-                .getSingleResult())
-        .longValue();
   }
 }
