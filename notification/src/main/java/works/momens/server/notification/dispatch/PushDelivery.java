@@ -69,9 +69,14 @@ public class PushDelivery {
     return attemptCount >= MAX_ATTEMPTS;
   }
 
-  /** 전송 시도를 클레임한다. 시도 횟수를 올리고 다음 백오프 시각을 먼저 기록해, 전송 중 종료돼도 그 시각에 재시도된다(10.3절). */
-  void claimAttempt(Instant nextAttemptAt) {
+  /** 전송 시도를 클레임한다. 시도 횟수를 올리고 처리 lease 만료 시각을 기록한다(10.3절). */
+  void claimAttempt(Instant leaseUntil) {
     this.attemptCount++;
+    this.nextAttemptAt = leaseUntil;
+  }
+
+  /** 일시 실패 결과를 기록한 시점부터 계산한 다음 재시도 시각을 반영한다. */
+  void scheduleRetry(Instant nextAttemptAt) {
     this.nextAttemptAt = nextAttemptAt;
   }
 

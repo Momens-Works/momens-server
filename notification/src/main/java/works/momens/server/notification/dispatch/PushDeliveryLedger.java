@@ -19,8 +19,9 @@ import works.momens.server.notification.fcm.FcmClient.FcmSendResult;
 /**
  * delivery 클레임·결과 기록 트랜잭션(docs/design/signal-push-demo-design.md 10.3절).
  *
- * <p>클레임 트랜잭션 안에서 시도 횟수와 다음 백오프 시각을 먼저 commit하고, FCM 호출은 트랜잭션 밖({@link PushSender})에서 수행한다. 서버가 전송
- * 전에 종료돼도 선반영된 {@code next_attempt_at}에 재시도되며 이는 at-least-once 특성 안에 있다(10.4절).
+ * <p>클레임 트랜잭션 안에서 시도 횟수와 처리 lease를 먼저 commit하고, FCM 호출은 트랜잭션 밖({@link PushSender})에서 수행한다. 일시 실패
+ * 결과를 기록할 때 lease를 실제 재시도 백오프로 교체한다. 서버가 전송 전에 종료되면 lease 만료 후 재시도되며 이는 at-least-once 특성 안에
+ * 있다(10.4절).
  */
 @Slf4j
 @Component
@@ -30,6 +31,8 @@ class PushDeliveryLedger {
   /** 최초 전송 후 일시 실패 백오프. 총 시도 횟수는 최초 전송을 포함해 최대 {@link PushDelivery#MAX_ATTEMPTS}회다. */
   private static final List<Duration> BACKOFFS =
       List.of(Duration.ofSeconds(1), Duration.ofSeconds(5), Duration.ofSeconds(30));
+
+  private static final Duration PROCESSING_LEASE = Duration.ofSeconds(30);
 
   static final String CATEGORY_INVALID_TOKEN = "invalid_token";
   static final String CATEGORY_RETRY_EXHAUSTED = "retry_exhausted";
@@ -53,6 +56,7 @@ class PushDeliveryLedger {
             .findByIds(due.stream().map(PushDelivery::getInstallationId).distinct().toList())
             .stream()
             .collect(Collectors.toMap(InstallationSnapshot::id, Function.identity()));
+    Instant leaseUntil = pushDeliveryRepository.currentDatabaseTime().plus(PROCESSING_LEASE);
     List<ClaimedPushDelivery> claimed = new ArrayList<>();
     for (PushDelivery delivery : due) {
       if (delivery.isExhausted()) {
@@ -67,7 +71,7 @@ class PushDeliveryLedger {
         delivery.cancel(CATEGORY_INSTALLATION_MISMATCH);
         continue;
       }
-      delivery.claimAttempt(Instant.now().plus(backoffFor(delivery.getAttemptCount() + 1)));
+      delivery.claimAttempt(leaseUntil);
       claimed.add(
           new ClaimedPushDelivery(
               delivery.getOutboxEventId(),
@@ -80,6 +84,7 @@ class PushDeliveryLedger {
   /** token별 전송 결과를 기록한다. 무효 token은 재시도하지 않고 설치를 비활성화한다(10.3절). */
   @Transactional
   public void record(List<ClaimedPushDelivery> claims, List<FcmSendResult> results) {
+    Instant recordedAt = pushDeliveryRepository.currentDatabaseTime();
     for (int i = 0; i < claims.size(); i++) {
       ClaimedPushDelivery claim = claims.get(i);
       PushDelivery delivery = load(claim);
@@ -92,8 +97,10 @@ class PushDeliveryLedger {
         case TRANSIENT_FAILURE -> {
           if (delivery.isExhausted()) {
             delivery.markFailed(CATEGORY_RETRY_EXHAUSTED);
+          } else {
+            delivery.scheduleRetry(recordedAt.plus(retryBackoffFor(delivery.getAttemptCount())));
           }
-          // 한도 전이면 pending 그대로 두고 클레임 때 선반영한 next_attempt_at에 재시도된다.
+          // 한도 전이면 pending을 유지하고 결과 기록 시점부터 계산한 백오프 뒤에 재시도한다.
         }
         default -> throw new IllegalStateException("unknown fcm send result");
       }
@@ -112,7 +119,7 @@ class PushDeliveryLedger {
         .orElseThrow();
   }
 
-  private static Duration backoffFor(int attemptCount) {
+  private static Duration retryBackoffFor(int attemptCount) {
     int retryIndex = Math.min(Math.max(attemptCount - 1, 0), BACKOFFS.size() - 1);
     return BACKOFFS.get(retryIndex);
   }

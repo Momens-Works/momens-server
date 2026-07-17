@@ -1,5 +1,6 @@
 package works.momens.server.notification.dispatch;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,6 +9,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 interface PushDeliveryRepository extends JpaRepository<PushDelivery, PushDeliveryId> {
+
+  @Query(value = "SELECT NOW()", nativeQuery = true)
+  Instant currentDatabaseTime();
 
   /**
    * 동일 event의 기기별 delivery는 복합 PK로 중복을 막는다(멱등 materialization). JPA {@code save()}는 이 시맨틱을 표현할 수 없어

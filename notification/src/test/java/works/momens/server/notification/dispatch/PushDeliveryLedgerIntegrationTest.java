@@ -6,6 +6,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import jakarta.persistence.EntityManager;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,9 +51,10 @@ class PushDeliveryLedgerIntegrationTest extends AbstractPostgresIntegrationTest 
   }
 
   @Test
-  @DisplayName("클레임은 시도 횟수와 다음 백오프 시각을 선반영하고 현재 token을 돌려준다")
-  void claimAdvancesAttemptAndBackoff() {
+  @DisplayName("클레임은 시도 횟수와 처리 lease를 선반영하고 현재 token을 돌려준다")
+  void claimAdvancesAttemptAndLease() {
     materializePending();
+    Instant databaseNow = deliveryRepository.currentDatabaseTime();
 
     List<ClaimedPushDelivery> claims = ledger.claimDue(10);
 
@@ -60,8 +63,23 @@ class PushDeliveryLedgerIntegrationTest extends AbstractPostgresIntegrationTest 
     PushDelivery delivery = reload();
     assertThat(delivery.getAttemptCount()).isEqualTo(1);
     assertThat(delivery.isPending()).isTrue();
-    // 다음 백오프 시각이 선반영돼 즉시 재클레임되지 않는다.
+    assertThat(delivery.getNextAttemptAt()).isEqualTo(databaseNow.plus(Duration.ofSeconds(30)));
+    // 처리 lease가 선반영돼 즉시 재클레임되지 않는다.
     assertThat(ledger.claimDue(10)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("일시 실패 결과는 처리 lease를 첫 재시도 백오프 1초로 교체한다")
+  void transientFailureSchedulesRetryFromResult() {
+    materializePending();
+    Instant databaseNow = deliveryRepository.currentDatabaseTime();
+    List<ClaimedPushDelivery> claims = ledger.claimDue(10);
+
+    ledger.record(claims, List.of(FcmSendResult.TRANSIENT_FAILURE));
+
+    PushDelivery delivery = reload();
+    assertThat(delivery.isPending()).isTrue();
+    assertThat(delivery.getNextAttemptAt()).isEqualTo(databaseNow.plus(Duration.ofSeconds(1)));
   }
 
   @Test
