@@ -146,8 +146,16 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 - `projects` 테이블은 레거시 초기 형상에 모바일 스냅샷 컬럼(target_date, progress, summary)을
   더한 범위만 만들었다. 제외한 레거시 컬럼(health_status, 카운트 컬럼, metadata, label)과
   `project_owners`는 웹 이관(MOM-35 계열)에서 추가한다.
-- 조회 public API는 `ProjectReader`(workspaceIdOf, findSnapshot, listByWorkspaceIds)와
+- 조회 public API는 `ProjectReader`(workspaceIdOf, findSnapshot, listByWorkspaceIds, progressOf)와
   `ProjectSnapshot`이다. projectId가 속한 workspace를 찾는 책임은 이 모듈이 소유한다.
+- 진행률 계산은 이 모듈에서 담당한다(`progressOf`, MOM-0800). `projects.progress`에 저장된 값은 사용하지 않고,
+  조회할 때마다 태스크 상태를 기준으로 계산하므로 해당 컬럼은 매핑하지 않는다. 컬럼 자체는 레거시 웹이
+  수동 입력으로 계속 사용하므로 DB에는 그대로 유지한다.
+- 진행률은 `cancelled`를 제외한 태스크를 기준으로 계산하며, 정수 나눗셈을 사용해 소수점은 버린다.
+  `cancelled` 제외와 소수점 버림은 기획에서 명시하지 않은 부분이라 서버 구현에서 결정했다(ADR-0013).
+- 진행률은 별도 집계 쿼리를 사용하지 않는다. `TaskReader.listTasksByStatus`가 반환한 같은 조회 결과를
+  기준으로 전체 태스크 수와 `done` 태스크 수를 계산해 목록과 진행률이 서로 어긋나지 않도록 했다
+  (MOM-0779의 `material_count`와 같은 이유).
 - 태스크 도메인은 MOM-62에서 시작했다. `tasks` 테이블은 레거시와 호환되는 범위(모바일 보드와
   생성이 쓰는 컬럼)로 시작했고, 상세(MOM-63)가 읽는 레거시 컬럼(description, assignee_id)을
   더했다. 모바일이 안 쓰는 레거시 컬럼(milestone_id, due_date)은 웹 이관에서 추가한다. role은
@@ -254,10 +262,12 @@ dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패
   브리프는 오늘의 브리프라 당일 생성된 시그널을 처리 여부와 무관하게 집계한다(MOM-81). 하루
   경계를 어떤 타임존으로 볼지(Asia/Seoul 고정)는 `BriefDay`가 소유하고, 시각은 `mobileClock`
   으로 주입한다. 시그널 요약 필터 칩(당일 시그널의 type으로 데이터 기반 구성, 라벨은 type의 첫 글자만
-  대문자로 바꾸고, All을 맨 앞에 둔 뒤 라벨 글자수와 알파벳순 정렬), 페이지
-  기본 크기 20, 현재 우선순위 구성(진행 중인 todo와 in_progress만 후보, priority 높은 순과 생성
-  오래된 순 정렬, 상위 4개)은 조합 규칙이라 `SignalTypeLabel`과 `MobilePriority`, 조합 서비스가
-  소유한다(MOM-67).
+  대문자로 바꾸고, All을 맨 앞에 둔 뒤 라벨 글자수와 알파벳순 정렬)도 조합 규칙이다.
+- 기본 크기는 20이다(MOM-0798에서 3에서 변경). 현재 우선순위(진행 중인 `todo`와 `in_progress`만 대상,
+  `priority` 내림차순, 생성일 오름차순, 상위 4개)와 시그널 타입 라벨은 브리프 조합 규칙이므로
+  `SignalTypeLabel`, `MobilePriority`, 조합 서비스에서 관리한다(MOM-67).
+- 진행률은 `ProjectReader.progressOf`가 반환한 값을 그대로 사용한다. 조합 서비스는 계산에 관여하지 않으며,
+  진행률 계산 규칙은 project 모듈에서 관리한다(MOM-0800).
 - `GET /api/mobile/tasks/{taskId}`: project의 태스크 상세(`TaskReader.findDetail`)와 workspace
   멤버십(태스크가 속한 workspace 기준), user 프로필(담당자 이름)을 조합한다. purpose 개명
   (도메인 description), priority 매핑, 빈 값 고정(open_questions는 빈 배열, next_action은 null)은
