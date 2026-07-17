@@ -83,6 +83,6 @@ class BootstrapServiceTest {
   }
 
   private static ProjectSnapshot snapshot(UUID id, UUID workspaceId, String name) {
-    return new ProjectSnapshot(id, workspaceId, name, null, 0, null);
+    return new ProjectSnapshot(id, workspaceId, name, null, null);
   }
 }

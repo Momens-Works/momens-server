@@ -15,6 +15,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -101,6 +102,7 @@ class ProjectBriefServiceTest {
     UUID signalId = UUID.randomUUID();
     UUID taskId = UUID.randomUUID();
     when(projectReader.findSnapshot(PROJECT_ID)).thenReturn(Optional.of(snapshot));
+    when(projectReader.progressOf(PROJECT_ID)).thenReturn(OptionalInt.of(64));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
     // change도 all 개수에 포함되고, 칩과 items에도 나온다.
     when(signalListService.countByCreatedRange(PROJECT_ID, CALLER_ID, TODAY_FROM, TODAY_TO))
@@ -124,6 +126,8 @@ class ProjectBriefServiceTest {
     MobileBrief brief = projectBriefService.getBrief(PROJECT_ID, CALLER_ID);
 
     assertThat(brief.project()).isEqualTo(snapshot);
+    // 진행률은 project 모듈이 계산한 값을 그대로 싣는다.
+    assertThat(brief.progress()).isEqualTo(64);
     // All이 맨 앞(전체 12), 나머지는 라벨 글자수 오름차순과 알파벳순(Risk, Change, Decision, Question).
     assertThat(brief.filters())
         .containsExactly(
@@ -330,6 +334,7 @@ class ProjectBriefServiceTest {
 
   private void stubBriefBase() {
     when(projectReader.findSnapshot(PROJECT_ID)).thenReturn(Optional.of(snapshot()));
+    lenient().when(projectReader.progressOf(PROJECT_ID)).thenReturn(OptionalInt.of(64));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
     lenient()
         .when(signalListService.countByCreatedRange(PROJECT_ID, CALLER_ID, TODAY_FROM, TODAY_TO))
@@ -357,7 +362,6 @@ class ProjectBriefServiceTest {
         WORKSPACE_ID,
         "Q2 Activation Readiness",
         LocalDate.of(2026, 6, 30),
-        64,
         "목표일까지 Q2 Activation Readiness 범위의 회원 가입 MVP를 안정적으로 릴리즈한다.");
   }
 }
