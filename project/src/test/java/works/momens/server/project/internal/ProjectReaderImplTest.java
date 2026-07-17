@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import works.momens.server.project.BoardTask;
 import works.momens.server.project.TaskReader;
+import works.momens.server.project.TaskStatus;
 
 /**
  * 진행률 계산 규칙 검증.
@@ -47,9 +48,13 @@ class ProjectReaderImplTest {
     projectReader.progressOf(PROJECT_ID);
 
     // cancelled를 목록에 넣지 않아서 분모에서 빠진다. 이 단언이 그 설계 의도를 고정한다.
+    // 상태가 추가되면 PROGRESS_STATUSES도 함께 변경되어 이 테스트가 실패한다.
+    // 새 상태가 계산 대상에서 빠지는 것을 바로 확인할 수 있으므로,
+    // 분모에 포함할지 결정한 뒤 기대값을 수정한다.
     ArgumentCaptor<List<String>> statuses = ArgumentCaptor.captor();
     verify(taskReader).listTasksByStatus(eq(PROJECT_ID), statuses.capture());
     assertThat(statuses.getValue()).containsExactly("backlog", "todo", "in_progress", "done");
+    assertThat(statuses.getValue()).doesNotContain(TaskStatus.CANCELLED.value());
   }
 
   @Test

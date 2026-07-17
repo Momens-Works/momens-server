@@ -147,12 +147,17 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   더한 범위만 만들었다. 제외한 레거시 컬럼(health_status, 카운트 컬럼, metadata, label)과
   `project_owners`는 웹 이관(MOM-35 계열)에서 추가한다.
 - 조회 public API는 `ProjectReader`(workspaceIdOf, findSnapshot, listByWorkspaceIds, progressOf)와
-  `ProjectSnapshot`이다. projectId가 속한 workspace를 찾는 책임은 이 모듈이 소유한다.
+  `ProjectSnapshot`, `TaskStatus`다. projectId가 속한 workspace를 찾는 책임은 이 모듈이 소유한다.
 - 진행률 계산은 이 모듈에서 담당한다(`progressOf`, MOM-0800). `projects.progress`에 저장된 값은 사용하지 않고,
   조회할 때마다 태스크 상태를 기준으로 계산하므로 해당 컬럼은 매핑하지 않는다. 컬럼 자체는 레거시 웹이
   수동 입력으로 계속 사용하므로 DB에는 그대로 유지한다.
 - 진행률은 `cancelled`를 제외한 태스크를 기준으로 계산하며, 정수 나눗셈을 사용해 소수점은 버린다.
   `cancelled` 제외와 소수점 버림은 기획에서 명시하지 않은 부분이라 서버 구현에서 결정했다(ADR-0013).
+- 상태는 `TaskStatus` enum에서 정의하며, `tasks.status`의 DB CHECK 제약과 동일한 5가지 값을 사용한다.
+- 진행률 분모는 상태를 개별적으로 나열하지 않고 `TaskStatus` 전체에서 `cancelled`만 제외해 계산한다.
+  이렇게 하면 상태가 추가되더라도 별도 수정 없이 계산 대상에 포함된다.
+- 보드의 그룹, 노출 순서, 라벨은 화면 정책이므로 계속 mobile의 `BoardStatus`에서 관리한다. `BoardStatus`와
+  수정 요청 검증(`@Pattern`)을 `TaskStatus`를 기준으로 생성하도록 개선하는 작업은 후속으로 진행한다.
 - 진행률은 별도 집계 쿼리를 사용하지 않는다. `TaskReader.listTasksByStatus`가 반환한 같은 조회 결과를
   기준으로 전체 태스크 수와 `done` 태스크 수를 계산해 목록과 진행률이 서로 어긋나지 않도록 했다
   (MOM-0779의 `material_count`와 같은 이유).

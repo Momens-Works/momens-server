@@ -1,5 +1,6 @@
 package works.momens.server.project.internal;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +13,7 @@ import works.momens.server.project.BoardTask;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.ProjectSnapshot;
 import works.momens.server.project.TaskReader;
+import works.momens.server.project.TaskStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -20,13 +22,17 @@ class ProjectReaderImpl implements ProjectReader {
   /**
    * 진행률 계산에 포함되는 상태입니다. {@code cancelled}는 제외합니다.
    *
+   * <p>진행률은 {@link TaskStatus} 전체에서 {@code cancelled}만 제외해 계산합니다. 계산 대상을 개별 상태로 나열하지 않는 이유는 새 상태가
+   * 추가되더라도 별도 수정 없이 계산에 포함되도록 하기 위해서입니다.
+   *
    * <p>진행률은 같은 조회 결과에서 전체 태스크 수와 {@code done} 태스크 수를 함께 계산합니다. 별도 집계 쿼리를 사용하지 않는 이유는 목록과 계산 기준을
    * 일치시키기 위해서입니다(MOM-0779).
    */
   private static final List<String> PROGRESS_STATUSES =
-      List.of("backlog", "todo", "in_progress", "done");
-
-  private static final String DONE_STATUS = "done";
+      Arrays.stream(TaskStatus.values())
+          .filter(status -> status != TaskStatus.CANCELLED)
+          .map(TaskStatus::value)
+          .toList();
 
   private final ProjectRepository projectRepository;
   private final TaskReader taskReader;
@@ -55,7 +61,8 @@ class ProjectReaderImpl implements ProjectReader {
     if (tasks.isEmpty()) {
       return OptionalInt.of(0);
     }
-    long done = tasks.stream().filter(task -> DONE_STATUS.equals(task.status())).count();
+    long done =
+        tasks.stream().filter(task -> TaskStatus.DONE.value().equals(task.status())).count();
     // 정수 나눗셈을 사용하므로 소수점은 버립니다. 따라서 진행률을 올림하지 않으며, 100은 모든 태스크가 done일 때만 반환됩니다.
     return OptionalInt.of((int) (done * 100 / tasks.size()));
   }
