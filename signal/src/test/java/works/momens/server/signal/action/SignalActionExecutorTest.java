@@ -8,16 +8,12 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import works.momens.server.context.DevEntityRelationWriter;
 import works.momens.server.outbox.OutboxAppender;
 import works.momens.server.project.CreateTaskCommand;
 import works.momens.server.project.CreatedTask;
-import works.momens.server.project.DevTaskDetailWriter;
 import works.momens.server.project.TaskCreator;
 import works.momens.server.signal.SignalActionResult;
 import works.momens.server.signal.SignalReader;
@@ -33,46 +29,26 @@ class SignalActionExecutorTest {
   private final SignalActionRepository signalActionRepository = mock(SignalActionRepository.class);
   private final TaskCreator taskCreator = mock(TaskCreator.class);
   private final OutboxAppender outboxAppender = mock(OutboxAppender.class);
-  private final SignalReader signalReader = mock(SignalReader.class);
 
   private final SignalActionExecutor executor =
-      new SignalActionExecutor(
-          signalActionRepository,
-          taskCreator,
-          outboxAppender,
-          signalReader,
-          Optional.empty(),
-          Optional.empty());
+      new SignalActionExecutor(signalActionRepository, taskCreator, outboxAppender);
 
   @Test
-  @DisplayName("prod 프로필에는 시연용 writer가 등록되지 않는다")
-  void prodProfileDoesNotRegisterDemoWriters() {
-    try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
-      context.getEnvironment().setActiveProfiles("prod");
-      context.register(DevTaskDetailWriter.class, DevEntityRelationWriter.class);
-      context.refresh();
-
-      assertThat(context.getBeansOfType(DevTaskDetailWriter.class)).isEmpty();
-      assertThat(context.getBeansOfType(DevEntityRelationWriter.class)).isEmpty();
-    }
-  }
-
-  @Test
-  @DisplayName("prod에서는 정확한 시연 제목도 기존 기본 task로 생성하고 이벤트를 발행한다")
-  void prodCreatesDefaultTaskForExactDemoTitleAndAppendsConvertedEvent() {
-    String exactDemoTitle = "할인 쿠폰 적용 실패 문의가 오늘 27건 접수됐습니다";
+  @DisplayName("convert는 전달받은 값으로 task를 생성하고 signal.converted_to_task를 발행한다")
+  void convertCreatesTaskAndAppendsConvertedEvent() {
+    String title = "쿠폰 실패 안내 개선";
     SignalReader.Snapshot signal =
-        new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, exactDemoTitle);
+        new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목");
     UUID taskId = UUID.randomUUID();
     when(taskCreator.create(any()))
-        .thenReturn(new CreatedTask(taskId, PROJECT_ID, exactDemoTitle, "pm", "medium", "todo"));
+        .thenReturn(new CreatedTask(taskId, PROJECT_ID, title, "pm", "medium", "todo"));
 
-    SignalActionResult result = executor.convert(signal, USER_ID, exactDemoTitle, "pm", "medium");
+    SignalActionResult result = executor.convert(signal, USER_ID, title, "pm", "medium");
 
     verify(taskCreator)
         .create(
             CreateTaskCommand.fromSignal(
-                PROJECT_ID, WORKSPACE_ID, exactDemoTitle, "pm", "medium", SIGNAL_ID));
+                PROJECT_ID, WORKSPACE_ID, title, "pm", "medium", SIGNAL_ID));
     verify(outboxAppender)
         .append(
             WORKSPACE_ID,

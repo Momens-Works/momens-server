@@ -1,6 +1,5 @@
 package works.momens.server.signal;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -8,9 +7,6 @@ import java.util.UUID;
 public interface SignalReader {
 
   Optional<Snapshot> findLive(UUID signalId);
-
-  /** dev convert-to-task가 Signal evidence를 태스크 관련자료로 재사용할 때 표시 순서대로 조회한다. */
-  List<UUID> findEvidenceSourceRefIds(UUID signalId);
 
   /** action 처리에 필요한 Signal 최소 스냅샷. */
   record Snapshot(UUID id, UUID workspaceId, UUID projectId, String title) {}
