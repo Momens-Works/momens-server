@@ -63,7 +63,7 @@ Git 워크플로는 GitFlow를 따르고, 커밋·브랜치·PR 형식은 아래
 ## 리뷰
 
 - PR은 머지 전 **최소 1명의 승인이 필요합니다**(`protected-branches` ruleset 강제, 작성자
-  self-approve 불가). CODEOWNERS(`@Momens-Works/momens-backend`)에 리뷰가 자동 요청됩니다.
+  self-approve 불가). 리뷰어는 PR을 열 때 직접 지정합니다(자동 요청 없음).
 - `LGTM`만 남기지 않고, 확인한 범위·판단 근거를 짧게 남깁니다.
 
 ## 머지
