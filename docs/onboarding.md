@@ -168,8 +168,8 @@ docs: 문서 수정
 - **rebase 머지로 통일**(머지 커밋 없음, 선형 히스토리).
 - `develop`/`main`은 **PR로만** 변경(직접 push 차단), 리뷰 대화는 모두 resolve 후 머지.
 - 머지된 브랜치는 자동 삭제됩니다.
-- 머지하려면 **최소 1명의 승인이 필요합니다**(`protected-branches` ruleset 강제). CODEOWNERS
-  (`@Momens-Works/momens-backend`)에 리뷰 요청이 자동으로 갑니다.
+- 머지하려면 **최소 1명의 승인이 필요합니다**(`protected-branches` ruleset 강제). 리뷰어는 PR을
+  열 때 직접 지정합니다(자동 요청 없음).
 
 머지 정책 전체는 [기반 규칙 > Git > 머지](rules/git.md#머지)에 있습니다.
 
