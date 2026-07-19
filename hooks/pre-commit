@@ -7,9 +7,18 @@
 
 set -eu
 
-staged=$(git diff --cached --name-only --diff-filter=ACM -- '*.java' '*.gradle')
+staged=$(git diff --cached --name-only --diff-filter=ACMR -- '*.java' '*.gradle')
 if [ -z "$staged" ]; then
   exit 0
+fi
+
+# spotlessCheck 는 인덱스가 아니라 작업 트리를 검사합니다. 스테이징된 파일에 아직 스테이징
+# 안 된 변경이 남아 있으면(부분 스테이징) 검사 대상이 실제 커밋 내용과 달라질 수 있어 알립니다.
+# CI 가 커밋 트리를 최종 검사하므로 여기서는 차단하지 않고 경고만 합니다.
+partial=$(git status --porcelain -- '*.java' '*.gradle' | grep -E '^[MARC][MD]' || true)
+if [ -n "$partial" ]; then
+  echo "pre-commit 경고: 스테이징 안 된 변경이 남은 파일이 있어 작업 트리 기준으로 검사합니다."
+  echo "$partial"
 fi
 
 repo_root=$(git rev-parse --show-toplevel)

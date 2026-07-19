@@ -31,9 +31,11 @@ COPY source/build.gradle ./source/
 COPY user/build.gradle ./user/
 COPY workspace/build.gradle ./workspace/
 RUN sed -i 's/\r$//' gradlew
+# 의존성 메타데이터를 resolve 해 Gradle 배포본·메타데이터를 이 레이어에 캐시합니다.
+# 트리 출력은 버리되(로그만 커짐) 실패는 숨기지 않아, 워밍이 깨지면 빌드가 바로 드러납니다.
 RUN ./gradlew --no-daemon \
       -Dorg.gradle.java.installations.paths=/opt/java/jdk17 \
-      :app:dependencies --configuration runtimeClasspath -q || true
+      :app:dependencies --configuration runtimeClasspath > /dev/null
 
 # 2) 소스 복사 후 빌드. 테스트는 PostgreSQL Testcontainers(Docker)가 필요해 이미지 빌드
 #    중 실행할 수 없습니다. CI 가 spotlessCheck/test 를 별도로 수행하므로 여기서는 bootJar
