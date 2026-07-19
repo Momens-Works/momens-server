@@ -6,7 +6,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,8 +30,6 @@ import works.momens.server.user.UserService;
 @SpringBootTest
 @AutoConfigureMockMvc
 class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
-
-  private static final String DEMO_SIGNAL_TITLE = "할인 쿠폰 적용 실패 문의가 오늘 27건 접수됐습니다";
 
   @Autowired private MockMvc mockMvc;
   @Autowired private AccessTokenTestFactory accessTokens;
@@ -244,138 +241,6 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
         jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM tasks WHERE project_id = ?", Integer.class, project);
     assertThat(taskCountAfterRetry).isEqualTo(1);
-  }
-
-  @Test
-  @DisplayName("test 프로필의 정확한 쿠폰 실패 제목은 상세와 관련자료가 채워진 시연용 task를 생성한다")
-  void exactDemoTitleCreatesRichTaskAndReplaysWithoutDuplicates() throws Exception {
-    UserProfile user =
-        userService.findOrCreate("signals-it-demo-convert@momens.works", "김규일", null);
-    UUID workspace = insertWorkspace("signals-demo-convert");
-    addMember(workspace, user.id(), "owner");
-    UUID project = insertProject(workspace, user.id(), "signals-demo-convert-project");
-    UUID signal = insertSignal(workspace, project, "change", DEMO_SIGNAL_TITLE, "전환율 저하", "사전 안내");
-    UUID slack =
-        insertSourceRef(
-            workspace, "slack", "고객 문의 채널", "쿠폰 문의 27건", "문의 본문", "https://momens.slack.com/demo");
-    UUID figma =
-        insertSourceRef(
-            workspace,
-            "figma",
-            "여름 세일 이벤트 배너",
-            "쿠폰 조건 안내 누락",
-            "피그마 본문",
-            "https://www.figma.com/file/demo");
-    UUID file =
-        insertSourceRef(
-            workspace,
-            "file",
-            "쿠폰 입력 구간 분석",
-            "이탈률 11.3% 증가",
-            "분석 본문",
-            "https://drive.google.com/file/d/demo");
-    insertEvidence(workspace, signal, slack, 0, "고객 문의", "27건 접수", "반복 문의");
-    insertEvidence(workspace, signal, figma, 1, "이벤트 배너", "조건 누락", "적용 불가 인지");
-    insertEvidence(workspace, signal, file, 2, "쿠폰 입력", "이탈 증가", "전환 저하");
-    String token = "Bearer " + accessTokens.issueAccessToken(user.id());
-
-    mockMvc
-        .perform(
-            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signal)
-                .header("Authorization", token)
-                .header("API-Version", "1"))
-        .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.task.title").value("쿠폰 실패 안내 개선"))
-        .andExpect(jsonPath("$.task.status").value("todo"));
-
-    UUID taskId =
-        jdbcTemplate.queryForObject(
-            "SELECT id FROM tasks WHERE origin_signal_id = ?",
-            (resultSet, rowNumber) -> resultSet.getObject("id", UUID.class),
-            signal);
-
-    mockMvc
-        .perform(
-            get("/api/mobile/tasks/{taskId}", taskId)
-                .header("Authorization", token)
-                .header("API-Version", "1"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.title").value("쿠폰 실패 안내 개선"))
-        .andExpect(jsonPath("$.purpose").value("고객이 결제 전에 쿠폰 적용 가능 여부와 실패 이유를 이해할 수 있게 한다."))
-        .andExpect(jsonPath("$.status").value("todo"))
-        .andExpect(jsonPath("$.priority").value("high"))
-        .andExpect(jsonPath("$.role").value("pm"))
-        .andExpect(jsonPath("$.assignee.id").value(user.id().toString()))
-        .andExpect(jsonPath("$.checklist.total_count").value(4))
-        .andExpect(jsonPath("$.checklist.items[0].title").value("쿠폰 제외 브랜드와 최소 주문 금액 확정"))
-        .andExpect(jsonPath("$.checklist.items[1].title").value("결제 전에 쿠폰 적용 가능 여부 표시"))
-        .andExpect(jsonPath("$.checklist.items[2].title").value("실패 원인별 안내 문구 적용"))
-        .andExpect(jsonPath("$.checklist.items[3].title").value("고객센터 응대 가이드 공유"))
-        .andExpect(jsonPath("$.open_questions.length()").value(2))
-        .andExpect(jsonPath("$.open_questions[0].body").value("쿠폰 제외 브랜드를 상품 상세에서도 안내할까요?"))
-        .andExpect(jsonPath("$.open_questions[1].body").value("쿠폰 실패 시 사용 가능한 다른 쿠폰을 추천할까요?"))
-        .andExpect(
-            jsonPath("$.next_action")
-                .value("고객 문의 27건을 실패 원인별로 분류하고, 가장 많은 두 원인의 안내 문구와 사전 노출 위치를 먼저 확정하세요."))
-        .andExpect(jsonPath("$.materials.length()").value(3))
-        .andExpect(jsonPath("$.materials[0].id").value(slack.toString()))
-        .andExpect(jsonPath("$.materials[0].source").value("slack"))
-        .andExpect(jsonPath("$.materials[1].id").value(figma.toString()))
-        .andExpect(jsonPath("$.materials[1].source").value("figma"))
-        .andExpect(jsonPath("$.materials[2].id").value(file.toString()))
-        .andExpect(jsonPath("$.materials[2].source").value("file"));
-
-    mockMvc
-        .perform(
-            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signal)
-                .header("Authorization", token)
-                .header("API-Version", "1"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.task.id").value(taskId.toString()));
-
-    assertThat(count("tasks", "origin_signal_id", signal)).isEqualTo(1);
-    assertThat(count("task_checklist_items", "task_id", taskId)).isEqualTo(4);
-    assertThat(count("task_open_questions", "task_id", taskId)).isEqualTo(2);
-    assertThat(count("entity_relations", "from_entity_id", taskId)).isEqualTo(3);
-    assertThat(count("signal_actions", "signal_id", signal)).isEqualTo(1);
-    assertThat(countOutbox("task.created", taskId)).isEqualTo(1);
-    assertThat(countOutbox("signal.converted_to_task", signal)).isEqualTo(1);
-  }
-
-  @Test
-  @DisplayName("test 프로필에서도 마침표가 붙은 유사 제목은 기존 기본 task를 생성한다")
-  void similarDemoTitleCreatesDefaultTask() throws Exception {
-    UserProfile user =
-        userService.findOrCreate("signals-it-demo-similar@momens.works", "김규일", null);
-    UUID workspace = insertWorkspace("signals-demo-similar");
-    addMember(workspace, user.id(), "owner");
-    UUID project = insertProject(workspace, user.id(), "signals-demo-similar-project");
-    String similarTitle = DEMO_SIGNAL_TITLE + ".";
-    UUID signal = insertSignal(workspace, project, "change", similarTitle, "전환율 저하", "사전 안내");
-
-    mockMvc
-        .perform(
-            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signal)
-                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(user.id()))
-                .header("API-Version", "1"))
-        .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.task.title").value(similarTitle));
-
-    Map<String, Object> task =
-        jdbcTemplate.queryForMap(
-            "SELECT id, role, priority, description, assignee_id, next_action "
-                + "FROM tasks WHERE origin_signal_id = ?",
-            signal);
-    UUID taskId = (UUID) task.get("id");
-    assertThat(task)
-        .containsEntry("role", "pm")
-        .containsEntry("priority", "medium")
-        .containsEntry("description", null)
-        .containsEntry("assignee_id", null)
-        .containsEntry("next_action", null);
-    assertThat(count("task_checklist_items", "task_id", taskId)).isZero();
-    assertThat(count("task_open_questions", "task_id", taskId)).isZero();
-    assertThat(count("entity_relations", "from_entity_id", taskId)).isZero();
   }
 
   @Test
@@ -611,18 +476,5 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
         target,
         change,
         impact);
-  }
-
-  private Integer count(String table, String column, UUID id) {
-    return jdbcTemplate.queryForObject(
-        "SELECT COUNT(*) FROM " + table + " WHERE " + column + " = ?", Integer.class, id);
-  }
-
-  private Integer countOutbox(String eventType, UUID aggregateId) {
-    return jdbcTemplate.queryForObject(
-        "SELECT COUNT(*) FROM outbox_events WHERE event_type = ? AND aggregate_id = ?",
-        Integer.class,
-        eventType,
-        aggregateId.toString());
   }
 }

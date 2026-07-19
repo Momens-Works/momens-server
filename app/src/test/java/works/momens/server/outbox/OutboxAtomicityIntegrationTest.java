@@ -28,8 +28,6 @@ import works.momens.server.user.UserService;
 @AutoConfigureMockMvc
 class OutboxAtomicityIntegrationTest extends AbstractPostgresIntegrationTest {
 
-  private static final String DEMO_SIGNAL_TITLE = "할인 쿠폰 적용 실패 문의가 오늘 27건 접수됐습니다";
-
   @Autowired private MockMvc mockMvc;
   @Autowired private AccessTokenTestFactory accessTokens;
   @Autowired private UserService userService;
@@ -74,9 +72,7 @@ class OutboxAtomicityIntegrationTest extends AbstractPostgresIntegrationTest {
     UUID workspace = insertWorkspace("outbox-atomicity");
     addMember(workspace, user.id(), "owner");
     UUID project = insertProject(workspace, user.id(), "outbox-atomicity-project");
-    UUID signal = insertSignal(workspace, project, "change", DEMO_SIGNAL_TITLE);
-    UUID sourceRef = insertSourceRef(workspace);
-    insertEvidence(workspace, signal, sourceRef);
+    UUID signal = insertSignal(workspace, project, "risk", "제목");
 
     mockMvc
         .perform(
@@ -98,23 +94,6 @@ class OutboxAtomicityIntegrationTest extends AbstractPostgresIntegrationTest {
     Integer outboxCount =
         jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM outbox_events WHERE workspace_id = ?", Integer.class, workspace);
-    Integer checklistCount =
-        jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM task_checklist_items i "
-                + "JOIN tasks t ON t.id = i.task_id WHERE t.project_id = ?",
-            Integer.class,
-            project);
-    Integer openQuestionCount =
-        jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM task_open_questions q "
-                + "JOIN tasks t ON t.id = q.task_id WHERE t.project_id = ?",
-            Integer.class,
-            project);
-    Integer materialCount =
-        jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM entity_relations WHERE workspace_id = ?",
-            Integer.class,
-            workspace);
     Integer labelSequenceCount =
         jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM workspace_label_sequences "
@@ -125,9 +104,6 @@ class OutboxAtomicityIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(taskCount).isZero();
     assertThat(signalActionCount).isZero();
     assertThat(outboxCount).isZero();
-    assertThat(checklistCount).isZero();
-    assertThat(openQuestionCount).isZero();
-    assertThat(materialCount).isZero();
     assertThat(labelSequenceCount).isZero();
   }
 
@@ -169,26 +145,5 @@ class OutboxAtomicityIntegrationTest extends AbstractPostgresIntegrationTest {
         title,
         "본문");
     return id;
-  }
-
-  private UUID insertSourceRef(UUID workspaceId) {
-    UUID id = UUID.randomUUID();
-    jdbcTemplate.update(
-        "INSERT INTO source_refs (id, workspace_id, source_type, title) VALUES (?, ?, ?, ?)",
-        id,
-        workspaceId,
-        "slack",
-        "고객 문의 채널");
-    return id;
-  }
-
-  private void insertEvidence(UUID workspaceId, UUID signalId, UUID sourceRefId) {
-    jdbcTemplate.update(
-        "INSERT INTO signal_evidence "
-            + "(workspace_id, signal_id, source_ref_id, sort_order) VALUES (?, ?, ?, ?)",
-        workspaceId,
-        signalId,
-        sourceRefId,
-        0);
   }
 }

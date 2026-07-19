@@ -1,6 +1,5 @@
 package works.momens.server.signal.query;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +13,6 @@ import works.momens.server.signal.SignalReader;
 class SignalReaderImpl implements SignalReader {
 
   private final SignalRepository signalRepository;
-  private final SignalEvidenceRepository signalEvidenceRepository;
 
   @Override
   @Transactional(readOnly = true)
@@ -28,15 +26,5 @@ class SignalReaderImpl implements SignalReader {
                     signal.getWorkspaceId(),
                     signal.getProjectId(),
                     signal.getTitle()));
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public List<UUID> findEvidenceSourceRefIds(UUID signalId) {
-    return signalEvidenceRepository
-        .findBySignalIdOrderBySortOrderAscSourceRefIdAsc(signalId)
-        .stream()
-        .map(SignalEvidence::getSourceRefId)
-        .toList();
   }
 }
