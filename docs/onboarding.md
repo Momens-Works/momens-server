@@ -68,6 +68,8 @@ docker compose up -d
 
 `installGitHooks` 는 최초 1회만 실행하면 됩니다. 이후 커밋할 때 스테이징된 Java/Gradle
 파일이 있으면 `pre-commit` 훅이 `spotlessCheck` 를 돌려 CI 이전에 포맷 문제를 잡아줍니다.
+`spotlessCheck` 는 작업 트리 전체를 검사하므로, 스테이징하지 않은 다른 Java/Gradle 파일의
+포맷 문제도 함께 걸립니다.
 
 `momens-proto`는 private 리포이므로 로컬 GitHub 자격 증명에 읽기 권한이 필요합니다.
 GitHub Actions는 같은 권한을 가진 repository secret `CI_SUBMODULES_TOKEN`으로 submodule을
