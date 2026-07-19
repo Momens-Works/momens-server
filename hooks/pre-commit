@@ -1,0 +1,22 @@
+#!/bin/sh
+# 커밋 전에 스테이징된 Java/Gradle 파일의 포맷을 검사합니다. CI의 spotlessCheck 와 동일한
+# 검사를 로컬에서 미리 돌려, push 후 CI 에서야 포맷 실패를 발견하는 왕복을 줄입니다.
+#
+# 설치: `./gradlew installGitHooks` (core.hooksPath 를 이 디렉터리로 설정)
+# 검사 대상이 없으면(문서만 수정 등) Gradle 을 띄우지 않고 즉시 통과합니다.
+
+set -eu
+
+staged=$(git diff --cached --name-only --diff-filter=ACM -- '*.java' '*.gradle')
+if [ -z "$staged" ]; then
+  exit 0
+fi
+
+repo_root=$(git rev-parse --show-toplevel)
+echo "pre-commit: spotlessCheck (staged Java/Gradle 파일 감지)"
+if ! "$repo_root"/gradlew -q spotlessCheck; then
+  echo
+  echo "포맷 검사에 실패했습니다. 아래를 실행해 포맷을 적용한 뒤 다시 스테이징·커밋하세요:"
+  echo "  ./gradlew spotlessApply"
+  exit 1
+fi

@@ -1,18 +1,21 @@
 name: Build and deploy (dev)
 
+# CI(테스트 포함)가 develop push 에서 성공한 뒤에만 dev 배포를 진행합니다. push 로 직접
+# 트리거하면 테스트 결과와 무관하게 이미지가 빌드·배포되므로, CI 성공을 게이트로 둡니다.
 on:
-  push:
-    branches:
-      - develop
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [develop]
   workflow_dispatch:
 
 permissions:
   contents: read
   packages: write
 
-# 같은 ref 의 이전 실행은 취소합니다(불필요한 중복 빌드 방지).
+# 같은 커밋의 이전 실행은 취소합니다(불필요한 중복 빌드 방지).
 concurrency:
-  group: build-momens-server-dev-${{ github.ref }}
+  group: build-momens-server-dev-${{ github.event.workflow_run.head_branch || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -21,14 +24,24 @@ env:
 jobs:
   build-and-dispatch:
     runs-on: ubuntu-latest
+    # workflow_run 은 PR CI 완료로도 발화하므로, develop push 에서 성공한 CI 만 배포합니다.
+    # workflow_dispatch 수동 실행은 게이트 없이 그대로 허용합니다.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
     # step if 에서 참조하려면 job 레벨 env 여야 합니다.
     env:
       K8S_DEV_DISPATCH_TOKEN: ${{ secrets.MOMENS_K8S_DEV_DISPATCH_TOKEN }}
+      # 배포 대상 커밋: workflow_run 은 트리거한 CI 의 head_sha, 수동 실행은 현재 ref.
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      DEPLOY_REF: ${{ github.event.workflow_run.head_branch || github.ref_name }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.DEPLOY_SHA }}
           submodules: recursive
           token: ${{ secrets.CI_SUBMODULES_TOKEN }}
 
@@ -50,7 +63,7 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          tags: ${{ env.IMAGE }}:${{ env.DEPLOY_SHA }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -64,4 +77,4 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $K8S_DEV_DISPATCH_TOKEN" \
             https://api.github.com/repos/Momens-Works/momens-k8s-dev/dispatches \
-            -d "{\"event_type\":\"deploy-momens-server\",\"client_payload\":{\"image_tag\":\"${{ github.sha }}\",\"source_branch\":\"${{ github.ref_name }}\"}}"
+            -d "{\"event_type\":\"deploy-momens-server\",\"client_payload\":{\"image_tag\":\"${DEPLOY_SHA}\",\"source_branch\":\"${DEPLOY_REF}\"}}"
