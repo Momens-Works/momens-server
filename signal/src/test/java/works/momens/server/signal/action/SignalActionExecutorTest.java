@@ -36,19 +36,20 @@ class SignalActionExecutorTest {
   @Test
   @DisplayName("convert는 전달받은 값으로 task를 생성하고 signal.converted_to_task를 발행한다")
   void convertCreatesTaskAndAppendsConvertedEvent() {
+    // 기본값(pm/medium)과 다른 값으로, executor가 하드코딩 없이 전달받은 세 값을 그대로 쓰는지 고정한다.
     String title = "쿠폰 실패 안내 개선";
     SignalReader.Snapshot signal =
         new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목");
     UUID taskId = UUID.randomUUID();
     when(taskCreator.create(any()))
-        .thenReturn(new CreatedTask(taskId, PROJECT_ID, title, "pm", "medium", "todo"));
+        .thenReturn(new CreatedTask(taskId, PROJECT_ID, title, "design", "high", "todo"));
 
-    SignalActionResult result = executor.convert(signal, USER_ID, title, "pm", "medium");
+    SignalActionResult result = executor.convert(signal, USER_ID, title, "design", "high");
 
     verify(taskCreator)
         .create(
             CreateTaskCommand.fromSignal(
-                PROJECT_ID, WORKSPACE_ID, title, "pm", "medium", SIGNAL_ID));
+                PROJECT_ID, WORKSPACE_ID, title, "design", "high", SIGNAL_ID));
     verify(outboxAppender)
         .append(
             WORKSPACE_ID,
