@@ -31,11 +31,11 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Format check
-        run: ./gradlew spotlessCheck
-
-      - name: Test
-        run: ./gradlew test
+      # 포맷 검사·테스트·부트 jar 를 한 번의 Gradle 호출로 묶습니다. 구성 단계와 태스크
+      # 그래프를 재사용해 스텝별로 Gradle 을 다시 띄우는 비용을 줄입니다. 실패 지점은
+      # Gradle 출력에서 확인합니다.
+      - name: Check, test, build
+        run: ./gradlew spotlessCheck test bootJar
 
       - name: Upload test report
         if: failure()
@@ -44,6 +44,3 @@ jobs:
           name: test-report
           path: app/build/reports/tests/test/
           retention-days: 7
-
-      - name: Build boot jar
-        run: ./gradlew bootJar

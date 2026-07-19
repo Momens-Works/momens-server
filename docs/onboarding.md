@@ -61,7 +61,13 @@ docker compose up -d
 
 # 4) 빌드/테스트로 환경 검증 (Docker 실행 중이어야 함)
 ./gradlew test
+
+# 5) git 훅 설치 (커밋 전 포맷 검사). core.hooksPath 를 hooks/ 로 설정합니다.
+./gradlew installGitHooks
 ```
+
+`installGitHooks` 는 최초 1회만 실행하면 됩니다. 이후 커밋할 때 스테이징된 Java/Gradle
+파일이 있으면 `pre-commit` 훅이 `spotlessCheck` 를 돌려 CI 이전에 포맷 문제를 잡아줍니다.
 
 `momens-proto`는 private 리포이므로 로컬 GitHub 자격 증명에 읽기 권한이 필요합니다.
 GitHub Actions는 같은 권한을 가진 repository secret `CI_SUBMODULES_TOKEN`으로 submodule을

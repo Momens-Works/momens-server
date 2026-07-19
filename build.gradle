@@ -20,6 +20,14 @@ spotless {
     }
 }
 
+// 로컬 git 훅을 설치합니다. hooks/ 는 버전 관리되지만 .git/hooks 는 아니므로,
+// core.hooksPath 를 hooks/ 로 지정해 저장소 훅을 그대로 쓰게 합니다(최초 1회 실행).
+tasks.register('installGitHooks', Exec) {
+    group = 'git hooks'
+    description = 'core.hooksPath 를 hooks/ 로 설정해 저장소 공용 git 훅을 활성화합니다.'
+    commandLine 'git', 'config', 'core.hooksPath', 'hooks'
+}
+
 subprojects {
     apply plugin: 'java'
     apply plugin: 'com.diffplug.spotless'
