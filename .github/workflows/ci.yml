@@ -1,5 +1,3 @@
-# 이 이름은 build-and-deploy-dev.yml 의 workflow_run.workflows 에서 문자열로 참조합니다.
-# 이름을 바꾸면 그 값도 함께 고쳐야 dev 배포 트리거가 유지됩니다.
 name: CI
 
 on:
@@ -8,11 +6,16 @@ on:
     branches:
       - main
       - develop
+  workflow_dispatch:
 
 # 같은 ref 의 이전 실행은 취소합니다(불필요한 중복 실행 방지).
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+# 기본은 읽기만 부여하고, 이미지 push 가 필요한 배포 job 에서만 권한을 넓힙니다.
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -46,3 +49,72 @@ jobs:
           name: test-report
           path: app/build/reports/tests/test/
           retention-days: 7
+
+  # dev 배포는 같은 워크플로의 build job 에 의존시켜, 테스트가 성공한 커밋만 배포합니다.
+  # needs 로 순서를 잡으면 워크플로 이름 문자열 참조(workflow_run)가 필요 없고, checkout 도
+  # 기본값이 곧 테스트한 커밋(github.sha)이라 배포 대상 커밋을 따로 지정하지 않아도 됩니다.
+  deploy-dev:
+    needs: build
+    # develop 의 push 와 수동 실행에서만 배포합니다. PR·main push, 그리고 다른 브랜치에서의
+    # 수동 CI 재실행은 배포로 이어지지 않습니다.
+    if: >-
+      github.ref == 'refs/heads/develop' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    # dev 는 단일 환경이라 배포는 항상 최신 실행만 진행합니다(늦게 끝난 실행이 dev 를 이전
+    # SHA 로 되돌리는 레이스 방지).
+    concurrency:
+      group: build-momens-server-dev
+      cancel-in-progress: true
+
+    # step if 에서 참조하려면 job 레벨 env 여야 합니다.
+    env:
+      K8S_DEV_DISPATCH_TOKEN: ${{ secrets.MOMENS_K8S_DEV_DISPATCH_TOKEN }}
+      IMAGE: ghcr.io/momens-works/momens-server
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          token: ${{ secrets.CI_SUBMODULES_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # dev 배포 정책(D18)상 commit SHA 태그만 push 합니다. prod 워크플로와
+      # 달리 latest 등 mutable 태그는 만들지 않습니다.
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # momens-k8s-dev 레포에 dev 배포를 요청합니다. deploy-momens-server 핸들러와
+      # MOMENS_K8S_DEV_DISPATCH_TOKEN secret 이 있어야 동작합니다.
+      # 토큰이 없으면 이 스텝을 건너뛰어, 이미지 push 까지만 돌고 워크플로는 성공으로 남습니다.
+      - name: Request dev deploy
+        if: ${{ env.K8S_DEV_DISPATCH_TOKEN != '' }}
+        run: |
+          curl -fsS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $K8S_DEV_DISPATCH_TOKEN" \
+            https://api.github.com/repos/Momens-Works/momens-k8s-dev/dispatches \
+            -d "{\"event_type\":\"deploy-momens-server\",\"client_payload\":{\"image_tag\":\"${GITHUB_SHA}\",\"source_branch\":\"${GITHUB_REF_NAME}\"}}"
