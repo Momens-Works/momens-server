@@ -33,8 +33,10 @@ COPY workspace/build.gradle ./workspace/
 RUN sed -i 's/\r$//' gradlew
 # 전체 configuration 그래프를 resolve 해 Gradle 배포본·의존성 메타데이터를 이 레이어에
 # 캐시합니다. bootJar 는 compileClasspath·annotationProcessor(Lombok 등) 메타데이터도 쓰므로
-# runtimeClasspath 로 한정하지 않습니다. 트리 출력은 버리되(로그만 커짐) 실패는 숨기지 않아,
-# 워밍이 깨지면 빌드가 바로 드러납니다.
+# runtimeClasspath 로 한정하지 않습니다.
+# 이 단계는 캐시 워밍 전용이고 의존성 검증 수단이 아닙니다. dependencies 리포트는 해석에
+# 실패한 항목을 FAILED 로 표시할 뿐 태스크는 성공으로 끝나고, 트리 출력도 로그가 커져 버립니다.
+# 실제 의존성 검증은 뒤의 bootJar 가 수행합니다.
 RUN ./gradlew --no-daemon \
       -Dorg.gradle.java.installations.paths=/opt/java/jdk17 \
       :app:dependencies > /dev/null

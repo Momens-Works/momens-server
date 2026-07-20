@@ -8,11 +8,6 @@ on:
       - develop
   workflow_dispatch:
 
-# 같은 ref 의 이전 실행은 취소합니다(불필요한 중복 실행 방지).
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 # 기본은 읽기만 부여하고, 이미지 push 가 필요한 배포 job 에서만 권한을 넓힙니다.
 permissions:
   contents: read
@@ -20,6 +15,13 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    # 같은 ref 의 이전 검증만 취소합니다. workflow 레벨에 두면 실행 전체가 취소되어, 이미
+    # 테스트를 통과하고 진행 중이던 deploy-dev 까지 함께 죽습니다(새 커밋의 테스트가 실패하면
+    # 직전 커밋도 배포되지 않음). 그래서 검증 취소는 이 job 에만 겁니다.
+    concurrency:
+      group: ci-${{ github.ref }}
+      cancel-in-progress: true
 
     steps:
       - uses: actions/checkout@v7
@@ -36,11 +38,11 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      # 포맷 검사·테스트·부트 jar 를 한 번의 Gradle 호출로 묶습니다. 구성 단계와 태스크
-      # 그래프를 재사용해 스텝별로 Gradle 을 다시 띄우는 비용을 줄입니다. 실패 지점은
-      # Gradle 출력에서 확인합니다.
-      - name: Check, test, build
-        run: ./gradlew spotlessCheck test bootJar
+      # 포맷 검사와 테스트를 한 호출로 묶습니다. bootJar 까지 같이 넘기면 Gradle 이 태스크
+      # 그래프 순서대로 bootJar 를 테스트보다 먼저 실행해, 테스트가 실패할 커밋도 jar 조립
+      # 비용을 먼저 치릅니다. 그래서 가장 비싼 테스트가 먼저 끊기도록 호출을 나눕니다.
+      - name: Check and test
+        run: ./gradlew spotlessCheck test
 
       - name: Upload test report
         if: failure()
@@ -49,6 +51,9 @@ jobs:
           name: test-report
           path: app/build/reports/tests/test/
           retention-days: 7
+
+      - name: Build boot jar
+        run: ./gradlew bootJar
 
   # dev 배포는 같은 워크플로의 build job 에 의존시켜, 테스트가 성공한 커밋만 배포합니다.
   # needs 로 순서를 잡으면 워크플로 이름 문자열 참조(workflow_run)가 필요 없고, checkout 도
