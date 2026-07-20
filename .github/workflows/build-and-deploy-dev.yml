@@ -4,6 +4,8 @@ name: Build and deploy (dev)
 # 트리거하면 테스트 결과와 무관하게 이미지가 빌드·배포되므로, CI 성공을 게이트로 둡니다.
 on:
   workflow_run:
+    # ci.yml 의 `name: CI` 를 문자열로 참조합니다. CI 워크플로 이름을 바꾸면 이 값도 함께
+    # 고쳐야 하고, 놓치면 에러 없이 트리거가 멈춰 dev 배포가 조용히 중단됩니다.
     workflows: ["CI"]
     types: [completed]
     branches: [develop]
