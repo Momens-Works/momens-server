@@ -1,3 +1,5 @@
+# 이 이름은 build-and-deploy-dev.yml 의 workflow_run.workflows 에서 문자열로 참조합니다.
+# 이름을 바꾸면 그 값도 함께 고쳐야 dev 배포 트리거가 유지됩니다.
 name: CI
 
 on:
