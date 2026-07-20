@@ -30,10 +30,12 @@ COPY signal/build.gradle ./signal/
 COPY source/build.gradle ./source/
 COPY user/build.gradle ./user/
 COPY workspace/build.gradle ./workspace/
-RUN sed -i 's/\r$//' gradlew
-# 전체 configuration 그래프를 resolve 해 Gradle 배포본·의존성 메타데이터를 이 레이어에
-# 캐시합니다. bootJar 는 compileClasspath·annotationProcessor(Lombok 등) 메타데이터도 쓰므로
-# runtimeClasspath 로 한정하지 않습니다.
+# gradlew 의 줄바꿈은 .gitattributes 의 `gradlew text eol=lf` 로 보장합니다. 예전에는 여기서
+# sed 로 CR 을 지웠지만, 아래 COPY . . 가 원본으로 다시 덮어써 정작 bootJar 단계에는 적용되지
+# 않았습니다(방어가 무력화된 상태). 체크아웃 시점에 고치는 편이 로컬 빌드까지 함께 보호합니다.
+# :app 기준으로 configuration 그래프를 resolve 해 Gradle 배포본·의존성 메타데이터를 이
+# 레이어에 캐시합니다(하위 모듈 자체의 annotationProcessor 등은 각 모듈 컴파일 시 해석되지만,
+# Lombok 처럼 좌표가 같은 의존성은 이 캐시가 그대로 적용됩니다).
 # 이 단계는 캐시 워밍 전용이고 의존성 검증 수단이 아닙니다. dependencies 리포트는 해석에
 # 실패한 항목을 FAILED 로 표시할 뿐 태스크는 성공으로 끝나고, 트리 출력도 로그가 커져 버립니다.
 # 실제 의존성 검증은 뒤의 bootJar 가 수행합니다.
