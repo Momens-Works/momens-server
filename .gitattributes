@@ -1,1 +1,5 @@
 *.bat text eol=crlf
+
+# gradlew 는 컨테이너·CI 의 sh 로 실행되므로 항상 LF 로 체크아웃합니다.
+# core.autocrlf=true 환경에서 CRLF 로 받으면 `bad interpreter` 로 실패합니다.
+gradlew text eol=lf

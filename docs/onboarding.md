@@ -71,6 +71,13 @@ docker compose up -d
 `spotlessCheck` 는 작업 트리 전체를 검사하므로, 스테이징하지 않은 다른 Java/Gradle 파일의
 포맷 문제도 함께 걸립니다.
 
+알아둘 점 두 가지입니다.
+
+- `core.hooksPath` 를 `hooks/` 로 지정하면 **기존 `.git/hooks` 의 훅은 더 이상 실행되지
+  않습니다**. 개인 훅을 쓰고 있었다면 `hooks/` 로 옮기거나 별도로 관리해야 합니다.
+- 훅을 건너뛰어야 할 때는 `git commit --no-verify` 를 씁니다. 다만 포맷 문제는 CI
+  (`spotlessCheck`)에서 다시 걸리므로 임시 우회로만 사용합니다.
+
 `momens-proto`는 private 리포이므로 로컬 GitHub 자격 증명에 읽기 권한이 필요합니다.
 GitHub Actions는 같은 권한을 가진 repository secret `CI_SUBMODULES_TOKEN`으로 submodule을
 checkout합니다.
