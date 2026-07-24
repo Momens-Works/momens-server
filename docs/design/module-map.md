@@ -27,7 +27,7 @@
 | `source` | 외부 연결 lifecycle·provider OAuth·source-ref verify | `source` |
 | `context` | task-memory/source-ref 연결·context API (얇은 orchestration) | `relation` |
 | `retrieval` | 검색 read-model projection·document/event schema 소유 | `retrieval` |
-| `minsu` | Minsu 질의 usecase·LLM·gRPC client·Slack 표면 | `minsu`·`slackbot` |
+| `minsu` | Minsu usecase·LLM provider/model 경계·gRPC client·Slack 표면 | `minsu`·`slackbot` |
 
 ## 의존 방향
 
@@ -43,7 +43,8 @@
   소유하지 않는다.
 - `signal`은 `project`의 project/workspace 해석 public API와 `workspace`의 RBAC public API를 사용한다.
   상세 응답의 evidence는 `source`의 source_ref 조회 public API로 hydrate한다.
-  Signal을 task로 수용할 때는 `project`의 task 생성 public API를 사용한다.
+  MOM-0804부터 Signal을 task로 수용할 때 `minsu`의 `SignalTaskDraftGenerator`와 `project`의 task
+  생성 public API를 사용한다([ADR-0014](../adr/0014-minsu-task-draft-module-and-llm-boundary.md)).
 - `signal`과 `project`는 확정 액션 결과를 같은 트랜잭션에서 남기기 위해 `outbox`의
   `OutboxAppender` public API를 사용한다(CO-6). `signal`의 dev Signal 생성 쓰기 경로는 `source`의
   dev 쓰기 public API(`DevSourceRefWriter`)에도 위임한다.
@@ -333,8 +334,10 @@ dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패
   소유한다. 당일 범위 조회는 처리 여부와 무관하게 담고 소프트 삭제는 제외한다(MOM-81). 정렬
   기준과 커서 규칙도 이 모듈이 정하고, 어떤 type을 노출할지와 하루 경계는 호출하는 표면이 정한다.
 - body 없는 `convert-to-task`는 태스크 등록 시점에 민수가 생성하는 task draft를 입력으로 사용한다.
-  민수(서버 내 모듈로 구현 예정)가 구현되기 전에는 고정 목 draft(title=Signal title, role=`pm`,
-  priority=`medium`)를 쓰고, draft는 `signals` backing에 저장하지 않는다(ADR-0011).
+  MOM-0804부터 `signal`은 `minsu`의 공개 `SignalTaskDraftGenerator`를 호출하고, 비활성·설정
+  무효·입력 부족·외부 실패·출력 무효 시 고정 draft(title=15자로 제한한 Signal title, role=`pm`,
+  priority=`medium`)를 쓴다. 그전에는 ADR-0011의 고정 목 draft를 사용한다. draft는 `signals`
+  backing에 저장하지 않는다(ADR-0011·0014, MOM-0804·0805).
 - Signal action 결과 outbox 발행 계약을 소유한다. projection 경로의 outbox 소비 상태, 재시도, DLQ는
   worker 책임이고, retrieval indexing 상태는 retrieval 책임이다.
 - Signal 발생 push notification은 api-server가 `signal.created` outbox를 소비해 발송한다
@@ -416,14 +419,24 @@ public API 또는 application event로 발행한다.
 
 ### minsu
 
-Minsu query experience를 담당한다.
+Minsu 유스케이스와 LLM provider/model 경계를 담당한다.
 
+- Signal `convert-to-task`의 task draft 생성 공개 API `SignalTaskDraftGenerator`
 - `/workspaces/:id/minsu/query`
 - retrieval SearchRequest assembly, PermissionContext assembly, answer synthesis
 - Slack bot 표면, LLM adapter, retrieval gRPC client adapter
 
-Minsu는 검색을 호출하고 답변을 만드는 유스케이스를 소유한다. retrieval projection schema
-ownership과는 분리한다. 레거시 `slackbot`의 표면(Slack 이벤트 처리)도 이 모듈이 흡수한다.
+첫 수직 슬라이스는 Signal task draft로 시작한다(MOM-0805). 내부 벤더 중립 `LlmClient` port와
+배포 설정 기반 `ModelSelectionPolicy` 뒤에 Google Gen AI Java SDK adapter 하나를 두며, 기본
+model은 `gemini-3.5-flash-lite`다. `signal`에는 검증된 draft만 반환하고 SDK 타입과 prompt는
+노출하지 않는다. 상세 경계는
+[ADR-0014](../adr/0014-minsu-task-draft-module-and-llm-boundary.md)와
+[MOM-0803 설계](minsu-signal-task-draft-design.md)를 따른다.
+
+Minsu query를 이관할 때는 별도 공개 유스케이스로 검색 호출과 답변 생성을 소유한다. task draft와
+query는 LLM adapter·model 선택·persona 기반만 공유하고 서로의 API DTO를 재사용하지 않는다.
+retrieval projection schema ownership과는 분리한다. 레거시 `slackbot`의 표면(Slack 이벤트 처리)도
+이 모듈이 흡수한다.
 
 ## 레거시 매핑 요약
 
