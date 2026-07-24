@@ -47,6 +47,9 @@ adapter 하나만 둔다. SDK 타입은 infrastructure adapter 밖으로 노출�
 - Google Gen AI Java SDK를 직접 사용한다.
 - 구현 시점의 최신 안정 SDK 버전을 확인해 명시적으로 고정한다.
 - 안정 API인 `v1`과 ADC를 사용한다.
+- Google SDK client는 Spring bean 생성 중 만들지 않고 최초 provider 호출 경계에서 지연
+  생성한다. 성공한 client만 재사용하며 ADC 조회나 client 생성 실패는 provider 호출 실패와 같은
+  고정 fallback으로 처리한다.
 - 기본 및 최초 허용 모델은 GA인 `gemini-3.5-flash-lite`다.
 - model은 배포 설정에서 선택하되, 허용 catalog 밖의 provider/model을 조용히 기본값으로
   바꾸지 않는다.
@@ -80,12 +83,15 @@ Google structured output이 지원하지 않는 `maxLength`는 schema에 넣지 
 - 기능 비활성화
 - provider/model/location 등 설정 무효
 - overall impact와 모든 evidence 의미 값이 없음
+- ADC 조회 또는 Google SDK client 생성 실패
 - provider 호출 예외
 - candidate 없음, 비정상 finish reason, 빈 응답, JSON 또는 enum 검증 실패
 - 추후 운영 timeout 초과
 
 잘못된 설정이나 응답은 fallback으로 사용자 흐름을 유지하더라도 로그와 metric에서 원인을
 구분한다. prompt, 원문 응답, source 원문·URL·작성자·provider metadata는 로그에 남기지 않는다.
+Google provider 호출은 Micrometer `Observation`으로 감싸 현재 HTTP trace의 child span과 호출
+시간을 함께 기록한다.
 
 ### 호출·트랜잭션 경계
 

@@ -119,8 +119,8 @@ public record SignalTaskDraftInput(
 }
 
 public record TaskDraft(String title, Role role, Priority priority) {
-  enum Role { PM, DESIGN, BACKEND, FRONTEND }
-  enum Priority { LOW, MEDIUM, HIGH }
+  public enum Role { PM, DESIGN, BACKEND, FRONTEND }
+  public enum Priority { LOW, MEDIUM, HIGH }
 }
 ```
 
@@ -131,20 +131,29 @@ public record TaskDraft(String title, Role role, Priority priority) {
 
 ## 6. Signal 입력 조회
 
-현재 `SignalReader.Snapshot`은 id, workspaceId, projectId, title만 제공한다. 구현 시 같은 Signal
-행에서 읽을 수 있는 type과 impact를 snapshot에 추가하고, evidence 의미 값은 기존 정렬
-(`sort_order`, `source_ref_id`)대로 별도 조회한다.
+현재 `SignalReader.Snapshot`은 id, workspaceId, projectId, title만 제공한다. 구현 시 기존
+root public API에 다음 read seam을 추가한다.
 
-```text
-Snapshot
-  id, workspaceId, projectId, type, title, impact
+```java
+public interface SignalReader {
+  Optional<Snapshot> findLive(UUID signalId);
 
-DraftEvidence
-  target, change, impact
+  List<DraftEvidence> findDraftEvidence(UUID signalId);
+
+  record Snapshot(
+      UUID id, UUID workspaceId, UUID projectId, String type, String title, String impact) {}
+
+  record DraftEvidence(String target, String change, String impact) {}
+}
 ```
 
+`findDraftEvidence`는 `signal_evidence`의 의미 값만 `sort_order ASC, source_ref_id ASC`로
+반환한다. 행이 없으면 빈 목록을 반환하고 source ref를 hydrate하지 않는다. null·blank 값은
+그대로 반환하되 generator가 각 값을 trim하고 세 값이 모두 빈 evidence는 prompt에서 제외한다.
+
 evidence 조회는 기존 action ledger가 없고 요청 action이 convert일 때만 수행한다. dismiss와
-convert replay는 evidence를 읽거나 모델을 호출하지 않는다.
+convert replay는 evidence를 읽거나 모델을 호출하지 않는다. `SignalReader.Snapshot`에 evidence를
+포함하지 않아 `findLive`를 함께 쓰는 다른 경로에 불필요한 조회를 추가하지 않는다.
 
 모델 입력에 포함하는 값:
 
@@ -199,6 +208,15 @@ API, UX/AX는 이번 구현에 포함하지 않는다.
 - SDK retry attempts 1
 - 별도 애플리케이션 timeout 없음
 - provider response를 벤더 중립 결과로 변환한 뒤 SDK 타입 폐기
+
+Google SDK `Client`는 ADC를 client 생성 중 조회할 수 있으므로 Spring bean 생성자에서
+`Client.build()`를 호출하지 않는다. 내부 `GoogleClientFactory`를 provider 호출 경계에서 지연
+실행하고 첫 성공 instance만 thread-safe하게 캐시한다. 성공한 client는 application context 종료
+시 닫는다.
+
+ADC 조회나 client 생성이 실패하면 실패 instance를 캐시하지 않고 `provider_error`로 기록한 뒤
+고정 fallback을 반환한다. 다음 신규 요청은 client 생성을 다시 시도해 credential 복구를 재시작
+없이 반영할 수 있다. 기능 비활성·정적 설정 무효·입력 부족 경로에서는 factory를 호출하지 않는다.
 
 ## 8. prompt와 structured output
 
@@ -264,7 +282,7 @@ priority = medium
 | 기능 비활성 | 없음 | 고정 fallback | `disabled` |
 | 설정 무효 | 없음 | 고정 fallback | `invalid_config` |
 | impact/evidence 의미 값 없음 | 없음 | 고정 fallback | `insufficient_context` |
-| provider 예외 | 1회 | 고정 fallback | `provider_error` |
+| ADC/client 생성 또는 provider 예외 | 1회 | 고정 fallback | `provider_error` |
 | candidate/finish/text/JSON 무효 | 1회 | 고정 fallback | `invalid_response` |
 | role/priority 무효 | 1회 | 고정 fallback | `invalid_output` |
 | title만 빈 값 | 1회 | 모델 role/priority + Signal title | `generated_title_fallback` |
@@ -311,6 +329,11 @@ momens:
 `momens.minsu.llm.config.valid=0`을 노출한다. secret과 credential 내용은 로그에 남기지 않는다.
 app context는 정상 기동하고 각 호출은 `invalid_config` fallback을 사용한다.
 
+ADC 존재 여부는 정적 설정 유효성에 포함하지 않는다. credential은 SDK client를 지연 생성할 때
+확인하고 실패하면 `provider_error`로 관측한다. 따라서 `enabled=true`이고 provider/model/project/
+location이 모두 유효해도 ADC가 없는 환경에서 app context는 정상 기동하고 convert는 고정
+fallback을 사용한다.
+
 `gemini-3.5-flash-lite`는 설계 시점 기준 GA이고 최소 2027-07-21까지 제공된다. model lifecycle은
 배포 전 다시 확인하며, 새 model을 catalog에 추가할 때 prompt/schema 회귀 테스트를 통과해야 한다.
 
@@ -338,11 +361,21 @@ replayOrConflict로 되돌리는 현재 구조를 유지하므로 최종 task는
 낮은 cardinality의 provider, model, outcome, fallback reason, finish reason을 tag로 사용한다.
 signalId, response ID는 metric tag로 쓰지 않는다.
 
+실제 provider 경계는 Micrometer `Observation` 이름 `momens.minsu.llm.generate`로 감싼다. 현재
+HTTP observation을 parent로 하는 child span을 만들고, lazy client 생성과 provider 응답 수신까지
+같은 observation에 포함한다. 성공·실패 모두 observation을 닫고 예외는 error로 기록한 뒤 내부
+fallback으로 전환한다.
+
+provider, model, outcome, fallback reason은 low-cardinality key로 둔다. signalId, response ID,
+prompt와 응답 내용은 observation name, tag, event에 넣지 않는다. 비활성·정적 설정 무효·입력
+부족처럼 provider 경계에 들어가지 않는 fallback에는 provider child span을 만들지 않고 request
+counter만 기록한다.
+
 | 관측 | 내용 |
 | --- | --- |
 | config gauge | 설정 valid 1/0, enabled, provider/model |
 | request counter | generated/fallback outcome과 reason |
-| duration timer | 전체 provider 호출 duration |
+| provider observation | child span과 client 생성·provider 호출 duration |
 | attempts | 항상 1인지 확인 |
 | token summary | prompt/candidate/thoughts/total token |
 | log | provider/model, finish reason, token, response ID, duration, outcome |
@@ -368,12 +401,16 @@ startup 무효 설정은 error, 호출 실패·fallback은 warn, 정상 생성�
 - candidate 없음, 비정상 finish reason, 빈 text, malformed JSON → fallback
 - disabled/invalid config/insufficient context → provider 미호출
 - provider 예외 → 호출 한 번 후 fallback
+- ADC/client factory 예외 → context 정상 기동, 첫 generate에서 `provider_error` fallback
+- client 생성 성공 → thread-safe한 동일 instance 재사용, context 종료 시 close
 - provider/model을 잘못 넣어도 context 기동, config metric 0
 - prompt input에 제외 필드가 들어가지 않음
 - Google SDK response를 port 결과로 변환하는 adapter 계약 테스트
+- provider 성공·예외에서 `momens.minsu.llm.generate` observation 생성·종료와 low-cardinality
+  key 검증
 
-CI에서는 Google live API를 호출하지 않는다. `LlmClient` fake와 adapter의 교체 가능한 transport
-seam을 사용한다.
+CI에서는 Google live API와 실제 ADC를 사용하지 않는다. `LlmClient` fake와
+`GoogleClientFactory` seam을 사용한다.
 
 ### `signal` 모듈
 
@@ -383,12 +420,14 @@ seam을 사용한다.
 - dismiss는 generator 미호출
 - 생성 draft와 fallback draft 모두 기존 executor로 전달
 - title/type/impact/evidence만 입력에 포함
+- evidence는 `sort_order`, `source_ref_id` 순서이며 없으면 빈 목록
 - 동시 요청에서 task·ledger·outbox 원자성 유지
 
 ### `app`
 
 - `ApplicationModules.verify()` 통과
 - LLM disabled 기본 설정으로 전체 context 기동
+- LLM enabled·정적 설정 valid·ADC/client factory 실패 상태에서도 전체 context 기동
 - fake generator를 사용한 기존 mobile convert 통합 계약 유지
 - OpenAPI status/body와 idempotent 200/created 201 응답 변화 없음
 
