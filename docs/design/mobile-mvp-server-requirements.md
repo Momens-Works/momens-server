@@ -266,8 +266,10 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 
 - 경로: `POST /api/mobile/signals/{signalId}/actions/convert-to-task`
 - 요청 body를 받지 않는 원탭 action이다.
-- 태스크에 사용할 draft(title, role, priority)는 태스크 등록 시점에 민수가 생성한다. 민수 구현 전
-  MVP에서는 고정 목 draft(title=Signal title, role=`pm`, priority=`medium`)를 사용한다.
+- 태스크에 사용할 draft(title, role, priority)는 태스크 등록 시점에 민수가 생성한다. 비활성·설정
+  무효·입력 부족·외부 실패·출력 무효 시 고정 draft(title=15자로 제한한 Signal title, role=`pm`,
+  priority=`medium`)를 사용한다.
+- task draft title은 공백 포함 최대 15자여야 한다.
 - task draft role은 `pm`, `design`, `backend`, `frontend` 중 하나여야 한다.
 - task draft priority는 `low`, `medium`, `high` 중 하나여야 한다.
 - 서버는 최종 task를 생성해야 한다.
@@ -363,13 +365,16 @@ suggestion, task draft)을 민수 구현 전까지 목으로 처리하는 것은
 - Task draft는 최종 task가 아니라 사용자 원탭 action을 위한 초안이다.
 - draft(title, role, priority)는 민수 산출물이며, Signal 생성 시점이 아니라 태스크 등록
   (`convert-to-task`) 시점에 생성한다. Signal backing에는 저장하지 않는다.
-- 민수는 서버 내 모듈로 구현할 계획이다. 민수가 구현되기 전 MVP에서는 api-server가 고정 목
-  draft(title=Signal title, role=`pm`, priority=`medium`)를 사용한다.
+- 민수는 서버 내 `minsu` 모듈의 `SignalTaskDraftGenerator`로 구현한다. 비활성·설정 무효·입력
+  부족·외부 실패·출력 무효 시 api-server가 고정 draft(title=15자로 제한한 Signal title,
+  role=`pm`, priority=`medium`)를 사용한다.
 - api-server는 draft를 모바일 상세 응답에 노출하지 않고 body 없는 `convert-to-task`의 입력으로만
   사용한다.
 - 사용자의 확정 action이 있기 전까지 task draft는 프로젝트의 실행 항목으로 간주하지 않는다.
 
-생산 책임과 대안 비교는 [ADR-0011](../adr/0011-signal-evidence-and-task-draft-contract.md)을 따른다.
+생산 책임은 [ADR-0011](../adr/0011-signal-evidence-and-task-draft-contract.md), 모듈·LLM·fallback
+경계는 [ADR-0014](../adr/0014-minsu-task-draft-module-and-llm-boundary.md)와
+[MOM-0803 상세 설계](minsu-signal-task-draft-design.md)를 따른다.
 
 ## Outbox 요구사항
 
@@ -421,7 +426,7 @@ suggestion, task draft)을 민수 구현 전까지 목으로 처리하는 것은
 - Outbox 테이블의 상세 스키마(이 문서는 제품/API 요구사항만 다루며, DB 상세 스키마는 별도 설계 산출물에서 관리한다)
 - worker outbox 소비 상태, 재시도, DLQ 설계
 - FCM 디바이스 토큰 등록/해제 API 계약(경로, 요청 body, 토큰 회전/중복/폐기 정책)
-- Minsu suggestion 목 문구의 구체 값과 민수 모듈의 상세 경계(민수 구현 시 후속 확정)
+- Minsu suggestion 목 문구의 구체 값과 suggestion 생성 경계(task draft 경계는 ADR-0014에서 확정)
 - 태스크 상세 확장 필드가 비어 있을 때의 구체 응답 값 정책
 - bootstrap의 project 0개 응답 정책의 확정(R-READ-000의 2026-07-04 가결정안으로 구현했고, 기획
   확인 후 확정한다. 기본 project 선정 규칙은 2026-07-04에 기획이 임의 1개로 확인해 줬다)
