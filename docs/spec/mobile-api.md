@@ -379,6 +379,8 @@ draft는 Signal backing에 저장하지 않습니다.
 
 클라이언트는 title·role·priority를 선택하거나 전송하지 않습니다.
 
+아래 201·200 응답 예시는 MOM-0804·MOM-0805 적용 후 생성되는 draft를 기준으로 합니다.
+
 #### Response 201
 
 ```json

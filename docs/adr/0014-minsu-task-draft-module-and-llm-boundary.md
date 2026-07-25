@@ -30,7 +30,7 @@ model 선택, 관측 기반을 공유하기 어렵다. 반대로 레거시 Minsu
 `SignalTaskDraftGenerator`로 한정한다. `signal`은 `minsu` root package의 공개 계약만 직접
 참조한다.
 
-- 입력은 Signal title, type, overall impact와 evidence의 target·change·impact다.
+- 입력은 Signal title, type, description, overall impact와 evidence의 target·change·impact다.
 - 출력은 title, role, priority가 모두 검증된 task draft다.
 - Google SDK 타입, provider 응답, prompt 표현은 공개 계약 밖에 둔다.
 - Minsu suggestion, query, retrieval, Slack과 레거시 대화형 `create_task` action은 이번
@@ -65,6 +65,8 @@ workspace가 모델을 고르는 요구가 생기면 이 policy와 별도 model 
 
 Google adapter는 `application/json` response MIME type과 structured output schema를 사용한다.
 schema는 title, role, priority를 필수로 두고 role과 priority를 enum으로 제한한다.
+Signal과 evidence의 문자열은 외부 유래 데이터로 취급해 system instruction과 구조적으로 분리하고,
+그 안의 지시문은 따르지 않는다.
 
 태스크 title의 공백 포함 15자 제한은 모델에만 맡기지 않는다.
 
@@ -82,9 +84,9 @@ Google structured output이 지원하지 않는 `maxLength`는 schema에 넣지 
 
 - 기능 비활성화
 - provider/model/location 등 설정 무효
-- overall impact와 모든 evidence 의미 값이 없음
+- description, overall impact와 모든 evidence 의미 값이 없음
 - ADC 조회 또는 Google SDK client 생성 실패
-- provider 호출 예외
+- rate limit·quota 초과를 포함한 provider 호출 예외
 - candidate 없음, 비정상 finish reason, 빈 응답, JSON 또는 enum 검증 실패
 - 추후 운영 timeout 초과
 
