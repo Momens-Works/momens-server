@@ -188,6 +188,49 @@ class DefaultSignalTaskDraftGeneratorTest {
                 .noneMatch(keyValue -> keyValue.getKey().contains("signal")));
   }
 
+  @Test
+  void recordsSafetyFinishReasonAsInvalidResponseWithTokenUsage() {
+    RecordingObservationHandler handler = new RecordingObservationHandler();
+    ObservationRegistry registry = ObservationRegistry.create();
+    registry.observationConfig().observationHandler(handler);
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    LlmResponse safetyResponse =
+        new LlmResponse(
+            true, "SAFETY", "", "response-id", new LlmResponse.TokenUsage(10, 0, 0, 10));
+
+    TaskDraft result =
+        generator(responding(safetyResponse), true, true, registry, meterRegistry)
+            .generate(input());
+
+    assertAll(
+        () -> assertThat(result).isEqualTo(fallback()),
+        () ->
+            assertThat(
+                    meterRegistry
+                        .get("momens.minsu.task.draft.requests")
+                        .tag("outcome", "fallback")
+                        .tag("fallback.reason", "invalid_response")
+                        .counter()
+                        .count())
+                .isEqualTo(1),
+        () ->
+            assertThat(
+                    meterRegistry
+                        .get("momens.minsu.llm.tokens")
+                        .tag("type", "prompt")
+                        .summary()
+                        .totalAmount())
+                .isEqualTo(10),
+        () ->
+            assertThat(
+                    handler.stoppedContext.getLowCardinalityKeyValues().stream()
+                        .map(keyValue -> keyValue.getKey() + "=" + keyValue.getValue()))
+                .contains(
+                    "outcome=fallback",
+                    "fallback.reason=invalid_response",
+                    "finish.reason=safety"));
+  }
+
   private DefaultSignalTaskDraftGenerator generator(
       LlmClient client, boolean enabled, boolean valid) {
     return generator(client, enabled, valid, ObservationRegistry.create());

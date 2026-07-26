@@ -54,4 +54,30 @@ class DefaultGoogleSdkClientTest {
     assertThat(response.responseId()).isEqualTo("response-2");
     assertThat(response.tokenUsage().total()).isEqualTo(3);
   }
+
+  @Test
+  void mapsSafetyFinishReasonWithoutThrowing() {
+    GenerateContentResponse sdkResponse =
+        GenerateContentResponse.fromJson(
+            """
+            {
+              "candidates": [{
+                "finishReason": "SAFETY"
+              }],
+              "responseId": "response-3",
+              "usageMetadata": {
+                "promptTokenCount": 10,
+                "totalTokenCount": 10
+              }
+            }
+            """);
+
+    LlmResponse response = DefaultGoogleSdkClient.map(sdkResponse);
+
+    assertThat(response.candidatePresent()).isTrue();
+    assertThat(response.finishReason()).isEqualTo("SAFETY");
+    assertThat(response.text()).isEmpty();
+    assertThat(response.responseId()).isEqualTo("response-3");
+    assertThat(response.tokenUsage()).isEqualTo(new LlmResponse.TokenUsage(10, 0, 0, 10));
+  }
 }
