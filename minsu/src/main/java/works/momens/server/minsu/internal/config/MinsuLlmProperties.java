@@ -8,8 +8,10 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("momens.minsu.llm")
 public record MinsuLlmProperties(
     @DefaultValue("google") String provider,
-    @DefaultValue("gemini-3.5-flash-lite") String model,
+    @DefaultValue(MinsuLlmProperties.DEFAULT_MODEL) String model,
     @DefaultValue Google google) {
+
+  static final String DEFAULT_MODEL = "gemini-3.5-flash-lite";
 
   public record Google(@DefaultValue("") String project, @DefaultValue("global") String location) {}
 }

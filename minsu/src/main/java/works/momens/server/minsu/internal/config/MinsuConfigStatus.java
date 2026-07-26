@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 public final class MinsuConfigStatus {
 
   static final String GOOGLE = "google";
-  static final String DEFAULT_MODEL = "gemini-3.5-flash-lite";
   private static final Set<String> GOOGLE_LOCATIONS = Set.of("global", "us", "eu");
 
   private final boolean enabled;
@@ -54,7 +53,7 @@ public final class MinsuConfigStatus {
     if (!GOOGLE.equals(llm.provider())) {
       fields.add("provider");
     }
-    if (!DEFAULT_MODEL.equals(llm.model())) {
+    if (!MinsuLlmProperties.DEFAULT_MODEL.equals(llm.model())) {
       fields.add("model");
     }
     if (llm.google().project() == null || llm.google().project().isBlank()) {
