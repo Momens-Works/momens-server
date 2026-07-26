@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.env.Environment;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.minsu.SignalTaskDraftGenerator;
 
@@ -17,10 +18,19 @@ import works.momens.server.minsu.SignalTaskDraftGenerator;
 @SpringBootTest
 class MomensServerApplicationTests extends AbstractPostgresIntegrationTest {
 
-  @Autowired private SignalTaskDraftGenerator signalTaskDraftGenerator;
+  private final SignalTaskDraftGenerator signalTaskDraftGenerator;
+  private final Environment environment;
+
+  @Autowired
+  MomensServerApplicationTests(
+      SignalTaskDraftGenerator signalTaskDraftGenerator, Environment environment) {
+    this.signalTaskDraftGenerator = signalTaskDraftGenerator;
+    this.environment = environment;
+  }
 
   @Test
   void contextLoadsWithMinsuDisabledByDefault() {
     assertThat(signalTaskDraftGenerator).isNotNull();
+    assertThat(environment.getProperty("momens.minsu.task-draft.enabled", Boolean.class)).isFalse();
   }
 }
