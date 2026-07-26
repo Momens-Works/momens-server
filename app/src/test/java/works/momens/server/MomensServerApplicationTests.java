@@ -1,8 +1,12 @@
 package works.momens.server;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.minsu.SignalTaskDraftGenerator;
 
 /**
  * 애플리케이션 컨텍스트 로드 테스트.
@@ -13,6 +17,10 @@ import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 @SpringBootTest
 class MomensServerApplicationTests extends AbstractPostgresIntegrationTest {
 
+  @Autowired private SignalTaskDraftGenerator signalTaskDraftGenerator;
+
   @Test
-  void contextLoads() {}
+  void contextLoadsWithMinsuDisabledByDefault() {
+    assertThat(signalTaskDraftGenerator).isNotNull();
+  }
 }
