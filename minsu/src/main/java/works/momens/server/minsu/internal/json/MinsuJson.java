@@ -21,7 +21,7 @@ public final class MinsuJson {
 
   public <T> Optional<T> read(String value, Class<T> type) {
     try {
-      return Optional.of(objectMapper.readValue(value, type));
+      return Optional.ofNullable(objectMapper.readValue(value, type));
     } catch (JsonProcessingException e) {
       return Optional.empty();
     }

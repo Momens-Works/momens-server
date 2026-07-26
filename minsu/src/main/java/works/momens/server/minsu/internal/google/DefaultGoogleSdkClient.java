@@ -11,6 +11,7 @@ import com.google.genai.types.Schema;
 import com.google.genai.types.Type;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import works.momens.server.minsu.internal.llm.LlmRequest;
 import works.momens.server.minsu.internal.llm.LlmResponse;
 import works.momens.server.minsu.internal.llm.ModelSelection;
@@ -50,15 +51,19 @@ final class DefaultGoogleSdkClient implements GoogleSdkClient {
       return new LlmResponse(
           false,
           "",
-          response.text(),
+          "",
           response.responseId().orElse(""),
           tokenUsage(response.usageMetadata().orElse(null)));
     }
     Candidate candidate = candidates.getFirst();
+    String text =
+        candidate.content().flatMap(Content::parts).orElse(List.of()).stream()
+            .map(part -> part.text().orElse(""))
+            .collect(Collectors.joining());
     return new LlmResponse(
         true,
         candidate.finishReason().map(Object::toString).orElse(""),
-        response.text(),
+        text,
         response.responseId().orElse(""),
         tokenUsage(response.usageMetadata().orElse(null)));
   }
