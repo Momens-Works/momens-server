@@ -3,6 +3,7 @@ package works.momens.server.minsu.internal.generation;
 import io.micrometer.observation.Observation;
 import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.spi.LoggingEventBuilder;
 import org.springframework.stereotype.Component;
 import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
@@ -12,6 +13,7 @@ import works.momens.server.minsu.TaskDraft;
 import works.momens.server.minsu.internal.config.MinsuConfigStatus;
 import works.momens.server.minsu.internal.json.MinsuJson;
 import works.momens.server.minsu.internal.llm.LlmClient;
+import works.momens.server.minsu.internal.llm.LlmRequest;
 import works.momens.server.minsu.internal.llm.LlmResponse;
 import works.momens.server.minsu.internal.llm.LlmUseCase;
 import works.momens.server.minsu.internal.llm.ModelSelection;
@@ -58,10 +60,11 @@ final class DefaultSignalTaskDraftGenerator implements SignalTaskDraftGenerator 
     }
 
     ModelSelection selection = selectionPolicy.select(LlmUseCase.SIGNAL_TASK_DRAFT);
-    Observation observation = observability.startProvider(selection);
+    LlmRequest request = prompt.render(input);
+    Observation observation = observability.startProvider(selection, request.promptVersion());
     long startedAt = System.nanoTime();
     try {
-      LlmResponse response = llmClient.generate(selection, prompt.render(input));
+      LlmResponse response = llmClient.generate(selection, request);
       observability.recordTokens(selection, response.tokenUsage());
       Result result = validate(response, input, fallback);
       observability.completeProvider(observation, result.outcome(), response.finishReason(), null);
@@ -121,7 +124,11 @@ final class DefaultSignalTaskDraftGenerator implements SignalTaskDraftGenerator 
 
   private void logResult(
       ModelSelection selection, LlmResponse response, GenerationOutcome outcome, long startedAt) {
-    log.debug(
+    LoggingEventBuilder event =
+        outcome == GenerationOutcome.INVALID_RESPONSE || outcome == GenerationOutcome.INVALID_OUTPUT
+            ? log.atWarn()
+            : log.atDebug();
+    event.log(
         "Minsu LLM 호출 완료 provider={} model={} finishReason={} promptTokens={} candidateTokens={} "
             + "thoughtsTokens={} totalTokens={} responseId={} durationMs={} outcome={} "
             + "fallbackReason={}",

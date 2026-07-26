@@ -21,10 +21,11 @@ final class MinsuObservability {
     this.observationRegistry = observationRegistry;
   }
 
-  Observation startProvider(ModelSelection selection) {
+  Observation startProvider(ModelSelection selection, String promptVersion) {
     return Observation.start(OBSERVATION_NAME, observationRegistry)
         .lowCardinalityKeyValue("provider", selection.provider())
-        .lowCardinalityKeyValue("model", selection.model());
+        .lowCardinalityKeyValue("model", selection.model())
+        .lowCardinalityKeyValue("prompt.version", promptVersion);
   }
 
   void completeProvider(
