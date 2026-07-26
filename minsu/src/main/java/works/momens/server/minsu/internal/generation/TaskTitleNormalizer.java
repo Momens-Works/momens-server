@@ -16,6 +16,6 @@ final class TaskTitleNormalizer {
         && Character.isLowSurrogate(normalized.charAt(end))) {
       end--;
     }
-    return normalized.substring(0, end);
+    return normalized.substring(0, end).stripTrailing();
   }
 }

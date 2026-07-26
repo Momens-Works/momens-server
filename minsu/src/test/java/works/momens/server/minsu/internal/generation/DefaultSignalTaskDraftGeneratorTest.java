@@ -5,6 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationHandler;
@@ -16,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.LoggerFactory;
 import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
 import works.momens.server.minsu.SignalTaskDraftInput;
@@ -54,6 +59,17 @@ class DefaultSignalTaskDraftGeneratorTest {
     TaskDraft result = generator(client, true, true).generate(input());
 
     assertThat(result.title()).isEqualTo("12345678901234").hasSizeLessThanOrEqualTo(15);
+  }
+
+  @Test
+  void stripsTrailingSpaceAfterTruncatingTitle() {
+    CapturingClient client =
+        responding(
+            success("{\"title\":\"12345678901234 A\",\"role\":\"pm\",\"priority\":\"low\"}"));
+
+    TaskDraft result = generator(client, true, true).generate(input());
+
+    assertThat(result.title()).isEqualTo("12345678901234").doesNotEndWith(" ");
   }
 
   @Test
@@ -166,6 +182,7 @@ class DefaultSignalTaskDraftGeneratorTest {
                 .containsExactlyInAnyOrder(
                     "provider=google",
                     "model=gemini-3.5-flash-lite",
+                    "prompt.version=signal-task-draft-v1",
                     "outcome=generated",
                     "fallback.reason=none",
                     "finish.reason=stop"));
@@ -229,6 +246,63 @@ class DefaultSignalTaskDraftGeneratorTest {
                     "outcome=fallback",
                     "fallback.reason=invalid_response",
                     "finish.reason=safety"));
+  }
+
+  @Test
+  void logsInvalidResponseAtWarn() {
+    List<ILoggingEvent> events =
+        captureLogs(
+            () ->
+                generator(
+                        responding(
+                            new LlmResponse(
+                                true, "SAFETY", "", "response-id", LlmResponse.TokenUsage.EMPTY)),
+                        true,
+                        true)
+                    .generate(input()));
+
+    assertThat(events)
+        .filteredOn(
+            event -> event.getFormattedMessage().contains("fallbackReason=invalid_response"))
+        .extracting(ILoggingEvent::getLevel)
+        .containsExactly(Level.WARN);
+  }
+
+  @Test
+  void logsInvalidOutputAtWarn() {
+    List<ILoggingEvent> events =
+        captureLogs(
+            () ->
+                generator(
+                        responding(
+                            success(
+                                "{\"title\":\"점검\",\"role\":\"invalid\",\"priority\":\"medium\"}")),
+                        true,
+                        true)
+                    .generate(input()));
+
+    assertThat(events)
+        .filteredOn(event -> event.getFormattedMessage().contains("fallbackReason=invalid_output"))
+        .extracting(ILoggingEvent::getLevel)
+        .containsExactly(Level.WARN);
+  }
+
+  @Test
+  void logsGeneratedResponseAtDebug() {
+    List<ILoggingEvent> events =
+        captureLogs(
+            () ->
+                generator(
+                        responding(
+                            success("{\"title\":\"점검\",\"role\":\"pm\",\"priority\":\"medium\"}")),
+                        true,
+                        true)
+                    .generate(input()));
+
+    assertThat(events)
+        .filteredOn(event -> event.getFormattedMessage().contains("outcome=generated"))
+        .extracting(ILoggingEvent::getLevel)
+        .containsExactly(Level.DEBUG);
   }
 
   private DefaultSignalTaskDraftGenerator generator(
@@ -308,6 +382,22 @@ class DefaultSignalTaskDraftGeneratorTest {
         new RuntimeException("provider"),
         new RuntimeException("rate limit"),
         new RuntimeException("quota"));
+  }
+
+  private static List<ILoggingEvent> captureLogs(Runnable action) {
+    Logger logger = (Logger) LoggerFactory.getLogger(DefaultSignalTaskDraftGenerator.class);
+    Level previousLevel = logger.getLevel();
+    ListAppender<ILoggingEvent> appender = new ListAppender<>();
+    appender.start();
+    logger.setLevel(Level.DEBUG);
+    logger.addAppender(appender);
+    try {
+      action.run();
+      return List.copyOf(appender.list);
+    } finally {
+      logger.detachAppender(appender);
+      logger.setLevel(previousLevel);
+    }
   }
 
   private static final class CapturingClient implements LlmClient {
