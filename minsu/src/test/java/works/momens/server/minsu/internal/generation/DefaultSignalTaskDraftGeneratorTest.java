@@ -68,6 +68,24 @@ class DefaultSignalTaskDraftGeneratorTest {
     assertThat(result).isEqualTo(new TaskDraft("123456789012345", Role.DESIGN, Priority.MEDIUM));
   }
 
+  @Test
+  void recordsTitleFallbackAsGeneratedOutcomeWithoutFallbackReason() {
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    CapturingClient client =
+        responding(success("{\"title\":\" \",\"role\":\"design\",\"priority\":\"medium\"}"));
+
+    generator(client, true, true, ObservationRegistry.create(), meterRegistry).generate(input());
+
+    assertThat(
+            meterRegistry
+                .get("momens.minsu.task.draft.requests")
+                .tag("outcome", "generated_title_fallback")
+                .tag("fallback.reason", "none")
+                .counter()
+                .count())
+        .isEqualTo(1);
+  }
+
   @ParameterizedTest
   @MethodSource("invalidEnumResponses")
   void fallsBackWholeDraftForInvalidRoleOrPriority(String response) {
@@ -177,6 +195,15 @@ class DefaultSignalTaskDraftGeneratorTest {
 
   private DefaultSignalTaskDraftGenerator generator(
       LlmClient client, boolean enabled, boolean valid, ObservationRegistry observationRegistry) {
+    return generator(client, enabled, valid, observationRegistry, new SimpleMeterRegistry());
+  }
+
+  private DefaultSignalTaskDraftGenerator generator(
+      LlmClient client,
+      boolean enabled,
+      boolean valid,
+      ObservationRegistry observationRegistry,
+      SimpleMeterRegistry meterRegistry) {
     MinsuConfigStatus config = mock(MinsuConfigStatus.class);
     when(config.enabled()).thenReturn(enabled);
     when(config.valid()).thenReturn(valid);
@@ -188,7 +215,7 @@ class DefaultSignalTaskDraftGeneratorTest {
         client,
         new SignalTaskDraftPrompt(json),
         json,
-        new MinsuObservability(new SimpleMeterRegistry(), observationRegistry));
+        new MinsuObservability(meterRegistry, observationRegistry));
   }
 
   private static SignalTaskDraftInput input() {
