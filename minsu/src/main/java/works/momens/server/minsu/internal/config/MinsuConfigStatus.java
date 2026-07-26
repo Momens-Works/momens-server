@@ -32,10 +32,11 @@ public final class MinsuConfigStatus {
 
     if (!valid) {
       log.error(
-          "Minsu LLM 설정이 유효하지 않습니다 fields={} provider={} model={} location={}",
+          "Minsu LLM 설정이 유효하지 않습니다 fields={} provider={} model={} project={} location={}",
           invalidFields,
           safeLogValue(llm.provider()),
           safeLogValue(llm.model()),
+          safeLogValue(llm.google().project()),
           safeLogValue(llm.google().location()));
     }
   }

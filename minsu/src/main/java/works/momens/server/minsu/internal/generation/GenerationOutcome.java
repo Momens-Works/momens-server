@@ -7,8 +7,8 @@ enum GenerationOutcome {
   PROVIDER_ERROR("fallback", "provider_error"),
   INVALID_RESPONSE("fallback", "invalid_response"),
   INVALID_OUTPUT("fallback", "invalid_output"),
-  GENERATED_TITLE_FALLBACK("generated", "generated_title_fallback"),
-  GENERATED_TRUNCATED("generated", "generated_truncated"),
+  GENERATED_TITLE_FALLBACK("generated_title_fallback", "none"),
+  GENERATED_TRUNCATED("generated_truncated", "none"),
   GENERATED("generated", "none");
 
   private final String outcome;
