@@ -1,6 +1,10 @@
 package works.momens.server.mobile.signal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.UUID;
@@ -15,7 +19,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.minsu.Priority;
+import works.momens.server.minsu.Role;
+import works.momens.server.minsu.SignalTaskDraftGenerator;
+import works.momens.server.minsu.TaskDraft;
 import works.momens.server.signal.SignalActionResult;
 import works.momens.server.signal.SignalActionService;
 import works.momens.server.user.UserProfile;
@@ -30,18 +39,24 @@ import works.momens.server.user.UserService;
  * replay되는지를 본다. HTTP status 매핑({@code created} → 201/200)은 {@link MobileSignalsIntegrationTest}가
  * 담당하므로 여기서는 스레드 안전성이 보장되는 서비스 public API를 직접 호출한다.
  *
- * <p>두 스레드가 모두 ledger 없음을 확인하는 데 성공하면 한쪽이 unique 위반으로 복구하고, 한쪽이 먼저 커밋을 마치면 다른 쪽은 기존 ledger를 보고
- * replay한다. 어느 순서든 결과 계약은 같으므로 실행 타이밍에 의존하지 않는다.
+ * <p>서비스 호출 앞에서만 스레드를 맞추면 한쪽이 커밋까지 끝낸 뒤 다른 쪽이 기존 ledger를 보고 정상 replay할 수 있어 경합이 재현되지 않는다. 그래서
+ * rendezvous를 draft generator 경계에 둔다. generator 호출은 ledger 부재 확인 뒤·쓰기 트랜잭션 앞이라, 두 스레드가 여기서 만나면 양쪽
+ * 모두 "처리 이력 없음"을 확인한 상태로 insert에 진입하는 것이 보장된다. generator 호출이 2회라는 사실은 두 요청이 모두 쓰기 경로까지 들어갔다는 뜻이므로,
+ * {@code created=false}가 조기 ledger 조회가 아니라 unique 위반 복구에서 나왔음을 함께 고정한다.
  */
 @SpringBootTest
 class SignalConvertConcurrencyIntegrationTest extends AbstractPostgresIntegrationTest {
+
+  private static final int CONCURRENT_REQUESTS = 2;
 
   @Autowired private SignalActionService signalActionService;
   @Autowired private UserService userService;
   @Autowired private JdbcTemplate jdbcTemplate;
 
+  @MockitoBean private SignalTaskDraftGenerator taskDraftGenerator;
+
   @Test
-  @DisplayName("동시 convert 요청은 task·ledger·outbox를 한 벌만 남기고 나머지는 replay로 되돌린다")
+  @DisplayName("동시 convert 요청은 task·ledger·outbox를 한 벌만 남기고 패배 요청은 replay로 되돌린다")
   void concurrentConvertsCreateExactlyOneTask() throws Exception {
     UserProfile jinsu = userService.findOrCreate("signals-it-race@momens.works", "신진수", null);
     UUID workspace = insertWorkspace("signals-race");
@@ -49,21 +64,27 @@ class SignalConvertConcurrencyIntegrationTest extends AbstractPostgresIntegratio
     UUID project = insertProject(workspace, jinsu.id(), "signals-race-project");
     UUID signal = insertSignal(workspace, project, "risk", "이탈 가능성 발견");
 
-    CyclicBarrier barrier = new CyclicBarrier(2);
+    CyclicBarrier barrier = new CyclicBarrier(CONCURRENT_REQUESTS);
+    when(taskDraftGenerator.generate(any()))
+        .thenAnswer(
+            invocation -> {
+              barrier.await(10, TimeUnit.SECONDS);
+              return new TaskDraft("이탈 가능성 점검", Role.PM, Priority.MEDIUM);
+            });
     Callable<SignalActionResult> convert =
-        () -> {
-          barrier.await(10, TimeUnit.SECONDS);
-          return signalActionService.convertToTask(signal, jinsu.id());
-        };
-    ExecutorService pool = Executors.newFixedThreadPool(2);
+        () -> signalActionService.convertToTask(signal, jinsu.id());
+    ExecutorService pool = Executors.newFixedThreadPool(CONCURRENT_REQUESTS);
     List<SignalActionResult> results;
     try {
-      List<Future<SignalActionResult>> futures = pool.invokeAll(List.of(convert, convert));
-      results = List.of(futures.get(0).get(20, TimeUnit.SECONDS), futures.get(1).get());
+      List<Future<SignalActionResult>> futures =
+          pool.invokeAll(List.of(convert, convert), 20, TimeUnit.SECONDS);
+      results = List.of(futures.get(0).get(), futures.get(1).get());
     } finally {
       pool.shutdownNow();
     }
 
+    // 두 요청 모두 ledger 부재를 확인하고 쓰기 경로까지 들어갔다(= 실제 unique 경합이 일어났다).
+    verify(taskDraftGenerator, times(CONCURRENT_REQUESTS)).generate(any());
     assertThat(results).filteredOn(SignalActionResult::created).hasSize(1);
     assertThat(results).filteredOn(result -> !result.created()).hasSize(1);
     assertThat(results).extracting(result -> result.task().id()).containsOnly(taskId(project));
