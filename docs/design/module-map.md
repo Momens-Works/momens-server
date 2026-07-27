@@ -43,8 +43,8 @@
   소유하지 않는다.
 - `signal`은 `project`의 project/workspace 해석 public API와 `workspace`의 RBAC public API를 사용한다.
   상세 응답의 evidence는 `source`의 source_ref 조회 public API로 hydrate한다.
-  MOM-0804부터 Signal을 task로 수용할 때 `minsu`의 `SignalTaskDraftGenerator`와 `project`의 task
-  생성 public API를 사용한다([ADR-0014](../adr/0014-minsu-task-draft-module-and-llm-boundary.md)).
+  Signal을 task로 수용할 때 `minsu`의 `SignalTaskDraftGenerator`와 `project`의 task 생성 public
+  API를 사용한다([ADR-0014](../adr/0014-minsu-task-draft-module-and-llm-boundary.md)).
 - `signal`과 `project`는 확정 액션 결과를 같은 트랜잭션에서 남기기 위해 `outbox`의
   `OutboxAppender` public API를 사용한다(CO-6). `signal`의 dev Signal 생성 쓰기 경로는 `source`의
   dev 쓰기 public API(`DevSourceRefWriter`)에도 위임한다.
