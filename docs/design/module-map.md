@@ -334,10 +334,11 @@ dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패
   소유한다. 당일 범위 조회는 처리 여부와 무관하게 담고 소프트 삭제는 제외한다(MOM-81). 정렬
   기준과 커서 규칙도 이 모듈이 정하고, 어떤 type을 노출할지와 하루 경계는 호출하는 표면이 정한다.
 - body 없는 `convert-to-task`는 태스크 등록 시점에 민수가 생성하는 task draft를 입력으로 사용한다.
-  MOM-0804부터 `signal`은 `minsu`의 공개 `SignalTaskDraftGenerator`를 호출하고, 비활성·설정
-  무효·입력 부족·외부 실패·출력 무효 시 고정 draft(title=15자로 제한한 Signal title, role=`pm`,
-  priority=`medium`)를 쓴다. 그전에는 ADR-0011의 고정 목 draft를 사용한다. draft는 `signals`
-  backing에 저장하지 않는다(ADR-0011·0014, MOM-0804·0805).
+  `signal`은 `minsu`의 공개 `SignalTaskDraftGenerator`를 호출하고, 비활성·설정 무효·입력
+  부족·외부 실패·출력 무효 시 고정 draft(title=15자로 제한한 Signal title, role=`pm`,
+  priority=`medium`)를 쓴다. 모델 호출은 쓰기 트랜잭션 밖에서 하고, 기존 action이 있는 replay·
+  충돌과 dismiss는 evidence 조회와 모델 호출을 하지 않는다. draft는 `signals` backing에 저장하지
+  않는다(ADR-0011·0014, MOM-0804·0805).
 - Signal action 결과 outbox 발행 계약을 소유한다. projection 경로의 outbox 소비 상태, 재시도, DLQ는
   worker 책임이고, retrieval indexing 상태는 retrieval 책임이다.
 - Signal 발생 push notification은 api-server가 `signal.created` outbox를 소비해 발송한다
