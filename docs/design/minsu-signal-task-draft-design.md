@@ -327,11 +327,35 @@ momens:
         location: ${MOMENS_MINSU_LLM_GOOGLE_LOCATION:global}
 ```
 
-초기 provider/model catalog:
+초기 provider/model 호환성 catalog:
 
 | provider | model | 허용 location | 상태 |
 | --- | --- | --- | --- |
 | `google` | `gemini-3.5-flash-lite` | `global`, `us`, `eu` | 기본·허용 |
+
+이 catalog는 선택한 provider/model/location이 실제 호출 가능한 조합인지 정적으로 검증하기
+위한 것으로, Momens가 보안 또는 데이터 레지던시 정책으로 허용한 지역 목록이 아니다. 레거시의
+`asia-southeast1`은 기존 인프라와 가깝더라도 현재 model이 지원하지 않으므로 포함하지 않는다.
+
+`global` 기본값은 Minsu가 기본 비활성인 1차 기반 구현에서 dev 연동을 단순화하고 특정 지역의
+quota·capacity에 덜 의존하기 위한 기술적 기본값이다. 이는 운영 고객 데이터의 처리 지역을
+`global`로 확정한다는 뜻이 아니다. 기능을 활성화하면서 location을 명시하지 않으면 실제
+`global` endpoint를 사용한다는 점은 별도로 유의한다.
+
+Google 문서상 각 endpoint의 ML 처리 지역 의미는 다음과 같다.
+
+| location | 호출·가용성 의미 | ML 처리 지역 의미 |
+| --- | --- | --- |
+| `global` | 모델 호출 가능. 가용성을 높이고 429 오류를 줄이는 데 유리 | 요청이 전달되는 지역을 통제하거나 특정할 수 없음 |
+| `us` | 미국 멀티리전 endpoint | 미국 관할 경계 안에서 ML 처리 |
+| `eu` | EU 멀티리전 endpoint | EU 관할 경계 안에서 ML 처리 |
+
+- [Gemini 3.5 Flash-Lite 모델과 지원 location](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/3-5-flash-lite)
+- [Google model endpoint와 ML 처리 지역](https://docs.cloud.google.com/gemini-enterprise-agent-platform/resources/locations)
+
+데이터 레지던시 운영 정책은 이 catalog와 별도 결정이다. prod에서 Minsu를 활성화하기 전에
+location 명시를 강제할지와 `global`/`us`/`eu` 중 어떤 endpoint를 허용할지를 보안·법무
+요구사항에 따라 확정해야 한다. 이 결정 전에는 기존 원칙대로 prod에서 활성화하지 않는다.
 
 `enabled=false`는 유효한 의도적 비활성 상태다. `enabled=true`일 때 다음 중 하나면 설정 무효다.
 
