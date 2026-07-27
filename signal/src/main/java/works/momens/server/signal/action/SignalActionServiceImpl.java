@@ -1,5 +1,6 @@
 package works.momens.server.signal.action;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -8,6 +9,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.minsu.SignalTaskDraftGenerator;
+import works.momens.server.minsu.SignalTaskDraftInput;
+import works.momens.server.minsu.TaskDraft;
 import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
 import works.momens.server.signal.SignalActionResult;
@@ -28,20 +32,12 @@ import works.momens.server.workspace.WorkspaceAccess;
 @RequiredArgsConstructor
 class SignalActionServiceImpl implements SignalActionService {
 
-  /**
-   * convert-to-task 고정 목 draft(ADR-0011). task draft(title·role·priority)는 민수 산출물이며, 민수가 서버 모듈로
-   * 구현되기 전까지 서버가 이 고정 값으로 task를 만든다. role·priority는 클라이언트가 보내지 않고, title은 Signal 제목을 쓴다. 고정 값이라 같은
-   * Signal 요청은 결정적이다. 실제 민수 연동은 MOM-0691·MOM-0692에서 이 상수를 대체한다.
-   */
-  private static final String MOCK_DRAFT_ROLE = "pm";
-
-  private static final String MOCK_DRAFT_PRIORITY = "medium";
-
   private final SignalReader signalReader;
   private final WorkspaceAccess workspaceAccess;
   private final SignalActionRepository signalActionRepository;
   private final SignalActionExecutor executor;
   private final TaskReader taskReader;
+  private final SignalTaskDraftGenerator taskDraftGenerator;
 
   @Override
   public SignalActionResult convertToTask(UUID signalId, UUID userId) {
@@ -51,8 +47,10 @@ class SignalActionServiceImpl implements SignalActionService {
       return replayOrConflict(existing.get(), SignalActionType.CONVERT_TO_TASK);
     }
 
+    TaskDraft draft = generateDraft(signal);
     try {
-      return executor.convert(signal, userId, signal.title(), MOCK_DRAFT_ROLE, MOCK_DRAFT_PRIORITY);
+      return executor.convert(
+          signal, userId, draft.title(), draft.role().value(), draft.priority().value());
     } catch (DataIntegrityViolationException raced) {
       return replayOrConflict(
           signalActionRepository.findBySignalId(signalId).orElseThrow(() -> raced),
@@ -91,6 +89,23 @@ class SignalActionServiceImpl implements SignalActionService {
           CommonErrorCode.AUTH_FORBIDDEN, Map.of("signal_id", signalId.toString()));
     }
     return signal;
+  }
+
+  /**
+   * task draft를 만든다(MOM-0804). evidence 조회와 모델 호출은 신규 convert에서만 수행하고, replay·충돌·dismiss 경로는 여기까지
+   * 오지 않는다. 외부 LLM 호출이 쓰기 트랜잭션과 DB connection을 점유하지 않도록 {@link SignalActionExecutor} 밖에서 호출한다.
+   * generator는 실패를 전파하지 않고 항상 유효한 고정 fallback draft를 반환하므로 이 경로에 별도 예외 처리가 없다.
+   */
+  private TaskDraft generateDraft(SignalReader.Snapshot signal) {
+    List<SignalTaskDraftInput.Evidence> evidence =
+        signalReader.findDraftEvidence(signal.id()).stream()
+            .map(
+                item ->
+                    new SignalTaskDraftInput.Evidence(item.target(), item.change(), item.impact()))
+            .toList();
+    return taskDraftGenerator.generate(
+        new SignalTaskDraftInput(
+            signal.title(), signal.type(), signal.description(), signal.impact(), evidence));
   }
 
   private SignalActionResult replayOrConflict(

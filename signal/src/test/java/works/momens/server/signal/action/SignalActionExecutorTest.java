@@ -39,7 +39,8 @@ class SignalActionExecutorTest {
     // 기본값(pm/medium)과 다른 값으로, executor가 하드코딩 없이 전달받은 세 값을 그대로 쓰는지 고정한다.
     String title = "쿠폰 실패 안내 개선";
     SignalReader.Snapshot signal =
-        new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목");
+        new SignalReader.Snapshot(
+            SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "decision", "제목", "설명", "전체 영향");
     UUID taskId = UUID.randomUUID();
     when(taskCreator.create(any()))
         .thenReturn(new CreatedTask(taskId, PROJECT_ID, title, "design", "high", "todo"));
@@ -65,7 +66,8 @@ class SignalActionExecutorTest {
   @DisplayName("dismiss는 signal.dismissed를 빈 payload로 발행한다")
   void dismissAppendsDismissedEventWithEmptyPayload() {
     SignalReader.Snapshot signal =
-        new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "제목");
+        new SignalReader.Snapshot(
+            SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "decision", "제목", "설명", "전체 영향");
 
     SignalActionResult result = executor.dismiss(signal, USER_ID);
 

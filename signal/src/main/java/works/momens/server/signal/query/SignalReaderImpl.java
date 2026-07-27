@@ -1,5 +1,6 @@
 package works.momens.server.signal.query;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -7,12 +8,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.signal.SignalReader;
 
-/** action 모듈이 참조하는 최소 read 경계. Signal 존재·스코프·제목만 노출하고, 나머지는 이 nested 모듈 안에 둔다. */
+/** action 모듈이 참조하는 최소 read 경계. Signal 존재·스코프와 draft 입력 값만 노출하고, 나머지는 이 nested 모듈 안에 둔다. */
 @Service
 @RequiredArgsConstructor
 class SignalReaderImpl implements SignalReader {
 
   private final SignalRepository signalRepository;
+  private final SignalEvidenceRepository signalEvidenceRepository;
 
   @Override
   @Transactional(readOnly = true)
@@ -25,6 +27,21 @@ class SignalReaderImpl implements SignalReader {
                     signal.getId(),
                     signal.getWorkspaceId(),
                     signal.getProjectId(),
-                    signal.getTitle()));
+                    signal.getType(),
+                    signal.getTitle(),
+                    signal.getDescription(),
+                    signal.getImpact()));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<DraftEvidence> findDraftEvidence(UUID signalId) {
+    return signalEvidenceRepository
+        .findBySignalIdOrderBySortOrderAscSourceRefIdAsc(signalId)
+        .stream()
+        .map(
+            evidence ->
+                new DraftEvidence(evidence.getTarget(), evidence.getChange(), evidence.getImpact()))
+        .toList();
   }
 }
