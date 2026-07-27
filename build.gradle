@@ -28,6 +28,35 @@ tasks.register('installGitHooks', Exec) {
     commandLine 'git', 'config', 'core.hooksPath', 'hooks'
 }
 
+// settings.gradle에 등록한 모든 서브프로젝트는 Docker 의존성 워밍 레이어에서도
+// build.gradle을 먼저 복사해야 합니다. 이 목록이 어긋나면 COPY . . 전 Gradle 구성에 실패합니다.
+tasks.register('verifyDockerModuleBuildScripts') {
+    group = 'verification'
+    description = 'Gradle 서브프로젝트의 build.gradle이 Docker 워밍 레이어에 포함됐는지 검사합니다.'
+    inputs.file layout.projectDirectory.file('Dockerfile')
+    inputs.file layout.projectDirectory.file('settings.gradle')
+
+    doLast {
+        Set<String> dockerfileLines = file('Dockerfile').readLines()
+            .collect { it.trim() }
+            .toSet()
+        List<String> missingModules = subprojects.findAll { subproject ->
+            String moduleDir = rootProject.projectDir.toPath()
+                .relativize(subproject.projectDir.toPath())
+                .toString()
+                .replace(File.separator, '/')
+            String copyLine = "COPY ${moduleDir}/build.gradle ./${moduleDir}/"
+            !dockerfileLines.contains(copyLine)
+        }.collect { it.path }
+
+        if (!missingModules.isEmpty()) {
+            throw new GradleException(
+                "Dockerfile 의존성 워밍 레이어에 build.gradle COPY가 누락됐습니다: "
+                    + missingModules.join(', '))
+        }
+    }
+}
+
 subprojects {
     apply plugin: 'java'
     apply plugin: 'com.diffplug.spotless'
