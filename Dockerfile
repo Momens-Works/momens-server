@@ -15,6 +15,8 @@ WORKDIR /workspace
 #    의존성 메타데이터를 미리 받아 둡니다. 소스만 바뀌면 아래 COPY . . 이후 레이어만
 #    무효화되고 이 레이어는 캐시 히트되어, 매 빌드마다 Gradle 배포본/메타데이터를 다시
 #    받지 않습니다. 새 모듈을 추가하면 해당 모듈의 build.gradle COPY 행도 여기에 추가합니다.
+#    `verifyDockerModuleBuildScripts`가 `COPY <module>/build.gradle ./<module>/` 형식과
+#    Gradle 서브프로젝트 목록의 양방향 정합성을 검사합니다(공백과 destination의 `./`은 선택).
 COPY gradlew settings.gradle build.gradle ./
 COPY gradle ./gradle
 COPY third_party ./third_party
