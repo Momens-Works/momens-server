@@ -228,6 +228,12 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
     String taskId =
         jdbcTemplate.queryForObject(
             "SELECT id FROM tasks WHERE project_id = ?", String.class, project);
+    // Minsu는 기본 비활성이므로 고정 fallback draft(title=Signal title, role=pm, priority=medium)를 쓴다.
+    assertThat(
+            jdbcTemplate.queryForMap(
+                "SELECT role, priority FROM tasks WHERE project_id = ?", project))
+        .containsEntry("role", "pm")
+        .containsEntry("priority", "medium");
 
     mockMvc
         .perform(

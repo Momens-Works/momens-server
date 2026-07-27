@@ -1,5 +1,6 @@
 package works.momens.server.signal;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -8,6 +9,27 @@ public interface SignalReader {
 
   Optional<Snapshot> findLive(UUID signalId);
 
-  /** action 처리에 필요한 Signal 최소 스냅샷. */
-  record Snapshot(UUID id, UUID workspaceId, UUID projectId, String title) {}
+  /**
+   * task draft 생성 입력으로 쓰는 근거의 의미 값만 {@code sort_order ASC, source_ref_id ASC}로 반환한다. 근거가 없으면 빈 목록을
+   * 반환하고 source ref를 hydrate하지 않는다. 상세 조회와 달리 source 원문·URL·작성자는 포함하지 않는다.
+   */
+  List<DraftEvidence> findDraftEvidence(UUID signalId);
+
+  /**
+   * action 처리에 필요한 Signal 스냅샷.
+   *
+   * <p>{@code type}·{@code description}·{@code impact}는 task draft 생성 입력이다. evidence는 convert 신규
+   * 처리에서만 필요하므로 여기 포함하지 않고 {@link #findDraftEvidence(UUID)}로 분리한다.
+   */
+  record Snapshot(
+      UUID id,
+      UUID workspaceId,
+      UUID projectId,
+      String type,
+      String title,
+      String description,
+      String impact) {}
+
+  /** task draft 생성에 쓰는 근거 의미 값(대상·변화·영향). */
+  record DraftEvidence(String target, String change, String impact) {}
 }

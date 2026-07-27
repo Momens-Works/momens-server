@@ -158,7 +158,14 @@ class SignalCreatedDeliveryMaterializerIntegrationTest extends AbstractPostgresI
     when(signalReader.findLive(SIGNAL_ID))
         .thenReturn(
             Optional.of(
-                new SignalReader.Snapshot(SIGNAL_ID, WORKSPACE_ID, PROJECT_ID, "결제 정책 결정 3일째 보류")));
+                new SignalReader.Snapshot(
+                    SIGNAL_ID,
+                    WORKSPACE_ID,
+                    PROJECT_ID,
+                    "decision",
+                    "결제 정책 결정 3일째 보류",
+                    "설명",
+                    "전체 영향")));
     when(workspaceAccess.listMemberships(WORKSPACE_ID))
         .thenReturn(
             List.of(
