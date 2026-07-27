@@ -33,28 +33,57 @@ tasks.register('installGitHooks', Exec) {
 tasks.register('verifyDockerModuleBuildScripts') {
     group = 'verification'
     description = 'Gradle 서브프로젝트의 build.gradle이 Docker 워밍 레이어에 포함됐는지 검사합니다.'
-    inputs.file layout.projectDirectory.file('Dockerfile')
-    inputs.file layout.projectDirectory.file('settings.gradle')
 
     doLast {
-        Set<String> dockerfileLines = file('Dockerfile').readLines()
-            .collect { it.trim() }
-            .toSet()
-        List<String> missingModules = subprojects.findAll { subproject ->
-            String moduleDir = rootProject.projectDir.toPath()
+        Set<String> gradleModules = subprojects.collect { subproject ->
+            rootProject.projectDir.toPath()
                 .relativize(subproject.projectDir.toPath())
                 .toString()
                 .replace(File.separator, '/')
-            String copyLine = "COPY ${moduleDir}/build.gradle ./${moduleDir}/"
-            !dockerfileLines.contains(copyLine)
-        }.collect { it.path }
+        }.toSet()
+        Set<String> dockerModules = new TreeSet<>()
+        List<String> invalidCopies = []
 
+        file('Dockerfile').eachLine { line ->
+            def matcher = line =~ /^\s*COPY\s+(\S+)\/build\.gradle\s+(\S+)\s*$/
+            if (matcher.matches()) {
+                String sourceDir = matcher.group(1).replaceFirst('^\\./', '')
+                String destinationDir = matcher.group(2)
+                    .replaceFirst('^\\./', '')
+                    .replaceFirst('/$', '')
+                if (sourceDir == destinationDir) {
+                    dockerModules.add(sourceDir)
+                } else {
+                    invalidCopies.add(line.trim())
+                }
+            }
+        }
+
+        Set<String> missingModules = new TreeSet<>(gradleModules)
+        missingModules.removeAll(dockerModules)
+        Set<String> staleModules = new TreeSet<>(dockerModules)
+        staleModules.removeAll(gradleModules)
+        List<String> errors = []
         if (!missingModules.isEmpty()) {
+            errors.add("누락된 모듈: ${missingModules.join(', ')}")
+        }
+        if (!staleModules.isEmpty()) {
+            errors.add("제거되지 않은 모듈: ${staleModules.join(', ')}")
+        }
+        if (!invalidCopies.isEmpty()) {
+            errors.add("source와 destination이 다른 COPY: ${invalidCopies.join(', ')}")
+        }
+
+        if (!errors.isEmpty()) {
             throw new GradleException(
-                "Dockerfile 의존성 워밍 레이어에 build.gradle COPY가 누락됐습니다: "
-                    + missingModules.join(', '))
+                "Gradle 서브프로젝트와 Dockerfile 의존성 워밍 레이어가 일치하지 않습니다.\n- "
+                    + errors.join('\n- '))
         }
     }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('verifyDockerModuleBuildScripts')
 }
 
 subprojects {
