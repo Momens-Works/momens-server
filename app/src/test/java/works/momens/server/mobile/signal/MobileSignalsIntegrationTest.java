@@ -228,7 +228,8 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
     String taskId =
         jdbcTemplate.queryForObject(
             "SELECT id FROM tasks WHERE project_id = ?", String.class, project);
-    // Minsu는 기본 비활성이므로 고정 fallback draft(title=Signal title, role=pm, priority=medium)를 쓴다.
+    // Minsu는 기본 비활성이므로 고정 fallback draft(title=15자로 제한한 Signal title, role=pm,
+    // priority=medium)를 쓴다.
     assertThat(
             jdbcTemplate.queryForMap(
                 "SELECT role, priority FROM tasks WHERE project_id = ?", project))
@@ -247,6 +248,30 @@ class MobileSignalsIntegrationTest extends AbstractPostgresIntegrationTest {
         jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM tasks WHERE project_id = ?", Integer.class, project);
     assertThat(taskCountAfterRetry).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("Minsu 비활성 기본 설정에서 15자를 넘는 Signal title은 15자로 잘린 task title이 된다")
+  void convertToTaskTruncatesFallbackTitle() throws Exception {
+    UserProfile jinsu = userService.findOrCreate("signals-it-truncate@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("signals-truncate");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "signals-truncate-project");
+    UUID signal =
+        insertSignal(workspace, project, "risk", "Android 13+ 권한 요청 플로우에서 이탈 가능성 발견", null, null);
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signal)
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.task.title").value("Android 13+ 권한"));
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT title FROM tasks WHERE project_id = ?", String.class, project))
+        .isEqualTo("Android 13+ 권한");
   }
 
   @Test

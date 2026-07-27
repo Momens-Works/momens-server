@@ -3,6 +3,7 @@ package works.momens.server.mobile.signal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -99,7 +100,7 @@ class MobileSignalConvertDraftIntegrationTest extends AbstractPostgresIntegratio
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.task.title").value("결제 정책 확정하기"));
 
-    verify(taskDraftGenerator).generate(any());
+    verify(taskDraftGenerator, times(1)).generate(any());
   }
 
   @Test
