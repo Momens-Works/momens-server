@@ -49,8 +49,9 @@ momens:
       firebase:
         # ADC 서비스 계정의 소속 프로젝트와 FCM 대상 프로젝트가 다를 수 있어 명시적으로 주입합니다.
         project-id: ${MOMENS_NOTIFICATION_PUSH_FIREBASE_PROJECT_ID:}
-  # Signal task draft 생성 기반(MOM-0805). MOM-0804 연동 전까지 호출 경로는 없으며 기본 비활성입니다.
-  # 운영 timeout은 MOM-0806 측정 후 결정하므로 그 전에는 prod에서 활성화하지 않습니다.
+  # Signal task draft 생성 기반(MOM-0805)과 convert-to-task 연동(MOM-0804). 기본 비활성이며 이때는
+  # 고정 fallback draft를 사용합니다. 운영 timeout은 MOM-0806 측정 후 결정하므로 그 전에는 prod에서
+  # 활성화하지 않습니다.
   minsu:
     task-draft:
       enabled: ${MOMENS_MINSU_TASK_DRAFT_ENABLED:false}

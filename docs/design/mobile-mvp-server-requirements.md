@@ -266,12 +266,10 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 
 - 경로: `POST /api/mobile/signals/{signalId}/actions/convert-to-task`
 - 요청 body를 받지 않는 원탭 action이다.
-- 현재 MOM-0804·MOM-0805 적용 전 구현은 고정 목 draft(title=Signal title, role=`pm`,
+- 태스크 등록 시점에 민수가 draft(title, role, priority)를 생성한다. 비활성·설정 무효·입력
+  부족·외부 실패·출력 무효 시 고정 draft(title=15자로 제한한 Signal title, role=`pm`,
   priority=`medium`)를 사용한다.
-- MOM-0804·MOM-0805 적용 후에는 태스크 등록 시점에 민수가 draft(title, role, priority)를
-  생성한다. 비활성·설정 무효·입력 부족·외부 실패·출력 무효 시 고정 draft(title=15자로 제한한
-  Signal title, role=`pm`, priority=`medium`)를 사용한다.
-- MOM-0804·MOM-0805 적용 후 task draft title은 공백 포함 최대 15자여야 한다.
+- task draft title은 공백 포함 최대 15자여야 한다.
 - task draft role은 `pm`, `design`, `backend`, `frontend` 중 하나여야 한다.
 - task draft priority는 `low`, `medium`, `high` 중 하나여야 한다.
 - 서버는 최종 task를 생성해야 한다.
@@ -367,12 +365,9 @@ suggestion, task draft)을 민수 구현 전까지 목으로 처리하는 것은
 - Task draft는 최종 task가 아니라 사용자 원탭 action을 위한 초안이다.
 - draft(title, role, priority)는 민수 산출물이며, Signal 생성 시점이 아니라 태스크 등록
   (`convert-to-task`) 시점에 생성한다. Signal backing에는 저장하지 않는다.
-- 현재 MOM-0804·MOM-0805 적용 전 구현은 고정 목 draft(title=Signal title, role=`pm`,
-  priority=`medium`)를 사용한다.
-- MOM-0804·MOM-0805 적용 후 민수는 서버 내 `minsu` 모듈의
-  `SignalTaskDraftGenerator`로 구현한다. 비활성·설정 무효·입력 부족·외부 실패·출력 무효 시
-  api-server가 고정 draft(title=15자로 제한한 Signal title, role=`pm`, priority=`medium`)를
-  사용한다.
+- 민수는 서버 내 `minsu` 모듈의 `SignalTaskDraftGenerator`로 구현한다. 비활성·설정 무효·입력
+  부족·외부 실패·출력 무효 시 api-server가 고정 draft(title=15자로 제한한 Signal title,
+  role=`pm`, priority=`medium`)를 사용한다.
 - api-server는 draft를 모바일 상세 응답에 노출하지 않고 body 없는 `convert-to-task`의 입력으로만
   사용한다.
 - 사용자의 확정 action이 있기 전까지 task draft는 프로젝트의 실행 항목으로 간주하지 않는다.

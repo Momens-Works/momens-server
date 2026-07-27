@@ -368,18 +368,13 @@ project는 모바일의 현재 context로 고정되어 있고, description·task
 
 시그널을 원탭으로 태스크에 등록합니다. 요청 body는 없습니다.
 
-현재 MOM-0804·MOM-0805 적용 전 구현은 고정 목 draft를 사용합니다: `title`은 전체 Signal
-title, `role`은 `pm`, `priority`는 `medium`.
-
-MOM-0804·MOM-0805 적용 후 서버는 태스크 등록 시점에 민수가 생성하는 task draft(`title`,
-`role`, `priority`)를 사용합니다. 민수는 서버 내 `minsu` 모듈로 구현합니다. 비활성·설정
-무효·입력 부족·외부 실패·출력 무효 시 고정 draft(`title`은 15자로 제한한 Signal title,
-`role`은 `pm`, `priority`는 `medium`)를 사용합니다. 생성된 title은 공백 포함 최대 15자이며,
-draft는 Signal backing에 저장하지 않습니다.
+서버는 태스크 등록 시점에 민수가 생성하는 task draft(`title`, `role`, `priority`)를
+사용합니다. 민수는 서버 내 `minsu` 모듈로 구현합니다. 비활성·설정 무효·입력 부족·외부
+실패·출력 무효 시 고정 draft(`title`은 15자로 제한한 Signal title, `role`은 `pm`,
+`priority`는 `medium`)를 사용합니다. 생성된 title은 공백 포함 최대 15자이며, draft는 Signal
+backing에 저장하지 않습니다.
 
 클라이언트는 title·role·priority를 선택하거나 전송하지 않습니다.
-
-아래 201·200 응답 예시는 MOM-0804·MOM-0805 적용 후 생성되는 draft를 기준으로 합니다.
 
 #### Response 201
 
