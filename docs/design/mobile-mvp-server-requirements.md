@@ -335,15 +335,15 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 | `signal_summary.summary` | `signal_digests`. Minsu 산출물이고 MVP는 fixture가 채운다 | `null` |
 
 서버는 backing source가 없는 값을 임의 생성하지 않는다. worker가 준비되지 않은 MVP 환경에서는
-production 코드 분기 대신 worker와 같은 backing 계약의 fixture를 사용한다. 민수 산출물(Minsu
-suggestion, task draft)을 민수 구현 전까지 목으로 처리하는 것은 이 원칙의 명시적 예외다(ADR-0011).
+production 코드 분기 대신 worker와 같은 backing 계약의 fixture를 사용한다. 민수 산출물 중 아직
+구현되지 않은 Minsu suggestion을 목으로 처리하는 것은 이 원칙의 명시적 예외다(ADR-0011).
 
 ## Signal 요구사항
 
 - Signal은 모바일 API가 안정적으로 조회하고 액션 대상으로 참조할 수 있는 형태로 저장되어야 한다.
 - Signal 생성은 worker가 담당해야 한다.
-- Minsu suggestion과 task draft는 민수 산출물이다. 민수는 서버 내 모듈로 구현할 계획이며, 구현되기
-  전에는 목으로 처리한다.
+- Minsu suggestion과 task draft는 민수 산출물이다. task draft는 서버 내 `minsu` 모듈이
+  생성한다(ADR-0014). Minsu suggestion은 아직 구현 전이라 목으로 처리한다.
 - Signal type은 `risk`, `decision`, `change`, `question`을 지원해야 한다.
 - Signal은 사용자가 어떤 검토를 해야 하는지 표현할 수 있어야 한다.
 - Signal description은 backing에 보존할 수 있지만 모바일 상세 응답에는 노출하지 않는다.
