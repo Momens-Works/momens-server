@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.genai.errors.GenAiIOException;
 import java.io.InterruptedIOException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -75,6 +76,19 @@ class GoogleGenAiLlmClientTest {
     GenAiIOException sdkTimeout =
         new GenAiIOException(
             "Failed to execute HTTP request.", new InterruptedIOException("timeout"));
+    GoogleGenAiLlmClient client =
+        new GoogleGenAiLlmClient(selection -> new FailingGoogleSdkClient(sdkTimeout));
+
+    assertThatThrownBy(() -> client.generate(SELECTION, REQUEST))
+        .isInstanceOf(LlmTimeoutException.class)
+        .hasCause(sdkTimeout);
+  }
+
+  @Test
+  void mapsSdkSocketTimeoutToVendorNeutralTimeout() {
+    GenAiIOException sdkTimeout =
+        new GenAiIOException(
+            "Failed to execute HTTP request.", new SocketTimeoutException("Read timed out"));
     GoogleGenAiLlmClient client =
         new GoogleGenAiLlmClient(selection -> new FailingGoogleSdkClient(sdkTimeout));
 
