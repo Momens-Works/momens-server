@@ -1,5 +1,6 @@
 package works.momens.server.notification.consume;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,12 +53,24 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
   @Autowired private PushDispatcher pushDispatcher;
   @Autowired private RecordingFcmClient recordingFcmClient;
 
+  private Long foreignOutboxEventId;
+
+  /** 적대적으로 만든 회귀 가드 event를 안전 지연 밖으로 밀어 뒤 클래스에 물려주지 않는다. */
+  @AfterEach
+  void staleGuardEvent() {
+    if (foreignOutboxEventId != null) {
+      jdbcTemplate.update(
+          "UPDATE outbox_events SET created_at = created_at - interval '5 seconds' WHERE id = ?",
+          foreignOutboxEventId);
+    }
+  }
+
   @Test
   @DisplayName("dev Signal 생성이 workspace 전체 구성원의 활성 기기로 정확히 한 번의 push를 만든다")
   void devSignalCreationDeliversPushToWorkspaceMembers() throws Exception {
     // 앞선 테스트 클래스가 안전 지연(2초) 안에 남긴 outbox event를 재현한다. 이 event가 안전 prefix를 막으므로
     // materialize()로 watermark를 시드하면 끝까지 전진하지 못한다.
-    insertFreshForeignOutboxEvent();
+    foreignOutboxEventId = insertFreshForeignOutboxEvent();
 
     // E2E fixture 경계: 이 테스트가 만든 event만 소비 대상으로 남긴다. 운영 최초 시드(안전 지연을 지난 연속 prefix
     // 끝까지만 전진)와 달리 fresh event를 건너뛰고 강제 전진하므로 운영 동작과 같지 않다. 운영 시드 의미는
@@ -135,6 +149,11 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
         "UPDATE outbox_events SET created_at = created_at - interval '5 seconds' WHERE id = ?",
         outboxEventId);
 
+    // 회귀 가드를 소비 시점에도 살려 둔다. 여기까지 오는 데 걸린 시간과 무관하게, 시드가 안전 지연에 다시 의존하면
+    // 이 event가 prefix를 막아 테스트가 실패한다.
+    jdbcTemplate.update(
+        "UPDATE outbox_events SET created_at = NOW() WHERE id = ?", foreignOutboxEventId);
+
     materializer.materialize();
     pushDispatcher.runSendPass();
 
@@ -194,16 +213,20 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
         SignalCreatedDeliveryMaterializer.CONSUMER_NAME);
   }
 
-  private void insertFreshForeignOutboxEvent() {
-    jdbcTemplate.update(
-        """
-        INSERT INTO outbox_events
-          (issued_by, workspace_id, aggregate_type, aggregate_id, event_type, payload, idempotency_key)
-        VALUES ('api-server', ?, 'signal', ?, 'signal.converted_to_task', '{}'::jsonb, ?)
-        """,
-        UUID.randomUUID(),
-        UUID.randomUUID().toString(),
-        "push-e2e-foreign:" + UUID.randomUUID());
+  private long insertFreshForeignOutboxEvent() {
+    Long id =
+        jdbcTemplate.queryForObject(
+            """
+            INSERT INTO outbox_events
+              (issued_by, workspace_id, aggregate_type, aggregate_id, event_type, payload, idempotency_key)
+            VALUES ('api-server', ?, 'signal', ?, 'signal.converted_to_task', '{}'::jsonb, ?)
+            RETURNING id
+            """,
+            Long.class,
+            UUID.randomUUID(),
+            UUID.randomUUID().toString(),
+            "push-e2e-foreign:" + UUID.randomUUID());
+    return requireNonNull(id);
   }
 
   private long countBy(String table, String column, UUID id) {
