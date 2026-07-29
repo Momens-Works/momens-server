@@ -219,7 +219,7 @@ API, UX/AX는 이번 구현에 포함하지 않는다.
 - candidate count 1
 - 애플리케이션 호출 1회
 - SDK 총 시도 1회(`attempts=1`), 자동 재시도 없음
-- SDK 전체 call timeout 8초
+- Google SDK의 OkHttp call timeout 8초
 - timeout은 `momens.minsu.llm.timeout`으로 주입하며 초과 시 고정 fallback
 - provider response를 벤더 중립 결과로 변환한 뒤 SDK 타입 폐기
 
@@ -227,6 +227,13 @@ Google SDK `Client`는 ADC를 client 생성 중 조회할 수 있으므로 Sprin
 `Client.build()`를 호출하지 않는다. 내부 `GoogleClientFactory`를 provider 호출 경계에서 지연
 실행하고 첫 성공 instance만 thread-safe하게 캐시한다. 성공한 client는 application context 종료
 시 닫는다.
+
+`HttpOptions.timeout`은 SDK가 OkHttp `Call`을 실행할 때의 전체 call timeout이다. 하지만 SDK는
+OkHttp `Call.execute()` 전에 request header를 만들며 `GoogleCredentials.refreshIfExpired()`를
+호출한다. 따라서 최초 ADC 탐색·client 생성, 만료된 credential의 token 갱신, 최초 client 생성을
+기다리는 동시 요청은 이 8초 범위 밖이다. provider observation은 이 구간까지 포함하므로 실제
+관측 duration과 요청 점유 시간은 8초를 넘을 수 있다. 이 동기 경로 전체에 엄격한 상한을 두는
+것은 비동기 draft 생성(MOM-0810)에서 함께 다룬다.
 
 ADC 조회나 client 생성이 실패하면 실패 instance를 캐시하지 않고 `provider_error`로 기록한 뒤
 고정 fallback을 반환한다. 다음 신규 요청은 client 생성을 다시 시도해 credential 복구를 재시작
@@ -528,7 +535,7 @@ warm provider 결과를 fixture별로 보면 짧은 context의 p95/max는 3,485m
 - warm 전체 API 지연의 대부분은 provider 구간이며 서버 내부 처리 비중은 작음
 
 팀 합의로 애플리케이션 timeout은 **8초**로 확정했다. warm 전체 API max 6,223ms에 약 28% 여유를
-두고 초 단위로 올린 값이다. Google SDK의 전체 call timeout으로 적용하고 SDK 총 시도는
+두고 초 단위로 올린 값이다. Google SDK의 OkHttp call timeout으로 적용하고 SDK 총 시도는
 `attempts=1`로 유지한다. timeout은 벤더 중립 예외로 변환해 `fallback.reason=timeout`으로
 관측하고, public 5xx 없이 기존 고정 draft를 반환한다.
 
@@ -537,10 +544,32 @@ warm provider 결과를 fixture별로 보면 짧은 context의 p95/max는 3,485m
 `sort_order`, `source_ref_id` 앞순서를 보존한다. DB에서 의미 있는 10건만 제한 조회하고 prompt도
 동일한 상한을 방어적으로 적용한다.
 
-다만 측정은 한 로컬 환경과 한 시간대의 30건 표본만 반영한다. ingress, 컨테이너 자원 제한,
-dev 네트워크 경로가 포함되지 않았으므로 배포가 가능해지면 같은 fixture로 소량 재측정하고 8초가
-ingress timeout보다 작은지 확인한다. 이 재검증 전까지 prod의 task draft LLM은 계속 비활성으로
-둔다.
+### 15.2 실제 timeout 경로 검증 (MOM-0806, 2026-07-29)
+
+같은 로컬 환경에서 새 애플리케이션 프로세스를 `MOMENS_MINSU_LLM_TIMEOUT=10ms`로 기동하고 실제
+Google convert-to-task 호출을 1회 수행했다. 이 값은 timeout 경로 검증 전용이며 운영 설정이
+아니다.
+
+- HTTP 응답: `201 Created`, 전체 API 889ms
+- provider observation/log duration: 705ms
+- 관측 결과: `outcome=fallback`, `fallback.reason=timeout`
+- 생성 task: 고정 fallback title, role=`pm`, priority=`medium`
+- public 5xx 없이 task·Signal action이 정상 저장됨
+
+SDK가 표면화한 실제 call timeout이 벤더 중립 timeout으로 변환되고 고정 fallback과 관측 결과로
+이어지는 경로를 확인했다. 동시에 전체 API와 provider duration이 10ms를 크게 넘은 것은 최초
+ADC·client 생성과 token 갱신이 OkHttp call timeout 밖에 있다는 잔여 위험을 보여준다.
+
+운영값의 latency 분포 근거는 한 로컬 환경과 한 시간대의 30건 warm 표본이다. 별도 cold 1건은
+분포를 대표하지 않고 ingress, 컨테이너 자원 제한, dev 네트워크 경로도 포함되지 않았으므로
+배포가 가능해지면 같은 fixture로 다음을 구분해 소량 재측정한다.
+
+- 새 프로세스의 최초 cold 호출
+- client와 credential이 준비된 warm 호출
+- 만료 또는 강제 갱신으로 token refresh가 발생하는 호출
+- ingress timeout과 8초 OkHttp call timeout의 선후 관계
+
+이 재검증 전까지 prod의 task draft LLM은 계속 비활성으로 둔다.
 
 ## 16. 구현 티켓
 
