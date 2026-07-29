@@ -15,7 +15,10 @@ interface SignalEvidenceRepository extends JpaRepository<SignalEvidence, SignalE
    */
   List<SignalEvidence> findBySignalIdOrderBySortOrderAscSourceRefIdAsc(UUID signalId);
 
-  /** task draft에 사용할 의미 있는 근거 연결만 같은 표시 순서로 제한 조회합니다. */
+  /**
+   * task draft에 사용할 의미 있는 근거 연결만 같은 표시 순서로 제한 조회합니다. PostgreSQL text가 허용하지 않는 null 문자를 제외한 {@code
+   * U+0001..U+0020}을 제거해 prompt의 {@link String#trim()}과 blank 판정을 맞춥니다.
+   */
   @Query(
       """
       SELECT evidence
