@@ -33,6 +33,7 @@ public final class SignalTaskDraftPrompt {
                         trimToNull(item.change()),
                         trimToNull(item.impact())))
             .filter(EvidenceData::hasMeaning)
+            .limit(SignalTaskDraftInput.MAX_EVIDENCE_COUNT)
             .toList();
     InputData data =
         new InputData(

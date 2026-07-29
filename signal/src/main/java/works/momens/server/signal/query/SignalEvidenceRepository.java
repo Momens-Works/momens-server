@@ -2,7 +2,10 @@ package works.momens.server.signal.query;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 interface SignalEvidenceRepository extends JpaRepository<SignalEvidence, SignalEvidence.Key> {
 
@@ -11,4 +14,19 @@ interface SignalEvidenceRepository extends JpaRepository<SignalEvidence, SignalE
    * 않으면 전부 0일 수 있어, 복합 PK 구성원인 source_ref_id를 보조 정렬키로 두어 순서를 결정적으로 고정합니다.
    */
   List<SignalEvidence> findBySignalIdOrderBySortOrderAscSourceRefIdAsc(UUID signalId);
+
+  /** task draft에 사용할 의미 있는 근거 연결만 같은 표시 순서로 제한 조회합니다. */
+  @Query(
+      """
+      SELECT evidence
+      FROM SignalEvidence evidence
+      WHERE evidence.signalId = :signalId
+        AND (
+          TRIM(COALESCE(evidence.target, '')) <> ''
+          OR TRIM(COALESCE(evidence.change, '')) <> ''
+          OR TRIM(COALESCE(evidence.impact, '')) <> ''
+        )
+      ORDER BY evidence.sortOrder ASC, evidence.sourceRefId ASC
+      """)
+  List<SignalEvidence> findDraftEvidence(@Param("signalId") UUID signalId, Pageable pageable);
 }

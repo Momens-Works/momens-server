@@ -10,8 +10,8 @@ public interface SignalReader {
   Optional<Snapshot> findLive(UUID signalId);
 
   /**
-   * task draft 생성 입력으로 쓰는 근거의 의미 값만 {@code sort_order ASC, source_ref_id ASC}로 반환한다. 근거가 없으면 빈 목록을
-   * 반환하고 source ref를 hydrate하지 않는다. 상세 조회와 달리 source 원문·URL·작성자는 포함하지 않는다.
+   * task draft 생성 입력으로 쓰는 의미 있는 근거를 {@code sort_order ASC, source_ref_id ASC}로 최대 10건 반환한다. 근거가 없으면
+   * 빈 목록을 반환하고 source ref를 hydrate하지 않는다. 상세 조회와 달리 source 원문·URL·작성자는 포함하지 않는다.
    */
   List<DraftEvidence> findDraftEvidence(UUID signalId);
 
