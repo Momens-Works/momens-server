@@ -55,9 +55,14 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
 
   private Long foreignOutboxEventId;
 
-  /** 적대적으로 만든 회귀 가드 event를 안전 지연 밖으로 밀어 뒤 클래스에 물려주지 않는다. */
+  /**
+   * 적대적으로 만든 회귀 가드 event를 안전 지연 밖으로 밀어 뒤 클래스에 물려주지 않는다.
+   *
+   * <p>이 클래스는 전진된 offset 행과 본문 signal.created event도 남기지만, 둘 다 안전 지연 밖이거나 소비 완료라 뒤를 막지 않는다. 소비 직전
+   * {@code NOW()}로 되살리는 가드만이 뒤 클래스의 prefix를 자를 수 있는 행이다.
+   */
   @AfterEach
-  void staleGuardEvent() {
+  void backDateGuardEvent() {
     if (foreignOutboxEventId != null) {
       jdbcTemplate.update(
           "UPDATE outbox_events SET created_at = created_at - interval '5 seconds' WHERE id = ?",
@@ -72,10 +77,10 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
     // materialize()로 watermark를 시드하면 끝까지 전진하지 못한다.
     foreignOutboxEventId = insertFreshForeignOutboxEvent();
 
-    // E2E fixture 경계: 이 테스트가 만든 event만 소비 대상으로 남긴다. 운영 최초 시드(안전 지연을 지난 연속 prefix
-    // 끝까지만 전진)와 달리 fresh event를 건너뛰고 강제 전진하므로 운영 동작과 같지 않다. 운영 시드 의미는
-    // SignalCreatedDeliveryMaterializerIntegrationTest가 검증한다.
-    forceSeedWatermarkPastExistingEvents();
+    // E2E fixture 경계: 가드까지를 소비 완료로 표시해 이 테스트가 이후 만드는 event만 소비 대상으로 남긴다.
+    // 운영 최초 시드(안전 지연을 지난 연속 prefix 끝까지만 전진)와 달리 fresh event를 건너뛰고 강제 전진하므로
+    // 운영 동작과 같지 않다. 운영 시드 의미는 SignalCreatedDeliveryMaterializerIntegrationTest가 검증한다.
+    forceSeedWatermarkPast(foreignOutboxEventId);
 
     UserProfile owner = userService.findOrCreate("push-e2e-owner@momens.works", "홍길동", null);
     UserProfile memberWithDevice =
@@ -144,10 +149,11 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
                 workspace))
         .isEqualTo(1);
 
-    // 안전 지연(2초)을 기다리는 대신 event 생성 시각을 지연 이전으로 되돌린다.
+    // 안전 지연(2초)을 기다리는 대신 event 생성 시각을 지연 이전으로 되돌린다. 본문이 만든 event 전부가 대상이다.
+    // 이 흐름이 나중에 event를 하나 더 발행해도 그 event가 fresh로 남아 prefix를 자르지 않는다.
     jdbcTemplate.update(
-        "UPDATE outbox_events SET created_at = created_at - interval '5 seconds' WHERE id = ?",
-        outboxEventId);
+        "UPDATE outbox_events SET created_at = created_at - interval '5 seconds' WHERE id > ?",
+        foreignOutboxEventId);
 
     // 회귀 가드를 소비 시점에도 살려 둔다. 여기까지 오는 데 걸린 시간과 무관하게, 시드가 안전 지연에 다시 의존하면
     // 이 event가 prefix를 막아 테스트가 실패한다.
@@ -202,15 +208,16 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
         .andExpect(status().isNoContent());
   }
 
-  private void forceSeedWatermarkPastExistingEvents() {
+  private void forceSeedWatermarkPast(long outboxEventId) {
     jdbcTemplate.update(
         """
         INSERT INTO notification_consumer_offsets (consumer_name, last_outbox_id, created_at, updated_at)
-        VALUES (?, (SELECT COALESCE(MAX(id), 0) FROM outbox_events), NOW(), NOW())
+        VALUES (?, ?, NOW(), NOW())
         ON CONFLICT (consumer_name)
         DO UPDATE SET last_outbox_id = EXCLUDED.last_outbox_id, updated_at = NOW()
         """,
-        SignalCreatedDeliveryMaterializer.CONSUMER_NAME);
+        SignalCreatedDeliveryMaterializer.CONSUMER_NAME,
+        outboxEventId);
   }
 
   private long insertFreshForeignOutboxEvent() {
