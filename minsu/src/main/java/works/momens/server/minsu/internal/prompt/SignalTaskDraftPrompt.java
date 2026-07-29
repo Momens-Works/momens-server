@@ -13,6 +13,7 @@ import works.momens.server.minsu.internal.llm.LlmRequest;
 public final class SignalTaskDraftPrompt {
 
   static final String VERSION = "signal-task-draft-v1";
+  static final int MAX_EVIDENCE_COUNT = 10;
   private static final String RESOURCE = "/prompts/signal-task-draft-v1.txt";
 
   private final MinsuJson json;
@@ -33,7 +34,7 @@ public final class SignalTaskDraftPrompt {
                         trimToNull(item.change()),
                         trimToNull(item.impact())))
             .filter(EvidenceData::hasMeaning)
-            .limit(SignalTaskDraftInput.MAX_EVIDENCE_COUNT)
+            .limit(MAX_EVIDENCE_COUNT)
             .toList();
     InputData data =
         new InputData(

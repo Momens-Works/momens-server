@@ -82,7 +82,7 @@ class SignalReaderImplIntegrationTest extends AbstractPostgresIntegrationTest {
   void findDraftEvidenceLimitsMeaningfulEvidence() {
     UUID workspaceId = UUID.randomUUID();
     UUID signalId = insertSignal(workspaceId, UUID.randomUUID());
-    insertEvidence(workspaceId, signalId, UUID.randomUUID(), 0, " ", " ", " ");
+    insertEvidence(workspaceId, signalId, UUID.randomUUID(), 0, " \t", "\n", "\r");
     IntStream.range(0, 12)
         .forEach(
             index ->

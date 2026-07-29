@@ -22,9 +22,27 @@ interface SignalEvidenceRepository extends JpaRepository<SignalEvidence, SignalE
       FROM SignalEvidence evidence
       WHERE evidence.signalId = :signalId
         AND (
-          TRIM(COALESCE(evidence.target, '')) <> ''
-          OR TRIM(COALESCE(evidence.change, '')) <> ''
-          OR TRIM(COALESCE(evidence.impact, '')) <> ''
+          FUNCTION(
+            'regexp_replace',
+            COALESCE(evidence.target, ''),
+            '[\\u0001-\\u0020]',
+            '',
+            'g'
+          ) <> ''
+          OR FUNCTION(
+            'regexp_replace',
+            COALESCE(evidence.change, ''),
+            '[\\u0001-\\u0020]',
+            '',
+            'g'
+          ) <> ''
+          OR FUNCTION(
+            'regexp_replace',
+            COALESCE(evidence.impact, ''),
+            '[\\u0001-\\u0020]',
+            '',
+            'g'
+          ) <> ''
         )
       ORDER BY evidence.sortOrder ASC, evidence.sourceRefId ASC
       """)
