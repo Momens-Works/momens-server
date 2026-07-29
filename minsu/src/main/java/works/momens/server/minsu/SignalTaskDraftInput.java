@@ -6,6 +6,8 @@ import java.util.List;
 public record SignalTaskDraftInput(
     String title, String type, String description, String impact, List<Evidence> evidence) {
 
+  public static final int MAX_EVIDENCE_COUNT = 10;
+
   public SignalTaskDraftInput {
     evidence = evidence == null ? List.of() : List.copyOf(evidence);
   }

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.minsu.internal.json.MinsuJson;
@@ -64,6 +65,23 @@ class SignalTaskDraftPromptTest {
     assertThat(data.path("description").asText()).isEqualTo("설명이 포함됩니다");
     assertThat(data.path("evidence")).hasSize(1);
     assertThat(data.path("evidence").get(0).path("target").asText()).isEqualTo("대상");
+  }
+
+  @Test
+  void keepsOnlyFirstTenMeaningfulEvidenceItems() throws Exception {
+    List<SignalTaskDraftInput.Evidence> evidence =
+        IntStream.range(0, 12)
+            .mapToObj(
+                index ->
+                    new SignalTaskDraftInput.Evidence("대상" + index, "변화" + index, "영향" + index))
+            .toList();
+    SignalTaskDraftInput input = new SignalTaskDraftInput("제목", "risk", "설명", "영향", evidence);
+
+    JsonNode data = new ObjectMapper().readTree(prompt.render(input).dataJson());
+
+    assertThat(data.path("evidence")).hasSize(SignalTaskDraftInput.MAX_EVIDENCE_COUNT);
+    assertThat(data.path("evidence").get(0).path("target").asText()).isEqualTo("대상0");
+    assertThat(data.path("evidence").get(9).path("target").asText()).isEqualTo("대상9");
   }
 
   private static Set<String> toSet(java.util.Iterator<String> values) {

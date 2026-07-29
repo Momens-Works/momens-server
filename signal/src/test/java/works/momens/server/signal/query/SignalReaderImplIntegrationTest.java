@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,6 +75,29 @@ class SignalReaderImplIntegrationTest extends AbstractPostgresIntegrationTest {
     UUID signalId = insertSignal(UUID.randomUUID(), UUID.randomUUID());
 
     assertThat(signalReader.findDraftEvidence(signalId)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("task draft에는 정렬된 의미 있는 evidence를 최대 10건 반환한다")
+  void findDraftEvidenceLimitsMeaningfulEvidence() {
+    UUID workspaceId = UUID.randomUUID();
+    UUID signalId = insertSignal(workspaceId, UUID.randomUUID());
+    insertEvidence(workspaceId, signalId, UUID.randomUUID(), 0, " ", " ", " ");
+    IntStream.range(0, 12)
+        .forEach(
+            index ->
+                insertEvidence(
+                    workspaceId,
+                    signalId,
+                    UUID.randomUUID(),
+                    index + 1,
+                    "대상" + index,
+                    "변화" + index,
+                    "영향" + index));
+
+    assertThat(signalReader.findDraftEvidence(signalId))
+        .extracting(SignalReader.DraftEvidence::target)
+        .containsExactlyElementsOf(IntStream.range(0, 10).mapToObj(index -> "대상" + index).toList());
   }
 
   private UUID insertSignal(UUID workspaceId, UUID projectId) {

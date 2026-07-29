@@ -4,8 +4,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.signal.SignalReader;
 
 /** action 모듈이 참조하는 최소 read 경계. Signal 존재·스코프와 draft 입력 값만 노출하고, 나머지는 이 nested 모듈 안에 둔다. */
@@ -37,7 +39,7 @@ class SignalReaderImpl implements SignalReader {
   @Transactional(readOnly = true)
   public List<DraftEvidence> findDraftEvidence(UUID signalId) {
     return signalEvidenceRepository
-        .findBySignalIdOrderBySortOrderAscSourceRefIdAsc(signalId)
+        .findDraftEvidence(signalId, PageRequest.ofSize(SignalTaskDraftInput.MAX_EVIDENCE_COUNT))
         .stream()
         .map(
             evidence ->
