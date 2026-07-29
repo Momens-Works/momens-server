@@ -154,9 +154,14 @@ public interface SignalReader {
 }
 ```
 
-`findDraftEvidence`는 `signal_evidence`의 의미 값만 `sort_order ASC, source_ref_id ASC`로
-반환한다. 행이 없으면 빈 목록을 반환하고 source ref를 hydrate하지 않는다. null·blank 값은
-그대로 반환하되 generator가 각 값을 trim하고 세 값이 모두 빈 evidence는 prompt에서 제외한다.
+`findDraftEvidence`는 `signal_evidence`에서 target·change·impact 중 하나라도 의미 있는 행을
+`sort_order ASC, source_ref_id ASC`로 최대 10건 반환한다. 행이 없으면 빈 목록을 반환하고
+source ref를 hydrate하지 않는다. generator도 각 값을 trim하고 세 값이 모두 빈 evidence를
+제외한 뒤 같은 10건 상한을 적용해 public 입력을 방어한다.
+
+상한 10건은 evidence 한 건의 의미 필드가 각각 30자 이하인 기존 계약을 기준으로 의미 텍스트를
+최대 약 900자로 제한한다. 저장된 evidence와 Signal 상세 API에는 개수 제한을 추가하지 않고,
+LLM task draft 입력에만 적용한다.
 
 evidence 조회는 기존 action ledger가 없고 요청 action이 convert일 때만 수행한다. dismiss와
 convert replay는 evidence를 읽거나 모델을 호출하지 않는다. `SignalReader.Snapshot`에 evidence를
@@ -465,7 +470,8 @@ CI에서는 Google live API와 실제 ADC를 사용하지 않는다. `LlmClient`
 - dismiss는 generator 미호출
 - 생성 draft와 fallback draft 모두 기존 executor로 전달
 - title/type/description/impact/evidence만 입력에 포함
-- evidence는 `sort_order`, `source_ref_id` 순서이며 없으면 빈 목록
+- evidence는 의미 있는 앞선 10건만 `sort_order`, `source_ref_id` 순서로 포함하며 없으면 빈 목록
+- repository 제한 조회와 prompt 방어 제한이 같은 `MAX_EVIDENCE_COUNT=10` 계약을 사용
 - 동시 요청에서 task·ledger·outbox 원자성 유지
 
 ### `app`
@@ -525,6 +531,11 @@ warm provider 결과를 fixture별로 보면 짧은 context의 p95/max는 3,485m
 두고 초 단위로 올린 값이다. Google SDK의 전체 call timeout으로 적용하고 SDK 총 시도는
 `attempts=1`로 유지한다. timeout은 벤더 중립 예외로 변환해 `fallback.reason=timeout`으로
 관측하고, public 5xx 없이 기존 고정 draft를 반환한다.
+
+같은 지연·token 검토에서 task draft 입력 evidence 상한은 **10건**으로 확정했다. 각 evidence의
+세 의미 필드가 필드당 30자 이하이므로 의미 텍스트를 최대 약 900자로 제한하면서 기존 우선순위인
+`sort_order`, `source_ref_id` 앞순서를 보존한다. DB에서 의미 있는 10건만 제한 조회하고 prompt도
+동일한 상한을 방어적으로 적용한다.
 
 다만 측정은 한 로컬 환경과 한 시간대의 30건 표본만 반영한다. ingress, 컨테이너 자원 제한,
 dev 네트워크 경로가 포함되지 않았으므로 배포가 가능해지면 같은 fixture로 소량 재측정하고 8초가
