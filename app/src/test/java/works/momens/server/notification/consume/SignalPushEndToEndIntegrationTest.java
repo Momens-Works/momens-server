@@ -54,8 +54,13 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
   @Test
   @DisplayName("dev Signal 생성이 workspace 전체 구성원의 활성 기기로 정확히 한 번의 push를 만든다")
   void devSignalCreationDeliversPushToWorkspaceMembers() throws Exception {
-    // 배포 시점처럼 watermark를 현재 outbox 끝으로 먼저 시드한다.
-    materializer.materialize();
+    // 앞선 테스트 클래스가 안전 지연(2초) 안에 남긴 outbox event를 재현한다. 이 event가 안전 prefix를 막으므로
+    // materialize()로 watermark를 시드하면 끝까지 전진하지 못한다.
+    insertFreshForeignOutboxEvent();
+
+    // 배포 시점처럼 watermark를 현재 outbox 끝으로 먼저 시드한다. 안전 지연에 걸리지 않도록 offset 원장에 직접 시드해
+    // 이 테스트가 앞선 테스트가 남긴 event의 나이에 좌우되지 않게 한다(시드 자체는 materializer 모듈 테스트가 검증).
+    seedWatermarkToCurrentOutboxEnd();
 
     UserProfile owner = userService.findOrCreate("push-e2e-owner@momens.works", "홍길동", null);
     UserProfile memberWithDevice =
@@ -175,6 +180,29 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
                     """
                         .formatted(token)))
         .andExpect(status().isNoContent());
+  }
+
+  private void seedWatermarkToCurrentOutboxEnd() {
+    jdbcTemplate.update(
+        """
+        INSERT INTO notification_consumer_offsets (consumer_name, last_outbox_id, created_at, updated_at)
+        VALUES (?, (SELECT COALESCE(MAX(id), 0) FROM outbox_events), NOW(), NOW())
+        ON CONFLICT (consumer_name)
+        DO UPDATE SET last_outbox_id = EXCLUDED.last_outbox_id, updated_at = NOW()
+        """,
+        SignalCreatedDeliveryMaterializer.CONSUMER_NAME);
+  }
+
+  private void insertFreshForeignOutboxEvent() {
+    jdbcTemplate.update(
+        """
+        INSERT INTO outbox_events
+          (issued_by, workspace_id, aggregate_type, aggregate_id, event_type, payload, idempotency_key)
+        VALUES ('api-server', ?, 'signal', ?, 'signal.converted_to_task', '{}'::jsonb, ?)
+        """,
+        UUID.randomUUID(),
+        UUID.randomUUID().toString(),
+        "push-e2e-foreign:" + UUID.randomUUID());
   }
 
   private long countBy(String table, String column, UUID id) {
