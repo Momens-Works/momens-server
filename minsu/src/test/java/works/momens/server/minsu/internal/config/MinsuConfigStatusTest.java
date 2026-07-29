@@ -3,6 +3,7 @@ package works.momens.server.minsu.internal.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -53,6 +54,12 @@ class MinsuConfigStatusTest {
     return Stream.of(
         Arguments.of(properties("other", "gemini-3.5-flash-lite", "project", "global")),
         Arguments.of(properties("google", "other-model", "project", "global")),
+        Arguments.of(
+            new MinsuLlmProperties(
+                "google",
+                "gemini-3.5-flash-lite",
+                Duration.ZERO,
+                new MinsuLlmProperties.Google("project", "global"))),
         Arguments.of(properties("google", "gemini-3.5-flash-lite", "", "global")),
         Arguments.of(properties("google", "gemini-3.5-flash-lite", "project", "asia-northeast3")));
   }
@@ -60,6 +67,6 @@ class MinsuConfigStatusTest {
   private static MinsuLlmProperties properties(
       String provider, String model, String project, String location) {
     return new MinsuLlmProperties(
-        provider, model, new MinsuLlmProperties.Google(project, location));
+        provider, model, Duration.ofSeconds(8), new MinsuLlmProperties.Google(project, location));
   }
 }

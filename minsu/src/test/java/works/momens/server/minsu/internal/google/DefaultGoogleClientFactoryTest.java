@@ -4,17 +4,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.genai.types.HttpOptions;
 import com.google.genai.types.Schema;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class DefaultGoogleClientFactoryTest {
 
   @Test
-  void usesStableV1WithoutTimeoutAndWithOneTotalAttempt() {
-    HttpOptions options = DefaultGoogleClientFactory.httpOptions();
+  void usesStableV1WithEightSecondTimeoutAndOneTotalAttempt() {
+    HttpOptions options = DefaultGoogleClientFactory.httpOptions(Duration.ofSeconds(8));
 
     assertThat(options.apiVersion()).contains("v1");
-    assertThat(options.timeout()).isEmpty();
+    assertThat(options.timeout()).contains(8_000);
     assertThat(options.retryOptions()).isPresent();
     assertThat(options.retryOptions().orElseThrow().attempts()).contains(1);
   }

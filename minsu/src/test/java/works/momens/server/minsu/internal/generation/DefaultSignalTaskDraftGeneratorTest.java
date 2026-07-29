@@ -30,6 +30,7 @@ import works.momens.server.minsu.internal.json.MinsuJson;
 import works.momens.server.minsu.internal.llm.LlmClient;
 import works.momens.server.minsu.internal.llm.LlmRequest;
 import works.momens.server.minsu.internal.llm.LlmResponse;
+import works.momens.server.minsu.internal.llm.LlmTimeoutException;
 import works.momens.server.minsu.internal.llm.ModelSelection;
 import works.momens.server.minsu.internal.llm.ModelSelectionPolicy;
 import works.momens.server.minsu.internal.prompt.SignalTaskDraftPrompt;
@@ -127,6 +128,37 @@ class DefaultSignalTaskDraftGeneratorTest {
 
     assertThat(result).isEqualTo(fallback());
     assertThat(client.calls()).isEqualTo(1);
+  }
+
+  @Test
+  void callsProviderOnceAndRecordsTimeoutFallbackSeparately() {
+    RecordingObservationHandler handler = new RecordingObservationHandler();
+    ObservationRegistry registry = ObservationRegistry.create();
+    registry.observationConfig().observationHandler(handler);
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    CapturingClient client = failing(new LlmTimeoutException(new RuntimeException("timeout")));
+
+    TaskDraft result = generator(client, true, true, registry, meterRegistry).generate(input());
+
+    assertAll(
+        () -> assertThat(result).isEqualTo(fallback()),
+        () -> assertThat(client.calls()).isEqualTo(1),
+        () ->
+            assertThat(
+                    meterRegistry
+                        .get("momens.minsu.task.draft.requests")
+                        .tag("outcome", "fallback")
+                        .tag("fallback.reason", "timeout")
+                        .counter()
+                        .count())
+                .isEqualTo(1),
+        () ->
+            assertThat(
+                    handler.stoppedContext.getLowCardinalityKeyValues().stream()
+                        .map(keyValue -> keyValue.getKey() + "=" + keyValue.getValue()))
+                .contains("outcome=fallback", "fallback.reason=timeout"),
+        () ->
+            assertThat(handler.stoppedContext.getError()).isInstanceOf(LlmTimeoutException.class));
   }
 
   @Test

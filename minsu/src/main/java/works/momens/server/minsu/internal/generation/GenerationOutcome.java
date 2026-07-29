@@ -4,6 +4,7 @@ enum GenerationOutcome {
   DISABLED("fallback", "disabled"),
   INVALID_CONFIG("fallback", "invalid_config"),
   INSUFFICIENT_CONTEXT("fallback", "insufficient_context"),
+  TIMEOUT("fallback", "timeout"),
   PROVIDER_ERROR("fallback", "provider_error"),
   INVALID_RESPONSE("fallback", "invalid_response"),
   INVALID_OUTPUT("fallback", "invalid_output"),

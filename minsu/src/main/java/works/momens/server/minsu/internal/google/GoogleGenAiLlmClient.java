@@ -1,10 +1,13 @@
 package works.momens.server.minsu.internal.google;
 
 import jakarta.annotation.PreDestroy;
+import java.io.InterruptedIOException;
+import java.net.SocketTimeoutException;
 import org.springframework.stereotype.Component;
 import works.momens.server.minsu.internal.llm.LlmClient;
 import works.momens.server.minsu.internal.llm.LlmRequest;
 import works.momens.server.minsu.internal.llm.LlmResponse;
+import works.momens.server.minsu.internal.llm.LlmTimeoutException;
 import works.momens.server.minsu.internal.llm.ModelSelection;
 
 @Component
@@ -20,7 +23,14 @@ final class GoogleGenAiLlmClient implements LlmClient {
 
   @Override
   public LlmResponse generate(ModelSelection selection, LlmRequest request) {
-    return client(selection).generate(selection, request);
+    try {
+      return client(selection).generate(selection, request);
+    } catch (RuntimeException error) {
+      if (isTimeout(error)) {
+        throw new LlmTimeoutException(error);
+      }
+      throw error;
+    }
   }
 
   @PreDestroy
@@ -44,5 +54,18 @@ final class GoogleGenAiLlmClient implements LlmClient {
       }
       return client;
     }
+  }
+
+  private static boolean isTimeout(Throwable error) {
+    Throwable cause = error;
+    while (cause != null) {
+      if (cause instanceof SocketTimeoutException
+          || (cause.getClass() == InterruptedIOException.class
+              && "timeout".equalsIgnoreCase(cause.getMessage()))) {
+        return true;
+      }
+      cause = cause.getCause();
+    }
+    return false;
   }
 }

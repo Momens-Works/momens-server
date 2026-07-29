@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -24,6 +25,7 @@ import works.momens.server.minsu.Role;
 import works.momens.server.minsu.SignalTaskDraftGenerator;
 import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.minsu.TaskDraft;
+import works.momens.server.minsu.internal.config.MinsuLlmProperties;
 
 class MinsuContextTest {
 
@@ -51,6 +53,8 @@ class MinsuContextTest {
 
               assertThat(draft).isEqualTo(new TaskDraft("시그널 제목", Role.PM, Priority.MEDIUM));
               assertThat(context.getBean(FailingGoogleClientFactory.class).calls).hasValue(1);
+              assertThat(context.getBean(MinsuLlmProperties.class).timeout())
+                  .isEqualTo(Duration.ofSeconds(8));
             });
   }
 
@@ -88,6 +92,7 @@ class MinsuContextTest {
     return Stream.of(
         Arguments.of("momens.minsu.llm.provider", "other"),
         Arguments.of("momens.minsu.llm.model", "other-model"),
+        Arguments.of("momens.minsu.llm.timeout", "0s"),
         Arguments.of("momens.minsu.llm.google.location", "asia-northeast3"));
   }
 

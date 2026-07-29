@@ -56,6 +56,9 @@ public final class MinsuConfigStatus {
     if (!MinsuLlmProperties.DEFAULT_MODEL.equals(llm.model())) {
       fields.add("model");
     }
+    if (llm.timeout() == null || llm.timeout().isZero() || llm.timeout().isNegative()) {
+      fields.add("timeout");
+    }
     if (llm.google().project() == null || llm.google().project().isBlank()) {
       fields.add("google.project");
     }
