@@ -214,7 +214,8 @@ API, UX/AX는 이번 구현에 포함하지 않는다.
 - candidate count 1
 - 애플리케이션 호출 1회
 - SDK 총 시도 1회(`attempts=1`), 자동 재시도 없음
-- 별도 애플리케이션 timeout 없음
+- SDK 전체 call timeout 8초
+- timeout은 `momens.minsu.llm.timeout`으로 주입하며 초과 시 고정 fallback
 - provider response를 벤더 중립 결과로 변환한 뒤 SDK 타입 폐기
 
 Google SDK `Client`는 ADC를 client 생성 중 조회할 수 있으므로 Spring bean 생성자에서
@@ -301,7 +302,7 @@ priority = medium
 | title만 빈 값 | 1회 | 모델 role/priority + Signal title | `generated_title_fallback` |
 | title 15자 초과 | 1회 | 정상 생성 + title 절단 | `generated_truncated` |
 | 정상 | 1회 | 모델 draft | `generated` |
-| 추후 timeout | 1회 | 고정 fallback | `timeout` |
+| provider timeout | 1회 | 고정 fallback | `timeout` |
 
 fallback은 public 5xx나 새 error code를 만들지 않는다. 인증, Signal not found, 권한, 기존 action
 충돌처럼 LLM과 무관한 기존 오류는 그대로 유지한다.
@@ -322,6 +323,7 @@ momens:
     llm:
       provider: ${MOMENS_MINSU_LLM_PROVIDER:google}
       model: ${MOMENS_MINSU_LLM_MODEL:gemini-3.5-flash-lite}
+      timeout: ${MOMENS_MINSU_LLM_TIMEOUT:8s}
       google:
         project: ${MOMENS_MINSU_LLM_GOOGLE_PROJECT:}
         location: ${MOMENS_MINSU_LLM_GOOGLE_LOCATION:global}
@@ -361,6 +363,7 @@ location 명시를 강제할지와 `global`/`us`/`eu` 중 어떤 endpoint를 허
 
 - provider가 `google`이 아님
 - model이 catalog에 없음
+- timeout이 0 이하임
 - project 또는 location이 공백
 - model이 지원하지 않는 location
 
@@ -439,6 +442,7 @@ startup 무효 설정은 error, 호출 실패·fallback은 warn, 정상 생성�
 - candidate 없음, 비정상 finish reason, 빈 text, malformed JSON → fallback
 - disabled/invalid config/insufficient context → provider 미호출
 - provider 예외 → 호출 한 번 후 fallback
+- provider timeout → 호출 한 번 후 `timeout` fallback과 관측 결과
 - ADC/client factory 예외 → context 정상 기동, 첫 generate에서 `provider_error` fallback
 - client 생성 성공 → thread-safe한 동일 instance 재사용, context 종료 시 close
 - provider/model을 잘못 넣어도 context 기동, config metric 0
@@ -485,9 +489,47 @@ MOM-0806에서 다음을 기록한다.
 - finish reason과 token 분포
 - ingress와 SDK underlying timeout
 
-운영 timeout은 측정값과 원탭 사용자 체감을 함께 보고 결정한다. 확정 전에는 prod에서
-`MOMENS_MINSU_TASK_DRAFT_ENABLED=true`로 배포하지 않는다. timeout을 추가할 때도 재시도는
-도입하지 않고 초과 시 고정 fallback을 사용한다.
+로컬 측정값과 원탭 사용자 체감을 함께 보고 애플리케이션 timeout을 8초로 확정했다. 재시도는
+도입하지 않고 초과 시 고정 fallback을 사용한다. dev/ingress 재검증 전에는 prod에서
+`MOMENS_MINSU_TASK_DRAFT_ENABLED=true`로 배포하지 않는다.
+
+### 15.1 로컬 예비 측정 (MOM-0806, 2026-07-29)
+
+dev 배포가 불가능한 상태라 운영 timeout 확정 전에 로컬 기준선을 먼저 측정했다. 측정 환경은
+macOS 26.5.2 arm64, JDK 21.0.3, Spring Boot 4.1.0, 로컬 PostgreSQL 16이며, Google project
+`momens-dev-mvp`, location `global`, model `gemini-3.5-flash-lite`와 ADC를 사용했다.
+`aiplatform.googleapis.com`을 활성화한 뒤 실제 convert-to-task API를 순차 호출했다.
+
+표본은 Java SDK client 지연 생성을 포함한 cold 1건과 warm 30건이다. warm 표본은 짧은 context,
+evidence 1건인 중간 context, evidence 3건인 긴 context를 각각 10건씩 교차했다. 멱등 replay가
+generator 호출을 건너뛰므로 매 표본마다 새 Signal을 생성했다.
+
+| 구간 | 표본 | p50 | p95 | max |
+| --- | ---: | ---: | ---: | ---: |
+| provider cold | 1 | 1,865ms | 1,865ms | 1,865ms |
+| 전체 API cold | 1 | 2,011ms | 2,011ms | 2,011ms |
+| provider warm | 30 | 1,258ms | 5,960ms | 6,161ms |
+| 전체 API warm | 30 | 1,317ms | 6,002ms | 6,223ms |
+| 전체 API - provider | 30 | 43ms | 75ms | 117ms |
+
+warm provider 결과를 fixture별로 보면 짧은 context의 p95/max는 3,485ms, 중간 context는
+5,821ms, 긴 context는 6,161ms였다. 30건 중 19건은 1,500ms 미만이었지만 3건은 5,000ms
+이상으로 tail 변동이 컸다.
+
+- 31건 모두 `generated`, fallback 0건
+- finish reason은 31건 모두 `STOP`
+- warm total token은 p50 408, p95 490, max 499
+- warm 전체 API 지연의 대부분은 provider 구간이며 서버 내부 처리 비중은 작음
+
+팀 합의로 애플리케이션 timeout은 **8초**로 확정했다. warm 전체 API max 6,223ms에 약 28% 여유를
+두고 초 단위로 올린 값이다. Google SDK의 전체 call timeout으로 적용하고 SDK 총 시도는
+`attempts=1`로 유지한다. timeout은 벤더 중립 예외로 변환해 `fallback.reason=timeout`으로
+관측하고, public 5xx 없이 기존 고정 draft를 반환한다.
+
+다만 측정은 한 로컬 환경과 한 시간대의 30건 표본만 반영한다. ingress, 컨테이너 자원 제한,
+dev 네트워크 경로가 포함되지 않았으므로 배포가 가능해지면 같은 fixture로 소량 재측정하고 8초가
+ingress timeout보다 작은지 확인한다. 이 재검증 전까지 prod의 task draft LLM은 계속 비활성으로
+둔다.
 
 ## 16. 구현 티켓
 
