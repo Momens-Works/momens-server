@@ -58,9 +58,10 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
     // materialize()로 watermark를 시드하면 끝까지 전진하지 못한다.
     insertFreshForeignOutboxEvent();
 
-    // 배포 시점처럼 watermark를 현재 outbox 끝으로 먼저 시드한다. 안전 지연에 걸리지 않도록 offset 원장에 직접 시드해
-    // 이 테스트가 앞선 테스트가 남긴 event의 나이에 좌우되지 않게 한다(시드 자체는 materializer 모듈 테스트가 검증).
-    seedWatermarkToCurrentOutboxEnd();
+    // E2E fixture 경계: 이 테스트가 만든 event만 소비 대상으로 남긴다. 운영 최초 시드(안전 지연을 지난 연속 prefix
+    // 끝까지만 전진)와 달리 fresh event를 건너뛰고 강제 전진하므로 운영 동작과 같지 않다. 운영 시드 의미는
+    // SignalCreatedDeliveryMaterializerIntegrationTest가 검증한다.
+    forceSeedWatermarkPastExistingEvents();
 
     UserProfile owner = userService.findOrCreate("push-e2e-owner@momens.works", "홍길동", null);
     UserProfile memberWithDevice =
@@ -182,7 +183,7 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
         .andExpect(status().isNoContent());
   }
 
-  private void seedWatermarkToCurrentOutboxEnd() {
+  private void forceSeedWatermarkPastExistingEvents() {
     jdbcTemplate.update(
         """
         INSERT INTO notification_consumer_offsets (consumer_name, last_outbox_id, created_at, updated_at)
