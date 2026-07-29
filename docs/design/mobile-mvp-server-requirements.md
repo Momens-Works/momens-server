@@ -368,6 +368,8 @@ production 코드 분기 대신 worker와 같은 backing 계약의 fixture를 �
 - 민수는 서버 내 `minsu` 모듈의 `SignalTaskDraftGenerator`로 구현한다. 비활성·설정 무효·입력
   부족·외부 실패·출력 무효 시 api-server가 고정 draft(title=15자로 제한한 Signal title,
   role=`pm`, priority=`medium`)를 사용한다.
+- draft 생성에 사용하는 evidence는 기존 정렬의 의미 있는 앞선 10건으로 제한한다. 이 제한은
+  Signal evidence 저장과 상세 API 응답에는 적용하지 않는다.
 - api-server는 draft를 모바일 상세 응답에 노출하지 않고 body 없는 `convert-to-task`의 입력으로만
   사용한다.
 - 사용자의 확정 action이 있기 전까지 task draft는 프로젝트의 실행 항목으로 간주하지 않는다.
