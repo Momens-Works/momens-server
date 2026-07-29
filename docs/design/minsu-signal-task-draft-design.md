@@ -368,7 +368,7 @@ location 명시를 강제할지와 `global`/`us`/`eu` 중 어떤 endpoint를 허
 
 - provider가 `google`이 아님
 - model이 catalog에 없음
-- timeout이 0 이하임
+- timeout이 1ms 미만이거나 SDK의 `int` 밀리초 상한을 초과함
 - project 또는 location이 공백
 - model이 지원하지 않는 location
 
@@ -471,7 +471,7 @@ CI에서는 Google live API와 실제 ADC를 사용하지 않는다. `LlmClient`
 - 생성 draft와 fallback draft 모두 기존 executor로 전달
 - title/type/description/impact/evidence만 입력에 포함
 - evidence는 의미 있는 앞선 10건만 `sort_order`, `source_ref_id` 순서로 포함하며 없으면 빈 목록
-- repository 제한 조회와 prompt 방어 제한이 같은 `MAX_EVIDENCE_COUNT=10` 계약을 사용
+- repository 제한 조회와 prompt 방어 제한이 각각 10건 계약을 소유해 모듈 간 상수 의존 없이 같은 상한을 적용
 - 동시 요청에서 task·ledger·outbox 원자성 유지
 
 ### `app`
