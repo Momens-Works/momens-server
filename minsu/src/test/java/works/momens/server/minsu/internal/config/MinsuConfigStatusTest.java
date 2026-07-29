@@ -50,6 +50,21 @@ class MinsuConfigStatusTest {
     assertThat(status.valid()).isTrue();
   }
 
+  @Test
+  void enabledMaximumTimeoutIsValid() {
+    MinsuConfigStatus status =
+        new MinsuConfigStatus(
+            new MinsuTaskDraftProperties(true),
+            new MinsuLlmProperties(
+                "google",
+                "gemini-3.5-flash-lite",
+                Duration.ofMillis(Integer.MAX_VALUE),
+                new MinsuLlmProperties.Google("project", "global")),
+            new SimpleMeterRegistry());
+
+    assertThat(status.valid()).isTrue();
+  }
+
   private static Stream<Arguments> invalidProperties() {
     return Stream.of(
         Arguments.of(properties("other", "gemini-3.5-flash-lite", "project", "global")),
@@ -59,6 +74,18 @@ class MinsuConfigStatusTest {
                 "google",
                 "gemini-3.5-flash-lite",
                 Duration.ZERO,
+                new MinsuLlmProperties.Google("project", "global"))),
+        Arguments.of(
+            new MinsuLlmProperties(
+                "google",
+                "gemini-3.5-flash-lite",
+                Duration.ofNanos(1),
+                new MinsuLlmProperties.Google("project", "global"))),
+        Arguments.of(
+            new MinsuLlmProperties(
+                "google",
+                "gemini-3.5-flash-lite",
+                Duration.ofMillis(Integer.MAX_VALUE).plusMillis(1),
                 new MinsuLlmProperties.Google("project", "global"))),
         Arguments.of(properties("google", "gemini-3.5-flash-lite", "", "global")),
         Arguments.of(properties("google", "gemini-3.5-flash-lite", "project", "asia-northeast3")));
