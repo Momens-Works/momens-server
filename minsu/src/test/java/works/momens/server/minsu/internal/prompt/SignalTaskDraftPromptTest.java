@@ -79,7 +79,7 @@ class SignalTaskDraftPromptTest {
 
     JsonNode data = new ObjectMapper().readTree(prompt.render(input).dataJson());
 
-    assertThat(data.path("evidence")).hasSize(SignalTaskDraftInput.MAX_EVIDENCE_COUNT);
+    assertThat(data.path("evidence")).hasSize(SignalTaskDraftPrompt.MAX_EVIDENCE_COUNT);
     assertThat(data.path("evidence").get(0).path("target").asText()).isEqualTo("대상0");
     assertThat(data.path("evidence").get(9).path("target").asText()).isEqualTo("대상9");
   }
