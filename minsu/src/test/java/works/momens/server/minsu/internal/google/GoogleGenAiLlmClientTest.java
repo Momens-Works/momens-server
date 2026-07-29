@@ -3,6 +3,8 @@ package works.momens.server.minsu.internal.google;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.genai.errors.GenAiIOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -11,6 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import works.momens.server.minsu.internal.llm.LlmRequest;
 import works.momens.server.minsu.internal.llm.LlmResponse;
+import works.momens.server.minsu.internal.llm.LlmTimeoutException;
 import works.momens.server.minsu.internal.llm.ModelSelection;
 
 class GoogleGenAiLlmClientTest {
@@ -67,6 +70,19 @@ class GoogleGenAiLlmClientTest {
     assertThat(sdkClient.generates).hasValue(1);
   }
 
+  @Test
+  void mapsSdkCallTimeoutToVendorNeutralTimeout() {
+    GenAiIOException sdkTimeout =
+        new GenAiIOException(
+            "Failed to execute HTTP request.", new InterruptedIOException("timeout"));
+    GoogleGenAiLlmClient client =
+        new GoogleGenAiLlmClient(selection -> new FailingGoogleSdkClient(sdkTimeout));
+
+    assertThatThrownBy(() -> client.generate(SELECTION, REQUEST))
+        .isInstanceOf(LlmTimeoutException.class)
+        .hasCause(sdkTimeout);
+  }
+
   private static final class FakeGoogleSdkClient implements GoogleSdkClient {
 
     private final AtomicInteger generates = new AtomicInteger();
@@ -82,5 +98,16 @@ class GoogleGenAiLlmClientTest {
     public void close() {
       closes.incrementAndGet();
     }
+  }
+
+  private record FailingGoogleSdkClient(RuntimeException error) implements GoogleSdkClient {
+
+    @Override
+    public LlmResponse generate(ModelSelection selection, LlmRequest request) {
+      throw error;
+    }
+
+    @Override
+    public void close() {}
   }
 }

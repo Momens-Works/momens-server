@@ -15,6 +15,7 @@ import works.momens.server.minsu.internal.json.MinsuJson;
 import works.momens.server.minsu.internal.llm.LlmClient;
 import works.momens.server.minsu.internal.llm.LlmRequest;
 import works.momens.server.minsu.internal.llm.LlmResponse;
+import works.momens.server.minsu.internal.llm.LlmTimeoutException;
 import works.momens.server.minsu.internal.llm.LlmUseCase;
 import works.momens.server.minsu.internal.llm.ModelSelection;
 import works.momens.server.minsu.internal.llm.ModelSelectionPolicy;
@@ -71,15 +72,19 @@ final class DefaultSignalTaskDraftGenerator implements SignalTaskDraftGenerator 
       logResult(selection, response, result.outcome(), startedAt);
       return finish(result.draft(), result.outcome());
     } catch (RuntimeException e) {
-      observability.completeProvider(observation, GenerationOutcome.PROVIDER_ERROR, null, e);
+      GenerationOutcome outcome =
+          e instanceof LlmTimeoutException
+              ? GenerationOutcome.TIMEOUT
+              : GenerationOutcome.PROVIDER_ERROR;
+      observability.completeProvider(observation, outcome, null, e);
       log.warn(
           "Minsu LLM 호출 실패 provider={} model={} durationMs={} outcome={} fallbackReason={}",
           selection.provider(),
           selection.model(),
           elapsedMillis(startedAt),
-          GenerationOutcome.PROVIDER_ERROR.outcome(),
-          GenerationOutcome.PROVIDER_ERROR.reason());
-      return finish(fallback, GenerationOutcome.PROVIDER_ERROR);
+          outcome.outcome(),
+          outcome.reason());
+      return finish(fallback, outcome);
     }
   }
 
