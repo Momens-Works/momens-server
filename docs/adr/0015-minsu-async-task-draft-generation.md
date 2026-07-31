@@ -77,6 +77,22 @@ ADR-0014와 동기 상세 설계가 함께 전제한 "`minsu`는 `signal`, `proj
 `project → minsu`는 `minsu → project`와 순환이므로 금지한다. 상태를 조합하는 것은 표면 모듈인
 `mobile`의 책임이다.
 
+### `docs/rules/architecture.md` 기본값에 대한 예외
+
+이 결정은 문서화된 두 기본값에서 벗어난다. 둘 다 금지가 아니라 기본값·최소화이고,
+architecture.md 자신이 "단순한 경우 상대 모듈의 public API 직접 참조를 허용하되 리뷰 단계에서
+세부 논의합니다"라고 적어둔 자리가 여기다. 규칙 자체는 바꾸지 않고 **범위를 한정한 예외**로
+둔다.
+
+| architecture.md 기본값 | 이 ADR |
+| --- | --- |
+| "기본은 application event 기반 협력" | Modulith event publication registry 대신 public API 직접 호출. 이 레포는 아직 application event를 도입하지 않아 `event_publication` Flyway와 재발행 스케줄러를 새로 만들어야 하는데, 원장이 이미 durable queue라 얻는 것이 없다 |
+| "트랜잭션 단위는 같은 도메인에 닫고, 모듈 경계를 넘는 트랜잭션 참여는 최소화" | `minsu`가 연 트랜잭션에 `project` 반영 API가 참여한다 |
+
+예외 범위는 **`minsu → project`의 draft 반영 하나**다. 다른 모듈 조합이나 `minsu`의 다른
+유스케이스로 확대하지 않는다. 트랜잭션을 넘기는 이유는 아래 원자성 논거 하나뿐이므로, 그
+조건이 사라지면 예외도 사라진다.
+
 이 변경으로 `minsu`는 무상태 모듈에서 **영속성 소유 모듈**이 된다. 또한 `minsu`가 연 트랜잭션에
 `project`의 반영 API가 참여하는 cross-module 트랜잭션이 생긴다. 이를 허용하는 이유는 `tasks`
 반영과 원장 종료가 원자적이지 않으면, 반영 후 프로세스가 죽었을 때 재시도가 CAS 0건을 보고

@@ -188,6 +188,11 @@ task_id는 payload에만 담는데, 공개 `OutboxEventView`에는 payload 필�
 | fail-closed (채택) | 모든 비동기 intent가 durable. 상태 공백 없음 | 원장 장애가 convert API 장애가 됨 |
 | fail-open | convert 가용성 유지 | 그 task는 풍부화되지 않고 원장도 없어 조용히 `ready` |
 
+실제로 fail-closed가 **추가하는** 위험은 표가 시사하는 것보다 작다. 원장 insert 실패의 대부분을
+차지할 DB 장애·커넥션 고갈은 같은 트랜잭션의 `tasks` insert도 함께 실패시키므로 convert는 어차피
+실패한다. 순수하게 늘어나는 위험은 원장 고유의 제약 위반과 락 경합뿐이고, `task_id` UNIQUE는
+상류의 `signal_actions UNIQUE(signal_id)`가 이미 막고 있어 실질적으로 거의 남지 않는다.
+
 fail-closed를 택한 이유는 fail-open의 실패가 **보이지 않기** 때문이다. 원장이 없으면 `ready`로
 응답하므로 앱도 사용자도 서버도 무엇이 빠졌는지 알 수 없고, 원장 장애가 길어지면 그동안의
 task 전부가 조용히 풍부화되지 않는다. convert 실패는 최소한 드러나고 재시도가 replay로
@@ -223,10 +228,15 @@ provider를 호출한다. 비동기 활성 상태에서 고정 fallback을 얻�
 따라서 `minsu` 공개 계약에 두 진입점을 둔다. 활성 여부 판정은 `minsu`가 소유하고 `signal`은
 두 번 호출하기만 한다.
 
-| 진입점 | 호출 위치 | 비동기 활성 | 비동기 비활성 |
+| 진입점 | 호출자 | 비동기 활성 | 비동기 비활성 |
 | --- | --- | --- | --- |
-| draft 확보 | 쓰기 트랜잭션 **밖** | LLM 미호출, 고정 fallback 반환 | 현재와 동일하게 LLM 호출 |
-| 원장 적재 | 쓰기 트랜잭션 **안** | `pending` 행 적재 | 아무것도 하지 않음 |
+| draft 확보 | `signal`, 쓰기 트랜잭션 **밖** | LLM 미호출, 고정 fallback 반환 | 현재와 동일하게 LLM 호출 |
+| 원장 적재 | `signal`, 쓰기 트랜잭션 **안** | `pending` 행 적재 | 아무것도 하지 않음 |
+| 상태 조회 | `signal`(replay), `mobile`(task 상세) | 원장에서 `draft_status` 판정 | 항상 `ready` |
+
+세 번째 진입점을 계약으로 못 박는 이유는 **deadline 투영(8.6절)을 내장해야 하는 유일한
+지점**이기 때문이다. `signal`과 `mobile`이 각자 투영 로직을 구현하면 반드시 어긋난다.
+`draft_status` 판정은 `minsu`가 한 곳에서 소유한다.
 
 두 진입점을 나누는 이유는 트랜잭션 경계가 다르기 때문이다. 동기 모드의 LLM 호출은 지금처럼
 쓰기 트랜잭션 밖에 있어야 하고(느린 네트워크가 DB connection을 점유하지 않도록), 원장 적재는
@@ -236,6 +246,12 @@ provider를 호출한다. 비동기 활성 상태에서 고정 fallback을 얻�
 기존 `generate` 시그니처를 그대로 둘지, draft 확보 진입점으로 흡수할지는 구현 티켓에서 정한다.
 어느 쪽이든 `signal`은 활성 여부를 알지 못하고 `minsu`가 판정을 소유한다는 점은 같다. 9.2절의
 "`disabled`면 적재하지 않는다"도 같은 원칙이다.
+
+**활성 판정은 한 요청 안에서 한 번만 하고 두 진입점이 같은 값을 쓴다.** 판정이 갈리면 비활성으로
+LLM을 부르고 활성으로 적재해 중복 생성과 baseline 불일치가 생기거나, 활성으로 fallback만 확보하고
+비활성으로 적재하지 않아 **LLM을 한 번도 부르지 않은 채 `ready`** 가 된다. 후자는 조용한 품질
+손실이다. 현재 `MinsuConfigStatus`는 정적 설정이고 한 요청은 한 pod가 처리하므로 실제 위험은
+없지만, 판정을 동적 토글로 바꾸면 곧바로 문제가 되므로 계약으로 남긴다.
 
 ### 5.5 생성 입력의 시점
 
@@ -274,10 +290,23 @@ workspace 데이터 안의 복제다.
 | 소유 모듈 | `minsu` |
 | 적재 시점 | convert 트랜잭션 (5.3절) |
 | 멱등 키 | `task_id` UNIQUE. convert 1건당 task 1건이 이미 `signal_actions UNIQUE(signal_id)`로 보장된다 |
-| 보유 데이터 | `task_id`, 입력 snapshot(5.5절), 상태, completion reason, 시도 횟수, claim token, lease |
+| 보유 데이터 | `task_id`, `workspace_id`, 입력 snapshot(5.5절), **반영 baseline**, 상태, completion reason, 시도 횟수, claim token, lease |
 | 상태 | `pending` → `processing`(claim) → `completed`(reason 별도, 8.3절) |
 | 재시도 | 시도 횟수와 다음 시도 시각을 원장이 소유 |
 | 유실 복구 | lease 만료분과 재시작 후 남은 `pending`을 매 주기 회수 |
+
+**baseline은 원장이 값으로 소유한다.** convert가 `tasks`에 실제로 쓴 title/role/priority를
+적재 시점에 그대로 복사해 둔다. 반영 시점에 고정 fallback 규칙을 다시 계산해 비교하지 않는다.
+재계산 방식은 fallback 생성 규칙(`TaskTitleNormalizer` 등)이 바뀌는 순간 진행 중이던 작업
+전부가 CAS 불일치가 되어 편집이 없는데도 `user_edited`로 오분류된다. 8.1절이 내세우는
+"오탐 0"이 규칙 변경 한 번에 무너지는 것이다. baseline을 값으로 저장하면 규칙이 바뀌어도 과거
+작업이 안전하고, snapshot 보존 정책(5.5절)과도 분리된다. snapshot은 종료 후 비워도 baseline은
+남는다.
+
+`workspace_id`를 갖는 이유는 원장이 Signal 본문을 복제해 실질적으로 workspace 데이터이기
+때문이다. `signal_actions`와 `outbox_events`도 모두 갖고 있고, 운영 쿼리·지표를 workspace로
+분해하려면 필요하다. prod 데이터 레지던시 판단이 workspace 단위라 정책 적용 대상을 고르는
+데도 쓰인다.
 
 `tasks`에는 생성이 성공한 시점에만 title/role/priority를 반영한다. 어떤 이유로 끝나든
 `tasks`는 convert 시점의 고정 fallback draft를 최소한으로 갖는다. 따라서 **`tasks`는 항상
@@ -358,6 +387,7 @@ task 상세 조회
 | --- | --- | --- |
 | `generated` | 모델 draft 반영 | 반영됨 |
 | `user_edited` | 사용자가 먼저 편집해 결과 폐기 (8.1절) | 사용자 편집 유지 |
+| `task_gone` | 대상 task가 삭제됨 (8.1절) | 대상 없음 |
 | `operationally_closed` | 운영 판단으로 수동 종료 (11.1절) | 고정 fallback 유지 |
 | `deadline_exceeded` | 원장 나이 상한 초과 (8.6절) | 고정 fallback 유지 |
 | `insufficient_context` | 입력 부족으로 재시도 없이 종료 | 고정 fallback 유지 |
@@ -373,6 +403,10 @@ task 상세 조회
 매핑한다. 동기 설계 5절의 "fallback 여부와 이유는 public API 응답에 넣지 않고 내부 관측으로
 남긴다"를 그대로 유지하기 위해서다. 앱에게 필요한 정보는 "이 title이 앞으로 더 바뀌는가"
 하나이고, 그 점에서 모든 종료 사유는 같다. 사유는 원장과 관측에만 남는다.
+
+더 결정적인 이유는 **앱이 실패를 알아도 할 수 있는 것이 없다**는 점이다. 재생성 API가 없으므로
+"생성 실패"를 구분해봐야 앱이 취할 행동은 "fallback title을 그대로 표시" 하나뿐이고 그것은
+`ready`와 같다. 재생성 API가 생기면 그때 사유 노출을 함께 판단한다.
 
 원장 행이 없는 task(비동기 도입 이전에 만들어졌거나 비동기 비활성 상태에서 convert된 task,
 그리고 Signal을 거치지 않은 일반 task)는 `ready`로 응답한다. 원장 행의 존재 자체가 비동기
@@ -404,6 +438,11 @@ task 상세 조회
 - push 통지는 1차 범위에서 제외한다. push는 토큰 무효·알림 권한 거부·앱 종료로 수신 보장이
   약해 재조회 경로를 대체하지 못하고 그 위에 얹는 최적화이므로, 재조회가 자리 잡은 뒤 별도로
   판단한다.
+- **결과를 확인하는 경로는 convert 응답과 task 상세 둘뿐이다.** task 목록·보드에는
+  `draft_status`를 노출하지 않는다. 보드 카드의 title은 사용자가 상세에 들어가지 않으면
+  fallback인 채로 있다가 다음 목록 조회에서 조용히 바뀐다. 7.2절의 "`generating` 동안에도
+  title은 항상 유효한 draft"가 성립하므로 계약 위반은 아니지만, 앱이 보드 캐시 무효화를
+  판단하려면 이 사실을 알아야 하므로 모바일 통보에 포함한다.
 
 이 계약은 서버가 확정하고 모바일에 알린다. 앱이 `generating`을 어떻게 표시할지, 재조회를
 언제 어떤 간격으로 할지는 앱이 정한다. 서버가 보장하는 것은 다음 셋이다.
@@ -443,8 +482,19 @@ task 상세 조회
 - `generating`을 본 뒤 scheduler가 끝나면 AI title + `generating`이 될 수 있다. 이 조합은
   안전하다. 앱이 한 번 더 재조회할 뿐 결과를 놓치지 않는다.
 
-역순(`task` → 원장)은 위 시나리오를 그대로 허용하므로 금지한다. 구현 티켓에는 scheduler 완료가
-응답 조립 사이에 끼어도 `fallback title + ready`가 나오지 않는 동시성 테스트를 포함한다.
+역순(`task` → 원장)은 위 시나리오를 그대로 허용하므로 금지한다.
+
+**이 순서 계약은 PostgreSQL 기본 격리 수준 `READ COMMITTED`를 전제한다.** 두 SELECT가 각각
+그 시점의 snapshot을 뜨기 때문에 "나중에 읽은 값이 더 최신"이 성립한다. 응답 조립이 한
+트랜잭션 안에서 일어나도 무방하지만, 격리 수준을 `REPEATABLE READ` 이상으로 올리면 첫 문장이
+snapshot을 고정하므로 **순서만으로는 정합성이 보장되지 않는다.**
+
+이 전제가 깨지기 쉬운 자리가 실제로 있다. `ProjectTaskService.getTaskDetail`은
+`@Transactional(readOnly = true)`이고 여기에 원장 조회가 추가된다. 지금은 성립하지만 격리
+수준을 올리거나 두 값을 한 번에 뜨는 최적화가 들어가면 계약이 조용히 무너진다.
+
+구현 티켓에는 scheduler 완료가 응답 조립 사이에 끼어도 `fallback title + ready`가 나오지 않는
+동시성 테스트를, **같은 트랜잭션·`READ COMMITTED` 조건에서** 포함한다.
 
 ## 8. 경합·멱등성·실패 복구
 
@@ -454,8 +504,14 @@ task 상세 조회
 뒤늦게 도착한 AI 결과가 이를 덮으면 사용자가 명시적으로 한 편집이 사라진다.
 
 판정은 **조건부 UPDATE(compare-and-set)** 로 한다. 반영 시점에 `tasks`의 title/role/priority가
-여전히 convert 시점의 고정 fallback 값과 같을 때만 갱신한다. 값이 달라졌으면 사용자가 이미
+여전히 **원장에 기록된 baseline**(6절)과 같을 때만 갱신한다. 값이 달라졌으면 사용자가 이미
 편집한 것이므로 AI 결과를 폐기하고 원장을 닫는다.
+
+CAS 조건에는 `deleted_at IS NULL`도 포함한다. 이 서버에는 아직 task 삭제 API가 없지만
+`tasks.deleted_at`이 존재하고 `TaskRepository`가 모두 이 조건으로 필터하며, prod는 레거시
+`momens-api`와 DB를 공유하므로 삭제가 레거시 쪽에서 일어날 수 있다. 세 필드만 비교하면 삭제된
+행에 AI 결과를 쓰고 `generated`로 집계된다. 이 경우는 `user_edited`가 아니라
+`task_gone`으로 닫아 지표를 분리한다.
 
 `updated_at` 비교는 쓰지 않는다. 체크리스트 토글처럼 draft와 무관한 갱신에도 걸려, 실제 편집이
 없는데 결과를 버린다.
@@ -587,6 +643,29 @@ deadline을 넘긴 뒤 뒤늦게 돌아온 scheduler가 결과를 반영하면 �
 token이 맞아도 반영하지 않고 원장을 `deadline_exceeded`로 닫는다. 8.2절의 claim token fencing과
 같은 성격의 조건이 하나 더 붙는 것이다.
 
+두 조건이 같은 deadline을 쓰면 경계에서 어긋난다. 조건 평가와 커밋 사이에 읽기가 끼기
+때문이다.
+
+```text
+T-ε  반영 트랜잭션이 deadline 조건을 평가 → 아직 안 지남, 통과
+T    재조회: 원장 → now() > deadline → ready 투영, task → 아직 fallback title
+T+ε  반영 트랜잭션 커밋 → tasks에 AI title
+```
+
+앱은 `ready` + fallback title을 받고 재조회를 멈췄는데 그 뒤 title이 바뀐다. 7.3절이 잡은
+문제와 같은 형태가 deadline 축에서 한 번 더 나타난다.
+
+따라서 **두 deadline에 가드 밴드를 둔다.**
+
+```text
+반영 CAS deadline  =  적재 시각 + 상한 - margin
+읽기 투영 deadline =  적재 시각 + 상한
+```
+
+margin은 반영 트랜잭션이 조건 평가부터 커밋까지 걸리는 시간보다 충분히 크게 잡는다. 그러면 위
+인터리빙은 반영 트랜잭션이 margin보다 오래 열려 있어야 성립하므로 사실상 발생하지 않는다.
+절대적 불가능이 아니라 창을 실용적으로 닫는 것이며, margin 값은 구현 티켓에서 정한다.
+
 원장의 물리적 정리(상태를 `completed`로 바꾸고 snapshot을 비우는 것)는 scheduler가 나중에
 해도 된다. public 계약은 읽기 투영으로 이미 닫혀 있다.
 
@@ -652,6 +731,11 @@ outcome·재시도 가능 여부를 반환하고, 기존 내부 `GenerationOutco
 `invalid_config`는 terminal이지만 원장을 닫을 뿐 task는 고정 fallback을 유지하므로 손실이
 없다. 설정을 고친 뒤 과거 건을 다시 생성할지는 운영 판단이며 이 설계에 넣지 않는다.
 
+`disabled`는 적재하지 않는데 `invalid_config`는 적재 후 terminal이라 비대칭이다. 의도한
+선택이다. 비활성은 정상 상태지만 설정 무효는 고쳐야 할 오류이므로, 원장 행과
+`completion_reason`으로 드러나는 편이 낫다. 설정이 깨진 동안 convert마다 원장 행과 scheduler
+왕복이 한 번씩 생기지만 모델 호출은 없으므로 비용은 작다.
+
 ### 9.3 관측
 
 동기 경로의 `momens.minsu.llm.generate` observation과 outcome/fallback reason tag를 그대로
@@ -697,6 +781,10 @@ embedding을 명시적으로 제외했고, 검색 read-model은 `momens-retrieva
 - 실제 도입은 `minsu → retrieval` 연동이 선행돼야 하며 별도 설계·티켓이 필요하다.
 - 그 시점에 지연과 검색 품질의 타협점은 재시도 상한과 end-to-end 지연 관측값을 근거로
   다시 정한다. 지금은 근거가 될 데이터가 없다.
+
+재검토 시점은 다음으로 둔다. **dev 활성화(11절 단계 2) 이후 end-to-end 지연과
+`retry_exhausted` 비율이 쌓이면** 그 값을 근거로 `minsu → retrieval` 연동을 별도 설계로
+착수할지 판단한다. 그때까지는 이 문서의 결론(전제 조건만 만든다)이 유효하다.
 
 ## 11. 단계적 전환
 
@@ -791,7 +879,11 @@ ADR-0015가 이 PR에 함께 들어가므로 별도 ADR 티켓은 두지 않는�
 - lease 길이와 장시간 호출 중 lease 갱신 여부 — 구현 티켓 (8.2절)
 - 원장 나이 상한 값 — 구현 티켓 (8.6절)
 - 원장 테이블의 세부 컬럼과 Flyway 파일명 — 구현 티켓
-- 입력 snapshot의 description·impact 상한과 보존·삭제 정책 — 구현 티켓 (5.5절)
+- 입력 snapshot의 description·impact 상한과 보존·삭제 정책 — **prod 마이그레이션 전에 확정**
+  (5.5절). 정책 없이 prod에 가면 `signals` 본문이 두 벌 남고, 지우려면 그때는 운영 데이터라
+  삭제 마이그레이션이 필요하다. baseline을 원장이 따로 소유하므로(6절) snapshot만 비우는
+  정리가 가능하다.
+- 반영 CAS deadline의 가드 밴드 margin — 구현 티켓 (8.6절)
 - 스케줄링 게이트를 올릴 위치 — 구현 티켓 (11.2절)
 - 기존 `generate` 시그니처의 존치 여부 — 구현 티켓 (5.4절)
 - scheduler 중단 시 남은 `pending`을 닫는 운영 절차 — 구현 티켓 (11.1절)
