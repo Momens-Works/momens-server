@@ -4,9 +4,10 @@
 - 날짜: 2026-08-01
 - 작성자: Kimgyuilli
 
-[ADR-0014](0014-minsu-task-draft-module-and-llm-boundary.md)를 supersede 한다. `minsu` 모듈
-경계, 벤더 중립 `LlmClient` port, Google adapter, 결과 검증과 고정 fallback 정책은 그대로
-유지하고, **draft 생성이 언제 어디서 일어나는가**만 바꾼다.
+[ADR-0014](0014-minsu-task-draft-module-and-llm-boundary.md)를 **부분적으로** supersede 한다.
+바뀌는 것은 draft 생성 시점, draft 저장, 모듈 의존 방향이다. `minsu` 모듈을 두는 결정, 벤더
+중립 `LlmClient` port, Google adapter와 SDK 사용 방침, 응답 검증 순서와 고정 fallback 정책,
+model 선택 policy는 그대로 유효하며 이 ADR이 다시 정하지 않는다.
 
 [ADR-0011](0011-signal-evidence-and-task-draft-contract.md)은 **부분적으로** supersede 한다.
 
@@ -130,12 +131,17 @@ architecture.md 자신이 "단순한 경우 상대 모듈의 public API 직접 �
 
 ### 공개 계약
 
-`minsu` 공개 계약에 draft 확보(쓰기 트랜잭션 밖)와 원장 적재(트랜잭션 안) 두 진입점을 둔다.
-활성 여부 판정은 `minsu`가 소유하고 `signal`은 알지 못한다.
+`minsu` 공개 계약에 세 진입점을 둔다. 활성 여부 판정은 `minsu`가 소유하고 `signal`은 알지
+못한다.
+
+- **draft 확보** — 쓰기 트랜잭션 밖. 활성이면 LLM을 부르지 않고 고정 fallback을 반환한다.
+- **원장 적재** — 쓰기 트랜잭션 안. 활성일 때만 `pending` 행을 만든다.
+- **상태 조회** — `signal`(replay)과 `mobile`(task 상세)이 쓴다. deadline 투영을 내장하는 유일한
+  지점이라 판정 로직이 한 곳에 있어야 한다.
 
 현재 `SignalTaskDraftGenerator.generate`는 비활성·설정 무효·입력 부족이 아닌 한 항상 provider를
-호출하므로, 이 메서드 하나로는 "활성일 때 LLM을 부르지 않는다"를 표현할 수 없다. 두 진입점을
-나누는 것은 트랜잭션 경계가 다르기 때문이기도 하다.
+호출하므로, 이 메서드 하나로는 "활성일 때 LLM을 부르지 않는다"를 표현할 수 없다. draft 확보와
+원장 적재를 나누는 것은 트랜잭션 경계가 다르기 때문이기도 하다.
 
 모바일 응답에는 생성 상태를 `generating`과 `ready` 두 값으로만 노출한다. 종료 사유는 원장과
 관측에만 남긴다. ADR-0011과 ADR-0014의 "fallback 여부와 이유를 public API에 넣지 않는다"를

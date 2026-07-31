@@ -217,9 +217,9 @@ task 전부가 조용히 풍부화되지 않는다. convert 실패는 최소한 
 대신 원장 insert 실패율을 지표와 경보로 두고(9.3절), 구현 티켓의 검증 기준에 포함한다.
 
 기존 outbox event(`signal.converted_to_task`, `task.created`)는 그대로 둔다. 다만 **반영 시점에
-후속 event를 하나 추가해야 한다**(5.6절).
+후속 event를 하나 추가해야 한다**(5.4절).
 
-### 5.6 반영 결과를 projection에 전달
+### 5.4 반영 결과를 projection에 전달
 
 convert는 fallback 값으로 task를 만들면서 `task.created`를 발행한다. worker는 이 event를 소비해
 공유 DB에서 최신 상태를 hydrate하고 retrieval projection을 만든다(ADR-0008). 그런데 AI 결과는
@@ -291,7 +291,7 @@ worker가 `minsu` 원장 스키마를 알아야 해서 결합이 훨씬 크다.
 | 재시도 | 백오프 1s / 5s / 30s, `MAX_ATTEMPTS` | 동일 형태, 값은 구현 티켓 |
 | 보장 | at-least-once | at-least-once |
 
-### 5.4 공개 계약 변경: 동기 호출을 요청 경로에서 제거
+### 5.5 공개 계약 변경: 동기 호출을 요청 경로에서 제거
 
 **비동기가 활성이면 convert 요청 경로에서 LLM을 호출하지 않는다.** 3절이 지적한 지연 문제가
 해결되는 근거가 이것이고, 이 설계의 목적 자체다.
@@ -342,7 +342,7 @@ PreparedTaskDraft {
 판정 소유권, 판정 1회, 서로 다른 두 트랜잭션 경계가 모두 유지된다. 판정을 나중에 동적 토글로
 바꿔도 요청 내 일관성이 계약으로 남는다.
 
-### 5.5 생성 입력의 시점
+### 5.6 생성 입력의 시점
 
 원장에 **convert 시점의 `SignalTaskDraftInput` snapshot을 저장한다.**
 
@@ -379,7 +379,7 @@ workspace 데이터 안의 복제다.
 | 소유 모듈 | `minsu` |
 | 적재 시점 | convert 트랜잭션 (5.3절) |
 | 멱등 키 | `task_id` UNIQUE. convert 1건당 task 1건이 이미 `signal_actions UNIQUE(signal_id)`로 보장된다 |
-| 보유 데이터 | `task_id`, `workspace_id`, 입력 snapshot(5.5절), **반영 baseline**, **`read_deadline_at`·`apply_cutoff_at`**, 상태, completion reason, 시도 횟수, claim token, lease, `next_attempt_at` |
+| 보유 데이터 | `task_id`, `workspace_id`, 입력 snapshot(5.6절), **반영 baseline**, **`read_deadline_at`·`apply_cutoff_at`**, 상태, completion reason, 시도 횟수, claim token, lease, `next_attempt_at` |
 | 상태 | `pending` → `processing`(claim) → `completed`(reason 별도, 8.3절) |
 | 재시도 | 시도 횟수와 다음 시도 시각을 원장이 소유 |
 | 유실 복구 | lease 만료분과 재시작 후 남은 `pending`을 매 주기 회수 |
@@ -389,7 +389,7 @@ workspace 데이터 안의 복제다.
 재계산 방식은 fallback 생성 규칙(`TaskTitleNormalizer` 등)이 바뀌는 순간 진행 중이던 작업
 전부가 CAS 불일치가 되어 편집이 없는데도 `user_edited`로 오분류된다. 8.1절이 내세우는
 "오탐 0"이 규칙 변경 한 번에 무너지는 것이다. baseline을 값으로 저장하면 규칙이 바뀌어도 과거
-작업이 안전하고, snapshot 보존 정책(5.5절)과도 분리된다. snapshot은 종료 후 비워도 baseline은
+작업이 안전하고, snapshot 보존 정책(5.6절)과도 분리된다. snapshot은 종료 후 비워도 baseline은
 남는다.
 
 `workspace_id`를 갖는 이유는 원장이 Signal 본문을 복제해 실질적으로 workspace 데이터이기
@@ -409,7 +409,7 @@ workspace 데이터 안의 복제다.
 ```text
 convert-to-task (동기)
   → SignalReader로 Signal·evidence 조회, SignalTaskDraftInput 조립  (signal, 현재와 동일)
-  → minsu에서 draft 확보 (활성이면 LLM 미호출 고정 fallback, 5.4절)  (signal → minsu)
+  → minsu에서 draft 확보 (활성이면 LLM 미호출 고정 fallback, 5.5절)  (signal → minsu)
   → SignalActionExecutor.convert 트랜잭션
       tasks insert
       signal_actions insert
@@ -435,7 +435,7 @@ task 상세 조회
 | --- | --- | --- |
 | `signal → minsu` | 원장 적재, draft 확보, 상태 조회 | 오늘 이미 존재 |
 | `minsu → project` | 생성 결과를 `tasks`에 반영 | **신규** |
-| `minsu → outbox` | 반영 시 `task.draft_generated` 발행 (5.6절) | **신규** |
+| `minsu → outbox` | 반영 시 `task.draft_generated` 발행 (5.4절) | **신규** |
 | `mobile → minsu` | task 상세의 `draft_status` 읽기 | **신규** |
 
 `mobile → minsu`가 필요한 이유는 7.2절이 task 상세 조회에도 `draft_status`를 노출하기
@@ -447,7 +447,7 @@ task 상세 조회
 `ApplicationModules.verify()`가 실패한다. 상태를 읽는 쪽은 조합 표면인 `mobile`이어야 한다.
 
 `minsu`가 `signal`·`mobile`에 의존하지 않는다는 규칙은 그대로 유지된다. `mobile → minsu`는
-반대 방향이라 이 규칙과 무관하고, 입력을 convert 시점 snapshot으로 받으므로(5.5절) `signal`을
+반대 방향이라 이 규칙과 무관하고, 입력을 convert 시점 snapshot으로 받으므로(5.6절) `signal`을
 참조할 이유도 없다.
 
 `project`와 `minsu`는 서로를 모르는 관계에서 `minsu → project` 단방향으로 바뀐다. 이 제약은
@@ -529,8 +529,9 @@ processing(lease 만료)
 ### 7.2 모바일 계약 변경
 
 `ConvertToTaskResponse`에 draft 생성 상태를 추가한다. unknown field를 허용하는 클라이언트에는
-하위 호환 확장이다. 앱의 decoder가 unknown field를 허용하지 않으면 필드 추가 시점에 앱도 함께
-배포해야 하므로, 이 전제를 배포 순서와 함께 모바일에 알린다.
+하위 호환 확장이다. `momens-android`의 현재 decoder는 `ignoreUnknownKeys = true`이므로 필드
+추가만으로 기존 앱의 응답 파싱이 깨지지 않는다. 이 사실은 확인했고, 앱 배포 순서는 계약이 아니라
+효과의 문제로 남는다(11절 prod 활성화 조건).
 
 ```text
 {
@@ -558,7 +559,11 @@ processing(lease 만료)
   판단하려면 이 사실을 알아야 하므로 모바일 통보에 포함한다.
 
 이 계약은 서버가 확정하고 모바일에 알린다. 앱이 `generating`을 어떻게 표시할지, 재조회를
-언제 어떤 간격으로 할지는 앱이 정한다. 서버가 보장하는 것은 다음 셋이다.
+언제 어떤 간격으로 할지는 앱이 정한다.
+
+한 가지는 알리면서 함께 전달한다. task 상세 조회는 담당자·materials 등을 함께 hydrate하는
+무거운 경로라 짧은 간격의 polling에 적합하지 않다. 앱이 폴링 부담을 문제 삼으면 경량 상태 조회
+엔드포인트나 `retry_after` 계열 힌트를 후속으로 검토한다. 지금 미리 만들지는 않는다. 서버가 보장하는 것은 다음 셋이다.
 
 - `draft_status`는 반드시 종료 상태(`ready`)에 도달한다(8.6절).
 - **정상 종료에서는** `ready`와 함께 반환한 `task.title`이 최종 값이다. `ready`를 보고 재조회를
@@ -827,7 +832,7 @@ rollback의 차이는 11.1절에 정리한다.
 
 동기 경로의 8초(MOM-0806)는 **그대로 둔다**. 이 값은 원탭 action의 사용자 체감을 기준으로
 정했고, 비동기가 비활성일 때 convert가 타는 경로가 지금 그대로이기 때문이다. 비동기가
-활성이면 요청 경로에서 LLM을 부르지 않으므로(5.4절) 이 값은 그 경로에 적용되지 않는다.
+활성이면 요청 경로에서 LLM을 부르지 않으므로(5.5절) 이 값은 그 경로에 적용되지 않는다.
 
 비동기 경로는 사용자가 기다리지 않으므로 별도 설정 키로 분리하고 더 큰 값을 갖는다. 구체적
 값은 dev 재측정 뒤 확정한다. 동기 경로의 8초를 비동기 값으로 재사용하지 않는다. 두 경로가
@@ -850,8 +855,26 @@ rollback의 차이는 11.1절에 정리한다.
 
 따라서 **attempt 전체에 wall-clock 상한을 둔다.** SDK timeout이 아니라 ADC 탐색·client 생성·
 token refresh·provider 호출을 모두 포함한 한 번의 시도 전체를 감싸는 상한이다. 상한을 넘으면
-해당 시도를 포기하고 결과를 버린다. 실행 동시성도 bounded로 두어 멈춘 호출이 남아도 slot이
-고갈되지 않게 한다.
+해당 시도를 포기하고 결과를 버린다. 실행 동시성도 bounded로 둔다.
+
+**다만 이 상한이 호출을 실제로 취소하지는 못한다.** timeout wrapper가 하는 일은 호출자를 대기에서
+풀고 결과를 버리는 것뿐이다. SDK나 ADC 호출이 interrupt에 응답하지 않으면 underlying thread는
+계속 점유된다. `GoogleGenAiLlmClient`는 동기 `generateContent`를 호출하고 최초 client 생성을
+`synchronized` 블록에서 수행하므로, 첫 생성이 멈추면 뒤따르는 호출도 같은 monitor에서 막힐 수
+있다. bounded pool은 피해 규모를 슬롯 수로 제한할 뿐, 영구 정지 호출 N개가 N개 슬롯을 모두
+소진하는 것을 막지 못한다.
+
+**포화 가능성을 수용한다.** 취소 가능한 transport로 바꾸거나 attempt를 별도 프로세스로 격리하는
+방안은 이 슬라이스의 범위를 크게 넘고, 얻는 것은 이미 이상 상황인 경우의 복구 시간 단축이다.
+대신 포화를 **관측하고 복구할 수 있게** 한다.
+
+- executor active count, queue depth, reject count
+- attempt 상한을 넘겨도 반환하지 않은 hung attempt 수
+- 포화가 지속되면 Pod 재시작으로 복구한다. 원장이 durable하므로 재시작 후 `pending`과 lease
+  만료분을 그대로 이어서 처리한다. 유실은 없다.
+
+구현 티켓의 검증에는 interrupt를 무시하는 fake client로 모든 슬롯을 점유한 뒤, 재시작 후 작업이
+정상 복구되는지 확인하는 테스트를 포함한다.
 
 네 시간 값의 선후 관계를 고정한다.
 
@@ -977,7 +1000,7 @@ embedding을 명시적으로 제외했고, 검색 read-model은 `momens-retrieva
 4. **prod 활성화** — 다음이 모두 충족된 뒤 판단한다.
    - 데이터 레지던시 정책(동기 설계 11절)
    - dev 재측정으로 timeout·lease·deadline 값 확정
-   - **worker의 `task.draft_generated` 소비 배포와 end-to-end projection 검증**(5.6절)
+   - **worker의 `task.draft_generated` 소비 배포와 end-to-end projection 검증**(5.4절)
    - **`draft_status`를 처리하는 앱 배포**
 
 마지막 항목은 계약 문제가 아니라 효과 문제다. `draft_status`를 모르는 기존 앱은 `generating`을
@@ -1021,7 +1044,20 @@ provider 호출 여부만 제어한다. 세 축으로 나눈다.
 | provider | 모델 호출 자체가 활성인가 | 기존 `disabled` 의미. 적재도 하지 않음 |
 
 이 분리가 없으면 rollback 시 `disabled`, `invalid_config`, `operationally_closed` 중 무엇으로
-기록해야 하는지가 흔들린다. 설정명과 조합별 동작 표는 구현 티켓에서 확정한다.
+기록해야 하는지가 흔들린다. 설정명은 구현 티켓에서 정하되, **기존 원장이 남아 있는 상태에서
+축이 꺼졌을 때의 동작은 여기서 확정한다.**
+
+**provider가 비활성이거나 설정이 무효면 claim하지 않는다.** 원장은 `pending` 그대로 두고
+`completion_reason`을 기록하지 않는다. 재활성화되면 그대로 이어서 처리하고, 그 전에
+`read_deadline_at`이 지나면 읽기 투영이 `ready`로 닫는다(8.6절).
+
+`disabled`를 completion reason으로 만들지 않는 이유는 그것이 종료가 아니기 때문이다. 설정을
+되돌리면 계속 처리할 수 있는 작업을 종료로 기록하면 되살릴 방법이 없다. 반대로 운영자가 명시적으로
+끝내려는 경우는 `operationally_closed`가 이미 있다.
+
+이 규칙 하나로 조합이 모두 결정된다. 롤링 배포로 활성 pod와 비활성 pod가 섞여도 마찬가지다.
+비활성 pod는 claim하지 않고 활성 pod가 집어가며, 아무도 집지 않으면 deadline이 닫는다. 어느
+경로든 `tasks`는 유효한 draft를 유지하고 앱은 `generating`에 갇히지 않는다.
 
 ### 11.3 스케줄링 게이트 정리
 
@@ -1044,7 +1080,7 @@ local·test 기본값이 push 비활성이고, 위 단계 1·2가 push 설정에
 이 문서는 설계만 확정한다. 구현은 다음으로 분리한다.
 
 1. **원장·scheduler 기반** — `minsu` 생성 원장 테이블, convert 트랜잭션 적재 API, draft 확보
-   진입점 분리(5.4절), claim token과 lease, 재시도 판정, 조건부 UPDATE 반영과 terminal 전이의
+   진입점 분리(5.5절), claim token과 lease, 재시도 판정, 조건부 UPDATE 반영과 terminal 전이의
    원자성, 원장 나이 상한, 스케줄링 게이트 정리(11.3절), 관측. 기본 비활성.
 
    이 티켓은 `minsu`를 **무상태 모듈에서 영속성 소유 모듈로 바꾼다.** 현재
@@ -1060,7 +1096,7 @@ local·test 기본값이 push 비활성이고, 위 단계 1·2가 push 설정에
    - `REQUIRES_NEW`, 별도 transaction manager, 명시적 조기 commit은 금지한다.
    - CAS가 0건이거나 원장의 token·deadline 조건 갱신이 0건이면 예외 없이 커밋하지 않고 전체를
      롤백한다. task만 바뀌고 원장이 남는 상태를 만들지 않는다.
-   - 반영에 성공하면 같은 트랜잭션에서 `task.draft_generated`를 append한다(5.6절).
+   - 반영에 성공하면 같은 트랜잭션에서 `task.draft_generated`를 append한다(5.4절).
 
    조건부 UPDATE를 native·JPQL bulk update로 구현하면 JPA Auditing이 동작하지 않아
    `tasks.updated_at`이 갱신되지 않는다. `docs/rules/persistence.md`가 수정 테이블의
@@ -1072,9 +1108,12 @@ local·test 기본값이 push 비활성이고, 위 단계 1·2가 push 설정에
    거부하면 서버 단독 선배포가 앱을 깨뜨리므로, **현재 앱 decoder의 unknown field 동작 확인과
    그에 따른 배포 순서 결정**을 이 티켓의 완료 조건에 포함한다.
 
-3. **dev 측정** — end-to-end 지연, `retry_exhausted` 비율, `user_edited` 건수, 3구간 timeout
+3. **worker의 `task.draft_generated` 소비** (`momens-worker`) — 새 event_type 소비, watermark
+   호환, 재-hydrate, end-to-end projection 검증. **prod 활성화의 선행 조건**이며(5.4절) 서버
+   구현과 독립적으로 진행할 수 있다.
+4. **dev 측정** — end-to-end 지연, `retry_exhausted` 비율, `user_edited` 건수, 3구간 timeout
    미측정 구간.
-4. **prod 마이그레이션** — `momens-api`에 원장 테이블 마이그레이션 PR.
+5. **prod 마이그레이션** — `momens-api`에 원장 테이블 마이그레이션 PR.
 
 ADR-0015가 이 PR에 함께 들어가므로 별도 ADR 티켓은 두지 않는다.
 
@@ -1088,13 +1127,12 @@ ADR-0015가 이 PR에 함께 들어가므로 별도 ADR 티켓은 두지 않는�
 - 장시간 호출 중 lease 갱신 여부 — 구현 티켓 (8.2절)
 - 원장 테이블의 세부 컬럼과 Flyway 파일명 — 구현 티켓
 - 입력 snapshot의 description·impact 상한과 보존·삭제 정책 — **prod 마이그레이션 전에 확정**
-  (5.5절). 정책 없이 prod에 가면 `signals` 본문이 두 벌 남고, 지우려면 그때는 운영 데이터라
+  (5.6절). 정책 없이 prod에 가면 `signals` 본문이 두 벌 남고, 지우려면 그때는 운영 데이터라
   삭제 마이그레이션이 필요하다. baseline을 원장이 따로 소유하므로(6절) snapshot만 비우는
   정리가 가능하다.
 - 가드 밴드 margin — 구현 티켓 (8.6절)
-- worker의 `task.draft_generated` 소비와 배포 순서 — `momens-worker` 범위 (5.6절)
 - 스케줄링 게이트를 올릴 위치 — 구현 티켓 (11.3절)
-- 기존 `generate` 시그니처의 존치 여부 — 구현 티켓 (5.4절)
+- 기존 `generate` 시그니처의 존치 여부 — 구현 티켓 (5.5절)
 - scheduler 중단 시 남은 `pending`을 닫는 운영 절차 — 구현 티켓 (11.1절)
 - prod 데이터 레지던시 정책 — 동기 설계 11절에서 이월된 미결
 - `minsu → retrieval` 연동 — 별도 설계

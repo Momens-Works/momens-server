@@ -19,5 +19,5 @@
 | [0011](0011-signal-evidence-and-task-draft-contract.md) | Signal evidence와 task draft 생산·저장 계약 | Accepted (draft 생성 시점·저장·outbox 부분은 [0015](0015-minsu-async-task-draft-generation.md)로 대체) |
 | [0012](0012-brief-signal-digest-backing.md) | 브리프 시그널 요약 문단의 backing과 모듈 소유권 | Accepted |
 | [0013](0013-project-progress-derivation.md) | 프로젝트 진행률을 태스크에서 계산 | Accepted |
-| [0014](0014-minsu-task-draft-module-and-llm-boundary.md) | Minsu task draft 모듈과 LLM 경계 | Superseded by [0015](0015-minsu-async-task-draft-generation.md) |
+| [0014](0014-minsu-task-draft-module-and-llm-boundary.md) | Minsu task draft 모듈과 LLM 경계 | Accepted (생성 시점·저장·모듈 의존 부분은 [0015](0015-minsu-async-task-draft-generation.md)로 대체) |
 | [0015](0015-minsu-async-task-draft-generation.md) | Minsu task draft 비동기 생성과 `minsu` 영속성 소유 | Accepted |
