@@ -6,9 +6,7 @@ updates:
       - "/"
       - "/app"
       - "/common"
-      - "/user"
-      - "/auth"
-      - "/workspace"
+      - "/modules/*"
     schedule:
       interval: "weekly"
       day: "monday"
