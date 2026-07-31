@@ -220,13 +220,20 @@ class SignalPushEndToEndIntegrationTest extends AbstractPostgresIntegrationTest 
         outboxEventId);
   }
 
+  /**
+   * 안전 prefix를 자를 fresh event 하나를 심는다.
+   *
+   * <p>{@code event_type}은 이 테스트 전용 값이다. 안전 prefix 쿼리는 {@code id}·{@code created_at}만 보므로 가드 역할은
+   * 타입과 무관한 반면, 실제 event_type을 빌려 쓰면 같은 DB를 공유하는 다른 테스트와 결합된다({@code
+   * OutboxAtomicityIntegrationTest}는 {@code signal.converted_to_task} INSERT를 실패시키는 trigger를 건다).
+   */
   private long insertFreshForeignOutboxEvent() {
     Long id =
         jdbcTemplate.queryForObject(
             """
             INSERT INTO outbox_events
               (issued_by, workspace_id, aggregate_type, aggregate_id, event_type, payload, idempotency_key)
-            VALUES ('api-server', ?, 'signal', ?, 'signal.converted_to_task', '{}'::jsonb, ?)
+            VALUES ('api-server', ?, 'signal', ?, 'push-e2e.foreign', '{}'::jsonb, ?)
             RETURNING id
             """,
             Long.class,
