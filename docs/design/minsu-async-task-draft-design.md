@@ -5,7 +5,8 @@
 상태: 확정 설계 (구현 전)
 
 관련 결정: [ADR-0011](../adr/0011-signal-evidence-and-task-draft-contract.md),
-[ADR-0014](../adr/0014-minsu-task-draft-module-and-llm-boundary.md),
+[ADR-0015](../adr/0015-minsu-async-task-draft-generation.md),
+[ADR-0014](../adr/0014-minsu-task-draft-module-and-llm-boundary.md)(0015가 supersede),
 [ADR-0008](../adr/0008-outbox-worker-projection-boundary.md)
 
 관련 문서: [MOM-0803 동기 task draft 상세 설계](minsu-signal-task-draft-design.md),
@@ -178,6 +179,22 @@ task_id는 payload에만 담는데, 공개 `OutboxEventView`에는 payload 필�
 원장 적재는 convert 트랜잭션의 일부이므로, 롤백되면 원장도 함께 사라진다. 커밋 전에 생성이
 시작되는 일은 없다. scheduler는 커밋된 `pending` 행만 본다.
 
+**이 선택은 fail-closed다.** 원장 insert가 실패하면 convert 전체가 롤백되어 public API가
+실패한다. 기존 동기 계약은 LLM 실패를 fallback으로 흡수해 convert 가용성을 지켰지만, 비동기
+활성 후에는 원장 테이블·제약·lock 문제가 convert 실패로 이어질 수 있다.
+
+| 정책 | 얻는 것 | 잃는 것 |
+| --- | --- | --- |
+| fail-closed (채택) | 모든 비동기 intent가 durable. 상태 공백 없음 | 원장 장애가 convert API 장애가 됨 |
+| fail-open | convert 가용성 유지 | 그 task는 풍부화되지 않고 원장도 없어 조용히 `ready` |
+
+fail-closed를 택한 이유는 fail-open의 실패가 **보이지 않기** 때문이다. 원장이 없으면 `ready`로
+응답하므로 앱도 사용자도 서버도 무엇이 빠졌는지 알 수 없고, 원장 장애가 길어지면 그동안의
+task 전부가 조용히 풍부화되지 않는다. convert 실패는 최소한 드러나고 재시도가 replay로
+흡수된다.
+
+대신 원장 insert 실패율을 지표와 경보로 두고(9.3절), 구현 티켓의 검증 기준에 포함한다.
+
 기존 outbox event(`signal.converted_to_task`, `task.created`)는 그대로 둔다. worker의 projection
 소비 계약(ADR-0008)은 이 설계와 무관하며 바뀌지 않는다.
 
@@ -316,7 +333,8 @@ task 상세 조회
 `project`와 `minsu`는 서로를 모르는 관계에서 `minsu → project` 단방향으로 바뀐다. 이 제약은
 동기 설계 4절("`minsu`는 `signal`, `project`, `mobile`에 의존하지 않는다")과 ADR-0014가 함께
 전제한 것으로, 첫 슬라이스를 작게 유지하기 위한 조건이었고 비동기 전환으로 전제가 바뀌었다.
-개정 시 `minsu → project` 참조 범위는 draft 반영 한 가지로 제한한다.
+이 변경은 ADR-0014를 supersede 하는 [ADR-0015](../adr/0015-minsu-async-task-draft-generation.md)가
+확정하며, `minsu → project` 참조 범위는 draft 반영 한 가지로 제한한다.
 
 `signal`이 비동기 실행까지 조립하는 안은 채택하지 않았다. 생성 원장 소유가 `signal`로 넘어가
 6절 결정과 어긋나고, Signal action의 멱등·충돌 정책을 담당하는 모듈이 LLM 작업의 claim·
@@ -339,7 +357,9 @@ task 상세 조회
 | `completion_reason` | 의미 | `tasks` 반영 |
 | --- | --- | --- |
 | `generated` | 모델 draft 반영 | 반영됨 |
-| `user_edited` | 사용자가 먼저 편집해 결과 폐기 (8.2절) | 사용자 편집 유지 |
+| `user_edited` | 사용자가 먼저 편집해 결과 폐기 (8.1절) | 사용자 편집 유지 |
+| `operationally_closed` | 운영 판단으로 수동 종료 (11.1절) | 고정 fallback 유지 |
+| `deadline_exceeded` | 원장 나이 상한 초과 (8.6절) | 고정 fallback 유지 |
 | `insufficient_context` | 입력 부족으로 재시도 없이 종료 | 고정 fallback 유지 |
 | `invalid_config` | 설정 무효로 종료 | 고정 fallback 유지 |
 | `retry_exhausted` | 재시도 상한 도달 | 고정 fallback 유지 |
@@ -386,12 +406,45 @@ task 상세 조회
   판단한다.
 
 이 계약은 서버가 확정하고 모바일에 알린다. 앱이 `generating`을 어떻게 표시할지, 재조회를
-언제 어떤 간격으로 할지는 앱이 정한다. 서버가 보장하는 것은 다음 둘이다.
+언제 어떤 간격으로 할지는 앱이 정한다. 서버가 보장하는 것은 다음 셋이다.
 
-- `draft_status`는 반드시 종료 상태(`ready`)에 도달한다. 8.6절의 원장 나이 상한이 이를
-  보장한다.
+- `draft_status`는 반드시 종료 상태(`ready`)에 도달한다(8.6절).
+- `ready`와 함께 반환한 `task.title`은 최종 값이다. `ready`를 보고 재조회를 멈춰도 갱신을
+  놓치지 않는다(7.3절).
 - `generating` 동안에도 `task.title`은 항상 유효한 draft다. 앱이 로딩을 표시하지 않고 그대로
   렌더해도 깨지지 않는다.
+
+### 7.3 응답 조립의 읽기 순서
+
+`tasks`와 원장은 서로 다른 모듈이 각각 읽는다. PostgreSQL 기본 격리 수준
+`READ COMMITTED`에서는 두 SELECT가 다른 snapshot을 볼 수 있어, 순서를 정하지 않으면 다음이
+가능하다.
+
+```text
+1. task를 읽는다 → fallback title
+2. scheduler가 AI title + completed 를 원자적으로 커밋
+3. 원장을 읽는다 → ready
+4. 앱은 fallback title + ready 를 받고 재조회를 멈춘다
+```
+
+서버는 AI 결과를 정상 저장했는데 앱은 fallback title을 영구히 표시한다. 8.3절의 쓰기 원자성은
+이 문제를 막지 못한다. 쓰기가 원자적이어도 **읽기가 두 번**이기 때문이다.
+
+따라서 읽기 순서를 계약으로 고정한다.
+
+**신규 convert 응답** — 원장을 적재했으면 상태를 다시 읽지 않고 `generating`을 반환한다.
+응답에 담는 title은 방금 만든 fallback이므로 이 조합은 항상 정합하다. 적재하지 않았으면
+(비동기 비활성) `ready`다.
+
+**replay 응답과 task 상세** — **원장 상태를 먼저 읽고 그다음 task를 읽는다.**
+
+- `ready`를 먼저 봤다면 그 뒤 읽는 task는 반영이 끝난 상태이거나 그보다 더 최신이다. 따라서
+  `ready`와 함께 반환하는 title은 최종 값이다.
+- `generating`을 본 뒤 scheduler가 끝나면 AI title + `generating`이 될 수 있다. 이 조합은
+  안전하다. 앱이 한 번 더 재조회할 뿐 결과를 놓치지 않는다.
+
+역순(`task` → 원장)은 위 시나리오를 그대로 허용하므로 금지한다. 구현 티켓에는 scheduler 완료가
+응답 조립 사이에 끼어도 `fallback title + ready`가 나오지 않는 동시성 테스트를 포함한다.
 
 ## 8. 경합·멱등성·실패 복구
 
@@ -409,8 +462,8 @@ task 상세 조회
 
 두 방식의 오차 방향은 다르다.
 
-- 조건부 UPDATE는 **편집이 없는데 버리는 오탐이 없다.** 값이 fallback 그대로면 아무도 손대지
-  않은 것이 확실하다.
+- 조건부 UPDATE는 **편집이 없는데 버리는 오탐이 없다.** 값이 fallback 그대로면 title·role·
+  priority가 실질적으로 바뀌지 않은 것이 확실하다.
 - 대신 **편집을 놓치는 미탐이 있다.** title/role/priority가 결과적으로 fallback과 같으면
   편집으로 감지되지 않아 AI 결과가 반영된다.
 
@@ -480,7 +533,10 @@ worker A가 claim → 모델 호출
 - 원장 적재는 convert 트랜잭션의 일부라 정확히 한 번이다. 트랜잭션이 롤백되면 원장도 없다.
   재시도로 들어온 convert는 `signal_actions UNIQUE(signal_id)`에 걸려 replay가 되므로 원장을
   다시 적재하지 않는다. `task_id` UNIQUE가 이중 방어로 남는다.
-- 생성 실행은 claim token으로 직렬화한다. token을 보유한 실행만 기록할 수 있다.
+- **결과 기록**은 claim token으로 직렬화한다. token을 보유한 실행만 기록할 수 있다.
+  이는 exactly-once **기록**이지 exactly-once **실행**이 아니다. lease가 만료되면 8.2절처럼
+  두 worker가 동시에 모델을 호출할 수 있고, at-least-once와 만료 lease를 택한 이상 복구
+  과정의 중복 실행은 정상 동작이다. 중복 실행의 비용은 관측으로 본다(9.3절).
 - 반영은 조건부 UPDATE라 두 번 적용해도 결과가 같다. 첫 번째가 값을 바꾸면 두 번째는 조건에
   걸려 아무것도 하지 않는다.
 
@@ -504,15 +560,42 @@ worker A가 claim → 모델 호출
 (11.1절) 회수 루프에 버그가 있으면 원장이 terminal로 갈 방법이 없고, 앱은 `generating`을
 무기한 본다.
 
-따라서 **원장 나이 상한**을 둔다. 적재 후 일정 시간이 지난 행은 시도 횟수와 무관하게
-`completed`(`retry_exhausted`)로 닫는다. 상한은 재시도 백오프 총합보다 충분히 크게 잡고
-구체적 값은 구현 티켓에서 정한다.
+따라서 **원장 나이 상한(deadline)** 을 둔다. 적재 시각 기준으로 일정 시간이 지나면 그 작업은
+종료된 것으로 본다. 상한은 재시도 백오프 총합보다 충분히 크게 잡고 구체적 값은 구현 티켓에서
+정한다.
 
-이 상한은 scheduler가 정상일 때는 발동하지 않는다. 발동한다는 것 자체가 이상 신호이므로
-9.3절의 "가장 오래된 `pending`의 age" 지표와 함께 경보 대상으로 둔다.
+중요한 것은 **이 상한을 누가 강제하는가**다. scheduler가 상한을 처리하게 두면 순환이 된다.
+scheduler가 멈춘 상황을 막으려고 둔 장치를 그 scheduler가 실행하기 때문이다. 나이 상한은 행의
+속성일 뿐 실행 주체가 아니다.
 
-이 상한이 있으므로 서버는 `draft_status`가 반드시 `ready`에 도달한다고 앱에 보장할 수 있다.
-앱의 재조회 간격과 폴링 상한은 앱이 정한다.
+그래서 상한을 **읽기 시점에 투영한다.**
+
+```text
+draft_status =
+  원장 행 없음                             → ready
+  completed                                → ready
+  pending/processing 이고 now() > deadline → ready   (투영)
+  그 외                                    → generating
+```
+
+`now()`는 원장과 같은 DB 시계다. 이 판정은 조회 경로에서 비교 하나로 끝나므로 scheduler가
+멈춰 있어도, 설정을 꺼서 rollback해도 성립한다. 앱은 어떤 경우에도 `generating`에 무기한
+갇히지 않는다.
+
+deadline을 넘긴 뒤 뒤늦게 돌아온 scheduler가 결과를 반영하면 앱에 이미 `ready`로 알린 값이
+바뀐다. 이를 막기 위해 **반영 CAS에도 deadline 조건을 넣는다.** deadline이 지난 작업은 claim
+token이 맞아도 반영하지 않고 원장을 `deadline_exceeded`로 닫는다. 8.2절의 claim token fencing과
+같은 성격의 조건이 하나 더 붙는 것이다.
+
+원장의 물리적 정리(상태를 `completed`로 바꾸고 snapshot을 비우는 것)는 scheduler가 나중에
+해도 된다. public 계약은 읽기 투영으로 이미 닫혀 있다.
+
+이 보장의 범위는 **원장 행이 있는 task**다. `minsu` 자체가 없는 이전 바이너리로 rollback하면
+응답에 `draft_status` 필드가 없으므로 앱은 이전 계약을 본다. 설정만 끄는 rollback과 바이너리
+rollback의 차이는 11.1절에 정리한다.
+
+상한이 발동한다는 것 자체가 이상 신호이므로 9.3절의 "가장 오래된 `pending`의 age",
+`deadline_exceeded` counter와 함께 경보 대상으로 둔다.
 
 ## 9. timeout·retry·관측
 
@@ -556,6 +639,16 @@ outcome·재시도 가능 여부를 반환하고, 기존 내부 `GenerationOutco
 오류가 아니기 때문이다. 다만 같은 입력으로 반복 실패하면 프롬프트·스키마 문제이므로
 `retry_exhausted` 비율을 outcome별로 관측해 구분한다.
 
+`provider_error`는 성격이 다른 실패를 한 값으로 묶는다. 일시 네트워크 오류나 일부 429·5xx는
+재시도로 복구되지만, 잘못된 ADC·IAM 403·존재하지 않는 project/location은 설정을 고치기 전에는
+같고, 일일 quota 소진은 짧은 백오프로 복구되지 않는다. 기존 `GenerationOutcome.PROVIDER_ERROR`
+하나로는 이를 구분할 수 없다.
+
+**첫 구현에서는 구분하지 않고 모두 제한 재시도한다.** 재시도 횟수에 상한이 있어 정합성 문제는
+없고, 비용은 복구 불가능한 실패에 대한 몇 번의 헛된 호출과 그만큼 늘어난 `generating` 시간이다.
+어느 쪽이 실제로 흔한지는 dev 측정 전에는 알 수 없으므로 지금 세분화하지 않는다. 관측에서
+`retry_exhausted` 중 `provider_error` 비중이 크면 그때 category를 나눈다.
+
 `invalid_config`는 terminal이지만 원장을 닫을 뿐 task는 고정 fallback을 유지하므로 손실이
 없다. 설정을 고친 뒤 과거 건을 다시 생성할지는 운영 판단이며 이 설계에 넣지 않는다.
 
@@ -578,6 +671,9 @@ outcome·재시도 가능 여부를 반환하고, 기존 내부 `GenerationOutco
 - 재시도 횟수 분포와 outcome별 `retry_exhausted` 비율
 - **lease 만료로 회수된 작업 수**
 - **claim token 불일치로 무시된 stale 결과 수**
+- **task 하나당 실제 provider 호출 수** — 복구 과정의 중복 실행 비용(8.4절)
+- **deadline 투영으로 `ready`가 된 건수** — 0이 정상이며 경보 대상(8.6절)
+- **원장 insert 실패율** — fail-closed 선택의 대가를 보는 지표(5.3절)
 
 `retry_exhausted` 비율과 `user_edited` 건수는 제품 판단에 직접 쓰인다. 전자가 높으면 모델·
 프롬프트 문제이고, 후자가 높으면 비동기 생성이 사용자보다 느려 가치가 없다는 신호다.
@@ -623,11 +719,16 @@ embedding을 명시적으로 제외했고, 검색 read-model은 `momens-retrieva
 - **롤링 중 혼재** — 활성 pod가 적재한 작업은 원장에 남고, 어느 pod의 scheduler가 집어가도
   된다. 비활성 pod가 처리한 convert는 원장이 없어 동기 경로와 동일하다. 두 경우 모두 결과가
   정의돼 있다.
-- **rollback 후 남은 `pending`** — 기본은 **계속 처리한다.** 이미 적재된 작업은 유효하고,
-  처리해도 `tasks`는 유효한 draft를 유지한다. scheduler까지 꺼야 하는 상황이라면 별도
-  스위치로 scheduler만 멈추고 원장은 남긴다. 이때 해당 task는 `generating`에 머무르므로,
-  장시간 중단이 예상되면 남은 `pending`을 `completed`(`invalid_config` 또는 운영 사유)로 닫아
-  `ready`로 되돌린다. 이 운영 절차는 구현 티켓에서 명령이나 쿼리로 구체화한다.
+- **설정 rollback(flag off) 후 남은 `pending`** — 기본은 **계속 처리한다.** 이미 적재된
+  작업은 유효하고, 처리해도 `tasks`는 유효한 draft를 유지한다. scheduler까지 멈춰야 하는
+  상황이면 별도 스위치로 멈추고 원장은 남긴다. 이때도 앱은 `generating`에 갇히지 않는다.
+  deadline이 지나면 읽기 투영이 `ready`로 닫기 때문이다(8.6절). 남은 행을
+  `operationally_closed`로 즉시 닫는 절차는 지표를 깨끗하게 유지하기 위한 것이며 구현
+  티켓에서 명령이나 쿼리로 구체화한다. `invalid_config`를 재사용하지 않는다. 실제 설정 오류
+  지표가 오염된다.
+- **바이너리 rollback** — `minsu` 원장·조회가 없는 이전 배포로 되돌리면 응답에
+  `draft_status` 필드 자체가 없다. 앱은 이전 계약을 보므로 `generating`에 갇힐 대상이 없다.
+  원장 행은 DB에 남아 있다가 다시 배포하면 이어서 처리되거나 deadline으로 닫힌다.
 - **활성화 시점 이전 task** — 원장이 없으므로 `ready`다. 소급 생성하지 않는다.
 
 각 단계는 앞 단계로 되돌릴 수 있다. 설정을 끄면 convert는 동기 경로로 돌아가고 `tasks`는
@@ -662,23 +763,25 @@ local·test 기본값이 push 비활성이고, 위 단계 1·2가 push 설정에
    google-genai). 모듈 의존 추가와 `common`의 영속성 기반 준수가 범위에 포함된다.
 
    `project`의 반영 API는 **호출자 트랜잭션에 참여해야 한다.** `minsu`가 트랜잭션을 열고 CAS
-   반영과 원장 terminal 전이를 함께 커밋하므로(8.3절), 반영 API가 `REQUIRES_NEW`이거나 자기
-   `@Transactional`로 독립 커밋하면 원자성이 깨진다.
+   반영과 원장 terminal 전이를 함께 커밋하기 때문이다(8.3절). 구체적으로는 다음을 지킨다.
 
-2. **ADR-0014 개정** — 다음 네 가지를 함께 다룬다.
-   - `minsu → project` 단방향 의존 허용과 참조 범위 한정
-   - "task draft는 저장하지 않으므로 DB와 Flyway 변경은 없다" — 원장 테이블이 뒤집는다
-   - "호출·트랜잭션 경계" 3·4번 — 새 convert에서 쓰기 트랜잭션 밖 draft 생성, 그리고
-     `SignalActionExecutor` 트랜잭션의 원자 저장 범위. 원장 적재가 이 트랜잭션에 들어간다
-   - "동시 최초 요청은 둘 다 모델을 호출할 수 있다 … 별도 단일 비행 또는 reservation 설계를
-     검토한다" — 비동기 전환이 이 미결을 **해소한다.** 요청 경로에서 모델을 부르지 않고
-     원장의 `task_id` UNIQUE와 claim이 단일 비행을 보장하므로 중복 호출 비용이 사라진다
+   - 같은 transaction manager를 쓰고 기본 `PROPAGATION_REQUIRED`로 참여한다. 반영 API에
+     `@Transactional`을 붙이는 것 자체는 문제가 아니다. 기본 전파가 이미 참여이고 현재
+     `TaskEditorImpl.update`도 같은 방식이다.
+   - `REQUIRES_NEW`, 별도 transaction manager, 명시적 조기 commit은 금지한다.
+   - CAS가 0건이거나 원장의 token·deadline 조건 갱신이 0건이면 예외 없이 커밋하지 않고 전체를
+     롤백한다. task만 바뀌고 원장이 남는 상태를 만들지 않는다.
 
-3. **모바일 계약 확장** — `draft_status` 응답 필드와 `mobile → minsu` 읽기 의존. API 명세를
-   갱신하고 필드 추가를 모바일에 알린다.
-4. **dev 측정** — end-to-end 지연, `retry_exhausted` 비율, `user_edited` 건수, 3구간 timeout
+2. **모바일 계약 확장** — `draft_status` 응답 필드와 `mobile → minsu` 읽기 의존, 7.3절의 읽기
+   순서 계약. API 명세를 갱신하고 필드 추가를 모바일에 알린다. 앱 decoder가 unknown field를
+   거부하면 서버 단독 선배포가 앱을 깨뜨리므로, **현재 앱 decoder의 unknown field 동작 확인과
+   그에 따른 배포 순서 결정**을 이 티켓의 완료 조건에 포함한다.
+
+3. **dev 측정** — end-to-end 지연, `retry_exhausted` 비율, `user_edited` 건수, 3구간 timeout
    미측정 구간.
-5. **prod 마이그레이션** — `momens-api`에 원장 테이블 마이그레이션 PR.
+4. **prod 마이그레이션** — `momens-api`에 원장 테이블 마이그레이션 PR.
+
+ADR-0015가 이 PR에 함께 들어가므로 별도 ADR 티켓은 두지 않는다.
 
 검증 기준은 각 티켓이 소유한다. 이 문서는 어떤 값이 근거를 갖춰야 하는지만 정한다.
 
