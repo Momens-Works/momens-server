@@ -26,11 +26,15 @@ Gradle 멀티모듈(빌드 타임 컴파일 격리)과 Spring Modulith(런타임
 
 ```text
 root
-├── app            # 실행·조립
-├── user           # 기능/도메인 모듈
-├── …
-└── common         # 최소화된 공유 모듈
+├── app              # 실행·조립
+├── common           # 최소화된 공유 모듈
+└── modules          # 기능/capability 모듈의 물리적 그룹
+    ├── user
+    └── …
 ```
+
+`modules` 디렉터리는 물리적 정리를 위한 그룹일 뿐 Gradle 서브프로젝트가 아닙니다. 기능 모듈의
+Gradle 논리 경로는 `:user`, `:auth`처럼 평면으로 유지합니다.
 
 ## 모듈 경계
 

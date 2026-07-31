@@ -115,6 +115,19 @@ curl http://localhost:8080/actuator/health   # {"status":"UP"}
 momens-server
 ├── app/                       # 실행 애플리케이션 모듈 (Spring Boot main)
 │   └── src/main/java/works/momens/server/MomensServerApplication.java
+├── common/                    # 최소 공유 기반 모듈
+├── modules/                   # 기능/capability Gradle 모듈
+│   ├── auth/
+│   ├── context/
+│   ├── minsu/
+│   ├── mobile/
+│   ├── notification/
+│   ├── outbox/
+│   ├── project/
+│   ├── signal/
+│   ├── source/
+│   ├── user/
+│   └── workspace/
 ├── third_party/
 │   └── momens-proto/          # 공유 protobuf 계약 submodule
 ├── build.gradle               # 루트(공통 설정)
@@ -124,7 +137,10 @@ momens-server
 ```
 
 - 베이스 패키지: `works.momens.server`
-- 실행 모듈은 `app`으로 확정. **도메인 모듈 목록은 추후 결정**합니다.
+- 실행 모듈은 `app`, 최소 공유 기반은 `common`입니다.
+- `modules/`는 물리적 그룹일 뿐 Gradle 프로젝트가 아니며, 기능 모듈의 논리 경로는 `:auth`처럼
+  평면으로 유지합니다.
+- 확정된 모듈 목록과 책임 경계는 [상세설계 > 모듈 맵](design/module-map.md)을 따릅니다.
 - 구조/의존 방향은 [기반 규칙 > 아키텍처](rules/architecture.md)에 정리되어 있습니다.
 
 ---

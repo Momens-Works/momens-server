@@ -93,7 +93,7 @@ minsu
 ```
 
 - `settings.gradle`과 `app` 조립 목록에 `minsu`를 추가한다.
-- `signal/build.gradle`은 `project(':minsu')`에 의존한다.
+- `modules/signal/build.gradle`은 `project(':minsu')`에 의존한다.
 - `minsu`는 `signal`, `project`, `mobile`에 의존하지 않는다.
 - `minsu` root package에는 다른 모듈이 쓰는 공개 계약만 둔다.
 - port, prompt, 설정, Google adapter는 `minsu` 내부 package에 둔다.
@@ -212,7 +212,7 @@ API, UX/AX는 이번 구현에 포함하지 않는다.
 ### Google adapter
 
 - 공식 Google Gen AI Java SDK 직접 사용
-- implementation 시점 최신 안정 버전을 확인해 `minsu/build.gradle`에 명시적으로 고정
+- implementation 시점 최신 안정 버전을 확인해 `modules/minsu/build.gradle`에 명시적으로 고정
 - Gemini Enterprise Agent Platform backend와 stable `v1` API 명시
 - ADC 사용. API key를 코드나 설정 파일에 저장하지 않음
 - `responseMimeType=application/json`
