@@ -167,9 +167,9 @@ MCP 또는 웹에서 작업을 생성해 발급된 라벨을 브랜치 앞에 �
 ### 커밋 메시지
 
 ```text
-feat (domain): 새로운 기능 추가
-fix (domain): 버그 수정
-docs: 문서 수정
+feat(<Momens-작업-라벨>/<domain>): 새로운 기능 추가
+fix(<Momens-작업-라벨>/<domain>): 버그 수정
+docs(<Momens-작업-라벨>): 문서 수정
 ```
 
 타입과 형식 전체는 [기반 규칙 > Git](rules/git.md)을 참고하세요.
@@ -208,7 +208,7 @@ git switch -c MOM-0680-feat/create-category
 
 # 3) 작업 → 포맷 → 커밋
 ./gradlew spotlessApply
-git commit -m "feat (category): 카테고리 생성 API 추가"
+git commit -m "feat(MOM-0680/category): 카테고리 생성 API 추가"
 
 # 4) 푸시 후 PR 생성 (base: develop)
 git push -u origin MOM-0680-feat/create-category
