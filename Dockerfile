@@ -15,24 +15,24 @@ WORKDIR /workspace
 #    의존성 메타데이터를 미리 받아 둡니다. 소스만 바뀌면 아래 COPY . . 이후 레이어만
 #    무효화되고 이 레이어는 캐시 히트되어, 매 빌드마다 Gradle 배포본/메타데이터를 다시
 #    받지 않습니다. 새 모듈을 추가하면 해당 모듈의 build.gradle COPY 행도 여기에 추가합니다.
-#    `verifyDockerModuleBuildScripts`가 `COPY <module>/build.gradle ./<module>/` 형식과
+#    `verifyDockerModuleBuildScripts`가 `COPY <project-dir>/build.gradle ./<project-dir>/` 형식과
 #    Gradle 서브프로젝트 목록의 양방향 정합성을 검사합니다(공백과 destination의 `./`은 선택).
 COPY gradlew settings.gradle build.gradle ./
 COPY gradle ./gradle
 COPY third_party ./third_party
 COPY app/build.gradle ./app/
-COPY auth/build.gradle ./auth/
 COPY common/build.gradle ./common/
-COPY context/build.gradle ./context/
-COPY minsu/build.gradle ./minsu/
-COPY mobile/build.gradle ./mobile/
-COPY notification/build.gradle ./notification/
-COPY outbox/build.gradle ./outbox/
-COPY project/build.gradle ./project/
-COPY signal/build.gradle ./signal/
-COPY source/build.gradle ./source/
-COPY user/build.gradle ./user/
-COPY workspace/build.gradle ./workspace/
+COPY modules/auth/build.gradle ./modules/auth/
+COPY modules/context/build.gradle ./modules/context/
+COPY modules/minsu/build.gradle ./modules/minsu/
+COPY modules/mobile/build.gradle ./modules/mobile/
+COPY modules/notification/build.gradle ./modules/notification/
+COPY modules/outbox/build.gradle ./modules/outbox/
+COPY modules/project/build.gradle ./modules/project/
+COPY modules/signal/build.gradle ./modules/signal/
+COPY modules/source/build.gradle ./modules/source/
+COPY modules/user/build.gradle ./modules/user/
+COPY modules/workspace/build.gradle ./modules/workspace/
 # gradlew 의 줄바꿈은 .gitattributes 의 `gradlew text eol=lf` 로 보장합니다. 예전에는 여기서
 # sed 로 CR 을 지웠지만, 아래 COPY . . 가 원본으로 다시 덮어써 정작 bootJar 단계에는 적용되지
 # 않았습니다(방어가 무력화된 상태). 체크아웃 시점에 고치는 편이 로컬 빌드까지 함께 보호합니다.
