@@ -1,8 +1,12 @@
 # 0014. Minsu task draft 모듈과 LLM 경계
 
-- 상태: Accepted
+- 상태: Superseded by [ADR-0015](0015-minsu-async-task-draft-generation.md)
 - 날짜: 2026-07-25
 - 작성자: Kimgyuilli
+
+> **2026-08-01**: 생성 시점과 저장에 관한 결정은 ADR-0015가 대체했다(비동기 생성, `minsu` 생성
+> 원장 소유, `minsu → project`·`mobile → minsu` 의존). 모듈 경계, 벤더 중립 `LlmClient` port,
+> Google adapter, 결과 검증과 고정 fallback 정책은 그대로 유효하다.
 
 ## 맥락
 
