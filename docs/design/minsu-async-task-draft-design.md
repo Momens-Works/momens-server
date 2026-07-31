@@ -166,8 +166,7 @@ task_id는 payload에만 담는데, 공개 `OutboxEventView`에는 payload 필�
 
 `signal`은 이미 `minsu`에 의존하고
 (`SignalActionServiceImpl.generateDraft`가 `SignalTaskDraftInput`을 직접 조립한다), 그 입력을
-그대로 `minsu`의 적재 API에 넘기면 된다. 방향은 오늘과 같은 `signal → minsu`라 새 의존이
-없다.
+그대로 `minsu`의 적재 API에 넘기면 된다. 적재 방향은 오늘과 같은 `signal → minsu`다.
 
 - task_id는 적재 시점에 이미 있다.
 - watermark·시드·cutover가 필요 없다.
@@ -194,7 +193,34 @@ task_id는 payload에만 담는데, 공개 `OutboxEventView`에는 payload 필�
 | 재시도 | 백오프 1s / 5s / 30s, `MAX_ATTEMPTS` | 동일 형태, 값은 구현 티켓 |
 | 보장 | at-least-once | at-least-once |
 
-### 5.4 생성 입력의 시점
+### 5.4 공개 계약 변경: 동기 호출을 요청 경로에서 제거
+
+**비동기가 활성이면 convert 요청 경로에서 LLM을 호출하지 않는다.** 3절이 지적한 지연 문제가
+해결되는 근거가 이것이고, 이 설계의 목적 자체다.
+
+그런데 현재 공개 계약 `SignalTaskDraftGenerator.generate`는 이를 표현할 수 없다.
+`DefaultSignalTaskDraftGenerator.generate`는 비활성·설정 무효·입력 부족이 아닌 한 **항상**
+provider를 호출한다. 비동기 활성 상태에서 고정 fallback을 얻으려고 이 메서드를 그대로 부르면
+8초 예산이 응답 경로에 그대로 남는다.
+
+따라서 `minsu` 공개 계약에 두 진입점을 둔다. 활성 여부 판정은 `minsu`가 소유하고 `signal`은
+두 번 호출하기만 한다.
+
+| 진입점 | 호출 위치 | 비동기 활성 | 비동기 비활성 |
+| --- | --- | --- | --- |
+| draft 확보 | 쓰기 트랜잭션 **밖** | LLM 미호출, 고정 fallback 반환 | 현재와 동일하게 LLM 호출 |
+| 원장 적재 | 쓰기 트랜잭션 **안** | `pending` 행 적재 | 아무것도 하지 않음 |
+
+두 진입점을 나누는 이유는 트랜잭션 경계가 다르기 때문이다. 동기 모드의 LLM 호출은 지금처럼
+쓰기 트랜잭션 밖에 있어야 하고(느린 네트워크가 DB connection을 점유하지 않도록), 원장 적재는
+`tasks`·`signal_actions`와 원자적이어야 하므로 트랜잭션 안이어야 한다. 하나로 합치면 둘 중
+하나를 포기하게 된다.
+
+기존 `generate` 시그니처를 그대로 둘지, draft 확보 진입점으로 흡수할지는 구현 티켓에서 정한다.
+어느 쪽이든 `signal`은 활성 여부를 알지 못하고 `minsu`가 판정을 소유한다는 점은 같다. 9.2절의
+"`disabled`면 적재하지 않는다"도 같은 원칙이다.
+
+### 5.5 생성 입력의 시점
 
 원장에 **convert 시점의 `SignalTaskDraftInput` snapshot을 저장한다.**
 
@@ -203,9 +229,16 @@ task_id는 payload에만 담는데, 공개 `OutboxEventView`에는 payload 필�
 경로는 convert 시점 입력을 쓰므로 snapshot이 현재 의미를 그대로 보존한다.
 
 대가는 Signal의 description·impact·evidence 텍스트가 원장에 복제된다는 점이다. 같은 DB·같은
-workspace 데이터 안의 복제이고 evidence는 이미 10건·필드당 30자 상한이 걸려 있어 크기는
-제한적이다. 다만 다음 두 가지를 구현 티켓에서 함께 정한다.
+workspace 데이터 안의 복제다.
 
+크기는 evidence가 아니라 **description과 impact가 좌우한다.** evidence는 이미 10건·필드당
+30자 상한이 걸려 있어 약 900자로 묶이지만, `signals.description`은 `TEXT NOT NULL`,
+`impact`는 `TEXT`로 스키마상 상한이 없다(`V20260707100000__create_signals.sql`). worker가
+생산하는 요약이라 실제 값은 짧을 것으로 보지만 설계가 기대는 근거는 아니다.
+
+다음을 구현 티켓에서 정한다.
+
+- 원장 적재 시 description·impact에 자체 상한을 둘지, 둔다면 그 값
 - 원장이 terminal 상태로 닫힌 뒤 snapshot을 비우는 보존 정책
 - 원문·URL·작성자를 담지 않는다는 동기 설계 6절의 입력 제외 목록이 원장에도 그대로 적용됨
 
@@ -224,7 +257,7 @@ workspace 데이터 안의 복제이고 evidence는 이미 10건·필드당 30�
 | 소유 모듈 | `minsu` |
 | 적재 시점 | convert 트랜잭션 (5.3절) |
 | 멱등 키 | `task_id` UNIQUE. convert 1건당 task 1건이 이미 `signal_actions UNIQUE(signal_id)`로 보장된다 |
-| 보유 데이터 | `task_id`, 입력 snapshot(5.4절), 상태, completion reason, 시도 횟수, claim token, lease |
+| 보유 데이터 | `task_id`, 입력 snapshot(5.5절), 상태, completion reason, 시도 횟수, claim token, lease |
 | 상태 | `pending` → `processing`(claim) → `completed`(reason 별도, 8.3절) |
 | 재시도 | 시도 횟수와 다음 시도 시각을 원장이 소유 |
 | 유실 복구 | lease 만료분과 재시작 후 남은 `pending`을 매 주기 회수 |
@@ -241,7 +274,7 @@ workspace 데이터 안의 복제이고 evidence는 이미 10건·필드당 30�
 ```text
 convert-to-task (동기)
   → SignalReader로 Signal·evidence 조회, SignalTaskDraftInput 조립  (signal, 현재와 동일)
-  → 고정 fallback draft 생성                                        (기존 동기 경로 유지)
+  → minsu에서 draft 확보 (활성이면 LLM 미호출 고정 fallback, 5.4절)  (signal → minsu)
   → SignalActionExecutor.convert 트랜잭션
       tasks insert
       signal_actions insert
@@ -255,19 +288,35 @@ minsu scheduler (비동기)
   → 성공: claim token 조건으로 tasks CAS 반영 + 원장 completed 를 한 트랜잭션에    (minsu → project)
   → retryable 실패: 백오프 후 재시도 예약
   → terminal 실패: 원장 completed + reason (tasks는 고정 fallback 유지)
+
+task 상세 조회
+  → project에서 task 조회 + minsu에서 draft_status 조회               (mobile → minsu)
 ```
 
-의존 방향은 `signal → minsu`(적재)와 `minsu → project`(반영) 둘이다. 앞쪽은 오늘 이미
-존재하므로 **새로 생기는 것은 `minsu → project` 하나다.** `project`는 `minsu`를 모르므로
-순환은 아니지만, ADR-0014의 "`minsu`는 `signal`, `project`, `mobile`에 의존하지 않는다"를
-개정해야 한다. 그 제약은 첫 슬라이스를 작게 유지하기 위한 조건이었고 비동기 전환으로 전제가
-바뀌었다.
+의존은 셋이고 그중 **둘이 새로 생긴다.**
 
-개정 범위는 다음으로 한정한다.
+| 의존 | 용도 | 상태 |
+| --- | --- | --- |
+| `signal → minsu` | 원장 적재, draft 확보 | 오늘 이미 존재 |
+| `minsu → project` | 생성 결과를 `tasks`에 반영 | **신규** |
+| `mobile → minsu` | task 상세의 `draft_status` 읽기 | **신규** |
 
-- `minsu → project`를 허용하되 참조 범위는 draft 반영 한 가지로 제한한다.
-- `minsu → signal`과 `minsu → mobile` 비의존은 그대로 유지한다. 입력을 convert 시점
-  snapshot으로 받으므로(5.4절) `signal`을 참조할 이유가 없다.
+`mobile → minsu`가 필요한 이유는 7.2절이 task 상세 조회에도 `draft_status`를 노출하기
+때문이다. task 상세 경로는 `TaskController` → `ProjectTaskService` → `project`이고
+`modules/mobile/build.gradle`에는 현재 `minsu`가 없다. convert 응답 경로는 `signal`이 원장을
+읽어 `SignalActionResult`에 실으면 되므로 기존 의존으로 충분하지만, task 상세는 그렇지 않다.
+
+`project → minsu`로 해결하려는 시도는 **금지한다.** `minsu → project`와 순환이 되어
+`ApplicationModules.verify()`가 실패한다. 상태를 읽는 쪽은 조합 표면인 `mobile`이어야 한다.
+
+`minsu`가 `signal`·`mobile`에 의존하지 않는다는 규칙은 그대로 유지된다. `mobile → minsu`는
+반대 방향이라 이 규칙과 무관하고, 입력을 convert 시점 snapshot으로 받으므로(5.5절) `signal`을
+참조할 이유도 없다.
+
+`project`와 `minsu`는 서로를 모르는 관계에서 `minsu → project` 단방향으로 바뀐다. 이 제약은
+동기 설계 4절("`minsu`는 `signal`, `project`, `mobile`에 의존하지 않는다")과 ADR-0014가 함께
+전제한 것으로, 첫 슬라이스를 작게 유지하기 위한 조건이었고 비동기 전환으로 전제가 바뀌었다.
+개정 시 `minsu → project` 참조 범위는 draft 반영 한 가지로 제한한다.
 
 `signal`이 비동기 실행까지 조립하는 안은 채택하지 않았다. 생성 원장 소유가 `signal`로 넘어가
 6절 결정과 어긋나고, Signal action의 멱등·충돌 정책을 담당하는 모듈이 LLM 작업의 claim·
@@ -356,12 +405,28 @@ minsu scheduler (비동기)
 
 - 조건부 UPDATE는 **편집이 없는데 버리는 오탐이 없다.** 값이 fallback 그대로면 아무도 손대지
   않은 것이 확실하다.
-- 대신 **편집을 놓치는 미탐이 있다.** 사용자가 값을 바꿨다가 fallback과 같은 값으로 되돌리면
+- 대신 **편집을 놓치는 미탐이 있다.** title/role/priority가 결과적으로 fallback과 같으면
   편집으로 감지되지 않아 AI 결과가 반영된다.
 
-미탐을 허용하는 이유는 그 경우 사용자가 최종적으로 원한 값이 fallback과 같고, 반영되는 AI
-결과 역시 유효한 draft이기 때문이다. 편집 의도가 사라지는 피해가 없다. 반대로 오탐은 실제
-편집을 덮거나 생성 결과를 이유 없이 버리므로 피해가 실질적이다. 오탐 0을 택했다.
+미탐은 드물지 않다. `UpdateTaskCommand`는 "수정 화면이 저장할 때 편집 상태 전체를 보내므로
+title, role, priority, status, purpose는 항상 채워진 값으로 넘어온다". 즉 사용자가 purpose나
+완료기준만 고쳐 저장해도 title/role/priority는 fallback 값 그대로 다시 쓰이고, 그 뒤 도착한
+AI 결과가 title을 덮는다.
+
+그래도 미탐을 허용한다. 이 경우 사용자는 title을 건드리지 않았으므로 편집 의도가 사라지지
+않고, 반영되는 AI 결과 역시 유효한 draft다. 반대로 오탐은 실제 편집을 덮거나 생성 결과를
+이유 없이 버리므로 피해가 실질적이다. 오탐 0을 택했다.
+
+**CAS는 세 필드를 함께 본다.** title/role/priority 중 하나라도 달라지면 **draft 전체를 폐기한다.** 필드별로 나눠 일치하는
+것만 반영하지 않는다.
+
+부분 반영은 사용자가 보는 draft를 사람과 모델의 혼합물로 만든다. 예를 들어 사용자가 priority만
+높였는데 AI가 만든 title이 반영되면, 그 title은 사용자가 판단한 priority를 전제로 쓰인 것이
+아니다. 동기 설계 9절이 "role 또는 priority가 무효면 title만 쓰지 않고 draft 전체를 고정
+fallback으로 바꾼다"며 값을 섞지 않기로 한 것과 같은 원칙이다.
+
+대가는 사용자가 priority 하나만 바꿔도 AI title까지 버려진다는 점이다. 이를 감수한다. 반대
+방향의 혼합물이 사용자에게 설명하기 더 어렵다.
 
 ### 8.2 실행 fencing
 
@@ -427,12 +492,28 @@ worker A가 claim → 모델 호출
 전부 실패해도 사용자가 보는 것은 현재 동기 경로의 fallback 결과와 같다. **비동기 전환은
 품질의 상한만 올리고 하한은 내리지 않는다.**
 
+### 8.6 `generating`의 상한
+
+위 복구 경로는 모두 scheduler가 돌고 있다는 전제 위에 있다. scheduler 자체가 멈추거나
+(11.1절) 회수 루프에 버그가 있으면 원장이 terminal로 갈 방법이 없고, 앱은 `generating`을
+무기한 본다.
+
+따라서 **원장 나이 상한**을 둔다. 적재 후 일정 시간이 지난 행은 시도 횟수와 무관하게
+`completed`(`retry_exhausted`)로 닫는다. 상한은 재시도 백오프 총합보다 충분히 크게 잡고
+구체적 값은 구현 티켓에서 정한다.
+
+이 상한은 scheduler가 정상일 때는 발동하지 않는다. 발동한다는 것 자체가 이상 신호이므로
+9.3절의 "가장 오래된 `pending`의 age" 지표와 함께 경보 대상으로 둔다.
+
+앱 쪽 재조회 간격과 폴링 상한은 서버가 정하지 않는다. 7.2절과 함께 모바일 합의 항목이다.
+
 ## 9. timeout·retry·관측
 
 ### 9.1 비동기 경로의 timeout
 
 동기 경로의 8초(MOM-0806)는 **그대로 둔다**. 이 값은 원탭 action의 사용자 체감을 기준으로
-정했고, 비동기 전환 후에도 동기 fallback 경로가 남는 동안 유효하다.
+정했고, 비동기가 비활성일 때 convert가 타는 경로가 지금 그대로이기 때문이다. 비동기가
+활성이면 요청 경로에서 LLM을 부르지 않으므로(5.4절) 이 값은 그 경로에 적용되지 않는다.
 
 비동기 경로는 사용자가 기다리지 않으므로 별도 설정 키로 분리하고 더 큰 값을 갖는다. 구체적
 값은 dev 재측정 뒤 확정한다. 동기 경로의 8초를 비동기 값으로 재사용하지 않는다. 두 경로가
@@ -519,7 +600,8 @@ embedding을 명시적으로 제외했고, 검색 read-model은 `momens-retrieva
 기존 동기 계약을 한 번에 끊지 않는다.
 
 1. **동기 유지 + 원장 도입** — 비동기 생성을 기본 비활성으로 두고 원장·scheduler·관측만
-   배포한다. 비활성이면 convert가 원장을 적재하지 않으므로 동작은 현재와 같다.
+   배포한다. 비활성이면 convert가 원장을 적재하지 않으므로 동작은 현재와 같다. 이 단계에서
+   스케줄링 게이트를 먼저 정리한다(11.2절).
 2. **dev 활성화** — dev에서 비동기를 켜고 end-to-end 지연, `retry_exhausted` 비율,
    `user_edited` 건수를 측정한다. 3구간 timeout 예산의 미측정 구간(4절)도 이때 함께 채운다.
 3. **모바일 계약 확장** — 합의된 `draft_status`를 응답에 추가한다. 원장 행이 없으면 항상
@@ -544,14 +626,49 @@ embedding을 명시적으로 제외했고, 검색 read-model은 `momens-retrieva
 각 단계는 앞 단계로 되돌릴 수 있다. 설정을 끄면 convert는 동기 경로로 돌아가고 `tasks`는
 여전히 유효한 draft를 갖는다.
 
+### 11.2 스케줄링 게이트 정리
+
+현재 `@EnableScheduling`은 `notification` 모듈이 소유하고
+`momens.notification.push.enabled`에 걸려 있다. `NotificationSchedulingConfig`의 주석이
+"다른 모듈에는 아직 `@Scheduled` 빈이 없어 이 모듈이 게이트를 소유한다"고 그 한시성을
+명시한다.
+
+이 상태로 `minsu` scheduler를 추가하면 **push가 꺼진 환경에서 조용히 동작하지 않는다.**
+local·test 기본값이 push 비활성이고, 위 단계 1·2가 push 설정에 우연히 종속된다. 실패가
+드러나지 않고 원장만 쌓이므로 특히 나쁘다.
+
+`minsu`가 두 번째 `@Scheduled` 소유자가 되는 시점이므로 이때 게이트를 다시 정한다. 스케줄링
+인프라 활성화를 `app` 또는 `common`으로 올리고 모듈별 실행 여부는 각자의 설정으로 판정하는
+방향이 자연스럽다. 구체적 배치는 구현 티켓에서 정하되, **`minsu` scheduler가 push 설정과
+무관하게 동작한다**는 것이 요구사항이다.
+
 ## 12. 후속 구현 티켓
 
 이 문서는 설계만 확정한다. 구현은 다음으로 분리한다.
 
-1. **원장·scheduler 기반** — `minsu` 생성 원장 테이블, convert 트랜잭션 적재 API, claim token과
-   lease, 재시도 판정, 조건부 UPDATE 반영과 terminal 전이의 원자성, 관측. 기본 비활성.
-2. **ADR-0014 개정** — `minsu → project` 단방향 의존 허용과 참조 범위 한정.
-3. **모바일 계약 확장** — `draft_status` 응답 필드. 모바일 합의 후 착수.
+1. **원장·scheduler 기반** — `minsu` 생성 원장 테이블, convert 트랜잭션 적재 API, draft 확보
+   진입점 분리(5.4절), claim token과 lease, 재시도 판정, 조건부 UPDATE 반영과 terminal 전이의
+   원자성, 원장 나이 상한, 스케줄링 게이트 정리(11.2절), 관측. 기본 비활성.
+
+   이 티켓은 `minsu`를 **무상태 모듈에서 영속성 소유 모듈로 바꾼다.** 현재
+   `modules/minsu/build.gradle`에는 JPA·DB 의존이 전혀 없다(validation, actuator, jackson,
+   google-genai). 모듈 의존 추가와 `common`의 영속성 기반 준수가 범위에 포함된다.
+
+   `project`의 반영 API는 **호출자 트랜잭션에 참여해야 한다.** `minsu`가 트랜잭션을 열고 CAS
+   반영과 원장 terminal 전이를 함께 커밋하므로(8.3절), 반영 API가 `REQUIRES_NEW`이거나 자기
+   `@Transactional`로 독립 커밋하면 원자성이 깨진다.
+
+2. **ADR-0014 개정** — 다음 네 가지를 함께 다룬다.
+   - `minsu → project` 단방향 의존 허용과 참조 범위 한정
+   - "task draft는 저장하지 않으므로 DB와 Flyway 변경은 없다" — 원장 테이블이 뒤집는다
+   - "호출·트랜잭션 경계" 3·4번 — 새 convert에서 쓰기 트랜잭션 밖 draft 생성, 그리고
+     `SignalActionExecutor` 트랜잭션의 원자 저장 범위. 원장 적재가 이 트랜잭션에 들어간다
+   - "동시 최초 요청은 둘 다 모델을 호출할 수 있다 … 별도 단일 비행 또는 reservation 설계를
+     검토한다" — 비동기 전환이 이 미결을 **해소한다.** 요청 경로에서 모델을 부르지 않고
+     원장의 `task_id` UNIQUE와 claim이 단일 비행을 보장하므로 중복 호출 비용이 사라진다
+
+3. **모바일 계약 확장** — `draft_status` 응답 필드와 `mobile → minsu` 읽기 의존. 모바일 합의
+   후 착수.
 4. **dev 측정** — end-to-end 지연, `retry_exhausted` 비율, `user_edited` 건수, 3구간 timeout
    미측정 구간.
 5. **prod 마이그레이션** — `momens-api`에 원장 테이블 마이그레이션 PR.
@@ -562,9 +679,13 @@ embedding을 명시적으로 제외했고, 검색 read-model은 `momens-retrieva
 
 - 비동기 경로의 timeout 값과 재시도 백오프·상한 — dev 재측정 후
 - lease 길이와 장시간 호출 중 lease 갱신 여부 — 구현 티켓 (8.2절)
+- 원장 나이 상한 값 — 구현 티켓 (8.6절)
 - 원장 테이블의 세부 컬럼과 Flyway 파일명 — 구현 티켓
-- 입력 snapshot의 보존·삭제 정책 — 구현 티켓 (5.4절)
+- 입력 snapshot의 description·impact 상한과 보존·삭제 정책 — 구현 티켓 (5.5절)
+- 스케줄링 게이트를 올릴 위치 — 구현 티켓 (11.2절)
+- 기존 `generate` 시그니처의 존치 여부 — 구현 티켓 (5.4절)
 - scheduler 중단 시 남은 `pending`을 닫는 운영 절차 — 구현 티켓 (11.1절)
-- `draft_status` 필드명과 노출 위치 — 모바일 합의
+- `draft_status` 필드명 — 모바일 합의
+- 앱의 재조회 간격과 폴링 상한 — 모바일 합의 (8.6절)
 - prod 데이터 레지던시 정책 — 동기 설계 11절에서 이월된 미결
 - `minsu → retrieval` 연동 — 별도 설계
