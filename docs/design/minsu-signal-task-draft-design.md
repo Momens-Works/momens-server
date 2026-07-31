@@ -233,7 +233,7 @@ OkHttp `Call.execute()` 전에 request header를 만들며 `GoogleCredentials.re
 호출한다. 따라서 최초 ADC 탐색·client 생성, 만료된 credential의 token 갱신, 최초 client 생성을
 기다리는 동시 요청은 이 8초 범위 밖이다. provider observation은 이 구간까지 포함하므로 실제
 관측 duration과 요청 점유 시간은 8초를 넘을 수 있다. 이 동기 경로 전체에 엄격한 상한을 두는
-것은 비동기 draft 생성(MOM-0810)에서 함께 다룬다.
+것은 [비동기 draft 생성 설계(MOM-0810)](minsu-async-task-draft-design.md)에서 함께 다룬다.
 
 ADC 조회나 client 생성이 실패하면 실패 instance를 캐시하지 않고 `provider_error`로 기록한 뒤
 고정 fallback을 반환한다. 다음 신규 요청은 client 생성을 다시 시도해 credential 복구를 재시작
