@@ -257,10 +257,24 @@ payload       {} (ID 중심 원칙, worker가 DB에서 hydrate)
 `OutboxAppender`는 호출자 트랜잭션 안에서 호출해야 하므로(트랜잭션 없이 호출하면 실패한다)
 이 배치가 계약과 맞는다.
 
-worker 쪽 대응(새 event_type 소비와 재-hydrate)과 배포 순서는 이 문서의 범위 밖이다.
-producer가 먼저 배포돼도 worker가 모르는 event_type을 무시하면 되고, worker가 소비를 시작하는
-시점부터 projection이 최종값으로 수렴한다. ADR-0008과 ADR-0010의 MVP event 목록에 이 event를
-추가하는 것은 ADR-0015가 함께 다룬다.
+worker 쪽 구현(새 event_type 소비와 재-hydrate)은 `momens-worker`의 범위다. 다만 **배포 순서는
+이 설계의 전제 조건이다.**
+
+watermark 기반 consumer는 모르는 event를 읽어도 offset을 전진시킨다. 그러면 producer를 먼저
+배포한 구간의 `task.draft_generated`는 새 worker가 배포된 뒤에도 다시 읽히지 않고, 그 사이
+생성된 task의 projection이 fallback title로 영구 잔류한다. 앞서 "worker가 무시하면 된다"고
+넘길 수 있는 문제가 아니다.
+
+따라서 다음 중 하나를 만족해야 비동기 생성을 활성화한다.
+
+- **worker-first 배포** — worker가 이 event를 소비할 수 있게 된 뒤에 서버의 비동기 생성을
+  켠다. 가장 단순하고 이 방식을 기본으로 한다.
+- 또는 worker가 모르는 event_type에서 watermark를 전진시키지 않음이 구현·검증됐거나, cutover
+  watermark·backfill 절차가 정의돼 있다.
+
+11절의 prod 활성화 조건에 **worker 소비 배포와 end-to-end projection 검증**을 포함한다.
+
+ADR-0008과 ADR-0010의 MVP event 목록에 이 event를 추가하는 것은 ADR-0015가 함께 다룬다.
 
 worker가 `task.created`를 원장 terminal까지 대기·재시도하게 하는 대안은 채택하지 않았다.
 worker가 `minsu` 원장 스키마를 알아야 해서 결합이 훨씬 크다.
@@ -365,7 +379,7 @@ workspace 데이터 안의 복제다.
 | 소유 모듈 | `minsu` |
 | 적재 시점 | convert 트랜잭션 (5.3절) |
 | 멱등 키 | `task_id` UNIQUE. convert 1건당 task 1건이 이미 `signal_actions UNIQUE(signal_id)`로 보장된다 |
-| 보유 데이터 | `task_id`, `workspace_id`, 입력 snapshot(5.5절), **반영 baseline**, 상태, completion reason, 시도 횟수, claim token, lease |
+| 보유 데이터 | `task_id`, `workspace_id`, 입력 snapshot(5.5절), **반영 baseline**, **`read_deadline_at`·`apply_cutoff_at`**, 상태, completion reason, 시도 횟수, claim token, lease, `next_attempt_at` |
 | 상태 | `pending` → `processing`(claim) → `completed`(reason 별도, 8.3절) |
 | 재시도 | 시도 횟수와 다음 시도 시각을 원장이 소유 |
 | 유실 복구 | lease 만료분과 재시작 후 남은 `pending`을 매 주기 회수 |
@@ -706,9 +720,13 @@ worker A가 claim → 모델 호출
 | stale worker의 늦은 성공 | claim token 불일치로 기록이 거부된다 (8.2절) |
 | 반영 트랜잭션 도중 종료 | 커밋되지 않아 원장이 `processing`으로 남고 lease 만료 후 재시도한다 |
 
-어떤 경로로 끝나든 `tasks`는 convert 시점부터 항상 유효한 draft를 갖는다. 비동기 생성이
+어떤 경로로 끝나든 `tasks`는 convert 시점부터 **형식이 유효한** draft를 갖는다. 비동기 생성이
 전부 실패해도 사용자가 보는 것은 현재 동기 경로의 fallback 결과와 같다. **비동기 전환은
-품질의 상한만 올리고 하한은 내리지 않는다.**
+가용성의 하한을 내리지 않는다.**
+
+이것은 형식과 가용성의 하한이지 의미 품질의 하한이 아니다. schema 검증을 통과한 모델 결과가
+Signal title보다 의미적으로 나쁠 수 있고 그때는 그 결과가 fallback을 덮는다. 이 위험은 동기
+경로에도 똑같이 있으며 비동기 전환이 늘리지도 줄이지도 않는다.
 
 ### 8.6 `generating`의 상한
 
@@ -728,10 +746,10 @@ scheduler가 멈춘 상황을 막으려고 둔 장치를 그 scheduler가 실행
 
 ```text
 draft_status =
-  원장 행 없음                             → ready
-  completed                                → ready
-  pending/processing 이고 now() > deadline → ready   (투영)
-  그 외                                    → generating
+  원장 행 없음                                       → ready
+  completed                                          → ready
+  pending/processing 이고 now() > read_deadline_at   → ready   (투영)
+  그 외                                              → generating
 ```
 
 `now()`는 원장과 같은 DB 시계다. 이 판정은 조회 경로에서 비교 하나로 끝나므로 scheduler가
@@ -758,9 +776,23 @@ T+ε  반영 트랜잭션 커밋 → tasks에 AI title
 따라서 **두 deadline에 가드 밴드를 둔다.**
 
 ```text
-반영 CAS deadline  =  적재 시각 + 상한 - margin
-읽기 투영 deadline =  적재 시각 + 상한
+apply_cutoff_at   =  적재 시각 + 상한 - margin    (반영 CAS 조건)
+read_deadline_at  =  적재 시각 + 상한             (읽기 투영 조건)
 ```
+
+**두 값은 적재 시점에 계산해 원장에 저장한다.** 조회할 때마다 현재 설정으로 다시 계산하면
+설정 변경이 과거 작업의 상태를 뒤집는다.
+
+```text
+상한 1시간으로 적재 → 90분 뒤 조회 → ready
+배포로 상한을 3시간으로 변경 → 같은 원장 재조회 → generating
+```
+
+`ready`를 본 사용자가 다시 `generating`을 보게 되고, 그 뒤 뒤늦은 반영까지 들어오면 "`ready`
+이후 갱신을 놓치지 않는다"는 계약이 깨진다. 상태는 단조로워야 한다. 이는 "feature flag의 현재
+값으로 과거 task를 해석하지 않는다"(5.3절, 7.1절)와 같은 원칙이다.
+
+상한과 margin 설정 변경은 **새로 적재되는 원장에만** 적용된다.
 
 margin은 반영 트랜잭션이 조건 평가부터 커밋까지 걸리는 시간보다 충분히 크게 잡는다. 그러면 위
 인터리빙은 반영 트랜잭션이 margin보다 오래 열려 있어야 성립한다. margin 값은 구현 티켓에서
@@ -804,6 +836,32 @@ rollback의 차이는 11.1절에 정리한다.
 재시도는 비동기 경로에서 **도입한다.** 동기 경로가 재시도를 두지 않은 이유는 사용자가 그
 시간을 기다리기 때문이었고, 비동기에서는 그 제약이 없다. 백오프와 상한은 `push_deliveries`의
 형태(고정 백오프 목록 + `MAX_ATTEMPTS`)를 따르되 값은 구현 티켓에서 정한다.
+
+**SDK timeout만으로는 부족하다.** 4절에서 확인했듯 `HttpOptions.timeout`은 OkHttp `Call`
+구간에만 걸리고 ADC 탐색·client 생성·token refresh는 그 밖이다. 동기 경로에서는 사용자 요청이
+결국 끊기지만, 비동기에서는 아무도 기다리지 않으므로 전단에서 멈춘 호출이 그대로 남는다.
+
+그 결과는 다음과 같다.
+
+- lease가 만료될 때마다 다른 worker가 같은 작업을 다시 호출한다.
+- 멈춘 호출은 취소되지 않고 scheduler 실행 슬롯을 계속 점유한다.
+- 이런 작업이 쌓이면 scheduler 실행 용량이 고갈된다.
+- deadline 투영으로 API는 `ready`가 되는데 실제 작업은 계속 누적된다.
+
+따라서 **attempt 전체에 wall-clock 상한을 둔다.** SDK timeout이 아니라 ADC 탐색·client 생성·
+token refresh·provider 호출을 모두 포함한 한 번의 시도 전체를 감싸는 상한이다. 상한을 넘으면
+해당 시도를 포기하고 결과를 버린다. 실행 동시성도 bounded로 두어 멈춘 호출이 남아도 slot이
+고갈되지 않게 한다.
+
+네 시간 값의 선후 관계를 고정한다.
+
+```text
+attempt 상한  <  lease  <  apply_cutoff_at  <  read_deadline_at
+```
+
+attempt 상한이 lease보다 짧아야 정상 실행 중에 lease가 만료되어 중복 호출이 생기는 일이 없다.
+`apply_cutoff_at`과 `read_deadline_at`의 관계는 8.6절의 가드 밴드다. 구체적 값은 dev 재측정 뒤
+구현 티켓에서 정하되 이 부등식은 유지한다.
 
 ### 9.2 재시도 판정과 내부 실행 계약
 
@@ -858,7 +916,13 @@ outcome·재시도 가능 여부를 반환하고, 기존 내부 `GenerationOutco
 진행 상태:
 
 - 원장 상태별 건수(`pending`/`processing`/`completed`)
-- **가장 오래된 `pending`의 age** — 큐가 밀리는지 보는 1차 지표
+- **가장 오래된 미종료(`pending`+`processing`) 원장의 age** — scheduler 중단을 보는 1차 지표.
+  `pending`만 보면 claim 직후 멈춘 경우를 놓친다. 그때는 전부 `processing`이고 `pending`은 비어
+  있다
+- **만료된 `processing` lease 수와 최대 age**
+- **`read_deadline_at`을 지난 미종료 원장 수** — deadline 투영 counter는 사용자가 실제 조회해야
+  올라가므로 이 지표가 없으면 중단을 늦게 안다
+- **scheduler heartbeat(마지막 성공 주기 시각)**
 - **claim 이후 실제 모델 호출 시작까지의 queue delay**
 - convert 커밋부터 반영까지의 end-to-end 지연
 
@@ -905,12 +969,21 @@ embedding을 명시적으로 제외했고, 검색 read-model은 `momens-retrieva
 
 1. **동기 유지 + 원장 도입** — 비동기 생성을 기본 비활성으로 두고 원장·scheduler·관측만
    배포한다. 비활성이면 convert가 원장을 적재하지 않으므로 동작은 현재와 같다. 이 단계에서
-   스케줄링 게이트를 먼저 정리한다(11.2절).
+   스케줄링 게이트를 먼저 정리한다(11.3절).
 2. **dev 활성화** — dev에서 비동기를 켜고 end-to-end 지연, `retry_exhausted` 비율,
    `user_edited` 건수를 측정한다. 3구간 timeout 예산의 미측정 구간(4절)도 이때 함께 채운다.
 3. **모바일 계약 확장** — `draft_status`를 응답에 추가한다. 원장 행이 없으면 항상 `ready`라
    앱은 단계 1·2에서도 안전하게 배포할 수 있다. 필드 추가 시점을 모바일에 미리 알린다.
-4. **prod 활성화** — 데이터 레지던시 정책(동기 설계 11절)과 dev 재측정이 끝난 뒤 판단한다.
+4. **prod 활성화** — 다음이 모두 충족된 뒤 판단한다.
+   - 데이터 레지던시 정책(동기 설계 11절)
+   - dev 재측정으로 timeout·lease·deadline 값 확정
+   - **worker의 `task.draft_generated` 소비 배포와 end-to-end projection 검증**(5.6절)
+   - **`draft_status`를 처리하는 앱 배포**
+
+마지막 항목은 계약 문제가 아니라 효과 문제다. `draft_status`를 모르는 기존 앱은 `generating`을
+인식하지 못해 재조회하지 않는다. 서버가 AI title을 반영해도 사용자는 화면을 다시 열기 전까지
+fallback을 본다. 비동기 생성을 켜도 사용자에게 도달하지 않으므로, 앱 지원 없이 prod를 켜는
+것은 의미가 없다. 이는 모바일과 합의할 사항이 아니라 활성화 순서의 전제다.
 
 ### 11.1 rollout·rollback과 혼재 배포
 
@@ -935,7 +1008,22 @@ embedding을 명시적으로 제외했고, 검색 read-model은 `momens-retrieva
 각 단계는 앞 단계로 되돌릴 수 있다. 설정을 끄면 convert는 동기 경로로 돌아가고 `tasks`는
 여전히 유효한 draft를 갖는다.
 
-### 11.2 스케줄링 게이트 정리
+### 11.2 설정 축
+
+11.1절의 동작(신규는 동기로 되돌리되 기존 `pending`은 계속 처리, 필요하면 scheduler만 정지)을
+구현하려면 설정이 하나로는 부족하다. 현재 `momens.minsu.task-draft.enabled` 하나는 generator의
+provider 호출 여부만 제어한다. 세 축으로 나눈다.
+
+| 축 | 의미 | 끄면 |
+| --- | --- | --- |
+| 적재 | 신규 convert가 원장을 적재하는가 | 신규는 동기 경로. 기존 원장은 그대로 |
+| drain | scheduler가 원장을 처리하는가 | 기존 원장이 멈춤. deadline 투영이 `ready`로 닫음 |
+| provider | 모델 호출 자체가 활성인가 | 기존 `disabled` 의미. 적재도 하지 않음 |
+
+이 분리가 없으면 rollback 시 `disabled`, `invalid_config`, `operationally_closed` 중 무엇으로
+기록해야 하는지가 흔들린다. 설정명과 조합별 동작 표는 구현 티켓에서 확정한다.
+
+### 11.3 스케줄링 게이트 정리
 
 현재 `@EnableScheduling`은 `notification` 모듈이 소유하고
 `momens.notification.push.enabled`에 걸려 있다. `NotificationSchedulingConfig`의 주석이
@@ -957,7 +1045,7 @@ local·test 기본값이 push 비활성이고, 위 단계 1·2가 push 설정에
 
 1. **원장·scheduler 기반** — `minsu` 생성 원장 테이블, convert 트랜잭션 적재 API, draft 확보
    진입점 분리(5.4절), claim token과 lease, 재시도 판정, 조건부 UPDATE 반영과 terminal 전이의
-   원자성, 원장 나이 상한, 스케줄링 게이트 정리(11.2절), 관측. 기본 비활성.
+   원자성, 원장 나이 상한, 스케줄링 게이트 정리(11.3절), 관측. 기본 비활성.
 
    이 티켓은 `minsu`를 **무상태 모듈에서 영속성 소유 모듈로 바꾼다.** 현재
    `modules/minsu/build.gradle`에는 JPA·DB 의존이 전혀 없다(validation, actuator, jackson,
@@ -994,17 +1082,18 @@ ADR-0015가 이 PR에 함께 들어가므로 별도 ADR 티켓은 두지 않는�
 
 ## 13. 미확정으로 남는 것
 
-- 비동기 경로의 timeout 값과 재시도 백오프·상한 — dev 재측정 후
-- lease 길이와 장시간 호출 중 lease 갱신 여부 — 구현 티켓 (8.2절)
-- 원장 나이 상한 값 — 구현 티켓 (8.6절)
+- attempt 상한·lease·`apply_cutoff_at`·`read_deadline_at` 값과 실행 동시성 — dev 재측정 후
+  (9.1절의 부등식은 유지)
+- 적재·drain·provider 세 설정 축의 이름과 조합별 동작 — 구현 티켓 (11.2절)
+- 장시간 호출 중 lease 갱신 여부 — 구현 티켓 (8.2절)
 - 원장 테이블의 세부 컬럼과 Flyway 파일명 — 구현 티켓
 - 입력 snapshot의 description·impact 상한과 보존·삭제 정책 — **prod 마이그레이션 전에 확정**
   (5.5절). 정책 없이 prod에 가면 `signals` 본문이 두 벌 남고, 지우려면 그때는 운영 데이터라
   삭제 마이그레이션이 필요하다. baseline을 원장이 따로 소유하므로(6절) snapshot만 비우는
   정리가 가능하다.
-- 반영 CAS deadline의 가드 밴드 margin — 구현 티켓 (8.6절)
+- 가드 밴드 margin — 구현 티켓 (8.6절)
 - worker의 `task.draft_generated` 소비와 배포 순서 — `momens-worker` 범위 (5.6절)
-- 스케줄링 게이트를 올릴 위치 — 구현 티켓 (11.2절)
+- 스케줄링 게이트를 올릴 위치 — 구현 티켓 (11.3절)
 - 기존 `generate` 시그니처의 존치 여부 — 구현 티켓 (5.4절)
 - scheduler 중단 시 남은 `pending`을 닫는 운영 절차 — 구현 티켓 (11.1절)
 - prod 데이터 레지던시 정책 — 동기 설계 11절에서 이월된 미결

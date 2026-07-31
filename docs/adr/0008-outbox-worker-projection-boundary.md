@@ -7,6 +7,11 @@
 > **2026-07-07 개정**: 아래 본문의 "worker가 projection/notification을 처리"에서 **notification 소유권은
 > [ADR-0009](0009-notification-consumer-ownership.md)로 이관**됐다(api-server가 `signal.created`를 소비해
 > 발송). projection 경계와 worker의 소비·재시도·DLQ 소유는 유효하다.
+>
+> **2026-08-01 개정**: 아래 "MVP 이벤트는 다음 4개다" 목록에
+> [ADR-0015](0015-minsu-async-task-draft-generation.md)가 `task.draft_generated`를 추가했다
+> (Minsu 비동기 draft 반영을 projection에 전달). projection 경계와 ID 중심 payload 원칙은
+> 그대로 유효하다.
 
 ## 맥락
 
