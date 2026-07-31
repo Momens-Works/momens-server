@@ -21,6 +21,19 @@
 
 이 문서는 설계만 확정한다. 구현은 후속 티켓으로 분리한다.
 
+### 이 문서가 다루는 것과 다루지 않는 것
+
+동시성 설계는 문서로 닫히지 않는다. 인터리빙은 계속 만들어낼 수 있고 산문으로는 검증할 수
+없다. 따라서 경계를 명시한다.
+
+- **이 문서가 정한다** — 상태와 전이, 어떤 조건이 correctness requirement인지, 무엇을 보장하고
+  무엇을 보장하지 않는지, 모듈 경계와 의존 방향, 공개 계약의 모양.
+- **구현 티켓이 정하고 테스트로 검증한다** — 컬럼·인덱스·SQL, 타임아웃과 lease·백오프·margin
+  값, 격리 수준 검증, 구체적 인터리빙 시나리오 테스트.
+
+문서에 없는 인터리빙이 발견되면 그것은 이 문서의 결함이 아니라 구현 티켓의 테스트 항목이다.
+7.2절과 8.6절이 정한 보장의 **범위**만 지켜지면 된다.
+
 ## 2. 범위
 
 ### 포함
@@ -195,13 +208,62 @@ task_id는 payload에만 담는데, 공개 `OutboxEventView`에는 payload 필�
 
 fail-closed를 택한 이유는 fail-open의 실패가 **보이지 않기** 때문이다. 원장이 없으면 `ready`로
 응답하므로 앱도 사용자도 서버도 무엇이 빠졌는지 알 수 없고, 원장 장애가 길어지면 그동안의
-task 전부가 조용히 풍부화되지 않는다. convert 실패는 최소한 드러나고 재시도가 replay로
-흡수된다.
+task 전부가 조용히 풍부화되지 않는다. convert 실패는 최소한 드러난다.
+
+실패 경로를 구분해 둔다. 원장 insert 실패는 전체가 롤백되므로 `signal_actions`도 남지 않고,
+다음 요청은 **신규 convert**로 처음부터 다시 처리된다. replay가 되는 것은 커밋은 됐는데 응답이
+유실된 경우다. 두 경우를 섞으면 장애 분석이 어긋난다.
 
 대신 원장 insert 실패율을 지표와 경보로 두고(9.3절), 구현 티켓의 검증 기준에 포함한다.
 
-기존 outbox event(`signal.converted_to_task`, `task.created`)는 그대로 둔다. worker의 projection
-소비 계약(ADR-0008)은 이 설계와 무관하며 바뀌지 않는다.
+기존 outbox event(`signal.converted_to_task`, `task.created`)는 그대로 둔다. 다만 **반영 시점에
+후속 event를 하나 추가해야 한다**(5.6절).
+
+### 5.6 반영 결과를 projection에 전달
+
+convert는 fallback 값으로 task를 만들면서 `task.created`를 발행한다. worker는 이 event를 소비해
+공유 DB에서 최신 상태를 hydrate하고 retrieval projection을 만든다(ADR-0008). 그런데 AI 결과는
+그 뒤 별도 트랜잭션에서 `tasks`에 반영된다.
+
+```text
+1. fallback task + task.created 커밋
+2. worker가 task.created 소비 → fallback title로 projection 생성
+3. minsu가 AI draft를 tasks에 반영
+4. 후속 event 없음 → projection은 fallback title로 영구 잔류
+```
+
+outbox consumer의 safety lag는 근거가 되지 못한다. LLM 호출과 재시도는 초 단위이고 queue
+delay까지 더하면 safety lag를 쉽게 넘는다. 오히려 정상적인 경우 worker가 **먼저** 소비한다.
+
+검색 read-model이 영원히 fallback title을 들고 있는 것은 사용자에게 보이는 결함이다. 따라서
+**반영 트랜잭션에서 후속 event를 함께 발행한다.**
+
+```text
+event_type    task.draft_generated
+aggregate     task
+aggregate_id  task_id
+payload       {} (ID 중심 원칙, worker가 DB에서 hydrate)
+```
+
+`task.updated` 같은 범용 이름 대신 1회성 의미가 분명한 이름을 쓴다. ADR-0010의
+`{aggregate}.{과거형 동사}` 규약을 따르고, 한 task당 최대 한 번만 발행되므로
+`event_type + aggregate_id` 멱등키와 잘 맞는다.
+
+이 event는 **생성이 성공해 `tasks`를 실제로 갱신했을 때만** 발행한다. `user_edited`·
+`task_gone`·`retry_exhausted`처럼 `tasks`가 바뀌지 않은 종료에서는 projection도 바뀔 것이
+없으므로 발행하지 않는다.
+
+발행은 8.3절의 반영 트랜잭션에 합류한다. 따라서 `minsu → outbox` 의존이 하나 더 생긴다.
+`OutboxAppender`는 호출자 트랜잭션 안에서 호출해야 하므로(트랜잭션 없이 호출하면 실패한다)
+이 배치가 계약과 맞는다.
+
+worker 쪽 대응(새 event_type 소비와 재-hydrate)과 배포 순서는 이 문서의 범위 밖이다.
+producer가 먼저 배포돼도 worker가 모르는 event_type을 무시하면 되고, worker가 소비를 시작하는
+시점부터 projection이 최종값으로 수렴한다. ADR-0008과 ADR-0010의 MVP event 목록에 이 event를
+추가하는 것은 ADR-0015가 함께 다룬다.
+
+worker가 `task.created`를 원장 terminal까지 대기·재시도하게 하는 대안은 채택하지 않았다.
+worker가 `minsu` 원장 스키마를 알아야 해서 결합이 훨씬 크다.
 
 `notification`의 lease·claim token·백오프·at-least-once 패턴은 여전히 그대로 따른다. 달라지는
 것은 작업이 원장에 들어오는 경로뿐이다.
@@ -250,8 +312,21 @@ provider를 호출한다. 비동기 활성 상태에서 고정 fallback을 얻�
 **활성 판정은 한 요청 안에서 한 번만 하고 두 진입점이 같은 값을 쓴다.** 판정이 갈리면 비활성으로
 LLM을 부르고 활성으로 적재해 중복 생성과 baseline 불일치가 생기거나, 활성으로 fallback만 확보하고
 비활성으로 적재하지 않아 **LLM을 한 번도 부르지 않은 채 `ready`** 가 된다. 후자는 조용한 품질
-손실이다. 현재 `MinsuConfigStatus`는 정적 설정이고 한 요청은 한 pod가 처리하므로 실제 위험은
-없지만, 판정을 동적 토글로 바꾸면 곧바로 문제가 되므로 계약으로 남긴다.
+손실이다.
+
+이 불변식은 계약 형태로 강제한다. draft 확보가 draft와 **불투명한 준비 결과**를 함께 반환하고,
+적재는 그것을 그대로 받는다.
+
+```text
+PreparedTaskDraft {
+  draft          // signal이 executor에 넘겨 tasks에 쓴다
+  asyncIntent    // minsu만 해석한다. 비활성이면 비어 있다
+}
+```
+
+`signal`은 boolean으로 분기하지 않고 준비 결과를 트랜잭션 안의 적재 API에 전달하기만 한다.
+판정 소유권, 판정 1회, 서로 다른 두 트랜잭션 경계가 모두 유지된다. 판정을 나중에 동적 토글로
+바꿔도 요청 내 일관성이 계약으로 남는다.
 
 ### 5.5 생성 입력의 시점
 
@@ -331,7 +406,8 @@ convert-to-task (동기)
 minsu scheduler (비동기)
   → pending 또는 lease 만료 원장 claim (claim token + lease commit)
   → 트랜잭션 밖에서 LlmClient.generate
-  → 성공: claim token 조건으로 tasks CAS 반영 + 원장 completed 를 한 트랜잭션에    (minsu → project)
+  → 성공: 한 트랜잭션에 tasks CAS 반영 + 원장 completed + task.draft_generated
+          (claim token·deadline 조건)                          (minsu → project, minsu → outbox)
   → retryable 실패: 백오프 후 재시도 예약
   → terminal 실패: 원장 completed + reason (tasks는 고정 fallback 유지)
 
@@ -339,12 +415,13 @@ task 상세 조회
   → project에서 task 조회 + minsu에서 draft_status 조회               (mobile → minsu)
 ```
 
-의존은 셋이고 그중 **둘이 새로 생긴다.**
+의존은 넷이고 그중 **셋이 새로 생긴다.**
 
 | 의존 | 용도 | 상태 |
 | --- | --- | --- |
-| `signal → minsu` | 원장 적재, draft 확보 | 오늘 이미 존재 |
+| `signal → minsu` | 원장 적재, draft 확보, 상태 조회 | 오늘 이미 존재 |
 | `minsu → project` | 생성 결과를 `tasks`에 반영 | **신규** |
+| `minsu → outbox` | 반영 시 `task.draft_generated` 발행 (5.6절) | **신규** |
 | `mobile → minsu` | task 상세의 `draft_status` 읽기 | **신규** |
 
 `mobile → minsu`가 필요한 이유는 7.2절이 task 상세 조회에도 `draft_status`를 노출하기
@@ -379,9 +456,31 @@ task 상세 조회
 
 | 원장 상태 | 의미 | API 노출 |
 | --- | --- | --- |
-| `pending` | 적재됨, 생성 대기 | `generating` |
+| `pending` | 적재됨 또는 재시도 대기. 생성 대기 | `generating` |
 | `processing` | claim 보유, 생성 중 | `generating` |
 | `completed` | 종료. 사유는 `completion_reason` | `ready` |
+
+전이는 다음으로 고정한다. 모든 전이는 claim token 조건으로 갱신한다.
+
+```text
+pending(next_attempt_at ≤ now)
+  → processing(new token, lease, attempt+1)      claim
+
+processing
+  → completed                                    성공 또는 terminal 실패
+  → pending(next_attempt_at, token/lease 비움)    retryable 실패
+
+processing(lease 만료)
+  → processing(new token, lease, attempt+1)      장애 복구 재claim
+```
+
+- **retryable 실패는 `pending`으로 되돌린다.** `processing`을 유지한 채 token만 비우면
+  "claim 보유 중"이라는 상태 의미와 어긋난다. 되돌릴 때 이전 token과 lease를 함께 정리한다.
+- **시도 횟수는 claim 시점에 증가한다.** 결과 기록 시점에 올리면 claim 후 프로세스가 죽은
+  시도가 세지 않아 무한 재시도가 된다.
+- **`lease`와 `next_attempt_at`은 별도 컬럼이다.** 전자는 실행 중 소유권 만료, 후자는 대기 중
+  재시도 시각으로 의미가 다르다. 한 컬럼으로 겸하면 lease 만료 회수와 백오프 대기를 구분할 수
+  없다.
 
 | `completion_reason` | 의미 | `tasks` 반영 |
 | --- | --- | --- |
@@ -448,8 +547,9 @@ task 상세 조회
 언제 어떤 간격으로 할지는 앱이 정한다. 서버가 보장하는 것은 다음 셋이다.
 
 - `draft_status`는 반드시 종료 상태(`ready`)에 도달한다(8.6절).
-- `ready`와 함께 반환한 `task.title`은 최종 값이다. `ready`를 보고 재조회를 멈춰도 갱신을
-  놓치지 않는다(7.3절).
+- **정상 종료에서는** `ready`와 함께 반환한 `task.title`이 최종 값이다. `ready`를 보고 재조회를
+  멈춰도 갱신을 놓치지 않는다(7.3절). 예외는 deadline 초과로 닫힌 경우 하나이며 그 창은
+  8.6절에 적는다.
 - `generating` 동안에도 `task.title`은 항상 유효한 draft다. 앱이 로딩을 표시하지 않고 그대로
   렌더해도 깨지지 않는다.
 
@@ -663,8 +763,21 @@ T+ε  반영 트랜잭션 커밋 → tasks에 AI title
 ```
 
 margin은 반영 트랜잭션이 조건 평가부터 커밋까지 걸리는 시간보다 충분히 크게 잡는다. 그러면 위
-인터리빙은 반영 트랜잭션이 margin보다 오래 열려 있어야 성립하므로 사실상 발생하지 않는다.
-절대적 불가능이 아니라 창을 실용적으로 닫는 것이며, margin 값은 구현 티켓에서 정한다.
+인터리빙은 반영 트랜잭션이 margin보다 오래 열려 있어야 성립한다. margin 값은 구현 티켓에서
+정한다.
+
+**이것은 창을 좁히는 장치이지 불변식이 아니다.** PostgreSQL의 `now()`는 문장 평가 시각이 아니라
+**트랜잭션 시작 시각**으로 고정되므로, cutoff 이전에 시작한 반영 트랜잭션이 lock 대기나 GC
+pause로 지연되면 실제 projection deadline이 지난 뒤에도 조건이 참인 채 커밋할 수 있다.
+`clock_timestamp()`로 바꿔도 조건 평가와 커밋 사이의 창 자체는 남는다.
+
+따라서 7.2절의 title 최종성 보장은 **정상 종료에 한정**한다. deadline 초과로 닫힌 뒤 뒤늦은
+반영이 커밋되면 `ready`로 알린 title이 한 번 바뀔 수 있다. 사용자에게는 "다음 상세 진입에서
+제목이 달라 보임" 수준이고, deadline 발동 자체가 경보 대상인 이상 상황에서만 나타난다.
+
+원장 row lock으로 deadline 종료와 성공 반영을 직렬화하면 절대 보장으로 올릴 수 있다. 채택하지
+않았다. 조회 경로가 쓰기 lock을 잡아야 하고 lock 순서 규약이 추가되는데, 얻는 것은 이미 경보
+상태인 경우의 title 한 번 변경을 막는 것뿐이다. 비용이 이득보다 크다.
 
 원장의 물리적 정리(상태를 `completed`로 바꾸고 snapshot을 비우는 것)는 scheduler가 나중에
 해도 된다. public 계약은 읽기 투영으로 이미 닫혀 있다.
@@ -859,6 +972,12 @@ local·test 기본값이 push 비활성이고, 위 단계 1·2가 push 설정에
    - `REQUIRES_NEW`, 별도 transaction manager, 명시적 조기 commit은 금지한다.
    - CAS가 0건이거나 원장의 token·deadline 조건 갱신이 0건이면 예외 없이 커밋하지 않고 전체를
      롤백한다. task만 바뀌고 원장이 남는 상태를 만들지 않는다.
+   - 반영에 성공하면 같은 트랜잭션에서 `task.draft_generated`를 append한다(5.6절).
+
+   조건부 UPDATE를 native·JPQL bulk update로 구현하면 JPA Auditing이 동작하지 않아
+   `tasks.updated_at`이 갱신되지 않는다. `docs/rules/persistence.md`가 수정 테이블의
+   `updated_at`을 Auditing으로 관리하도록 정하므로, CAS SQL에서 `updated_at`을 DB 시각으로 함께
+   갱신하거나 row lock 후 entity mutation으로 구현한다.
 
 2. **모바일 계약 확장** — `draft_status` 응답 필드와 `mobile → minsu` 읽기 의존, 7.3절의 읽기
    순서 계약. API 명세를 갱신하고 필드 추가를 모바일에 알린다. 앱 decoder가 unknown field를
@@ -884,6 +1003,7 @@ ADR-0015가 이 PR에 함께 들어가므로 별도 ADR 티켓은 두지 않는�
   삭제 마이그레이션이 필요하다. baseline을 원장이 따로 소유하므로(6절) snapshot만 비우는
   정리가 가능하다.
 - 반영 CAS deadline의 가드 밴드 margin — 구현 티켓 (8.6절)
+- worker의 `task.draft_generated` 소비와 배포 순서 — `momens-worker` 범위 (5.6절)
 - 스케줄링 게이트를 올릴 위치 — 구현 티켓 (11.2절)
 - 기존 `generate` 시그니처의 존치 여부 — 구현 티켓 (5.4절)
 - scheduler 중단 시 남은 `pending`을 닫는 운영 절차 — 구현 티켓 (11.1절)
