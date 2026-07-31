@@ -8,6 +8,18 @@
 경계, 벤더 중립 `LlmClient` port, Google adapter, 결과 검증과 고정 fallback 정책은 그대로
 유지하고, **draft 생성이 언제 어디서 일어나는가**만 바꾼다.
 
+[ADR-0011](0011-signal-evidence-and-task-draft-contract.md)은 **부분적으로** supersede 한다.
+
+| ADR-0011 | 이 ADR |
+| --- | --- |
+| draft는 convert 시점에 생성한다 | convert가 생성을 **시작**하고 실제 모델 생성은 커밋 이후다. 사용자가 convert를 누른 시점의 입력을 쓰므로 근거의 시점은 그대로다 |
+| draft를 저장하지 않으므로 schema 추가는 `signal_evidence`에 한정된다 | `minsu`가 생성 원장을 소유한다. 입력 snapshot과 반영 baseline을 저장한다 |
+| outbox 경계와 payload는 ADR-0008·0010 변경이 필요하지 않다 | `task.draft_generated`를 추가한다 |
+
+ADR-0011의 나머지는 그대로 유효하다. `signal_evidence`의 대상·변화·영향 생산 계약, 세 값의
+30자 제한, convert가 body 없는 원탭 action이라는 점, draft의 role·priority 허용값, task draft를
+모바일 상세에 노출하지 않는다는 결정은 바뀌지 않는다.
+
 ## 맥락
 
 ADR-0014는 convert-to-task 요청 경로에서 동기로 draft를 생성하기로 했다. 당시에는 실제 지연을
@@ -62,16 +74,34 @@ exactly-once로 만들지 않는다.
 원장 적재는 fail-closed다. 적재가 실패하면 convert 전체가 롤백된다. fail-open은 실패가 조용해
 그동안의 task가 풍부화되지 않은 것을 아무도 알 수 없다.
 
-ADR-0008의 outbox·worker projection 경계는 이 결정과 무관하며 바뀌지 않는다. 기존 event는
-그대로 발행한다.
+### projection 전달
+
+ADR-0008의 outbox·worker projection 경계는 유지한다. api-server는 여전히 projection을 직접 쓰지
+않고 outbox row만 남긴다. 다만 **event를 하나 추가한다.**
+
+convert는 fallback 값으로 task를 만들며 `task.created`를 발행하고, worker는 이를 소비해
+projection을 만든다. AI 결과는 그 뒤 별도 트랜잭션에서 반영되므로 후속 event가 없으면
+projection이 fallback title로 영구 잔류한다. safety lag는 근거가 되지 못한다. LLM 호출과
+재시도는 초 단위라 정상적인 경우 worker가 먼저 소비한다.
+
+따라서 반영 트랜잭션에서 `task.draft_generated`(aggregate `task`, payload 없음)를 함께
+발행한다. ADR-0010의 `{aggregate}.{과거형 동사}` 규약을 따르고 한 task당 최대 한 번만
+발행되므로 `event_type + aggregate_id` 멱등키와 맞는다. `tasks`를 실제로 갱신했을 때만 발행하며,
+사용자 편집·삭제·재시도 소진처럼 `tasks`가 그대로인 종료에서는 발행하지 않는다.
+
+ADR-0008의 MVP event 목록에 이 event가 추가된다. `minsu → outbox` 의존이 함께 생긴다.
+
+worker가 `task.created`를 원장 terminal까지 대기·재시도하는 대안은 채택하지 않았다. worker가
+`minsu` 원장 스키마를 알아야 해 결합이 훨씬 크다.
 
 ### 모듈 경계
 
 ADR-0014와 동기 상세 설계가 함께 전제한 "`minsu`는 `signal`, `project`, `mobile`에 의존하지
 않는다"를 다음으로 바꾼다.
 
-- `signal → minsu` — 기존. draft 확보와 원장 적재
+- `signal → minsu` — 기존. draft 확보, 원장 적재, 상태 조회
 - `minsu → project` — **신규.** 생성 결과를 `tasks`에 반영. 참조 범위는 draft 반영 하나로 제한
+- `minsu → outbox` — **신규.** 반영 시 `task.draft_generated` 발행
 - `mobile → minsu` — **신규.** task 상세의 생성 상태 조회
 
 `project → minsu`는 `minsu → project`와 순환이므로 금지한다. 상태를 조합하는 것은 표면 모듈인

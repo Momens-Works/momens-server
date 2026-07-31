@@ -20,6 +20,11 @@ Minsu suggestion과 task draft는 worker 산출물이 아니라 민수 산출물
 계획이며, MVP 시점에는 아직 구현되지 않는다. worker 역시 준비되지 않은 MVP 환경에서도 모바일·서버
 계약은 worker/민수 연결 여부에 따라 달라지지 않아야 한다.
 
+> **2026-08-01**: task draft의 **생성 시점·저장·outbox** 관련 결정은
+> [ADR-0015](0015-minsu-async-task-draft-generation.md)가 대체했다(커밋 이후 비동기 생성,
+> `minsu` 생성 원장 저장, `task.draft_generated` 추가). evidence 생산 계약과 모바일 응답
+> 계약은 그대로 유효하다.
+
 ## 결정
 
 `signal_evidence`는 Signal과 source의 관계에서 생성된 의미 정보인 `대상`, `변화`, `영향`을 소유한다.
