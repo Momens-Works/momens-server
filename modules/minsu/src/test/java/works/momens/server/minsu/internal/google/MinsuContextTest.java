@@ -96,8 +96,11 @@ class MinsuContextTest {
         Arguments.of("momens.minsu.llm.google.location", "asia-northeast3"));
   }
 
+  // 모듈의 빈은 모두 internal 하위에 있다. 루트 패키지까지 스캔하면 슬라이스 테스트용 부트스트랩
+  // (MinsuModuleTestApplication)이 함께 잡혀 @EnableAutoConfiguration이 켜지고, DataSource 없이 도는
+  // 이 컨텍스트에서 Flyway·JPA 자동 구성이 실패한다(MOM-0817에서 minsu가 영속성을 갖게 된 뒤).
   @Configuration(proxyBeanMethods = false)
-  @ComponentScan("works.momens.server.minsu")
+  @ComponentScan("works.momens.server.minsu.internal")
   static class TestApplication {
 
     @Bean
