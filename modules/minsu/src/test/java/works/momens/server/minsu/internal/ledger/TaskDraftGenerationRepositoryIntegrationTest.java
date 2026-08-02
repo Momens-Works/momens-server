@@ -117,6 +117,30 @@ class TaskDraftGenerationRepositoryIntegrationTest extends AbstractPostgresInteg
   }
 
   @Test
+  @DisplayName("evidence를 jsonb 배열로 저장한다")
+  void storesEvidenceAsJsonbArray() {
+    UUID taskId = UUID.randomUUID();
+    repository.save(
+        generation(taskId)
+            .signalEvidence("[{\"target\":\"결제\",\"change\":\"실패율 3%\",\"impact\":\"전환 하락\"}]")
+            .build());
+    entityManager.flush();
+
+    // JSON 문자열이 한 번 더 직렬화되면 jsonb에 배열이 아니라 escape된 string 스칼라가 들어간다.
+    // Java 쪽 왕복만 보면 원문이 그대로 돌아와 구분되지 않으므로 DB 표현을 직접 확인한다.
+    Object type =
+        entityManager
+            .getEntityManager()
+            .createNativeQuery(
+                "SELECT jsonb_typeof(signal_evidence) FROM minsu_task_draft_generations"
+                    + " WHERE task_id = :taskId")
+            .setParameter("taskId", taskId)
+            .getSingleResult();
+
+    assertThat(type).isEqualTo("array");
+  }
+
+  @Test
   @DisplayName("필수 snapshot 필드가 비면 거부한다")
   void rejectsMissingRequiredSnapshot() {
     UUID id = persistPending();
