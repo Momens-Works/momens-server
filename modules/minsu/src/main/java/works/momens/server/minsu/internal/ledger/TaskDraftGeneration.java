@@ -37,13 +37,13 @@ class TaskDraftGeneration extends BaseEntity {
   @Column(name = "task_id", nullable = false, columnDefinition = "uuid")
   private UUID taskId;
 
-  @Column(name = "signal_title")
+  @Column(name = "signal_title", nullable = false)
   private String signalTitle;
 
-  @Column(name = "signal_type")
+  @Column(name = "signal_type", nullable = false)
   private String signalType;
 
-  @Column(name = "signal_description")
+  @Column(name = "signal_description", nullable = false)
   private String signalDescription;
 
   @Column(name = "signal_impact")

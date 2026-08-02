@@ -36,16 +36,11 @@ class TaskDraftGenerationRepositoryIntegrationTest extends AbstractPostgresInteg
   @DisplayName("적재한 snapshot과 baseline을 그대로 조회한다")
   void savesAndReadsBack() {
     UUID taskId = UUID.randomUUID();
-    Instant deadline = Instant.now().plus(10, ChronoUnit.MINUTES);
 
     repository.save(
         generation(taskId)
-            .signalTitle("결제 실패율이 올라감")
-            .signalDescription("2026-08-01부터 카드 결제 실패가 늘었다")
             .signalImpact("결제 전환율 하락")
             .signalEvidence("[{\"target\":\"결제\",\"change\":\"실패율 3%\",\"impact\":\"전환 하락\"}]")
-            .readDeadlineAt(deadline)
-            .applyCutoffAt(deadline)
             .build());
     entityManager.flush();
     entityManager.clear();
@@ -54,6 +49,8 @@ class TaskDraftGenerationRepositoryIntegrationTest extends AbstractPostgresInteg
 
     assertThat(saved.getWorkspaceId()).isEqualTo(WORKSPACE_ID);
     assertThat(saved.getSignalTitle()).isEqualTo("결제 실패율이 올라감");
+    assertThat(saved.getSignalType()).isEqualTo("risk");
+    assertThat(saved.getSignalDescription()).isEqualTo("2026-08-01부터 카드 결제 실패가 늘었다");
     assertThat(saved.getSignalImpact()).isEqualTo("결제 전환율 하락");
     assertThat(saved.getSignalEvidence()).contains("\"target\"").contains("결제");
     assertThat(saved.getBaselineTitle()).isEqualTo("결제 실패율 대응");
@@ -106,6 +103,42 @@ class TaskDraftGenerationRepositoryIntegrationTest extends AbstractPostgresInteg
         .hasMessageContaining("minsu_task_draft_generations_claim_check");
   }
 
+  @Test
+  @DisplayName("claim token과 lease 중 하나만 남은 행을 거부한다")
+  void rejectsPartiallyClearedClaim() {
+    UUID id = persistPending();
+
+    assertThatThrownBy(() -> update(id, "claim_token = gen_random_uuid()"))
+        .rootCause()
+        .hasMessageContaining("minsu_task_draft_generations_claim_check");
+    assertThatThrownBy(() -> update(id, "lease_expires_at = NOW()"))
+        .rootCause()
+        .hasMessageContaining("minsu_task_draft_generations_claim_check");
+  }
+
+  @Test
+  @DisplayName("필수 snapshot 필드가 비면 거부한다")
+  void rejectsMissingRequiredSnapshot() {
+    UUID id = persistPending();
+
+    assertThatThrownBy(() -> update(id, "signal_description = NULL"))
+        .rootCause()
+        .hasMessageContaining("signal_description");
+  }
+
+  @Test
+  @DisplayName("가드 밴드가 없는 deadline 조합을 거부한다")
+  void rejectsMissingGuardBand() {
+    UUID id = persistPending();
+
+    assertThatThrownBy(() -> update(id, "apply_cutoff_at = read_deadline_at"))
+        .rootCause()
+        .hasMessageContaining("minsu_task_draft_generations_deadline_check");
+    assertThatThrownBy(() -> update(id, "apply_cutoff_at = read_deadline_at + INTERVAL '1 second'"))
+        .rootCause()
+        .hasMessageContaining("minsu_task_draft_generations_deadline_check");
+  }
+
   private UUID persistPending() {
     TaskDraftGeneration saved = repository.save(generation(UUID.randomUUID()).build());
     entityManager.flush();
@@ -123,17 +156,20 @@ class TaskDraftGenerationRepositoryIntegrationTest extends AbstractPostgresInteg
   }
 
   private TaskDraftGeneration.TaskDraftGenerationBuilder generation(UUID taskId) {
-    Instant deadline = Instant.now().plus(10, ChronoUnit.MINUTES);
+    Instant readDeadline = Instant.now().plus(10, ChronoUnit.MINUTES);
     return TaskDraftGeneration.builder()
         .workspaceId(WORKSPACE_ID)
         .taskId(taskId)
+        .signalTitle("결제 실패율이 올라감")
         .signalType("risk")
+        .signalDescription("2026-08-01부터 카드 결제 실패가 늘었다")
         .signalEvidence("[]")
         .baselineTitle("결제 실패율 대응")
         .baselineRole("backend")
         .baselinePriority("medium")
-        .readDeadlineAt(deadline)
-        .applyCutoffAt(deadline)
+        // 가드 밴드(8.6절). 두 값을 같게 두면 margin이 0인 행이라 제약이 막는다.
+        .readDeadlineAt(readDeadline)
+        .applyCutoffAt(readDeadline.minus(1, ChronoUnit.MINUTES))
         .nextAttemptAt(Instant.now());
   }
 }
