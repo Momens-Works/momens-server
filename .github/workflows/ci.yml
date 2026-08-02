@@ -46,12 +46,25 @@ jobs:
       - name: Check and test
         run: ./gradlew spotlessCheck verifyDockerModuleBuildScripts test
 
+      # 모듈별 리포트를 각각 업로드하면 단일 경로만 매칭될 때 아티팩트 루트로 평탄화돼 어느
+      # 모듈이 실패했는지 알 수 없습니다. 그래서 모듈 이름을 유지한 채 한곳에 모아 올립니다.
+      - name: Collect test reports
+        if: failure()
+        run: |
+          for report in app common modules/*; do
+            [ -d "${report}/build/reports/tests/test" ] || continue
+            mkdir -p "build/test-reports/${report}"
+            cp -R "${report}/build/reports/tests/test/." "build/test-reports/${report}/"
+          done
+
       - name: Upload test report
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: test-report
-          path: app/build/reports/tests/test/
+          path: build/test-reports/
+          # spotlessCheck 등 테스트 이전 단계에서 실패하면 리포트가 없으므로 경고도 남기지 않습니다.
+          if-no-files-found: ignore
           retention-days: 7
 
       - name: Build boot jar
