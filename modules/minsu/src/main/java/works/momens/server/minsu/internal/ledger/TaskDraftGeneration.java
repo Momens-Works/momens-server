@@ -56,7 +56,7 @@ class TaskDraftGeneration extends BaseEntity {
   @Column(name = "baseline_title", nullable = false)
   private String baselineTitle;
 
-  @Column(name = "baseline_role")
+  @Column(name = "baseline_role", nullable = false)
   private String baselineRole;
 
   @Column(name = "baseline_priority", nullable = false)

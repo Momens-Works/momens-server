@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Primary;
 import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
@@ -96,11 +97,18 @@ class MinsuContextTest {
         Arguments.of("momens.minsu.llm.google.location", "asia-northeast3"));
   }
 
-  // 모듈의 빈은 모두 internal 하위에 있다. 루트 패키지까지 스캔하면 슬라이스 테스트용 부트스트랩
-  // (MinsuModuleTestApplication)이 함께 잡혀 @EnableAutoConfiguration이 켜지고, DataSource 없이 도는
-  // 이 컨텍스트에서 Flyway·JPA 자동 구성이 실패한다(MOM-0817에서 minsu가 영속성을 갖게 된 뒤).
+  // 슬라이스 테스트용 부트스트랩(MinsuModuleTestApplication)만 스캔에서 제외한다. 그 클래스가 잡히면
+  // @EnableAutoConfiguration이 켜져 DataSource 없이 도는 이 컨텍스트에서 Flyway·JPA 자동 구성이
+  // 실패한다(MOM-0817에서 minsu가 영속성을 갖게 된 뒤). 스캔 범위를 internal로 좁히는 대신 원인만
+  // 빼는 이유는, 루트 패키지에 나중에 빈이 생겨도 이 테스트가 조용히 놓치지 않게 하기 위해서다.
+  // 부트스트랩이 package-private이라 타입 대신 이름으로 지정한다.
   @Configuration(proxyBeanMethods = false)
-  @ComponentScan("works.momens.server.minsu.internal")
+  @ComponentScan(
+      basePackages = "works.momens.server.minsu",
+      excludeFilters =
+          @ComponentScan.Filter(
+              type = FilterType.REGEX,
+              pattern = "works\\.momens\\.server\\.minsu\\.MinsuModuleTestApplication"))
   static class TestApplication {
 
     @Bean

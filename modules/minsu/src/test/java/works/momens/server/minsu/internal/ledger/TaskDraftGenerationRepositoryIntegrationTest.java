@@ -40,11 +40,19 @@ class TaskDraftGenerationRepositoryIntegrationTest extends AbstractPostgresInteg
   @DisplayName("적재한 snapshot과 baseline을 그대로 조회한다")
   void savesAndReadsBack() {
     UUID taskId = UUID.randomUUID();
+    // timestamptz는 마이크로초까지 저장하므로 왕복 비교를 위해 같은 정밀도로 맞춘다.
+    Instant readDeadline =
+        Instant.now().plus(10, ChronoUnit.MINUTES).truncatedTo(ChronoUnit.MICROS);
+    Instant applyCutoff = readDeadline.minus(1, ChronoUnit.MINUTES);
+    Instant nextAttempt = readDeadline.minus(10, ChronoUnit.MINUTES);
 
     repository.save(
         generation(taskId)
             .signalImpact("결제 전환율 하락")
             .signalEvidence("[{\"target\":\"결제\",\"change\":\"실패율 3%\",\"impact\":\"전환 하락\"}]")
+            .readDeadlineAt(readDeadline)
+            .applyCutoffAt(applyCutoff)
+            .nextAttemptAt(nextAttempt)
             .build());
     entityManager.flush();
     entityManager.clear();
@@ -60,6 +68,10 @@ class TaskDraftGenerationRepositoryIntegrationTest extends AbstractPostgresInteg
     assertThat(saved.getBaselineTitle()).isEqualTo("결제 실패율 대응");
     assertThat(saved.getBaselineRole()).isEqualTo("backend");
     assertThat(saved.getBaselinePriority()).isEqualTo("medium");
+    // 8.6절의 세 시각. timestamptz ↔ Instant 왕복이 깨지면 deadline 판정이 통째로 어긋난다.
+    assertThat(saved.getReadDeadlineAt()).isEqualTo(readDeadline);
+    assertThat(saved.getApplyCutoffAt()).isEqualTo(applyCutoff);
+    assertThat(saved.getNextAttemptAt()).isEqualTo(nextAttempt);
     assertThat(saved.getStatus()).isEqualTo("pending");
     assertThat(saved.getCompletionReason()).isNull();
     assertThat(saved.getAttemptCount()).isZero();

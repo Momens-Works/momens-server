@@ -37,10 +37,19 @@ CREATE TABLE minsu_task_draft_generations (
     -- 반영 baseline(6절). convert가 tasks에 실제로 쓴 값을 복사해 둔다. 반영 시점에 고정 fallback
     -- 규칙을 다시 계산해 비교하지 않는다. 재계산 방식은 규칙이 바뀌는 순간 진행 중이던 작업 전부가
     -- CAS 불일치가 되어 편집이 없는데도 user_edited로 오분류된다.
-    -- baseline은 worker 산출물인 snapshot과 달리 서버가 tasks에 직접 쓴 값이므로 tasks의 허용값을
-    -- 미러한다(V20260706120000, V20260707150000). 오염되면 반영 CAS가 조용히 무매칭으로 넘어간다.
+    -- baseline은 worker 산출물인 snapshot과 달리 서버가 tasks에 직접 쓴 값이다.
+    --
+    -- role이 NOT NULL인 이유는 반영 CAS가 동등 비교이기 때문이다(8.1절). baseline_role이 NULL이면
+    -- `role = NULL`이 항상 거짓이라 사용자가 편집하지 않았는데도 user_edited로 오분류된다.
+    -- tasks.role이 nullable인 것(V20260715090000)은 웹 생성 태스크 사정이고 convert 경로와 무관하다.
+    -- 비동기 적재 시 baseline은 convert가 쓴 고정 fallback이므로 오늘 값은 'pm'·'medium'뿐이다
+    -- (DefaultSignalTaskDraftGenerator.fallback).
+    --
+    -- 아래 CHECK는 지금 막을 대상이 없다. 값이 고정이기 때문이다. 나중에 baseline이 다양해질 때
+    -- tasks 계약(V20260706120000, V20260707150000) 밖의 값이 들어오는 것을 막으려고 둔다. 오염되면
+    -- 반영 CAS가 예외 없이 무매칭으로 넘어가 조용히 user_edited가 된다.
     baseline_title TEXT NOT NULL,
-    baseline_role TEXT CHECK (baseline_role IN ('pm', 'design', 'backend', 'frontend')),
+    baseline_role TEXT NOT NULL CHECK (baseline_role IN ('pm', 'design', 'backend', 'frontend')),
     baseline_priority TEXT NOT NULL
         CHECK (baseline_priority IN ('low', 'medium', 'high', 'urgent')),
 
