@@ -1059,21 +1059,33 @@ provider 호출 여부만 제어한다. 세 축으로 나눈다.
 비활성 pod는 claim하지 않고 활성 pod가 집어가며, 아무도 집지 않으면 deadline이 닫는다. 어느
 경로든 `tasks`는 유효한 draft를 유지하고 앱은 `generating`에 갇히지 않는다.
 
-### 11.3 스케줄링 게이트 정리
+### 11.3 스케줄링 게이트 정리 (MOM-0816에서 완료)
 
-현재 `@EnableScheduling`은 `notification` 모듈이 소유하고
-`momens.notification.push.enabled`에 걸려 있다. `NotificationSchedulingConfig`의 주석이
-"다른 모듈에는 아직 `@Scheduled` 빈이 없어 이 모듈이 게이트를 소유한다"고 그 한시성을
-명시한다.
+이 절의 초안은 `@EnableScheduling`을 `notification` 모듈이
+`momens.notification.push.enabled`로 게이트하므로 **`minsu` scheduler가 push 꺼진 환경에서
+조용히 동작하지 않는다**고 적었다. MOM-0816 구현 중 확인한 결과 **이 전제는 사실이 아니었다.**
+`spring-modulith-starter-core`의 `MomentsAutoConfiguration`이 클래스 레벨
+`@EnableScheduling`을 조건 없이 달고 있어, 스케줄링 인프라는 push 설정과 무관하게 이미 항상
+켜져 있었다. `notification`의 조건부 설정은 스케줄링을 실제로 끄지 못했다.
 
-이 상태로 `minsu` scheduler를 추가하면 **push가 꺼진 환경에서 조용히 동작하지 않는다.**
-local·test 기본값이 push 비활성이고, 위 단계 1·2가 push 설정에 우연히 종속된다. 실패가
-드러나지 않고 원장만 쌓이므로 특히 나쁘다.
+그럼에도 게이트는 옮겼다. 다른 모듈 스케줄러의 동작 보장이 **무관한 라이브러리 auto-config의
+부수효과에 얹혀 있었기 때문이다.** 의존성이 빠지거나 그쪽에 조건이 붙으면 소리 없이 사라지고,
+그때 실패는 원장만 쌓이는 형태로 나타난다.
 
-`minsu`가 두 번째 `@Scheduled` 소유자가 되는 시점이므로 이때 게이트를 다시 정한다. 스케줄링
-인프라 활성화를 `app` 또는 `common`으로 올리고 모듈별 실행 여부는 각자의 설정으로 판정하는
-방향이 자연스럽다. 구체적 배치는 구현 티켓에서 정하되, **`minsu` scheduler가 push 설정과
-무관하게 동작한다**는 것이 요구사항이다.
+확정된 배치는 다음과 같다.
+
+- 스케줄링 인프라 활성화는 조립 모듈 `app`이 소유하고 항상 켠다
+  (`works.momens.server.support.scheduling.SchedulingConfig`). `common`은 기능 모듈이 의존해야
+  하는 공유 코드용이고, 활성화는 조립 결정이므로 `app`에 둔다.
+- 모듈별 실행 여부는 각 모듈이 자신의 설정으로 판정한다. `notification`은
+  `NotificationPushScheduler`의 `@ConditionalOnProperty`로 push 비활성 시 빈 자체가 등록되지
+  않는다.
+- 따라서 `minsu` scheduler는 push 설정과 무관하게 자신의 설정 축(11.2절)만으로 동작 여부가
+  정해진다.
+
+주의: 기본 `TaskScheduler`는 풀 크기가 1이라 모든 `@Scheduled`가 한 스레드에서 직렬 실행된다.
+`minsu` drain은 LLM 호출로 길어질 수 있어 1초 주기 push 폴링을 막을 수 있다. 원장·scheduler
+구현 티켓에서 `spring.task.scheduling.pool.size`를 함께 정한다.
 
 ## 12. 후속 구현 티켓
 
@@ -1081,7 +1093,8 @@ local·test 기본값이 push 비활성이고, 위 단계 1·2가 push 설정에
 
 1. **원장·scheduler 기반** — `minsu` 생성 원장 테이블, convert 트랜잭션 적재 API, draft 확보
    진입점 분리(5.5절), claim token과 lease, 재시도 판정, 조건부 UPDATE 반영과 terminal 전이의
-   원자성, 원장 나이 상한, 스케줄링 게이트 정리(11.3절), 관측. 기본 비활성.
+   원자성, 원장 나이 상한, scheduler 풀 크기(11.3절), 관측. 기본 비활성. 스케줄링 게이트
+   정리는 MOM-0816으로 분리해 완료했다.
 
    이 티켓은 `minsu`를 **무상태 모듈에서 영속성 소유 모듈로 바꾼다.** 현재
    `modules/minsu/build.gradle`에는 JPA·DB 의존이 전혀 없다(validation, actuator, jackson,
@@ -1131,7 +1144,7 @@ ADR-0015가 이 PR에 함께 들어가므로 별도 ADR 티켓은 두지 않는�
   삭제 마이그레이션이 필요하다. baseline을 원장이 따로 소유하므로(6절) snapshot만 비우는
   정리가 가능하다.
 - 가드 밴드 margin — 구현 티켓 (8.6절)
-- 스케줄링 게이트를 올릴 위치 — 구현 티켓 (11.3절)
+- scheduler 스레드 풀 크기 — 원장·scheduler 구현 티켓 (11.3절)
 - 기존 `generate` 시그니처의 존치 여부 — 구현 티켓 (5.5절)
 - scheduler 중단 시 남은 `pending`을 닫는 운영 절차 — 구현 티켓 (11.1절)
 - prod 데이터 레지던시 정책 — 동기 설계 11절에서 이월된 미결
