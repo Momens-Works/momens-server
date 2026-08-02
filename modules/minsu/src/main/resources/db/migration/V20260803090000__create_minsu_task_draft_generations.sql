@@ -20,9 +20,11 @@ CREATE TABLE minsu_task_draft_generations (
     -- 않는다: 상한을 두면 저장본이 convert 시점 입력과 달라지고, 길이 계약의 주체는 생산자인
     -- worker다(signal_evidence 30자 계약과 같은 이유). 복제량은 terminal 이후 snapshot을 비우는
     -- 보존 정책이 닫으며 그 정책은 MOM-0825에서 확정한다.
-    signal_title TEXT,
-    signal_type TEXT,
-    signal_description TEXT,
+    -- title·type·description은 signals에서 NOT NULL이고 원장은 그 입력을 그대로 보존하므로 여기서도
+    -- NOT NULL이다. impact만 원본 계약대로 nullable이다.
+    signal_title TEXT NOT NULL,
+    signal_type TEXT NOT NULL,
+    signal_description TEXT NOT NULL,
     signal_impact TEXT,
     signal_evidence JSONB NOT NULL,
 
@@ -33,7 +35,8 @@ CREATE TABLE minsu_task_draft_generations (
     baseline_role TEXT,
     baseline_priority TEXT NOT NULL,
 
-    -- 읽기 투영이 generating을 닫는 시각과 tasks 반영을 포기하는 시각(8.6절).
+    -- 읽기 투영이 generating을 닫는 시각과 tasks 반영을 포기하는 시각(8.6절). 두 값은 적재 시점에
+    -- 계산해 저장한다. 조회할 때마다 현재 설정으로 다시 계산하면 설정 변경이 과거 작업의 상태를 뒤집는다.
     read_deadline_at TIMESTAMPTZ NOT NULL,
     apply_cutoff_at TIMESTAMPTZ NOT NULL,
 
@@ -60,9 +63,19 @@ CREATE TABLE minsu_task_draft_generations (
     CONSTRAINT minsu_task_draft_generations_reason_check
         CHECK ((status = 'completed') = (completion_reason IS NOT NULL)),
     -- claim 보유는 processing에서만 성립한다. retryable 실패로 pending에 되돌릴 때 이전 token과
-    -- lease를 함께 정리한다는 7.1절 규칙을 제약으로 강제한다.
+    -- lease를 함께 정리한다는 7.1절 규칙을 제약으로 강제한다. 두 필드를 각각 상태와 묶어야 한다.
+    -- 한 조건에 AND로 묶으면 (pending, token 있음, lease 없음)처럼 한쪽만 남은 행이 양변 false로
+    -- 통과한다.
     CONSTRAINT minsu_task_draft_generations_claim_check
-        CHECK ((status = 'processing') = (claim_token IS NOT NULL AND lease_expires_at IS NOT NULL))
+        CHECK ((status = 'processing') = (claim_token IS NOT NULL)
+           AND (status = 'processing') = (lease_expires_at IS NOT NULL)),
+
+    -- 가드 밴드(8.6절). apply_cutoff_at = 적재 + 상한 - margin, read_deadline_at = 적재 + 상한이므로
+    -- 순서가 고정된다. margin이 0이면 반영 CAS의 조건 평가와 읽기 투영이 같은 경계에서 갈려, 앱이
+    -- ready + fallback title을 받은 뒤 title이 바뀌는 인터리빙이 열린다. margin 값 자체는 후속
+    -- 티켓에서 정하지만 margin > 0은 값과 무관하게 성립해야 한다.
+    CONSTRAINT minsu_task_draft_generations_deadline_check
+        CHECK (apply_cutoff_at < read_deadline_at)
 );
 
 -- scheduler가 재시도 시각이 지난 pending 행을 주기 스캔한다.
