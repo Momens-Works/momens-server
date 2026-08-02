@@ -6,7 +6,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableConfigurationProperties({MinsuTaskDraftProperties.class, MinsuLlmProperties.class})
+@EnableConfigurationProperties({
+  MinsuTaskDraftProperties.class,
+  MinsuLlmProperties.class,
+  MinsuAsyncProperties.class
+})
 class MinsuConfiguration {
 
   @Bean

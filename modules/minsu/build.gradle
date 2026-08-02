@@ -10,6 +10,10 @@ dependencies {
     annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
     testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
 
+    // 생성 원장의 공유 영속성 베이스(BaseEntity). MOM-0817에서 minsu가 영속성을 소유하게 됐습니다.
+    implementation project(':common')
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
@@ -23,6 +27,8 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // common testFixtures의 Testcontainers 통합테스트 베이스를 재사용합니다.
+    testImplementation testFixtures(project(':common'))
     testImplementation 'io.micrometer:micrometer-observation-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

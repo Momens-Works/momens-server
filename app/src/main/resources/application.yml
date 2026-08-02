@@ -54,7 +54,14 @@ momens:
   # dev/ingress 재검증 전에는 prod에서 활성화하지 않습니다.
   minsu:
     task-draft:
+      # provider 축: 모델 호출 자체가 활성인가(MOM-0810 설계 11.2절).
       enabled: ${MOMENS_MINSU_TASK_DRAFT_ENABLED:false}
+      # 비동기 생성의 나머지 두 축(MOM-0817). enroll은 신규 convert의 원장 적재, drain은 scheduler의
+      # 원장 처리를 제어합니다. 축을 나눈 이유는 rollback 시 신규만 동기로 되돌리고 기존 원장은 계속
+      # 처리해야 하기 때문입니다. provider가 꺼져 있으면 enroll 값과 무관하게 적재하지 않습니다.
+      async:
+        enroll: ${MOMENS_MINSU_TASK_DRAFT_ASYNC_ENROLL:false}
+        drain: ${MOMENS_MINSU_TASK_DRAFT_ASYNC_DRAIN:false}
     llm:
       provider: ${MOMENS_MINSU_LLM_PROVIDER:google}
       model: ${MOMENS_MINSU_LLM_MODEL:gemini-3.5-flash-lite}
