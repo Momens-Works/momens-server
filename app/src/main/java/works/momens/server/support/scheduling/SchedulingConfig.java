@@ -10,9 +10,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * notification의 폴링 스케줄러는 {@code momens.notification.push.enabled}로 등록 자체가 갈린다). 게이트를 특정 모듈이 소유하면 다른
  * 모듈의 스케줄러가 그 모듈의 설정에 우연히 종속되므로 여기로 올렸다.
  *
- * <p>사실 스케줄링은 지금도 항상 켜져 있다. spring-modulith-starter-core의 {@code MomentsAutoConfiguration}이 클래스 레벨
- * {@code @EnableScheduling}을 달고 있어 조건 없이 활성화된다. 그래서 push를 꺼도 다른 모듈의 스케줄러는 돌았다. 다만 그 보장이 무관한 라이브러리의
- * 부수효과에 얹혀 있어, 의존성이 빠지거나 조건이 붙으면 소리 없이 사라진다. 활성화를 여기서 명시적으로 소유해 그 우연을 없앤다.
+ * <p>사실 스케줄링은 이 클래스가 없어도 켜져 있었다. spring-modulith-starter-core의 {@code MomentsAutoConfiguration}이
+ * 클래스 레벨 {@code @EnableScheduling}을 달고 있고, 그 조건이 {@code @ConditionalOnProperty(name =
+ * "spring.modulith.moments.enabled", matchIfMissing = true)}라 프로퍼티를 지정하지 않은 기본값에서 활성화되기 때문이다. 그래서
+ * push를 꺼도 다른 모듈의 스케줄러는 돌았다. 다만 그 보장이 무관한 라이브러리의 부수효과에 얹혀 있어, 의존성이 빠지거나 저 프로퍼티를 끄면 소리 없이 사라진다. 활성화를
+ * 여기서 명시적으로 소유해 그 우연을 없앤다.
  *
  * <p>기본 {@code TaskScheduler}는 풀 크기가 1이라 스케줄러들이 한 스레드에서 직렬 실행된다. 현재는 1초 주기 push 폴링 하나뿐이라 문제가 없지만,
  * 오래 걸리는 스케줄러가 추가되면 {@code spring.task.scheduling.pool.size}를 함께 재검토한다.

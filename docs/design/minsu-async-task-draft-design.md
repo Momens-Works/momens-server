@@ -1065,11 +1065,13 @@ provider 호출 여부만 제어한다. 세 축으로 나눈다.
 `momens.notification.push.enabled`로 게이트하므로 **`minsu` scheduler가 push 꺼진 환경에서
 조용히 동작하지 않는다**고 적었다. MOM-0816 구현 중 확인한 결과 **이 전제는 사실이 아니었다.**
 `spring-modulith-starter-core`의 `MomentsAutoConfiguration`이 클래스 레벨
-`@EnableScheduling`을 조건 없이 달고 있어, 스케줄링 인프라는 push 설정과 무관하게 이미 항상
-켜져 있었다. `notification`의 조건부 설정은 스케줄링을 실제로 끄지 못했다.
+`@EnableScheduling`을 달고 있고 그 조건이
+`@ConditionalOnProperty(name = "spring.modulith.moments.enabled", matchIfMissing = true)`라,
+프로퍼티를 지정하지 않은 기본값에서 스케줄링 인프라가 push 설정과 무관하게 이미 켜져 있었다.
+`notification`의 조건부 설정은 스케줄링을 실제로 끄지 못했다.
 
 그럼에도 게이트는 옮겼다. 다른 모듈 스케줄러의 동작 보장이 **무관한 라이브러리 auto-config의
-부수효과에 얹혀 있었기 때문이다.** 의존성이 빠지거나 그쪽에 조건이 붙으면 소리 없이 사라지고,
+부수효과에 얹혀 있었기 때문이다.** 의존성이 빠지거나 저 프로퍼티를 끄면 소리 없이 사라지고,
 그때 실패는 원장만 쌓이는 형태로 나타난다.
 
 확정된 배치는 다음과 같다.
