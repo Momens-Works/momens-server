@@ -21,7 +21,11 @@ enum CompletionReason {
   DEADLINE_EXCEEDED("deadline_exceeded"),
   /** 입력이 부족해 재시도 없이 종료했다. */
   INSUFFICIENT_CONTEXT("insufficient_context"),
-  /** 설정이 무효해 종료했다. */
+  /**
+   * 설정이 무효해 종료했다.
+   *
+   * <p>설정이 무효한 동안에는 claim 자체를 하지 않으므로(11.2절) 상시 경로가 아니다. claim 이후 설정이 무효해진 경합에서만 도달한다.
+   */
   INVALID_CONFIG("invalid_config"),
   /** 재시도 상한에 도달했다. */
   RETRY_EXHAUSTED("retry_exhausted");

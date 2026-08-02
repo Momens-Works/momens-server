@@ -905,7 +905,7 @@ outcome·재시도 가능 여부를 반환하고, 기존 내부 `GenerationOutco
 | `invalid_response` | retryable | 같은 입력에도 모델 출력이 달라질 수 있다 |
 | `invalid_output` | retryable | 위와 같다 |
 | `insufficient_context` | terminal | 입력이 그대로이므로 재시도해도 같다 |
-| `invalid_config` | terminal | 설정을 고치기 전에는 같다. 설정 수정은 배포 사건이므로 재시도로 기다리지 않는다 |
+| `invalid_config` | terminal | 설정을 고치기 전에는 같다. 설정 수정은 배포 사건이므로 재시도로 기다리지 않는다. 다만 claim 자체가 설정 유효를 전제하므로(11.2절) 이 outcome은 claim 이후 설정이 무효해진 경합에서만 나온다 |
 | `disabled` | 적재 안 함 | 비활성이면 원장을 만들지 않는다 (11절) |
 
 `invalid_response`와 `invalid_output`을 retryable로 둔 이유는 structured output 위반이 결정적
@@ -925,10 +925,19 @@ outcome·재시도 가능 여부를 반환하고, 기존 내부 `GenerationOutco
 `invalid_config`는 terminal이지만 원장을 닫을 뿐 task는 고정 fallback을 유지하므로 손실이
 없다. 설정을 고친 뒤 과거 건을 다시 생성할지는 운영 판단이며 이 설계에 넣지 않는다.
 
-`disabled`는 적재하지 않는데 `invalid_config`는 적재 후 terminal이라 비대칭이다. 의도한
-선택이다. 비활성은 정상 상태지만 설정 무효는 고쳐야 할 오류이므로, 원장 행과
-`completion_reason`으로 드러나는 편이 낫다. 설정이 깨진 동안 convert마다 원장 행과 scheduler
-왕복이 한 번씩 생기지만 모델 호출은 없으므로 비용은 작다.
+**설정이 무효한 동안 새로 들어온 작업은 이 표를 타지 않는다.** 11.2절이 정한 대로 scheduler가
+claim 자체를 하지 않으므로 outcome이 만들어지지 않고, 원장은 `pending`으로 남는다. 이 표는
+claim에 성공한 실행의 결과 판정이다.
+
+`disabled`와 설정 무효는 원장에서 다르게 다뤄진다. 비활성이면 적재하지 않고, 설정이 무효면
+적재는 하되 claim하지 않는다. 전자는 "이 기능을 쓰지 않는다"는 정상 상태라 원장에 남길 이유가
+없고, 후자는 설정을 고치면 그대로 이어서 처리할 수 있는 작업이라 종료로 기록하면 되살릴 방법이
+없기 때문이다(11.2절).
+
+이 선택의 대가는 **설정 오류가 원장에는 드러나지 않는다**는 점이다. 쌓이는 것은 `pending`뿐이고
+그것만으로는 scheduler 중단과 구분되지 않는다. 따라서 설정 오류의 1차 관측은 원장이 아니라
+`momens.minsu.llm.config.valid` gauge가 담당한다(이미 있다). 9.3절의 "가장 오래된 미종료 원장의
+age"는 원인을 가리지 않는 2차 지표로 함께 본다.
 
 ### 9.3 관측
 
@@ -1048,7 +1057,8 @@ provider 호출 여부만 제어한다. 세 축으로 나눈다.
 축이 꺼졌을 때의 동작은 여기서 확정한다.**
 
 **provider가 비활성이거나 설정이 무효면 claim하지 않는다.** 원장은 `pending` 그대로 두고
-`completion_reason`을 기록하지 않는다. 재활성화되면 그대로 이어서 처리하고, 그 전에
+`completion_reason`을 기록하지 않는다. 이 규칙이 9.2절의 `invalid_config` 판정보다 앞선다.
+설정이 무효한 동안에는 claim이 없으므로 그 outcome 자체가 만들어지지 않는다. 재활성화되면 그대로 이어서 처리하고, 그 전에
 `read_deadline_at`이 지나면 읽기 투영이 `ready`로 닫는다(8.6절).
 
 `disabled`를 completion reason으로 만들지 않는 이유는 그것이 종료가 아니기 때문이다. 설정을
