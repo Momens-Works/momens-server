@@ -6,8 +6,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -76,44 +80,62 @@ class TaskDraftGenerationRepositoryIntegrationTest extends AbstractPostgresInteg
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
-  @Test
-  @DisplayName("종료 상태와 종료 사유는 함께만 존재한다")
-  void rejectsStatusAndReasonMismatch() {
+  /**
+   * 원장이 지켜야 할 불변식을 native update로 하나씩 위반시켜 DB가 막는지 확인한다.
+   *
+   * <p>케이스마다 별도 테스트 인스턴스(=별도 트랜잭션)를 쓴다. 한 트랜잭션 안에서 두 번 위반시키면 첫 실패로 트랜잭션이 abort돼 두 번째 단언이 첫 예외를 다시
+   * 보게 되고, 그러면 검증한 것처럼 보이지만 실제로는 아무것도 확인하지 못한다.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("constraintViolations")
+  @DisplayName("불변식을 어기는 전이를 DB가 막는다")
+  void rejectsConstraintViolation(String label, String assignment, String expected) {
     UUID id = persistPending();
 
-    assertThatThrownBy(() -> update(id, "status = 'completed'"))
-        .rootCause()
-        .hasMessageContaining("minsu_task_draft_generations_reason_check");
-    assertThatThrownBy(() -> update(id, "completion_reason = 'generated'"))
-        .rootCause()
-        .hasMessageContaining("minsu_task_draft_generations_reason_check");
+    assertThatThrownBy(() -> update(id, assignment)).rootCause().hasMessageContaining(expected);
+  }
+
+  private static Stream<Arguments> constraintViolations() {
+    String reason = "minsu_task_draft_generations_reason_check";
+    String claim = "minsu_task_draft_generations_claim_check";
+    String deadline = "minsu_task_draft_generations_deadline_check";
+    return Stream.of(
+        Arguments.of("종료 상태인데 사유가 없다", "status = 'completed'", reason),
+        Arguments.of("종료 상태가 아닌데 사유가 있다", "completion_reason = 'generated'", reason),
+        Arguments.of("processing인데 claim이 없다", "status = 'processing'", claim),
+        Arguments.of(
+            "pending인데 claim이 있다",
+            "claim_token = gen_random_uuid(), lease_expires_at = NOW()",
+            claim),
+        Arguments.of("token만 남았다", "claim_token = gen_random_uuid()", claim),
+        Arguments.of("lease만 남았다", "lease_expires_at = NOW()", claim),
+        Arguments.of("허용 목록에 없는 상태", "status = 'stalled'", "status_check"),
+        Arguments.of(
+            "허용 목록에 없는 종료 사유",
+            "status = 'completed', completion_reason = 'gave_up'",
+            "completion_reason_check"),
+        Arguments.of("tasks 계약 밖의 priority", "baseline_priority = 'critical'", "baseline_priority"),
+        Arguments.of("tasks 계약 밖의 role", "baseline_role = 'devops'", "baseline_role"),
+        Arguments.of("필수 snapshot 필드가 비었다", "signal_description = NULL", "signal_description"),
+        Arguments.of("가드 밴드가 0이다", "apply_cutoff_at = read_deadline_at", deadline),
+        Arguments.of(
+            "가드 밴드가 뒤집혔다", "apply_cutoff_at = read_deadline_at + INTERVAL '1 second'", deadline));
   }
 
   @Test
-  @DisplayName("claim token과 lease는 processing에서만 존재한다")
-  void rejectsClaimWithoutProcessing() {
+  @DisplayName("정상 전이는 제약을 통과한다")
+  void acceptsValidTransitions() {
     UUID id = persistPending();
 
-    assertThatThrownBy(() -> update(id, "status = 'processing'"))
-        .rootCause()
-        .hasMessageContaining("minsu_task_draft_generations_claim_check");
-    assertThatThrownBy(
-            () -> update(id, "claim_token = gen_random_uuid(), lease_expires_at = NOW()"))
-        .rootCause()
-        .hasMessageContaining("minsu_task_draft_generations_claim_check");
-  }
+    // claim: processing + token + lease. 제약이 과하게 좁으면 여기서 막힌다.
+    update(id, "status = 'processing', claim_token = gen_random_uuid(), lease_expires_at = NOW()");
+    // 종료: 상태와 사유를 함께 기록하고 claim은 정리한다.
+    update(
+        id,
+        "status = 'completed', completion_reason = 'generated',"
+            + " claim_token = NULL, lease_expires_at = NULL");
 
-  @Test
-  @DisplayName("claim token과 lease 중 하나만 남은 행을 거부한다")
-  void rejectsPartiallyClearedClaim() {
-    UUID id = persistPending();
-
-    assertThatThrownBy(() -> update(id, "claim_token = gen_random_uuid()"))
-        .rootCause()
-        .hasMessageContaining("minsu_task_draft_generations_claim_check");
-    assertThatThrownBy(() -> update(id, "lease_expires_at = NOW()"))
-        .rootCause()
-        .hasMessageContaining("minsu_task_draft_generations_claim_check");
+    assertThat(repository.findById(id).orElseThrow().getStatus()).isEqualTo("completed");
   }
 
   @Test
@@ -138,29 +160,6 @@ class TaskDraftGenerationRepositoryIntegrationTest extends AbstractPostgresInteg
             .getSingleResult();
 
     assertThat(type).isEqualTo("array");
-  }
-
-  @Test
-  @DisplayName("필수 snapshot 필드가 비면 거부한다")
-  void rejectsMissingRequiredSnapshot() {
-    UUID id = persistPending();
-
-    assertThatThrownBy(() -> update(id, "signal_description = NULL"))
-        .rootCause()
-        .hasMessageContaining("signal_description");
-  }
-
-  @Test
-  @DisplayName("가드 밴드가 없는 deadline 조합을 거부한다")
-  void rejectsMissingGuardBand() {
-    UUID id = persistPending();
-
-    assertThatThrownBy(() -> update(id, "apply_cutoff_at = read_deadline_at"))
-        .rootCause()
-        .hasMessageContaining("minsu_task_draft_generations_deadline_check");
-    assertThatThrownBy(() -> update(id, "apply_cutoff_at = read_deadline_at + INTERVAL '1 second'"))
-        .rootCause()
-        .hasMessageContaining("minsu_task_draft_generations_deadline_check");
   }
 
   private UUID persistPending() {

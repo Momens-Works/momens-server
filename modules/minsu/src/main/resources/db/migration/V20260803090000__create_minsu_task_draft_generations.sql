@@ -7,6 +7,10 @@
 -- (docs/rules/persistence.md). 외부 테이블(tasks/workspaces) FK는 signal_actions·push_deliveries와
 -- 같은 이유로 생략한다.
 --
+-- 배포 순서 제약: prod는 Flyway가 꺼져 있지만 ddl-auto=validate는 적용되므로, 이 엔티티가 prod로
+-- 나가기 전에 MOM-0825가 먼저 반영돼야 한다. 순서가 뒤집히면 테이블이 없어 부팅이 실패한다.
+-- 설정 3축이 모두 기본 비활성인 것과 무관한 제약이다.
+--
 -- 테이블명을 minsu_generations 같은 총칭이 아니라 task draft로 좁힌 것은 의도적이다. 컬럼 절반이
 -- task draft 전용(반영 baseline, read_deadline_at)이라 다른 종류의 생성은 자기 테이블을 갖는 편이
 -- 자연스럽고, 그때 총칭 이름이 비어 있어야 한다.
@@ -19,7 +23,9 @@ CREATE TABLE minsu_task_draft_generations (
     -- 사용자가 convert를 누른 시점의 근거가 그대로 보존된다. description·impact에 자체 상한을 두지
     -- 않는다: 상한을 두면 저장본이 convert 시점 입력과 달라지고, 길이 계약의 주체는 생산자인
     -- worker다(signal_evidence 30자 계약과 같은 이유). 복제량은 terminal 이후 snapshot을 비우는
-    -- 보존 정책이 닫으며 그 정책은 MOM-0825에서 확정한다.
+    -- 보존 정책이 닫으며 그 정책은 MOM-0825에서 확정한다. 단 아래 NOT NULL 때문에 그 정책은 NULL로
+    -- 비우는 형태일 수 없다. 빈 값('' / '[]') 덮어쓰기나 행 삭제여야 하고, NULL 방식을 고르면
+    -- 운영 데이터에 DROP NOT NULL이 필요해진다.
     -- title·type·description은 signals에서 NOT NULL이고 원장은 그 입력을 그대로 보존하므로 여기서도
     -- NOT NULL이다. impact만 원본 계약대로 nullable이다.
     signal_title TEXT NOT NULL,
@@ -31,9 +37,12 @@ CREATE TABLE minsu_task_draft_generations (
     -- 반영 baseline(6절). convert가 tasks에 실제로 쓴 값을 복사해 둔다. 반영 시점에 고정 fallback
     -- 규칙을 다시 계산해 비교하지 않는다. 재계산 방식은 규칙이 바뀌는 순간 진행 중이던 작업 전부가
     -- CAS 불일치가 되어 편집이 없는데도 user_edited로 오분류된다.
+    -- baseline은 worker 산출물인 snapshot과 달리 서버가 tasks에 직접 쓴 값이므로 tasks의 허용값을
+    -- 미러한다(V20260706120000, V20260707150000). 오염되면 반영 CAS가 조용히 무매칭으로 넘어간다.
     baseline_title TEXT NOT NULL,
-    baseline_role TEXT,
-    baseline_priority TEXT NOT NULL,
+    baseline_role TEXT CHECK (baseline_role IN ('pm', 'design', 'backend', 'frontend')),
+    baseline_priority TEXT NOT NULL
+        CHECK (baseline_priority IN ('low', 'medium', 'high', 'urgent')),
 
     -- 읽기 투영이 generating을 닫는 시각과 tasks 반영을 포기하는 시각(8.6절). 두 값은 적재 시점에
     -- 계산해 저장한다. 조회할 때마다 현재 설정으로 다시 계산하면 설정 변경이 과거 작업의 상태를 뒤집는다.
