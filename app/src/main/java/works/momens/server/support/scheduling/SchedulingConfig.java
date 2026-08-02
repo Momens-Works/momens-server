@@ -13,8 +13,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * <p>사실 스케줄링은 이 클래스가 없어도 켜져 있었다. spring-modulith-starter-core의 {@code MomentsAutoConfiguration}이
  * 클래스 레벨 {@code @EnableScheduling}을 달고 있고, 그 조건이 {@code @ConditionalOnProperty(name =
  * "spring.modulith.moments.enabled", matchIfMissing = true)}라 프로퍼티를 지정하지 않은 기본값에서 활성화되기 때문이다. 그래서
- * push를 꺼도 다른 모듈의 스케줄러는 돌았다. 다만 그 보장이 무관한 라이브러리의 부수효과에 얹혀 있어, 의존성이 빠지거나 저 프로퍼티를 끄면 소리 없이 사라진다. 활성화를
- * 여기서 명시적으로 소유해 그 우연을 없앤다.
+ * push를 꺼도 다른 모듈의 스케줄러는 돌았다. 다만 그 보장이 무관한 라이브러리의 부수효과에 얹혀 있었다.
+ *
+ * <p>그래서 {@code application.yml}에서 {@code spring.modulith.moments.enabled=false}로 그 auto-config를
+ * 끄고, 활성화 주체를 이 클래스 하나로 만들었다. Moments의 시간 이벤트는 이 앱에 리스너가 없어 잃는 기능이 없다. 대신 이 클래스가 빠지면 스케줄러가 조용히
+ * 멈추므로, 그 계약은 {@code SchedulingConfigIntegrationTest}가 가드한다.
  *
  * <p>기본 {@code TaskScheduler}는 풀 크기가 1이라 스케줄러들이 한 스레드에서 직렬 실행된다. 현재는 1초 주기 push 폴링 하나뿐이라 문제가 없지만,
  * 오래 걸리는 스케줄러가 추가되면 {@code spring.task.scheduling.pool.size}를 함께 재검토한다.

@@ -1084,6 +1084,13 @@ provider 호출 여부만 제어한다. 세 축으로 나눈다.
   않는다.
 - 따라서 `minsu` scheduler는 push 설정과 무관하게 자신의 설정 축(11.2절)만으로 동작 여부가
   정해진다.
+- Modulith의 `MomentsAutoConfiguration`은 `spring.modulith.moments.enabled=false`로 끈다
+  (`app/src/main/resources/application.yml`). Moments의 시간 이벤트는 이 앱에 리스너가 없어
+  잃는 기능이 없고, 이렇게 해야 활성화 주체가 `SchedulingConfig` 하나가 된다. 이 설정을 빼면
+  `SchedulingConfig`가 없어도 스케줄링이 켜져 있어 소유 관계가 코드로 표현되지 않는다.
+
+이 배치는 `SchedulingConfig`를 실제 의존 지점으로 만든다. 이 빈이 빠지면 push 폴링이 조용히
+멈추므로, 그 계약은 `SchedulingConfigIntegrationTest`가 CI에서 가드한다.
 
 주의: 기본 `TaskScheduler`는 풀 크기가 1이라 모든 `@Scheduled`가 한 스레드에서 직렬 실행된다.
 `minsu` drain은 LLM 호출로 길어질 수 있어 1초 주기 push 폴링을 막을 수 있다. 원장·scheduler
