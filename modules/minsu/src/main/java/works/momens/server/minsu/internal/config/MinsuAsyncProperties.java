@@ -22,8 +22,8 @@ import org.springframework.validation.annotation.Validated;
  *
  * <p>provider가 활성이지만 <b>설정이 무효한 경우는 적재는 하되 claim하지 않는다</b>(11.2절). 설정을 고치면 그대로 이어서 처리할 수 있는 작업이므로
  * 종료로 기록하지 않고, 그 전에 {@code read_deadline_at}이 지나면 읽기 투영이 닫는다. 따라서 설정 오류의 1차 관측은 원장이 아니라 {@code
- * momens.minsu.llm.config.valid} gauge다({@link MinsuConfigStatus}). {@code
- * CompletionReason.INVALID_CONFIG}는 claim 이후 설정이 무효해진 경합에서만 도달한다.
+ * momens.minsu.llm.config.valid} gauge다({@link MinsuConfigStatus}). 종료 사유 {@code invalid_config}는
+ * claim 이후 설정이 무효해진 경합에서만 도달한다.
  */
 @Validated
 @ConfigurationProperties("momens.minsu.task-draft.async")
