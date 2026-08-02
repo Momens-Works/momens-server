@@ -18,10 +18,11 @@ import works.momens.server.common.test.AbstractPostgresIntegrationTest;
  * <p>게이트를 notification이 소유하던 때는 {@code momens.notification.push.enabled=false}면 이 앱이 소유한 활성화가 통째로
  * 빠졌습니다. 다른 모듈의 스케줄러가 push 설정에 종속되지 않는다는 것이 이 테스트가 지키는 계약입니다.
  *
- * <p>{@link SchedulingConfig}의 javadoc대로 spring-modulith가 스케줄링을 이미 켜므로 이 테스트는 그 설정 클래스 단독을 가드하지
- * 못합니다. 검증 대상은 배선이 아니라 "push와 무관하게 스케줄러가 돈다"는 요구사항 자체입니다.
+ * <p>{@code spring.modulith.moments.enabled=false}로 Modulith의 {@code MomentsAutoConfiguration}을 끕니다
+ * ({@link SchedulingConfig}의 javadoc 참고). 이 auto-config도 {@code @EnableScheduling}을 달고 있어, 켜 둔 채로는
+ * {@code SchedulingConfig}를 지워도 테스트가 통과해 정작 이 PR이 지키려는 소유 관계를 가드하지 못합니다.
  */
-@SpringBootTest
+@SpringBootTest(properties = "spring.modulith.moments.enabled=false")
 class SchedulingConfigIntegrationTest extends AbstractPostgresIntegrationTest {
 
   private static final CountDownLatch TICKS = new CountDownLatch(1);
