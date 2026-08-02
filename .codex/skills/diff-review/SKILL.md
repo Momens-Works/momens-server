@@ -100,18 +100,10 @@ Before creating or updating a PR, inspect:
 git log --oneline origin/develop..HEAD
 ```
 
-Verify commit messages follow the project format from `docs/rules/git.md`:
-
-```text
-<type> (<domain>): <message>
-```
-
-For example:
-
-```text
-feat (auth): 모바일 Google 로그인 구현
-refactor (presentation): DTO 패키지 정리
-```
+Validate every commit message against the format defined in `docs/rules/git.md`. That
+file is the single source of truth, and the format must be followed exactly as specified
+there. Do not rely on or reference any commit message examples or formatting described
+in this skill or any other agent documentation.
 
 ## Validation Commands
 
