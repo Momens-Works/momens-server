@@ -28,6 +28,7 @@ Use `origin/main` only when the user specifically asks for release/main comparis
 3. Inspect the actual diff:
 
    ```bash
+   git log --oneline origin/develop..HEAD
    git rev-list --left-right --count origin/develop...HEAD
    MERGE_BASE="$(git merge-base origin/develop HEAD)"
    git diff --stat "$MERGE_BASE"
@@ -64,6 +65,19 @@ Before creating or updating a PR:
 - A branch label or `Fixes MOM-<number>` does not automatically link or complete the task.
 - Do not mark the task `done` while reviewing or opening the PR. Update it to `done`
   only after the PR is actually merged.
+
+## Commit Convention Check
+
+Before creating or updating a PR, inspect:
+
+```bash
+git log --oneline origin/develop..HEAD
+```
+
+Validate every commit message against the format defined in `docs/rules/git.md`. That
+file is the single source of truth, and the format must be followed exactly as specified
+there. Do not rely on or reference any commit message examples or formatting described
+in this skill or any other agent documentation.
 
 ## Validation Commands
 
