@@ -48,6 +48,13 @@ CREATE TABLE minsu_task_draft_generations (
     -- 아래 CHECK는 지금 막을 대상이 없다. 값이 고정이기 때문이다. 나중에 baseline이 다양해질 때
     -- tasks 계약(V20260706120000, V20260707150000) 밖의 값이 들어오는 것을 막으려고 둔다. 오염되면
     -- 반영 CAS가 예외 없이 무매칭으로 넘어가 조용히 user_edited가 된다.
+    --
+    -- 기준은 생산자인 minsu.Role·minsu.Priority가 아니라 tasks 계약이다. baseline은 정의상 convert가
+    -- tasks에 쓴 값이라 유효 도메인이 tasks의 도메인이고, CAS 비교 상대도 tasks의 컬럼이다. 생산자
+    -- 기준으로 좁히면(예: minsu.Priority에 없는 'urgent' 제외) tasks는 받는데 원장만 거부하는 구간이
+    -- 생겨 이 CHECK가 단독 실패 지점이 된다. 적재는 convert 트랜잭션 안이므로 그 실패는 사용자
+    -- convert 요청 실패로 나타난다. tasks 기준이면 같은 트랜잭션의 tasks 쓰기가 먼저 막히므로 이
+    -- CHECK가 최초 실패 지점이 되는 경로가 없고, 복사본 오염에 대한 이중 방어로만 남는다.
     baseline_title TEXT NOT NULL,
     baseline_role TEXT NOT NULL CHECK (baseline_role IN ('pm', 'design', 'backend', 'frontend')),
     baseline_priority TEXT NOT NULL
