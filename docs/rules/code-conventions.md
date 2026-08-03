@@ -11,6 +11,8 @@
 - **Spotless + Google Java Format** (2-space, 100칸)으로 강제합니다.
 - 커밋 전 `./gradlew spotlessApply`로 정렬하고, CI가 `./gradlew spotlessCheck`로 검사합니다.
 - 에디터 설정은 `.editorconfig`를 따릅니다.
+- 줄바꿈 형식은 `.gitattributes`를 기준으로 LF로 통일하며, `gradlew.bat`만 CRLF 예외로
+  처리합니다.
 - GJF가 자동 처리하므로 따로 신경 쓰지 않아도 되는 것: 와일드카드 import 금지, 모든
   제어문 중괄호, 연산자 공백, 배열 Java식(`String[]`).
 

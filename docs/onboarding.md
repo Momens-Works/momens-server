@@ -78,6 +78,29 @@ docker compose up -d
 - 훅을 건너뛰어야 할 때는 `git commit --no-verify` 를 씁니다. 다만 포맷 문제는 CI
   (`spotlessCheck`)에서 다시 걸리므로 임시 우회로만 사용합니다.
 
+줄바꿈 형식은 `.gitattributes`에서 LF로 통일합니다. 저장소를 클론한 뒤 다음 명령으로 워킹
+트리의 줄바꿈 상태를 확인합니다.
+
+```bash
+git ls-files --eol | grep ' w/crlf'
+```
+
+결과에 `gradlew.bat`만 표시되면 정상입니다. 다른 파일도 함께 표시된다면 `.gitattributes`
+설정이 적용되기 전에 저장소를 클론한 상태이므로, 워킹 트리를 다시 체크아웃해 LF로 맞춰야
+합니다.
+
+```bash
+git status              # 커밋하지 않은 변경 사항이 없는지 먼저 확인합니다.
+git rm --cached -r .
+git reset --hard
+```
+
+`git reset --hard`는 커밋하지 않은 변경 사항을 모두 삭제합니다. 반드시 `git status` 결과가
+비어 있는지 확인한 후 실행해야 합니다.
+
+CRLF가 섞인 상태로 두면 워킹 트리를 검사하는 `spotlessCheck`가 실패합니다. 이 경우 코드를
+수정하지 않은 커밋에서도 pre-commit 훅이 차단될 수 있습니다.
+
 `momens-proto`는 private 리포이므로 로컬 GitHub 자격 증명에 읽기 권한이 필요합니다.
 GitHub Actions는 같은 권한을 가진 repository secret `CI_SUBMODULES_TOKEN`으로 submodule을
 checkout합니다.
