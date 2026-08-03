@@ -73,18 +73,18 @@ final class DefaultSignalTaskDraftGenerator implements SignalTaskDraftGenerator 
     }
     if (asyncProperties.enroll()) {
       // 비동기 활성 경로. 여기서 LLM을 부르면 이 설계의 목적 자체가 사라진다(5.5절).
-      return new PreparedTaskDraft(
-          finish(fallback, GenerationOutcome.DEFERRED), enroller.intentFor(input));
+      return enroller.bind(finish(fallback, GenerationOutcome.DEFERRED), input);
     }
     return synchronous(generate(input, fallback));
   }
 
   @Override
   public void enroll(PreparedTaskDraft prepared, UUID taskId, UUID workspaceId) {
-    if (prepared.asyncIntent() == null) {
+    if (prepared instanceof SynchronousDraft) {
       return;
     }
-    enroller.enroll(prepared.asyncIntent(), prepared.draft(), taskId, workspaceId);
+    // 우리가 만들지 않은 준비 결과는 적재기가 거부한다. 조용히 넘기면 적재되지 않은 채 ready가 된다.
+    enroller.enroll(prepared, taskId, workspaceId);
   }
 
   /** 설정이 무효하거나 설정 유효성과 무관하게 비동기가 꺼져 있을 때 타는 기존 동기 경로. */
@@ -158,9 +158,8 @@ final class DefaultSignalTaskDraftGenerator implements SignalTaskDraftGenerator 
     return new TaskDraft(TaskTitleNormalizer.normalize(input.title()), Role.PM, Priority.MEDIUM);
   }
 
-  /** 적재 의사가 없는 준비 결과. 이 draft가 곧 최종값이므로 뒤이은 {@code enroll}은 아무것도 하지 않는다. */
   private static PreparedTaskDraft synchronous(TaskDraft draft) {
-    return new PreparedTaskDraft(draft, null);
+    return new SynchronousDraft(draft);
   }
 
   private TaskDraft finish(TaskDraft draft, GenerationOutcome outcome) {

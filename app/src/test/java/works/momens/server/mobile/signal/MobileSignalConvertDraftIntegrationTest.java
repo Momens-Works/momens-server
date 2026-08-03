@@ -63,8 +63,7 @@ class MobileSignalConvertDraftIntegrationTest extends AbstractPostgresIntegratio
         insertSignal(workspace, project, "decision", "결제 정책 결정 3일째 보류", "합의가 지연됩니다.", "출시 일정에 영향");
     insertEvidence(workspace, signal, 0, "결제 정책", "논의 중단", "출시 지연");
     when(taskDraftGenerator.prepare(any()))
-        .thenReturn(
-            new PreparedTaskDraft(new TaskDraft("결제 정책 확정하기", Role.BACKEND, Priority.HIGH), null));
+        .thenReturn(prepared(new TaskDraft("결제 정책 확정하기", Role.BACKEND, Priority.HIGH)));
     String token = "Bearer " + accessTokens.issueAccessToken(jinsu.id());
 
     mockMvc
@@ -117,7 +116,7 @@ class MobileSignalConvertDraftIntegrationTest extends AbstractPostgresIntegratio
     UUID project = insertProject(workspace, jinsu.id(), "convert-draft-fail-project");
     UUID signal = insertSignal(workspace, project, "risk", "결제 실패율이 올라감", "카드 결제 실패", "전환율 하락");
     when(taskDraftGenerator.prepare(any()))
-        .thenReturn(new PreparedTaskDraft(new TaskDraft("제목", Role.PM, Priority.MEDIUM), null));
+        .thenReturn(prepared(new TaskDraft("제목", Role.PM, Priority.MEDIUM)));
     doThrow(new TaskDraftEnrollmentException("원장 적재 실패", new RuntimeException()))
         .when(taskDraftGenerator)
         .enroll(any(), any(), any());
@@ -157,6 +156,11 @@ class MobileSignalConvertDraftIntegrationTest extends AbstractPostgresIntegratio
         .andExpect(status().isOk());
 
     verify(taskDraftGenerator, never()).prepare(any());
+  }
+
+  /** 실제 준비 결과는 Minsu 내부 타입이라 밖에서 만들 수 없다. 이 테스트는 generator 경계까지만 본다. */
+  private static PreparedTaskDraft prepared(TaskDraft draft) {
+    return () -> draft;
   }
 
   private UUID insertWorkspace(String slug) {

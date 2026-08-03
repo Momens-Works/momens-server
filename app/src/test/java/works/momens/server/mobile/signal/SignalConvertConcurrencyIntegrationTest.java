@@ -70,8 +70,8 @@ class SignalConvertConcurrencyIntegrationTest extends AbstractPostgresIntegratio
         .thenAnswer(
             invocation -> {
               barrier.await(10, TimeUnit.SECONDS);
-              return new PreparedTaskDraft(
-                  new TaskDraft("이탈 가능성 점검", Role.PM, Priority.MEDIUM), null);
+              TaskDraft draft = new TaskDraft("이탈 가능성 점검", Role.PM, Priority.MEDIUM);
+              return (PreparedTaskDraft) () -> draft;
             });
     Callable<SignalActionResult> convert =
         () -> signalActionService.convertToTask(signal, jinsu.id());

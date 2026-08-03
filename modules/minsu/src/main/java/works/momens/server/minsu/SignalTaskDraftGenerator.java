@@ -10,8 +10,8 @@ import java.util.UUID;
  * <b>안</b>에서 부른다. 하나로 합치면 둘 중 하나를 포기하게 된다.
  *
  * <p>비동기 활성 여부는 Minsu가 소유하고 호출자는 판정하지 않는다. 호출자는 {@link #prepare} 결과를 그대로 {@link #enroll}에 넘기기만 하며,
- * 그래서 한 요청 안에서 판정이 두 번 갈리는 경로가 계약상 존재하지 않는다. 판정이 갈리면 LLM을 한 번도 부르지 않은 채 {@code ready}가 되는 조용한 품질
- * 손실이 생긴다.
+ * {@link PreparedTaskDraft}가 활성 여부를 구현 타입에만 담으므로 그렇게 하는 것 외에 선택지가 없다. 한 요청 안에서 판정이 두 번 갈리는 경로가 계약상
+ * 존재하지 않는다. 판정이 갈리면 LLM을 한 번도 부르지 않은 채 {@code ready}가 되는 조용한 품질 손실이 생긴다.
  */
 public interface SignalTaskDraftGenerator {
 

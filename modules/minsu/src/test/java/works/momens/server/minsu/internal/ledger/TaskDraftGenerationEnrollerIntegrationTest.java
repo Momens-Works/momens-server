@@ -17,11 +17,11 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.minsu.PreparedTaskDraft;
 import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
 import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.minsu.TaskDraft;
-import works.momens.server.minsu.TaskDraftAsyncIntent;
 import works.momens.server.minsu.TaskDraftEnrollmentException;
 import works.momens.server.minsu.internal.config.MinsuAsyncProperties;
 import works.momens.server.minsu.internal.json.MinsuJson;
@@ -54,7 +54,7 @@ class TaskDraftGenerationEnrollerIntegrationTest extends AbstractPostgresIntegra
     UUID taskId = UUID.randomUUID();
     UUID workspaceId = UUID.randomUUID();
 
-    enroller.enroll(enroller.intentFor(input()), BASELINE, taskId, workspaceId);
+    enroller.enroll(enroller.bind(BASELINE, input()), taskId, workspaceId);
 
     TaskDraftGeneration saved = repository.findByTaskId(taskId).orElseThrow();
     assertAll(
@@ -80,7 +80,7 @@ class TaskDraftGenerationEnrollerIntegrationTest extends AbstractPostgresIntegra
     UUID taskId = UUID.randomUUID();
     Instant before = repository.currentDatabaseTime();
 
-    enroller.enroll(enroller.intentFor(input()), BASELINE, taskId, UUID.randomUUID());
+    enroller.enroll(enroller.bind(BASELINE, input()), taskId, UUID.randomUUID());
 
     TaskDraftGeneration saved = repository.findByTaskId(taskId).orElseThrow();
     assertAll(
@@ -96,23 +96,21 @@ class TaskDraftGenerationEnrollerIntegrationTest extends AbstractPostgresIntegra
   @DisplayName("적재에 실패하면 전용 예외로 감싸 던진다")
   void wrapsPersistenceFailureInEnrollmentException() {
     UUID taskId = UUID.randomUUID();
-    TaskDraftAsyncIntent intent = enroller.intentFor(input());
-    enroller.enroll(intent, BASELINE, taskId, UUID.randomUUID());
+    PreparedTaskDraft prepared = enroller.bind(BASELINE, input());
+    enroller.enroll(prepared, taskId, UUID.randomUUID());
 
     // 상류의 signal_actions UNIQUE(signal_id)가 1차 방어라 실제로는 도달하기 어렵지만, 도달했을 때
     // 호출자의 경합 흡수(DataIntegrityViolationException catch)에 삼켜지지 않아야 한다(5.3절).
-    assertThatThrownBy(() -> enroller.enroll(intent, BASELINE, taskId, UUID.randomUUID()))
+    assertThatThrownBy(() -> enroller.enroll(prepared, taskId, UUID.randomUUID()))
         .isInstanceOf(TaskDraftEnrollmentException.class)
         .hasMessageContaining(taskId.toString());
   }
 
   @Test
-  @DisplayName("Minsu가 발급하지 않은 의사는 받지 않는다")
-  void rejectsForeignAsyncIntent() {
-    assertThatThrownBy(
-            () ->
-                enroller.enroll(
-                    new TaskDraftAsyncIntent() {}, BASELINE, UUID.randomUUID(), UUID.randomUUID()))
+  @DisplayName("Minsu가 발급하지 않은 준비 결과는 받지 않는다")
+  void rejectsForeignPreparedDraft() {
+    // 외부 구현을 조용히 무시하면 적재되지 않은 채 ready가 된다.
+    assertThatThrownBy(() -> enroller.enroll(() -> BASELINE, UUID.randomUUID(), UUID.randomUUID()))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
