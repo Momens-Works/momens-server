@@ -51,9 +51,10 @@ public class TaskDraftGenerationEnroller {
           "Minsu가 발급하지 않은 asyncIntent입니다: " + intent.getClass().getName());
     }
     SignalTaskDraftInput snapshot = enrollment.snapshot();
-    Instant enrolledAt = repository.currentDatabaseTime();
-    Instant readDeadline = enrolledAt.plus(asyncProperties.generationDeadline());
     try {
+      // 시각 조회도 DB 호출이므로 같은 try 안에 둔다. 밖에 두면 이 실패만 전용 예외를 벗어난다.
+      Instant enrolledAt = repository.currentDatabaseTime();
+      Instant readDeadline = enrolledAt.plus(asyncProperties.generationDeadline());
       repository.saveAndFlush(
           TaskDraftGeneration.builder()
               .workspaceId(workspaceId)
