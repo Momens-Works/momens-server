@@ -1,6 +1,7 @@
 package works.momens.server.minsu.internal.google;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -27,6 +28,7 @@ import works.momens.server.minsu.SignalTaskDraftGenerator;
 import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.minsu.TaskDraft;
 import works.momens.server.minsu.internal.config.MinsuLlmProperties;
+import works.momens.server.minsu.internal.ledger.TaskDraftGenerationEnroller;
 
 class MinsuContextTest {
 
@@ -50,7 +52,8 @@ class MinsuContextTest {
               TaskDraft draft =
                   context
                       .getBean(SignalTaskDraftGenerator.class)
-                      .generate(new SignalTaskDraftInput("시그널 제목", "risk", "설명", null, List.of()));
+                      .prepare(new SignalTaskDraftInput("시그널 제목", "risk", "설명", null, List.of()))
+                      .draft();
 
               assertThat(draft).isEqualTo(new TaskDraft("시그널 제목", Role.PM, Priority.MEDIUM));
               assertThat(context.getBean(FailingGoogleClientFactory.class).calls).hasValue(1);
@@ -76,7 +79,8 @@ class MinsuContextTest {
               assertThat(context).hasNotFailed();
               context
                   .getBean(SignalTaskDraftGenerator.class)
-                  .generate(new SignalTaskDraftInput("시그널 제목", "risk", "설명", null, List.of()));
+                  .prepare(new SignalTaskDraftInput("시그널 제목", "risk", "설명", null, List.of()))
+                  .draft();
 
               assertThat(context.getBean(FailingGoogleClientFactory.class).calls).hasValue(0);
               assertThat(
@@ -102,14 +106,24 @@ class MinsuContextTest {
   // 실패한다(MOM-0817에서 minsu가 영속성을 갖게 된 뒤). 스캔 범위를 internal로 좁히는 대신 원인만
   // 빼는 이유는, 루트 패키지에 나중에 빈이 생겨도 이 테스트가 조용히 놓치지 않게 하기 위해서다.
   // 부트스트랩이 package-private이라 타입 대신 이름으로 지정한다.
+  //
+  // 원장 패키지도 같은 이유로 뺀다. 이 컨텍스트에는 DataSource가 없어 repository 빈이 만들어지지
+  // 않는다. 이 테스트가 보는 것은 설정 축과 provider 배선이므로 적재기는 mock으로 대체한다.
   @Configuration(proxyBeanMethods = false)
   @ComponentScan(
       basePackages = "works.momens.server.minsu",
       excludeFilters =
           @ComponentScan.Filter(
               type = FilterType.REGEX,
-              pattern = "works\\.momens\\.server\\.minsu\\.MinsuModuleTestApplication"))
+              pattern =
+                  "works\\.momens\\.server\\.minsu\\.MinsuModuleTestApplication"
+                      + "|works\\.momens\\.server\\.minsu\\.internal\\.ledger\\..*"))
   static class TestApplication {
+
+    @Bean
+    TaskDraftGenerationEnroller taskDraftGenerationEnroller() {
+      return mock(TaskDraftGenerationEnroller.class);
+    }
 
     @Bean
     MeterRegistry meterRegistry() {

@@ -2,7 +2,11 @@ package works.momens.server.minsu.internal.generation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.Level;
@@ -13,7 +17,9 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.ObservationRegistry;
+import java.time.Duration;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -21,12 +27,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.LoggerFactory;
+import works.momens.server.minsu.PreparedTaskDraft;
 import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
 import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.minsu.TaskDraft;
+import works.momens.server.minsu.TaskDraftAsyncIntent;
+import works.momens.server.minsu.internal.config.MinsuAsyncProperties;
 import works.momens.server.minsu.internal.config.MinsuConfigStatus;
 import works.momens.server.minsu.internal.json.MinsuJson;
+import works.momens.server.minsu.internal.ledger.TaskDraftGenerationEnroller;
 import works.momens.server.minsu.internal.llm.LlmClient;
 import works.momens.server.minsu.internal.llm.LlmRequest;
 import works.momens.server.minsu.internal.llm.LlmResponse;
@@ -40,12 +50,17 @@ class DefaultSignalTaskDraftGeneratorTest {
   private static final ModelSelection SELECTION =
       new ModelSelection("google", "gemini-3.5-flash-lite", "project", "global");
 
+  /** Minsu가 발급한 불투명 의사를 대신하는 표식. 호출자는 내용을 볼 수 없으므로 동일성만 확인한다. */
+  private static final TaskDraftAsyncIntent INTENT = new TaskDraftAsyncIntent() {};
+
+  private final TaskDraftGenerationEnroller enroller = mock(TaskDraftGenerationEnroller.class);
+
   @Test
   void returnsValidatedStructuredOutput() {
     CapturingClient client =
         responding(success("{\"title\":\"권한 흐름 점검\",\"role\":\"backend\",\"priority\":\"high\"}"));
 
-    TaskDraft result = generator(client, true, true).generate(input());
+    TaskDraft result = generator(client, true, true).prepare(input()).draft();
 
     assertThat(result).isEqualTo(new TaskDraft("권한 흐름 점검", Role.BACKEND, Priority.HIGH));
     assertThat(client.calls()).isEqualTo(1);
@@ -57,7 +72,7 @@ class DefaultSignalTaskDraftGeneratorTest {
         responding(
             success("{\"title\":\"12345678901234😀끝\",\"role\":\"pm\",\"priority\":\"low\"}"));
 
-    TaskDraft result = generator(client, true, true).generate(input());
+    TaskDraft result = generator(client, true, true).prepare(input()).draft();
 
     assertThat(result.title()).isEqualTo("12345678901234").hasSizeLessThanOrEqualTo(15);
   }
@@ -68,7 +83,7 @@ class DefaultSignalTaskDraftGeneratorTest {
         responding(
             success("{\"title\":\"12345678901234 A\",\"role\":\"pm\",\"priority\":\"low\"}"));
 
-    TaskDraft result = generator(client, true, true).generate(input());
+    TaskDraft result = generator(client, true, true).prepare(input()).draft();
 
     assertThat(result.title()).isEqualTo("12345678901234").doesNotEndWith(" ");
   }
@@ -80,7 +95,7 @@ class DefaultSignalTaskDraftGeneratorTest {
     SignalTaskDraftInput input =
         new SignalTaskDraftInput(" 12345678901234567890 ", "risk", "설명", null, List.of());
 
-    TaskDraft result = generator(client, true, true).generate(input);
+    TaskDraft result = generator(client, true, true).prepare(input).draft();
 
     assertThat(result).isEqualTo(new TaskDraft("123456789012345", Role.DESIGN, Priority.MEDIUM));
   }
@@ -91,7 +106,9 @@ class DefaultSignalTaskDraftGeneratorTest {
     CapturingClient client =
         responding(success("{\"title\":\" \",\"role\":\"design\",\"priority\":\"medium\"}"));
 
-    generator(client, true, true, ObservationRegistry.create(), meterRegistry).generate(input());
+    generator(client, true, true, ObservationRegistry.create(), meterRegistry)
+        .prepare(input())
+        .draft();
 
     assertThat(
             meterRegistry
@@ -106,7 +123,8 @@ class DefaultSignalTaskDraftGeneratorTest {
   @ParameterizedTest
   @MethodSource("invalidEnumResponses")
   void fallsBackWholeDraftForInvalidRoleOrPriority(String response) {
-    TaskDraft result = generator(responding(success(response)), true, true).generate(input());
+    TaskDraft result =
+        generator(responding(success(response)), true, true).prepare(input()).draft();
 
     assertThat(result).isEqualTo(fallback());
   }
@@ -114,7 +132,7 @@ class DefaultSignalTaskDraftGeneratorTest {
   @ParameterizedTest
   @MethodSource("invalidResponses")
   void fallsBackForInvalidProviderResponse(LlmResponse response) {
-    TaskDraft result = generator(responding(response), true, true).generate(input());
+    TaskDraft result = generator(responding(response), true, true).prepare(input()).draft();
 
     assertThat(result).isEqualTo(fallback());
   }
@@ -124,7 +142,7 @@ class DefaultSignalTaskDraftGeneratorTest {
   void callsProviderOnceAndFallsBackForProviderErrors(RuntimeException error) {
     CapturingClient client = failing(error);
 
-    TaskDraft result = generator(client, true, true).generate(input());
+    TaskDraft result = generator(client, true, true).prepare(input()).draft();
 
     assertThat(result).isEqualTo(fallback());
     assertThat(client.calls()).isEqualTo(1);
@@ -138,7 +156,8 @@ class DefaultSignalTaskDraftGeneratorTest {
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     CapturingClient client = failing(new LlmTimeoutException(new RuntimeException("timeout")));
 
-    TaskDraft result = generator(client, true, true, registry, meterRegistry).generate(input());
+    TaskDraft result =
+        generator(client, true, true, registry, meterRegistry).prepare(input()).draft();
 
     assertAll(
         () -> assertThat(result).isEqualTo(fallback()),
@@ -165,17 +184,93 @@ class DefaultSignalTaskDraftGeneratorTest {
   void doesNotCallProviderWhenDisabled() {
     CapturingClient client = responding(success("{}"));
 
-    TaskDraft result = generator(client, false, true).generate(input());
+    TaskDraft result = generator(client, false, true).prepare(input()).draft();
 
     assertThat(result).isEqualTo(fallback());
     assertThat(client.calls()).isZero();
   }
 
   @Test
+  void doesNotCallProviderWhenAsyncEnrollIsEnabled() {
+    // 이 설계의 목적 자체다(5.5절). 비동기 활성인데 요청 경로에서 provider를 부르면 8초 예산이 그대로 남는다.
+    when(enroller.intentFor(any())).thenReturn(INTENT);
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    CapturingClient client = responding(success("{}"));
+
+    PreparedTaskDraft prepared =
+        generator(client, true, true, true, ObservationRegistry.create(), meterRegistry)
+            .prepare(input());
+
+    assertAll(
+        () -> assertThat(client.calls()).isZero(),
+        () -> assertThat(prepared.draft()).isEqualTo(fallback()),
+        () -> assertThat(prepared.asyncIntent()).isSameAs(INTENT),
+        () ->
+            assertThat(
+                    meterRegistry
+                        .get("momens.minsu.task.draft.requests")
+                        .tag("outcome", "fallback")
+                        .tag("fallback.reason", "async_deferred")
+                        .counter()
+                        .count())
+                .isEqualTo(1));
+  }
+
+  @Test
+  void enrollsWithTheDraftThatWasWrittenToTasks() {
+    when(enroller.intentFor(any())).thenReturn(INTENT);
+    UUID taskId = UUID.randomUUID();
+    UUID workspaceId = UUID.randomUUID();
+    DefaultSignalTaskDraftGenerator generator =
+        generator(
+            responding(success("{}")),
+            true,
+            true,
+            true,
+            ObservationRegistry.create(),
+            new SimpleMeterRegistry());
+
+    PreparedTaskDraft prepared = generator.prepare(input());
+    generator.enroll(prepared, taskId, workspaceId);
+
+    // baseline은 재계산이 아니라 준비 결과의 draft 그대로여야 한다(8.1절).
+    verify(enroller).enroll(INTENT, fallback(), taskId, workspaceId);
+  }
+
+  @Test
+  void doesNotEnrollWhenAsyncIsDisabled() {
+    CapturingClient client =
+        responding(success("{\"title\":\"점검\",\"role\":\"pm\",\"priority\":\"medium\"}"));
+    DefaultSignalTaskDraftGenerator generator = generator(client, true, true);
+
+    PreparedTaskDraft prepared = generator.prepare(input());
+    generator.enroll(prepared, UUID.randomUUID(), UUID.randomUUID());
+
+    assertThat(prepared.asyncIntent()).isNull();
+    verifyNoInteractions(enroller);
+  }
+
+  @Test
+  void doesNotEnrollWhenProviderIsDisabledEvenIfEnrollIsOn() {
+    // 11.2절의 파생 규칙. 생성할 수단이 없는데 원장만 쌓이면 deadline까지 generating으로 남았다 닫힐 뿐이다.
+    CapturingClient client = responding(success("{}"));
+
+    PreparedTaskDraft prepared =
+        generator(
+                client, false, true, true, ObservationRegistry.create(), new SimpleMeterRegistry())
+            .prepare(input());
+
+    assertAll(
+        () -> assertThat(prepared.asyncIntent()).isNull(),
+        () -> assertThat(client.calls()).isZero(),
+        () -> verify(enroller, never()).intentFor(any()));
+  }
+
+  @Test
   void doesNotCallProviderWhenConfigIsInvalid() {
     CapturingClient client = responding(success("{}"));
 
-    TaskDraft result = generator(client, true, false).generate(input());
+    TaskDraft result = generator(client, true, false).prepare(input()).draft();
 
     assertThat(result).isEqualTo(fallback());
     assertThat(client.calls()).isZero();
@@ -187,7 +282,7 @@ class DefaultSignalTaskDraftGeneratorTest {
     SignalTaskDraftInput insufficient =
         new SignalTaskDraftInput("시그널 제목", "risk", " ", null, List.of());
 
-    TaskDraft result = generator(client, true, true).generate(insufficient);
+    TaskDraft result = generator(client, true, true).prepare(insufficient).draft();
 
     assertThat(result).isEqualTo(fallback());
     assertThat(client.calls()).isZero();
@@ -201,7 +296,7 @@ class DefaultSignalTaskDraftGeneratorTest {
     CapturingClient client =
         responding(success("{\"title\":\"점검\",\"role\":\"pm\",\"priority\":\"medium\"}"));
 
-    generator(client, true, true, registry).generate(input());
+    generator(client, true, true, registry).prepare(input()).draft();
 
     assertAll(
         () -> assertThat(handler.started).isEqualTo(1),
@@ -226,7 +321,9 @@ class DefaultSignalTaskDraftGeneratorTest {
     ObservationRegistry registry = ObservationRegistry.create();
     registry.observationConfig().observationHandler(handler);
 
-    generator(failing(new RuntimeException("quota")), true, true, registry).generate(input());
+    generator(failing(new RuntimeException("quota")), true, true, registry)
+        .prepare(input())
+        .draft();
 
     assertAll(
         () -> assertThat(handler.started).isEqualTo(1),
@@ -249,7 +346,8 @@ class DefaultSignalTaskDraftGeneratorTest {
 
     TaskDraft result =
         generator(responding(safetyResponse), true, true, registry, meterRegistry)
-            .generate(input());
+            .prepare(input())
+            .draft();
 
     assertAll(
         () -> assertThat(result).isEqualTo(fallback()),
@@ -291,7 +389,8 @@ class DefaultSignalTaskDraftGeneratorTest {
                                 true, "SAFETY", "", "response-id", LlmResponse.TokenUsage.EMPTY)),
                         true,
                         true)
-                    .generate(input()));
+                    .prepare(input())
+                    .draft());
 
     assertThat(events)
         .filteredOn(
@@ -311,7 +410,8 @@ class DefaultSignalTaskDraftGeneratorTest {
                                 "{\"title\":\"점검\",\"role\":\"invalid\",\"priority\":\"medium\"}")),
                         true,
                         true)
-                    .generate(input()));
+                    .prepare(input())
+                    .draft());
 
     assertThat(events)
         .filteredOn(event -> event.getFormattedMessage().contains("fallbackReason=invalid_output"))
@@ -329,7 +429,8 @@ class DefaultSignalTaskDraftGeneratorTest {
                             success("{\"title\":\"점검\",\"role\":\"pm\",\"priority\":\"medium\"}")),
                         true,
                         true)
-                    .generate(input()));
+                    .prepare(input())
+                    .draft());
 
     assertThat(events)
         .filteredOn(event -> event.getFormattedMessage().contains("outcome=generated"))
@@ -353,6 +454,16 @@ class DefaultSignalTaskDraftGeneratorTest {
       boolean valid,
       ObservationRegistry observationRegistry,
       SimpleMeterRegistry meterRegistry) {
+    return generator(client, enabled, valid, false, observationRegistry, meterRegistry);
+  }
+
+  private DefaultSignalTaskDraftGenerator generator(
+      LlmClient client,
+      boolean enabled,
+      boolean valid,
+      boolean asyncEnroll,
+      ObservationRegistry observationRegistry,
+      SimpleMeterRegistry meterRegistry) {
     MinsuConfigStatus config = mock(MinsuConfigStatus.class);
     when(config.enabled()).thenReturn(enabled);
     when(config.valid()).thenReturn(valid);
@@ -360,6 +471,8 @@ class DefaultSignalTaskDraftGeneratorTest {
     MinsuJson json = new MinsuJson();
     return new DefaultSignalTaskDraftGenerator(
         config,
+        new MinsuAsyncProperties(asyncEnroll, false, Duration.ofHours(1), Duration.ofMinutes(5)),
+        enroller,
         selectionPolicy,
         client,
         new SignalTaskDraftPrompt(json),

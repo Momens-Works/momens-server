@@ -2,6 +2,8 @@ package works.momens.server.minsu.internal.generation;
 
 enum GenerationOutcome {
   DISABLED("fallback", "disabled"),
+  /** 비동기 활성. 요청 경로에서는 고정 fallback만 돌려주고 실제 생성은 원장을 통해 scheduler가 맡는다(5.5절). */
+  DEFERRED("fallback", "async_deferred"),
   INVALID_CONFIG("fallback", "invalid_config"),
   INSUFFICIENT_CONTEXT("fallback", "insufficient_context"),
   TIMEOUT("fallback", "timeout"),

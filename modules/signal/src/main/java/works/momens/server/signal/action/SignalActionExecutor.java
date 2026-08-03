@@ -5,6 +5,9 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import works.momens.server.minsu.PreparedTaskDraft;
+import works.momens.server.minsu.SignalTaskDraftGenerator;
+import works.momens.server.minsu.TaskDraft;
 import works.momens.server.outbox.OutboxAppender;
 import works.momens.server.project.CreateTaskCommand;
 import works.momens.server.project.CreatedTask;
@@ -19,6 +22,9 @@ import works.momens.server.signal.SignalReader;
  * 생성이 남기는 task.created, 이 메서드가 남기는 signal.converted_to_task)}, dismiss는 {@code signal_actions
  * insert + outbox_events insert(signal.dismissed)}를 한 트랜잭션에 커밋한다(CO-6). facade({@link
  * SignalActionServiceImpl})와 빈을 분리해 self-invocation 없이 {@code @Transactional} 프록시가 걸리게 한다.
+ *
+ * <p>비동기 생성이 활성이면 여기에 Minsu 생성 원장 적재가 더해진다(MOM-0818, 설계 5.3절). 같은 트랜잭션이므로 롤백되면 원장도 함께 사라지고,
+ * scheduler는 커밋된 행만 본다. 반대로 적재가 실패하면 convert 전체가 실패한다(fail-closed).
  */
 @Component
 @RequiredArgsConstructor
@@ -33,14 +39,23 @@ class SignalActionExecutor {
   private final SignalActionRepository signalActionRepository;
   private final TaskCreator taskCreator;
   private final OutboxAppender outboxAppender;
+  private final SignalTaskDraftGenerator taskDraftGenerator;
 
   @Transactional
   SignalActionResult convert(
-      SignalReader.Snapshot signal, UUID userId, String title, String role, String priority) {
+      SignalReader.Snapshot signal, UUID userId, PreparedTaskDraft prepared) {
+    TaskDraft draft = prepared.draft();
     CreatedTask created =
         taskCreator.create(
             CreateTaskCommand.fromSignal(
-                signal.projectId(), signal.workspaceId(), title, role, priority, signal.id()));
+                signal.projectId(),
+                signal.workspaceId(),
+                draft.title(),
+                draft.role().value(),
+                draft.priority().value(),
+                signal.id()));
+    // 원장 baseline은 방금 tasks에 쓴 값이어야 한다(8.1절). task 생성 직후에 적재해 두 값이 갈릴 자리를 두지 않는다.
+    taskDraftGenerator.enroll(prepared, created.id(), signal.workspaceId());
     signalActionRepository.save(
         SignalAction.builder()
             .workspaceId(signal.workspaceId())

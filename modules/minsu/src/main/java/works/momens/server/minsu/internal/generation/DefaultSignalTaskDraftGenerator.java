@@ -2,16 +2,20 @@ package works.momens.server.minsu.internal.generation;
 
 import io.micrometer.observation.Observation;
 import java.util.Locale;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.spi.LoggingEventBuilder;
 import org.springframework.stereotype.Component;
+import works.momens.server.minsu.PreparedTaskDraft;
 import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
 import works.momens.server.minsu.SignalTaskDraftGenerator;
 import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.minsu.TaskDraft;
+import works.momens.server.minsu.internal.config.MinsuAsyncProperties;
 import works.momens.server.minsu.internal.config.MinsuConfigStatus;
 import works.momens.server.minsu.internal.json.MinsuJson;
+import works.momens.server.minsu.internal.ledger.TaskDraftGenerationEnroller;
 import works.momens.server.minsu.internal.llm.LlmClient;
 import works.momens.server.minsu.internal.llm.LlmRequest;
 import works.momens.server.minsu.internal.llm.LlmResponse;
@@ -21,11 +25,19 @@ import works.momens.server.minsu.internal.llm.ModelSelection;
 import works.momens.server.minsu.internal.llm.ModelSelectionPolicy;
 import works.momens.server.minsu.internal.prompt.SignalTaskDraftPrompt;
 
+/**
+ * Minsu 공개 계약 구현.
+ *
+ * <p>비동기 활성 판정을 이 클래스가 소유한다(5.5절). 판정은 {@code prepare}에서 한 번만 하고 그 결과를 {@link PreparedTaskDraft}에
+ * 담아 내보내므로, 한 요청 안에서 판정이 두 번 갈릴 수 없다.
+ */
 @Slf4j
 @Component
 final class DefaultSignalTaskDraftGenerator implements SignalTaskDraftGenerator {
 
   private final MinsuConfigStatus configStatus;
+  private final MinsuAsyncProperties asyncProperties;
+  private final TaskDraftGenerationEnroller enroller;
   private final ModelSelectionPolicy selectionPolicy;
   private final LlmClient llmClient;
   private final SignalTaskDraftPrompt prompt;
@@ -34,12 +46,16 @@ final class DefaultSignalTaskDraftGenerator implements SignalTaskDraftGenerator 
 
   DefaultSignalTaskDraftGenerator(
       MinsuConfigStatus configStatus,
+      MinsuAsyncProperties asyncProperties,
+      TaskDraftGenerationEnroller enroller,
       ModelSelectionPolicy selectionPolicy,
       LlmClient llmClient,
       SignalTaskDraftPrompt prompt,
       MinsuJson json,
       MinsuObservability observability) {
     this.configStatus = configStatus;
+    this.asyncProperties = asyncProperties;
+    this.enroller = enroller;
     this.selectionPolicy = selectionPolicy;
     this.llmClient = llmClient;
     this.prompt = prompt;
@@ -48,11 +64,31 @@ final class DefaultSignalTaskDraftGenerator implements SignalTaskDraftGenerator 
   }
 
   @Override
-  public TaskDraft generate(SignalTaskDraftInput input) {
+  public PreparedTaskDraft prepare(SignalTaskDraftInput input) {
     TaskDraft fallback = fallback(input);
     if (!configStatus.enabled()) {
-      return finish(fallback, GenerationOutcome.DISABLED);
+      // provider가 꺼져 있으면 enroll 값과 무관하게 적재하지 않는다(11.2절). 생성할 수단이 없는 원장은
+      // deadline까지 generating으로 남았다 닫힐 뿐이다.
+      return synchronous(finish(fallback, GenerationOutcome.DISABLED));
     }
+    if (asyncProperties.enroll()) {
+      // 비동기 활성 경로. 여기서 LLM을 부르면 이 설계의 목적 자체가 사라진다(5.5절).
+      return new PreparedTaskDraft(
+          finish(fallback, GenerationOutcome.DEFERRED), enroller.intentFor(input));
+    }
+    return synchronous(generate(input, fallback));
+  }
+
+  @Override
+  public void enroll(PreparedTaskDraft prepared, UUID taskId, UUID workspaceId) {
+    if (prepared.asyncIntent() == null) {
+      return;
+    }
+    enroller.enroll(prepared.asyncIntent(), prepared.draft(), taskId, workspaceId);
+  }
+
+  /** 설정이 무효하거나 설정 유효성과 무관하게 비동기가 꺼져 있을 때 타는 기존 동기 경로. */
+  private TaskDraft generate(SignalTaskDraftInput input, TaskDraft fallback) {
     if (!configStatus.valid()) {
       return finish(fallback, GenerationOutcome.INVALID_CONFIG);
     }
@@ -120,6 +156,11 @@ final class DefaultSignalTaskDraftGenerator implements SignalTaskDraftGenerator 
 
   private TaskDraft fallback(SignalTaskDraftInput input) {
     return new TaskDraft(TaskTitleNormalizer.normalize(input.title()), Role.PM, Priority.MEDIUM);
+  }
+
+  /** 적재 의사가 없는 준비 결과. 이 draft가 곧 최종값이므로 뒤이은 {@code enroll}은 아무것도 하지 않는다. */
+  private static PreparedTaskDraft synchronous(TaskDraft draft) {
+    return new PreparedTaskDraft(draft, null);
   }
 
   private TaskDraft finish(TaskDraft draft, GenerationOutcome outcome) {
