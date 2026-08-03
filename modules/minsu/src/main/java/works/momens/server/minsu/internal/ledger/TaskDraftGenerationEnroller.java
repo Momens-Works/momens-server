@@ -4,9 +4,9 @@ import java.time.Instant;
 import java.util.UUID;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
+import works.momens.server.minsu.PreparedTaskDraft;
 import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.minsu.TaskDraft;
-import works.momens.server.minsu.TaskDraftAsyncIntent;
 import works.momens.server.minsu.TaskDraftEnrollmentException;
 import works.momens.server.minsu.internal.config.MinsuAsyncProperties;
 import works.momens.server.minsu.internal.json.MinsuJson;
@@ -33,24 +33,25 @@ public class TaskDraftGenerationEnroller {
     this.json = json;
   }
 
-  /** draft 확보 시점에 입력 snapshot을 봉인한다. 해석은 {@link #enroll}만 한다. */
-  public TaskDraftAsyncIntent intentFor(SignalTaskDraftInput input) {
-    return new LedgerEnrollment(input);
+  /** draft 확보 시점에 draft와 입력 snapshot을 함께 봉인한다. 해석은 {@link #enroll}만 한다. */
+  public PreparedTaskDraft bind(TaskDraft draft, SignalTaskDraftInput snapshot) {
+    return new LedgerBoundDraft(draft, snapshot);
   }
 
   /**
-   * {@code pending} 원장을 적재한다.
+   * {@code pending} 원장을 적재한다. baseline은 준비 결과가 들고 있는 draft이고, 호출자가 그것을 {@code tasks}에 썼다는 것이
+   * 계약이다(8.1절).
    *
    * <p>{@code saveAndFlush}로 즉시 flush하는 이유는 실패를 <b>이 호출 안에서</b> 잡기 위해서다. 지연 flush에 맡기면 제약 위반이 커밋
    * 시점에 터져 호출자의 다른 제약 위반과 구분되지 않는다(5.3절이 구분하라고 한 두 실패 경로).
    */
-  public void enroll(
-      TaskDraftAsyncIntent intent, TaskDraft baseline, UUID taskId, UUID workspaceId) {
-    if (!(intent instanceof LedgerEnrollment enrollment)) {
+  public void enroll(PreparedTaskDraft prepared, UUID taskId, UUID workspaceId) {
+    if (!(prepared instanceof LedgerBoundDraft bound)) {
       throw new IllegalArgumentException(
-          "Minsu가 발급하지 않은 asyncIntent입니다: " + intent.getClass().getName());
+          "Minsu가 발급하지 않은 준비 결과입니다: " + prepared.getClass().getName());
     }
-    SignalTaskDraftInput snapshot = enrollment.snapshot();
+    TaskDraft baseline = bound.draft();
+    SignalTaskDraftInput snapshot = bound.snapshot();
     try {
       // 시각 조회도 DB 호출이므로 같은 try 안에 둔다. 밖에 두면 이 실패만 전용 예외를 벗어난다.
       Instant enrolledAt = repository.currentDatabaseTime();

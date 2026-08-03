@@ -67,8 +67,11 @@ class SignalActionServiceImplTest {
    * 경우만 쓴다.
    */
   private static PreparedTaskDraft prepared(String title, Role role, Priority priority) {
-    return new PreparedTaskDraft(new TaskDraft(title, role, priority), null);
+    return new TestPreparedDraft(new TaskDraft(title, role, priority));
   }
+
+  /** 실제 준비 결과는 Minsu 내부 타입이라 밖에서 만들 수 없다. 적재 여부 판정도 Minsu가 소유한다. */
+  private record TestPreparedDraft(TaskDraft draft) implements PreparedTaskDraft {}
 
   private static SignalReader.Snapshot snapshot() {
     return new SignalReader.Snapshot(

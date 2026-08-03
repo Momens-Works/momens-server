@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -22,6 +21,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -32,7 +32,6 @@ import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
 import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.minsu.TaskDraft;
-import works.momens.server.minsu.TaskDraftAsyncIntent;
 import works.momens.server.minsu.internal.config.MinsuAsyncProperties;
 import works.momens.server.minsu.internal.config.MinsuConfigStatus;
 import works.momens.server.minsu.internal.json.MinsuJson;
@@ -50,10 +49,18 @@ class DefaultSignalTaskDraftGeneratorTest {
   private static final ModelSelection SELECTION =
       new ModelSelection("google", "gemini-3.5-flash-lite", "project", "global");
 
-  /** Minsu가 발급한 불투명 의사를 대신하는 표식. 호출자는 내용을 볼 수 없으므로 동일성만 확인한다. */
-  private static final TaskDraftAsyncIntent INTENT = new TaskDraftAsyncIntent() {};
-
   private final TaskDraftGenerationEnroller enroller = mock(TaskDraftGenerationEnroller.class);
+
+  @BeforeEach
+  void stubEnroller() {
+    // 실제 적재기는 draft와 snapshot을 봉인한 자기 타입을 돌려준다. 여기서는 draft만 그대로 되비친다.
+    when(enroller.bind(any(), any()))
+        .thenAnswer(
+            invocation -> {
+              TaskDraft bound = invocation.getArgument(0);
+              return (PreparedTaskDraft) () -> bound;
+            });
+  }
 
   @Test
   void returnsValidatedStructuredOutput() {
@@ -193,7 +200,6 @@ class DefaultSignalTaskDraftGeneratorTest {
   @Test
   void doesNotCallProviderWhenAsyncEnrollIsEnabled() {
     // 이 설계의 목적 자체다(5.5절). 비동기 활성인데 요청 경로에서 provider를 부르면 8초 예산이 그대로 남는다.
-    when(enroller.intentFor(any())).thenReturn(INTENT);
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     CapturingClient client = responding(success("{}"));
 
@@ -204,7 +210,8 @@ class DefaultSignalTaskDraftGeneratorTest {
     assertAll(
         () -> assertThat(client.calls()).isZero(),
         () -> assertThat(prepared.draft()).isEqualTo(fallback()),
-        () -> assertThat(prepared.asyncIntent()).isSameAs(INTENT),
+        // 적재기가 draft와 입력 snapshot을 함께 봉인한다. baseline은 여기서 정해진다(8.1절).
+        () -> verify(enroller).bind(fallback(), input()),
         () ->
             assertThat(
                     meterRegistry
@@ -218,7 +225,6 @@ class DefaultSignalTaskDraftGeneratorTest {
 
   @Test
   void enrollsWithTheDraftThatWasWrittenToTasks() {
-    when(enroller.intentFor(any())).thenReturn(INTENT);
     UUID taskId = UUID.randomUUID();
     UUID workspaceId = UUID.randomUUID();
     DefaultSignalTaskDraftGenerator generator =
@@ -233,8 +239,8 @@ class DefaultSignalTaskDraftGeneratorTest {
     PreparedTaskDraft prepared = generator.prepare(input());
     generator.enroll(prepared, taskId, workspaceId);
 
-    // baseline은 재계산이 아니라 준비 결과의 draft 그대로여야 한다(8.1절).
-    verify(enroller).enroll(INTENT, fallback(), taskId, workspaceId);
+    // 준비 결과를 손대지 않고 그대로 넘긴다. baseline은 그 안에 이미 봉인돼 있다(8.1절).
+    verify(enroller).enroll(prepared, taskId, workspaceId);
   }
 
   @Test
@@ -246,7 +252,7 @@ class DefaultSignalTaskDraftGeneratorTest {
     PreparedTaskDraft prepared = generator.prepare(input());
     generator.enroll(prepared, UUID.randomUUID(), UUID.randomUUID());
 
-    assertThat(prepared.asyncIntent()).isNull();
+    assertThat(prepared.draft()).isEqualTo(new TaskDraft("점검", Role.PM, Priority.MEDIUM));
     verifyNoInteractions(enroller);
   }
 
@@ -261,9 +267,9 @@ class DefaultSignalTaskDraftGeneratorTest {
             .prepare(input());
 
     assertAll(
-        () -> assertThat(prepared.asyncIntent()).isNull(),
+        () -> assertThat(prepared.draft()).isEqualTo(fallback()),
         () -> assertThat(client.calls()).isZero(),
-        () -> verify(enroller, never()).intentFor(any()));
+        () -> verifyNoInteractions(enroller));
   }
 
   @Test

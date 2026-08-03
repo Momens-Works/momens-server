@@ -16,7 +16,6 @@ import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
 import works.momens.server.minsu.SignalTaskDraftGenerator;
 import works.momens.server.minsu.TaskDraft;
-import works.momens.server.minsu.TaskDraftAsyncIntent;
 import works.momens.server.outbox.OutboxAppender;
 import works.momens.server.project.CreateTaskCommand;
 import works.momens.server.project.CreatedTask;
@@ -104,9 +103,10 @@ class SignalActionExecutorTest {
     assertThat(result.task()).isNull();
   }
 
-  /** 비동기 활성 여부는 Minsu만 알므로 여기서는 불투명 의사를 담아 둔다. */
+  /** 실제 준비 결과는 Minsu 내부 타입이라 밖에서 만들 수 없다. 여기서는 draft만 담은 대역을 쓴다. */
   private static PreparedTaskDraft prepared(String title, Role role, Priority priority) {
-    return new PreparedTaskDraft(
-        new TaskDraft(title, role, priority), new TaskDraftAsyncIntent() {});
+    return new TestPreparedDraft(new TaskDraft(title, role, priority));
   }
+
+  private record TestPreparedDraft(TaskDraft draft) implements PreparedTaskDraft {}
 }
