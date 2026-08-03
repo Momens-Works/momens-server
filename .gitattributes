@@ -1,5 +1,11 @@
+# 워킹 트리 줄바꿈은 저장소 기준으로 통일해서 관리합니다. 개인 `core.autocrlf` 설정에 의존할 경우
+# Windows 환경을 거친 파일이 CRLF로 남을 수 있고, Spotless가 워킹 트리를 검사할 때 이를 포맷 위반으로 인식하게 됩니다.
+# 특히 `gradlew`나 `hooks/` 디렉터리의 셸 스크립트가 CRLF로 체크아웃되면 `bad interpreter` 오류가 발생할 수 있습니다.
+* text=auto eol=lf
+
+# Windows 배치 파일에 한해서만 CRLF로 체크아웃되도록 예외를 둡니다.
 *.bat text eol=crlf
 
-# gradlew 는 컨테이너·CI 의 sh 로 실행되므로 항상 LF 로 체크아웃합니다.
-# core.autocrlf=true 환경에서 CRLF 로 받으면 `bad interpreter` 로 실패합니다.
-gradlew text eol=lf
+# `gradle-wrapper.jar`는 줄바꿈이 변환되면 빌드가 실패할 수 있으므로 바이너리 파일로 명시적으로 고정합니다.
+# PNG, WebP 파일은 `text=auto` 설정에 따라 자동으로 바이너리로 처리됩니다.
+*.jar binary
