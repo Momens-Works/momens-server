@@ -1163,8 +1163,9 @@ ADR-0015가 이 PR에 함께 들어가므로 별도 ADR 티켓은 두지 않는�
 
 ## 13. 미확정으로 남는 것
 
-- attempt 상한·lease·`apply_cutoff_at`·`read_deadline_at` 값과 실행 동시성 — dev 재측정 후
-  (9.1절의 부등식은 유지)
+- attempt 상한·lease 값과 실행 동시성 — dev 재측정 후 (9.1절의 부등식은 유지).
+  `apply_cutoff_at`·`read_deadline_at`은 MOM-0818에서 기본값을 정했고(8.6절) MOM-0824의
+  재측정으로 조정한다.
 - 적재·drain·provider 세 설정 축의 이름과 조합별 동작 — 구현 티켓 (11.2절)
 - 장시간 호출 중 lease 갱신 여부 — 구현 티켓 (8.2절)
 - 원장 테이블의 세부 컬럼과 Flyway 파일명 — 구현 티켓
@@ -1172,9 +1173,7 @@ ADR-0015가 이 PR에 함께 들어가므로 별도 ADR 티켓은 두지 않는�
   (5.6절). 정책 없이 prod에 가면 `signals` 본문이 두 벌 남고, 지우려면 그때는 운영 데이터라
   삭제 마이그레이션이 필요하다. baseline을 원장이 따로 소유하므로(6절) snapshot만 비우는
   정리가 가능하다.
-- 가드 밴드 margin — 구현 티켓 (8.6절)
 - scheduler 스레드 풀 크기 — 원장·scheduler 구현 티켓 (11.3절)
-- 기존 `generate` 시그니처의 존치 여부 — 구현 티켓 (5.5절)
 - scheduler 중단 시 남은 `pending`을 닫는 운영 절차 — 구현 티켓 (11.1절)
 - prod 데이터 레지던시 정책 — 동기 설계 11절에서 이월된 미결
 - `minsu → retrieval` 연동 — 별도 설계
