@@ -19,11 +19,13 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataIntegrityViolationException;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.minsu.PreparedTaskDraft;
 import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
 import works.momens.server.minsu.SignalTaskDraftGenerator;
 import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.minsu.TaskDraft;
+import works.momens.server.minsu.TaskDraftEnrollmentException;
 import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
 import works.momens.server.signal.SignalActionResult;
@@ -58,6 +60,14 @@ class SignalActionServiceImplTest {
             executor,
             taskReader,
             taskDraftGenerator);
+  }
+
+  /**
+   * 비동기 비활성 상태의 준비 결과. 이 테스트가 보는 것은 facade의 가드·멱등·경합 정책이고, 적재 여부 판정은 Minsu가 소유하므로 여기서는 의사가 비어 있는
+   * 경우만 쓴다.
+   */
+  private static PreparedTaskDraft prepared(String title, Role role, Priority priority) {
+    return new PreparedTaskDraft(new TaskDraft(title, role, priority), null);
   }
 
   private static SignalReader.Snapshot snapshot() {
@@ -96,9 +106,9 @@ class SignalActionServiceImplTest {
     when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
     when(signalActionRepository.findBySignalId(SIGNAL_ID)).thenReturn(Optional.empty());
     when(signalReader.findDraftEvidence(SIGNAL_ID)).thenReturn(List.of());
-    when(taskDraftGenerator.generate(any()))
-        .thenReturn(new TaskDraft("결제 정책 확정하기", Role.BACKEND, Priority.HIGH));
-    when(executor.convert(signal, USER_ID, "결제 정책 확정하기", "backend", "high"))
+    when(taskDraftGenerator.prepare(any()))
+        .thenReturn(prepared("결제 정책 확정하기", Role.BACKEND, Priority.HIGH));
+    when(executor.convert(signal, USER_ID, prepared("결제 정책 확정하기", Role.BACKEND, Priority.HIGH)))
         .thenReturn(
             new SignalActionResult(
                 SIGNAL_ID,
@@ -109,8 +119,8 @@ class SignalActionServiceImplTest {
     SignalActionResult result = service.convertToTask(SIGNAL_ID, USER_ID);
 
     assertThat(result.created()).isTrue();
-    verify(taskDraftGenerator, times(1)).generate(any());
-    verify(executor).convert(signal, USER_ID, "결제 정책 확정하기", "backend", "high");
+    verify(taskDraftGenerator, times(1)).prepare(any());
+    verify(executor).convert(signal, USER_ID, prepared("결제 정책 확정하기", Role.BACKEND, Priority.HIGH));
   }
 
   @Test
@@ -121,9 +131,8 @@ class SignalActionServiceImplTest {
     when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
     when(signalActionRepository.findBySignalId(SIGNAL_ID)).thenReturn(Optional.empty());
     when(signalReader.findDraftEvidence(SIGNAL_ID)).thenReturn(List.of());
-    when(taskDraftGenerator.generate(any()))
-        .thenReturn(new TaskDraft("제목", Role.PM, Priority.MEDIUM));
-    when(executor.convert(signal, USER_ID, "제목", "pm", "medium"))
+    when(taskDraftGenerator.prepare(any())).thenReturn(prepared("제목", Role.PM, Priority.MEDIUM));
+    when(executor.convert(signal, USER_ID, prepared("제목", Role.PM, Priority.MEDIUM)))
         .thenReturn(
             new SignalActionResult(
                 SIGNAL_ID,
@@ -134,7 +143,7 @@ class SignalActionServiceImplTest {
     SignalActionResult result = service.convertToTask(SIGNAL_ID, USER_ID);
 
     assertThat(result.created()).isTrue();
-    verify(executor).convert(signal, USER_ID, "제목", "pm", "medium");
+    verify(executor).convert(signal, USER_ID, prepared("제목", Role.PM, Priority.MEDIUM));
   }
 
   @Test
@@ -148,16 +157,15 @@ class SignalActionServiceImplTest {
             List.of(
                 new SignalReader.DraftEvidence("결제 정책", "논의 중단", "출시 지연"),
                 new SignalReader.DraftEvidence("환불 정책", "합의 없음", "CS 부담")));
-    when(taskDraftGenerator.generate(any()))
-        .thenReturn(new TaskDraft("제목", Role.PM, Priority.MEDIUM));
-    when(executor.convert(any(), any(), any(), any(), any()))
+    when(taskDraftGenerator.prepare(any())).thenReturn(prepared("제목", Role.PM, Priority.MEDIUM));
+    when(executor.convert(any(), any(), any()))
         .thenReturn(new SignalActionResult(SIGNAL_ID, "convert_to_task", true, null));
 
     service.convertToTask(SIGNAL_ID, USER_ID);
 
     ArgumentCaptor<SignalTaskDraftInput> captor =
         ArgumentCaptor.forClass(SignalTaskDraftInput.class);
-    verify(taskDraftGenerator).generate(captor.capture());
+    verify(taskDraftGenerator).prepare(captor.capture());
     assertThat(captor.getValue())
         .isEqualTo(
             new SignalTaskDraftInput(
@@ -177,16 +185,15 @@ class SignalActionServiceImplTest {
     when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
     when(signalActionRepository.findBySignalId(SIGNAL_ID)).thenReturn(Optional.empty());
     when(signalReader.findDraftEvidence(SIGNAL_ID)).thenReturn(List.of());
-    when(taskDraftGenerator.generate(any()))
-        .thenReturn(new TaskDraft("제목", Role.PM, Priority.MEDIUM));
-    when(executor.convert(any(), any(), any(), any(), any()))
+    when(taskDraftGenerator.prepare(any())).thenReturn(prepared("제목", Role.PM, Priority.MEDIUM));
+    when(executor.convert(any(), any(), any()))
         .thenReturn(new SignalActionResult(SIGNAL_ID, "convert_to_task", true, null));
 
     service.convertToTask(SIGNAL_ID, USER_ID);
 
     ArgumentCaptor<SignalTaskDraftInput> captor =
         ArgumentCaptor.forClass(SignalTaskDraftInput.class);
-    verify(taskDraftGenerator).generate(captor.capture());
+    verify(taskDraftGenerator).prepare(captor.capture());
     assertThat(captor.getValue().evidence()).isEmpty();
   }
 
@@ -202,7 +209,7 @@ class SignalActionServiceImplTest {
 
     service.dismiss(SIGNAL_ID, USER_ID);
 
-    verify(taskDraftGenerator, never()).generate(any());
+    verify(taskDraftGenerator, never()).prepare(any());
     verify(signalReader, never()).findDraftEvidence(any());
   }
 
@@ -242,8 +249,8 @@ class SignalActionServiceImplTest {
 
     assertThat(result.created()).isFalse();
     assertThat(result.task().id()).isEqualTo(taskId);
-    verify(executor, never()).convert(any(), any(), any(), any(), any());
-    verify(taskDraftGenerator, never()).generate(any());
+    verify(executor, never()).convert(any(), any(), any());
+    verify(taskDraftGenerator, never()).prepare(any());
     verify(signalReader, never()).findDraftEvidence(any());
   }
 
@@ -288,7 +295,7 @@ class SignalActionServiceImplTest {
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(SignalErrorCode.SIGNAL_INVALID_STATE);
-    verify(taskDraftGenerator, never()).generate(any());
+    verify(taskDraftGenerator, never()).prepare(any());
     verify(signalReader, never()).findDraftEvidence(any());
   }
 
@@ -311,9 +318,8 @@ class SignalActionServiceImplTest {
         .thenReturn(Optional.empty())
         .thenReturn(Optional.of(racedRow));
     when(signalReader.findDraftEvidence(SIGNAL_ID)).thenReturn(List.of());
-    when(taskDraftGenerator.generate(any()))
-        .thenReturn(new TaskDraft("제목", Role.PM, Priority.MEDIUM));
-    when(executor.convert(signal, USER_ID, "제목", "pm", "medium"))
+    when(taskDraftGenerator.prepare(any())).thenReturn(prepared("제목", Role.PM, Priority.MEDIUM));
+    when(executor.convert(signal, USER_ID, prepared("제목", Role.PM, Priority.MEDIUM)))
         .thenThrow(new DataIntegrityViolationException("unique violation"));
     when(taskReader.findDetail(taskId))
         .thenReturn(
@@ -338,6 +344,25 @@ class SignalActionServiceImplTest {
     assertThat(result.actionType()).isEqualTo("convert_to_task");
     assertThat(result.task().id()).isEqualTo(taskId);
     verify(signalActionRepository, times(2)).findBySignalId(SIGNAL_ID);
+  }
+
+  @Test
+  @DisplayName("원장 적재 실패는 경합 흡수 경로로 삼키지 않고 그대로 전파한다")
+  void propagatesLedgerEnrollmentFailureInsteadOfReplaying() {
+    // 적재 실패는 트랜잭션 전체가 롤백돼 signal_actions도 남지 않는 신규 처리 실패이고, 커밋됐는데
+    // 응답만 유실된 replay와 장애 성격이 다르다(5.3절). 둘을 같은 경로로 흡수하면 분석이 어긋난다.
+    SignalReader.Snapshot signal = snapshot();
+    when(signalReader.findLive(SIGNAL_ID)).thenReturn(Optional.of(signal));
+    when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
+    when(signalActionRepository.findBySignalId(SIGNAL_ID)).thenReturn(Optional.empty());
+    when(signalReader.findDraftEvidence(SIGNAL_ID)).thenReturn(List.of());
+    when(taskDraftGenerator.prepare(any())).thenReturn(prepared("제목", Role.PM, Priority.MEDIUM));
+    when(executor.convert(any(), any(), any()))
+        .thenThrow(new TaskDraftEnrollmentException("원장 적재 실패", new RuntimeException()));
+
+    assertThatThrownBy(() -> service.convertToTask(SIGNAL_ID, USER_ID))
+        .isInstanceOf(TaskDraftEnrollmentException.class);
+    verify(signalActionRepository, times(1)).findBySignalId(SIGNAL_ID);
   }
 
   @Test

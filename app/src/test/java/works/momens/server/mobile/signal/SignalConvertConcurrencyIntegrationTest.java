@@ -21,6 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.minsu.PreparedTaskDraft;
 import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
 import works.momens.server.minsu.SignalTaskDraftGenerator;
@@ -65,11 +66,12 @@ class SignalConvertConcurrencyIntegrationTest extends AbstractPostgresIntegratio
     UUID signal = insertSignal(workspace, project, "risk", "이탈 가능성 발견");
 
     CyclicBarrier barrier = new CyclicBarrier(CONCURRENT_REQUESTS);
-    when(taskDraftGenerator.generate(any()))
+    when(taskDraftGenerator.prepare(any()))
         .thenAnswer(
             invocation -> {
               barrier.await(10, TimeUnit.SECONDS);
-              return new TaskDraft("이탈 가능성 점검", Role.PM, Priority.MEDIUM);
+              return new PreparedTaskDraft(
+                  new TaskDraft("이탈 가능성 점검", Role.PM, Priority.MEDIUM), null);
             });
     Callable<SignalActionResult> convert =
         () -> signalActionService.convertToTask(signal, jinsu.id());
@@ -84,7 +86,7 @@ class SignalConvertConcurrencyIntegrationTest extends AbstractPostgresIntegratio
     }
 
     // 두 요청 모두 ledger 부재를 확인하고 쓰기 경로까지 들어갔다(= 실제 unique 경합이 일어났다).
-    verify(taskDraftGenerator, times(CONCURRENT_REQUESTS)).generate(any());
+    verify(taskDraftGenerator, times(CONCURRENT_REQUESTS)).prepare(any());
     assertThat(results).filteredOn(SignalActionResult::created).hasSize(1);
     assertThat(results).filteredOn(result -> !result.created()).hasSize(1);
     assertThat(results).extracting(result -> result.task().id()).containsOnly(taskId(project));

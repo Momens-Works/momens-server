@@ -9,9 +9,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.minsu.PreparedTaskDraft;
 import works.momens.server.minsu.SignalTaskDraftGenerator;
 import works.momens.server.minsu.SignalTaskDraftInput;
-import works.momens.server.minsu.TaskDraft;
 import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
 import works.momens.server.signal.SignalActionResult;
@@ -23,10 +23,11 @@ import works.momens.server.workspace.WorkspaceAccess;
 /**
  * Signal action 멱등·충돌 정책 facade.
  *
- * <p>실제 원자 쓰기는 {@link SignalActionExecutor}에 위임한다({@code @Transactional} 프록시가 걸리도록 빈을 분리). ledger
- * {@code UNIQUE(signal_id)}로 인한 동시성 레이스(같은 Signal에 대한 두 요청이 동시에 처리 없음을 확인하고 둘 다 insert를 시도하는 경우)는
- * {@link DataIntegrityViolationException}을 잡아 재조회 후 replay/충돌로 되돌린다. {@code action_type} 문자열은
- * {@link SignalActionType}이 유일한 출처다.
+ * <p>실제 원자 쓰기는 {@link SignalActionExecutor}에 위임한다({@code @Transactional} 프록시가 걸리도록 빈을 분리). {@code
+ * signal_actions UNIQUE(signal_id)}로 인한 동시성 레이스(같은 Signal에 대한 두 요청이 동시에 처리 없음을 확인하고 둘 다 insert를
+ * 시도하는 경우)는 {@link DataIntegrityViolationException}을 잡아 재조회 후 replay/충돌로 되돌린다. Minsu 생성 원장 적재 실패는 이
+ * 경합이 아니라 신규 처리 실패이므로 별도 타입({@code TaskDraftEnrollmentException})으로 이 catch를 지나 그대로 전파된다. {@code
+ * action_type} 문자열은 {@link SignalActionType}이 유일한 출처다.
  */
 @Service
 @RequiredArgsConstructor
@@ -47,10 +48,9 @@ class SignalActionServiceImpl implements SignalActionService {
       return replayOrConflict(existing.get(), SignalActionType.CONVERT_TO_TASK);
     }
 
-    TaskDraft draft = generateDraft(signal);
+    PreparedTaskDraft prepared = prepareDraft(signal);
     try {
-      return executor.convert(
-          signal, userId, draft.title(), draft.role().value(), draft.priority().value());
+      return executor.convert(signal, userId, prepared);
     } catch (DataIntegrityViolationException raced) {
       return replayOrConflict(
           signalActionRepository.findBySignalId(signalId).orElseThrow(() -> raced),
@@ -92,18 +92,21 @@ class SignalActionServiceImpl implements SignalActionService {
   }
 
   /**
-   * task draft를 만든다(MOM-0804). evidence 조회와 모델 호출은 신규 convert에서만 수행하고, replay·충돌·dismiss 경로는 여기까지
-   * 오지 않는다. 외부 LLM 호출이 쓰기 트랜잭션과 DB connection을 점유하지 않도록 {@link SignalActionExecutor} 밖에서 호출한다.
-   * generator는 실패를 전파하지 않고 항상 유효한 고정 fallback draft를 반환하므로 이 경로에 별도 예외 처리가 없다.
+   * task에 쓸 draft를 확보한다(MOM-0804·MOM-0818). evidence 조회와 모델 호출은 신규 convert에서만 수행하고,
+   * replay·충돌·dismiss 경로는 여기까지 오지 않는다. 외부 LLM 호출이 쓰기 트랜잭션과 DB connection을 점유하지 않도록 {@link
+   * SignalActionExecutor} 밖에서 호출한다. generator는 실패를 전파하지 않고 항상 유효한 고정 fallback draft를 반환하므로 이 경로에 별도
+   * 예외 처리가 없다.
+   *
+   * <p>비동기 활성 여부는 Minsu가 판정하고 여기서는 알지 못한다. 준비 결과를 그대로 executor에 넘기면 적재는 Minsu가 알아서 한다.
    */
-  private TaskDraft generateDraft(SignalReader.Snapshot signal) {
+  private PreparedTaskDraft prepareDraft(SignalReader.Snapshot signal) {
     List<SignalTaskDraftInput.Evidence> evidence =
         signalReader.findDraftEvidence(signal.id()).stream()
             .map(
                 item ->
                     new SignalTaskDraftInput.Evidence(item.target(), item.change(), item.impact()))
             .toList();
-    return taskDraftGenerator.generate(
+    return taskDraftGenerator.prepare(
         new SignalTaskDraftInput(
             signal.title(), signal.type(), signal.description(), signal.impact(), evidence));
   }

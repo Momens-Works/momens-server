@@ -2,6 +2,7 @@ package works.momens.server.mobile.signal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -23,11 +24,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import works.momens.server.auth.AccessTokenTestFactory;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.minsu.PreparedTaskDraft;
 import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
 import works.momens.server.minsu.SignalTaskDraftGenerator;
 import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.minsu.TaskDraft;
+import works.momens.server.minsu.TaskDraftEnrollmentException;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 
@@ -59,8 +62,9 @@ class MobileSignalConvertDraftIntegrationTest extends AbstractPostgresIntegratio
     UUID signal =
         insertSignal(workspace, project, "decision", "결제 정책 결정 3일째 보류", "합의가 지연됩니다.", "출시 일정에 영향");
     insertEvidence(workspace, signal, 0, "결제 정책", "논의 중단", "출시 지연");
-    when(taskDraftGenerator.generate(any()))
-        .thenReturn(new TaskDraft("결제 정책 확정하기", Role.BACKEND, Priority.HIGH));
+    when(taskDraftGenerator.prepare(any()))
+        .thenReturn(
+            new PreparedTaskDraft(new TaskDraft("결제 정책 확정하기", Role.BACKEND, Priority.HIGH), null));
     String token = "Bearer " + accessTokens.issueAccessToken(jinsu.id());
 
     mockMvc
@@ -81,7 +85,7 @@ class MobileSignalConvertDraftIntegrationTest extends AbstractPostgresIntegratio
 
     ArgumentCaptor<SignalTaskDraftInput> captor =
         ArgumentCaptor.forClass(SignalTaskDraftInput.class);
-    verify(taskDraftGenerator).generate(captor.capture());
+    verify(taskDraftGenerator).prepare(captor.capture());
     assertThat(captor.getValue())
         .isEqualTo(
             new SignalTaskDraftInput(
@@ -100,7 +104,39 @@ class MobileSignalConvertDraftIntegrationTest extends AbstractPostgresIntegratio
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.task.title").value("결제 정책 확정하기"));
 
-    verify(taskDraftGenerator, times(1)).generate(any());
+    verify(taskDraftGenerator, times(1)).prepare(any());
+  }
+
+  @Test
+  @DisplayName("원장 적재가 실패하면 convert 전체가 롤백되어 task도 signal_actions도 남지 않는다")
+  void rollsBackWholeConvertWhenLedgerEnrollmentFails() throws Exception {
+    // fail-closed(5.3절). 원장 없이 응답만 성공하면 그 task는 조용히 풍부화되지 않고 아무도 알 수 없다.
+    UserProfile jinsu = userService.findOrCreate("convert-draft-fail-it@momens.works", "신진수", null);
+    UUID workspace = insertWorkspace("convert-draft-fail");
+    addMember(workspace, jinsu.id(), "owner");
+    UUID project = insertProject(workspace, jinsu.id(), "convert-draft-fail-project");
+    UUID signal = insertSignal(workspace, project, "risk", "결제 실패율이 올라감", "카드 결제 실패", "전환율 하락");
+    when(taskDraftGenerator.prepare(any()))
+        .thenReturn(new PreparedTaskDraft(new TaskDraft("제목", Role.PM, Priority.MEDIUM), null));
+    doThrow(new TaskDraftEnrollmentException("원장 적재 실패", new RuntimeException()))
+        .when(taskDraftGenerator)
+        .enroll(any(), any(), any());
+
+    mockMvc
+        .perform(
+            post("/api/mobile/signals/{signalId}/actions/convert-to-task", signal)
+                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(jinsu.id()))
+                .header("API-Version", "1"))
+        .andExpect(status().is5xxServerError());
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM tasks WHERE project_id = ?", Integer.class, project))
+        .isZero();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM signal_actions WHERE signal_id = ?", Integer.class, signal))
+        .isZero();
   }
 
   @Test
@@ -120,7 +156,7 @@ class MobileSignalConvertDraftIntegrationTest extends AbstractPostgresIntegratio
                 .header("API-Version", "1"))
         .andExpect(status().isOk());
 
-    verify(taskDraftGenerator, never()).generate(any());
+    verify(taskDraftGenerator, never()).prepare(any());
   }
 
   private UUID insertWorkspace(String slug) {
