@@ -133,6 +133,35 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
   }
 
   @Test
+  @DisplayName("신규 pending이 슬롯을 모두 채워도 만료된 lease가 회수된다")
+  void expiredLeaseIsReclaimedEvenWhenPendingFillsEverySlot() {
+    UUID stalled = persistPending();
+    ledger.claimDue(1);
+    expireLease();
+    // 회수를 기다리는 동안에도 사용자 convert는 계속 들어온다. 신규를 먼저 보면 매 주기 pending이
+    // 슬롯을 모두 채우는 사이 만료 행이 한 번도 집히지 않고, 그대로 apply_cutoff_at을 지나면 두
+    // 쿼리 모두에서 빠져 영영 회수되지 않는다(8.5절의 복구 보장이 부하에 따라 깨진다).
+    persistPending();
+    persistPending();
+
+    List<ClaimedGeneration> claims = ledger.claimDue(1);
+
+    assertThat(claims).hasSize(1);
+    assertThat(claims.getFirst().taskId()).isEqualTo(stalled);
+    assertThat(reload(stalled).getAttemptCount()).isEqualTo(2);
+  }
+
+  @Test
+  @DisplayName("만료된 lease가 없으면 남은 자리를 전부 pending으로 채운다")
+  void fillsRemainingSlotsWithPendingWhenNothingToReclaim() {
+    persistPending();
+    persistPending();
+
+    // 회수를 먼저 본다고 해서 평시 처리량이 줄지는 않는다.
+    assertThat(ledger.claimDue(2)).hasSize(2);
+  }
+
+  @Test
   @DisplayName("재시작 후 남은 pending을 다음 주기가 그대로 이어받는다")
   void resumesPendingAfterRestart() {
     UUID taskId = persistPending();
