@@ -35,6 +35,16 @@ class TaskDraftGenerationEnrollerIntegrationTest extends AbstractPostgresIntegra
   private static final Duration DEADLINE = Duration.ofHours(1);
   private static final Duration MARGIN = Duration.ofMinutes(5);
 
+  /** 적재는 실행 정책을 쓰지 않으므로 부등식을 만족하는 아무 값이면 된다. */
+  private static final MinsuAsyncProperties.Execution EXECUTION =
+      new MinsuAsyncProperties.Execution(
+          Duration.ofSeconds(20),
+          Duration.ofSeconds(30),
+          Duration.ofSeconds(60),
+          4,
+          List.of(Duration.ofSeconds(10)),
+          4);
+
   private static final TaskDraft BASELINE = new TaskDraft("결제 실패율 대응", Role.BACKEND, Priority.HIGH);
 
   @Autowired private TaskDraftGenerationRepository repository;
@@ -45,7 +55,9 @@ class TaskDraftGenerationEnrollerIntegrationTest extends AbstractPostgresIntegra
   void setUp() {
     enroller =
         new TaskDraftGenerationEnroller(
-            repository, new MinsuAsyncProperties(true, false, DEADLINE, MARGIN), new MinsuJson());
+            repository,
+            new MinsuAsyncProperties(true, false, DEADLINE, MARGIN, EXECUTION),
+            new MinsuJson());
   }
 
   @Test
