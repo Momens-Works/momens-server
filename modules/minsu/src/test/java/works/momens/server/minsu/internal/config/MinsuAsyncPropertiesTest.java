@@ -61,6 +61,65 @@ class MinsuAsyncPropertiesTest {
   }
 
   @Test
+  @DisplayName("SDK timeout과 wall-clock 상한이 같으면 부팅에 실패한다")
+  void rejectsProviderTimeoutEqualToAttemptTimeout() {
+    // 같은 값이면 어느 쪽이 먼저 터질지가 스케줄링에 달린다. wall-clock이 먼저 터지면 호출은 취소되지
+    // 않은 채 슬롯을 계속 점유한다.
+    assertThatThrownBy(() -> execution(30, 30, 60))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("provider-timeout");
+  }
+
+  @Test
+  @DisplayName("SDK가 받을 수 없는 timeout은 부팅에 실패한다")
+  void rejectsTimeoutOutsideSdkRange() {
+    // 1ms 미만은 밀리초 변환에서 0이 되고, 상한 초과는 int 변환이 실행 시점에 터진다. 후자는
+    // PROVIDER_ERROR로 분류돼 무효한 설정으로 claim과 재시도를 반복하는데, 이는 "설정이 무효하면
+    // claim하지 않는다"는 11.2절과 어긋난다.
+    Duration overflow = Duration.ofMillis(Integer.MAX_VALUE).plusMillis(1);
+    assertThatThrownBy(
+            () ->
+                new Execution(
+                    Duration.ofNanos(1),
+                    Duration.ofSeconds(30),
+                    Duration.ofSeconds(60),
+                    4,
+                    List.of(Duration.ofSeconds(10)),
+                    4))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("provider-timeout");
+    assertThatThrownBy(
+            () ->
+                new Execution(
+                    Duration.ofSeconds(20),
+                    overflow,
+                    overflow.plusSeconds(1),
+                    4,
+                    List.of(Duration.ofSeconds(10)),
+                    4))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("attempt-timeout");
+  }
+
+  @Test
+  @DisplayName("0 이하인 백오프는 부팅에 실패한다")
+  void rejectsNonPositiveBackoff() {
+    // 즉시 재시도가 되어 실패하는 작업이 상한까지 provider를 연달아 때린다. 백오프를 둔 이유가
+    // 사라지는데도 동작 자체는 정상으로 보인다.
+    assertThatThrownBy(
+            () ->
+                new Execution(
+                    Duration.ofSeconds(20),
+                    Duration.ofSeconds(30),
+                    Duration.ofSeconds(60),
+                    4,
+                    List.of(Duration.ofSeconds(10), Duration.ZERO),
+                    4))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("backoffs");
+  }
+
+  @Test
   @DisplayName("재시도가 있는데 백오프 목록이 비어 있으면 부팅에 실패한다")
   void rejectsEmptyBackoffsWhenRetryEnabled() {
     // 비어 있으면 백오프 조회가 실패 기록 시점에 터지고, 그때는 이미 claim을 보유한 상태라 그 실패가

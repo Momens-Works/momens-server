@@ -100,16 +100,26 @@ public record MinsuAsyncProperties(
       @DefaultValue({"10s", "30s", "2m"}) List<Duration> backoffs,
       @DefaultValue("4") int concurrency) {
 
+    /** {@code HttpOptions.timeout}이 밀리초 {@code int}라 이 범위를 벗어나면 SDK로 옮길 수 없다. */
+    private static final Duration MIN_SDK_TIMEOUT = Duration.ofMillis(1);
+
+    private static final Duration MAX_SDK_TIMEOUT = Duration.ofMillis(Integer.MAX_VALUE);
+
     public Execution {
       backoffs = List.copyOf(backoffs);
-      requirePositive(providerTimeout, "provider-timeout");
-      requirePositive(attemptTimeout, "attempt-timeout");
+      // provider-timeout은 SDK로 나가므로 동기 경로와 같은 범위를 요구한다(MinsuConfigStatus).
+      // 1ms 미만이면 밀리초 변환에서 0이 되고, 상한을 넘으면 int 변환이 실행 시점에 터진다. 후자는
+      // PROVIDER_ERROR로 분류돼 무효한 설정으로 claim·재시도를 반복하는데, 이는 "설정이 무효하면
+      // claim하지 않는다"는 11.2절과 정면으로 어긋난다. 값이 잘못됐다는 사실은 부팅에서 알아야 한다.
+      requireSdkRange(providerTimeout, "provider-timeout");
+      requireSdkRange(attemptTimeout, "attempt-timeout");
       requirePositive(lease, "lease");
-      // SDK timeout이 wall-clock 상한보다 크면 상한이 먼저 터져 호출을 버리는데, 버려진 호출은 취소되지
-      // 않고 슬롯을 계속 점유한다(9.1절). SDK가 먼저 끊어야 슬롯이 정상적으로 반환된다.
-      if (providerTimeout.compareTo(attemptTimeout) > 0) {
+      // SDK timeout이 wall-clock 상한 이상이면 상한이 먼저 터져 호출을 버리는데, 버려진 호출은 취소되지
+      // 않고 슬롯을 계속 점유한다(9.1절). 같은 값도 막는 이유는 그 경계에서 어느 쪽이 먼저 터질지가
+      // 스케줄링에 달리기 때문이다. SDK가 확실히 먼저 끊어야 슬롯이 정상적으로 반환된다.
+      if (providerTimeout.compareTo(attemptTimeout) >= 0) {
         throw new IllegalArgumentException(
-            "momens.minsu.task-draft.async.execution.provider-timeout은 attempt-timeout 이하여야 합니다");
+            "momens.minsu.task-draft.async.execution.provider-timeout은 attempt-timeout보다 작아야 합니다");
       }
       // 9.1절 부등식의 첫 구간. attempt 상한이 lease보다 길면 정상 실행 중에 lease가 만료돼 다른 worker가
       // 같은 작업을 중복 호출한다.
@@ -131,6 +141,9 @@ public record MinsuAsyncProperties(
         throw new IllegalArgumentException(
             "momens.minsu.task-draft.async.execution.backoffs는 재시도가 있으면 비어 있을 수 없습니다");
       }
+      // 0 이하인 백오프는 즉시 재시도가 되어 실패하는 작업이 상한까지 provider를 연달아 때린다.
+      // 백오프를 둔 이유가 사라지는데도 동작 자체는 정상으로 보여 관측에서만 드러난다.
+      backoffs.forEach(backoff -> requirePositive(backoff, "backoffs"));
     }
 
     /** 방금 기록한 시도 횟수에 대응하는 재시도 대기. 목록보다 시도가 많으면 마지막 값을 반복한다. */
@@ -143,6 +156,18 @@ public record MinsuAsyncProperties(
       if (value.isNegative() || value.isZero()) {
         throw new IllegalArgumentException(
             "momens.minsu.task-draft.async.execution." + key + "은 0보다 커야 합니다");
+      }
+    }
+
+    /** SDK가 받는 밀리초 {@code int}로 손실 없이 옮길 수 있는 범위. 동기 경로의 검증과 같은 값이다. */
+    private static void requireSdkRange(Duration value, String key) {
+      if (value.compareTo(MIN_SDK_TIMEOUT) < 0 || value.compareTo(MAX_SDK_TIMEOUT) > 0) {
+        throw new IllegalArgumentException(
+            "momens.minsu.task-draft.async.execution."
+                + key
+                + "은 1ms 이상 "
+                + MAX_SDK_TIMEOUT.toMillis()
+                + "ms 이하여야 합니다");
       }
     }
   }
