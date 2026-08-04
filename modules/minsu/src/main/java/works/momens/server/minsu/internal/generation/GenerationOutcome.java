@@ -1,6 +1,12 @@
 package works.momens.server.minsu.internal.generation;
 
-enum GenerationOutcome {
+/**
+ * 한 번의 생성 시도가 어떻게 끝났는지(설계 9.2절).
+ *
+ * <p>동기 경로에서는 관측 tag로만 쓰였지만 비동기 경로에서는 재시도 판정의 입력이 되므로 {@code internal} 안에서 공개한다. 재시도 여부와 종료 사유로의
+ * 매핑은 원장이 소유한다(9.2절 표).
+ */
+public enum GenerationOutcome {
   DISABLED("fallback", "disabled"),
   /** 비동기 활성. 요청 경로에서는 고정 fallback만 돌려주고 실제 생성은 원장을 통해 scheduler가 맡는다(5.5절). */
   DEFERRED("fallback", "async_deferred"),
