@@ -42,18 +42,25 @@ class TaskDraftGenerationLedger {
   }
 
   /**
-   * 처리 대상 원장을 claim한다. 재시도 시각이 지난 {@code pending}을 먼저 집고, 남은 자리를 lease가 만료된 {@code processing}으로
-   * 채운다.
+   * 처리 대상 원장을 claim한다. lease가 만료된 {@code processing}을 <b>먼저</b> 회수하고, 남은 자리를 재시도 시각이 지난 {@code
+   * pending}으로 채운다.
    *
-   * <p>두 경로를 한 쿼리로 합치지 않은 이유는 각각 다른 부분 인덱스를 타기 때문이다. {@code OR}로 묶으면 둘 다 놓친다. 신규·재시도를 만료 회수보다 먼저 보는
-   * 것은 만료 회수가 이미 지연된 작업이라 우선순위를 줘도 지연이 회복되지 않는 반면, 신규는 사용자가 방금 convert를 누른 건이기 때문이다.
+   * <p>두 경로를 한 쿼리로 합치지 않은 이유는 각각 다른 부분 인덱스를 타기 때문이다. {@code OR}로 묶으면 둘 다 놓친다.
+   *
+   * <p><b>회수를 먼저 보는 이유는 기아를 막기 위해서다.</b> 신규를 먼저 보면 매 주기 {@code pending}이 슬롯을 모두 채우는 동안 만료 행이 한 번도
+   * 집히지 않고, 그대로 {@code apply_cutoff_at}을 지나면 두 쿼리 모두에서 빠져 영영 회수되지 않는다. "lease 만료 후 다음 주기가 회수한다"는
+   * 8.5절의 복구 보장이 부하에 따라 깨지는 것이다.
+   *
+   * <p>반대 방향의 기아는 생기지 않는다. 만료 집합은 유한하고 자기 자신을 줄인다. 회수된 행은 {@code processing}이 되어 그 집합에서 빠지고, 회수마다
+   * 시도 횟수가 올라 결국 상한에서 종료된다. 새로 들어오는 것은 장애로 lease가 만료된 행뿐이다. 반면 {@code pending}은 사용자 요청으로 계속 유입되는 무한
+   * 스트림이라, 우선권을 주면 밀리는 쪽이 영원히 밀린다.
    */
   @Transactional
   public List<ClaimedGeneration> claimDue(int limit) {
     Execution execution = asyncProperties.execution();
-    List<TaskDraftGeneration> due = new ArrayList<>(repository.lockDuePending(limit));
+    List<TaskDraftGeneration> due = new ArrayList<>(repository.lockExpiredProcessing(limit));
     if (due.size() < limit) {
-      due.addAll(repository.lockExpiredProcessing(limit - due.size()));
+      due.addAll(repository.lockDuePending(limit - due.size()));
     }
     if (due.isEmpty()) {
       return List.of();
