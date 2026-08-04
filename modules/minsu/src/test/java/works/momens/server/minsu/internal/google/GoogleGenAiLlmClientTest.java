@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.google.genai.errors.GenAiIOException;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -22,6 +23,7 @@ class GoogleGenAiLlmClientTest {
   private static final ModelSelection SELECTION =
       new ModelSelection("google", "gemini-3.5-flash-lite", "project", "global");
   private static final LlmRequest REQUEST = new LlmRequest("v1", "system", "{}");
+  private static final Duration TIMEOUT = Duration.ofSeconds(8);
 
   @Test
   void reusesOneSuccessfulClientAcrossConcurrentCallsAndClosesIt() throws Exception {
@@ -35,13 +37,13 @@ class GoogleGenAiLlmClientTest {
             });
     List<Callable<LlmResponse>> calls = new ArrayList<>();
     for (int index = 0; index < 30; index++) {
-      calls.add(() -> client.generate(SELECTION, REQUEST));
+      calls.add(() -> client.generate(SELECTION, REQUEST, TIMEOUT));
     }
 
     try (var executor = Executors.newFixedThreadPool(8)) {
       executor
           .invokeAll(calls)
-          .forEach(future -> assertThat(future).succeedsWithin(java.time.Duration.ofSeconds(1)));
+          .forEach(future -> assertThat(future).succeedsWithin(Duration.ofSeconds(1)));
     }
     client.close();
 
@@ -63,9 +65,9 @@ class GoogleGenAiLlmClientTest {
               return sdkClient;
             });
 
-    assertThatThrownBy(() -> client.generate(SELECTION, REQUEST))
+    assertThatThrownBy(() -> client.generate(SELECTION, REQUEST, TIMEOUT))
         .isInstanceOf(IllegalStateException.class);
-    assertThat(client.generate(SELECTION, REQUEST).candidatePresent()).isTrue();
+    assertThat(client.generate(SELECTION, REQUEST, TIMEOUT).candidatePresent()).isTrue();
 
     assertThat(creates).hasValue(2);
     assertThat(sdkClient.generates).hasValue(1);
@@ -79,7 +81,7 @@ class GoogleGenAiLlmClientTest {
     GoogleGenAiLlmClient client =
         new GoogleGenAiLlmClient(selection -> new FailingGoogleSdkClient(sdkTimeout));
 
-    assertThatThrownBy(() -> client.generate(SELECTION, REQUEST))
+    assertThatThrownBy(() -> client.generate(SELECTION, REQUEST, TIMEOUT))
         .isInstanceOf(LlmTimeoutException.class)
         .hasCause(sdkTimeout);
   }
@@ -92,7 +94,7 @@ class GoogleGenAiLlmClientTest {
     GoogleGenAiLlmClient client =
         new GoogleGenAiLlmClient(selection -> new FailingGoogleSdkClient(sdkTimeout));
 
-    assertThatThrownBy(() -> client.generate(SELECTION, REQUEST))
+    assertThatThrownBy(() -> client.generate(SELECTION, REQUEST, TIMEOUT))
         .isInstanceOf(LlmTimeoutException.class)
         .hasCause(sdkTimeout);
   }
@@ -103,7 +105,7 @@ class GoogleGenAiLlmClientTest {
     private final AtomicInteger closes = new AtomicInteger();
 
     @Override
-    public LlmResponse generate(ModelSelection selection, LlmRequest request) {
+    public LlmResponse generate(ModelSelection selection, LlmRequest request, Duration timeout) {
       generates.incrementAndGet();
       return new LlmResponse(true, "STOP", "{}", "", LlmResponse.TokenUsage.EMPTY);
     }
@@ -117,7 +119,7 @@ class GoogleGenAiLlmClientTest {
   private record FailingGoogleSdkClient(RuntimeException error) implements GoogleSdkClient {
 
     @Override
-    public LlmResponse generate(ModelSelection selection, LlmRequest request) {
+    public LlmResponse generate(ModelSelection selection, LlmRequest request, Duration timeout) {
       throw error;
     }
 

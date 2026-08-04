@@ -34,6 +34,7 @@ import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.minsu.TaskDraft;
 import works.momens.server.minsu.internal.config.MinsuAsyncProperties;
 import works.momens.server.minsu.internal.config.MinsuConfigStatus;
+import works.momens.server.minsu.internal.config.MinsuLlmProperties;
 import works.momens.server.minsu.internal.json.MinsuJson;
 import works.momens.server.minsu.internal.ledger.TaskDraftGenerationEnroller;
 import works.momens.server.minsu.internal.llm.LlmClient;
@@ -48,6 +49,9 @@ class DefaultSignalTaskDraftGeneratorTest {
 
   private static final ModelSelection SELECTION =
       new ModelSelection("google", "gemini-3.5-flash-lite", "project", "global");
+
+  /** 동기 경로의 SDK timeout(MOM-0806). 비동기 값과 별도 키다. */
+  private static final Duration SYNC_TIMEOUT = Duration.ofSeconds(8);
 
   /** 이 테스트는 요청 경로만 다루므로 실행 정책 값은 부등식을 만족하기만 하면 된다. */
   private static final MinsuAsyncProperties.Execution EXECUTION =
@@ -326,6 +330,8 @@ class DefaultSignalTaskDraftGeneratorTest {
                     "provider=google",
                     "model=gemini-3.5-flash-lite",
                     "prompt.version=signal-task-draft-v1",
+                    // 동기 요청 경로와 비동기 실행 경로를 나눠 보기 위한 tag(9.3절).
+                    "mode=sync",
                     "outcome=generated",
                     "fallback.reason=none",
                     "finish.reason=stop"));
@@ -485,16 +491,16 @@ class DefaultSignalTaskDraftGeneratorTest {
     when(config.valid()).thenReturn(valid);
     ModelSelectionPolicy selectionPolicy = useCase -> SELECTION;
     MinsuJson json = new MinsuJson();
+    MinsuObservability observability = new MinsuObservability(meterRegistry, observationRegistry);
     return new DefaultSignalTaskDraftGenerator(
         config,
         new MinsuAsyncProperties(
             asyncEnroll, false, Duration.ofHours(1), Duration.ofMinutes(5), EXECUTION),
+        new MinsuLlmProperties("google", "gemini-3.5-flash-lite", SYNC_TIMEOUT, null),
         enroller,
-        selectionPolicy,
-        client,
-        new SignalTaskDraftPrompt(json),
-        json,
-        new MinsuObservability(meterRegistry, observationRegistry));
+        new TaskDraftAttempt(
+            config, selectionPolicy, client, new SignalTaskDraftPrompt(json), json, observability),
+        observability);
   }
 
   private static SignalTaskDraftInput input() {
@@ -547,7 +553,7 @@ class DefaultSignalTaskDraftGeneratorTest {
   }
 
   private static List<ILoggingEvent> captureLogs(Runnable action) {
-    Logger logger = (Logger) LoggerFactory.getLogger(DefaultSignalTaskDraftGenerator.class);
+    Logger logger = (Logger) LoggerFactory.getLogger(TaskDraftAttempt.class);
     Level previousLevel = logger.getLevel();
     ListAppender<ILoggingEvent> appender = new ListAppender<>();
     appender.start();
@@ -574,7 +580,7 @@ class DefaultSignalTaskDraftGeneratorTest {
     }
 
     @Override
-    public LlmResponse generate(ModelSelection selection, LlmRequest request) {
+    public LlmResponse generate(ModelSelection selection, LlmRequest request, Duration timeout) {
       calls.incrementAndGet();
       if (error != null) {
         throw error;
