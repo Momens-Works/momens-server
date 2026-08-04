@@ -1170,15 +1170,78 @@ ADR-0015가 이 PR에 함께 들어가므로 별도 ADR 티켓은 두지 않는�
 
 ## 13. 미확정으로 남는 것
 
-- attempt 상한·lease 값과 실행 동시성 — dev 재측정 후 (9.1절의 부등식은 유지).
-  `apply_cutoff_at`·`read_deadline_at`은 MOM-0818에서 기본값을 정했고(8.6절) MOM-0824의
-  재측정으로 조정한다.
-- 장시간 호출 중 lease 갱신 여부 — 구현 티켓 (8.2절)
+- attempt 상한·lease 값과 실행 동시성 — MOM-0819에서 **잠정값**을 정했다(아래 표). 확정은
+  MOM-0824의 dev 재측정이며 9.1절의 부등식은 그때도 유지한다. `apply_cutoff_at`·
+  `read_deadline_at`은 MOM-0818에서 정했다(8.6절).
 - 입력 snapshot의 description·impact 상한과 보존·삭제 정책 — **prod 마이그레이션 전에 확정**
   (5.6절). 정책 없이 prod에 가면 `signals` 본문이 두 벌 남고, 지우려면 그때는 운영 데이터라
   삭제 마이그레이션이 필요하다. baseline을 원장이 따로 소유하므로(6절) snapshot만 비우는
   정리가 가능하다.
-- scheduler 스레드 풀 크기 — 원장·scheduler 구현 티켓 (11.3절)
-- scheduler 중단 시 남은 `pending`을 닫는 운영 절차 — 구현 티켓 (11.1절)
 - prod 데이터 레지던시 정책 — 동기 설계 11절에서 이월된 미결
 - `minsu → retrieval` 연동 — 별도 설계
+
+### 13.1 MOM-0819에서 확정한 값
+
+`momens.minsu.task-draft.async.execution.*`이고 전부 잠정값이다. 근거가 되는 실측은 동기
+경로의 8초(MOM-0806) 하나뿐이며 그 값은 원탭 action의 사용자 체감 기준이라 비동기의 근거가
+되지 못한다. 그래서 **넉넉한 쪽**으로 잡았다. 값이 짧으면 정상 호출이 잘려 재시도로 낭비되고
+`retry_exhausted`가 올라 측정 자체가 오염되는 반면, 길면 `generating` 노출이 길어질 뿐이고 그
+구간에도 사용자는 유효한 fallback title을 본다.
+
+| 값 | 잠정값 | 근거 |
+| --- | --- | --- |
+| `provider-timeout` | 20s | 동기 8초의 2.5배. 요청별 `httpOptions`로 걸어 동기 경로와 분리한다 |
+| `attempt-timeout` | 30s | SDK가 먼저 끊도록 여유를 두되 ADC 탐색·client 생성까지 감싼다 |
+| `lease` | 60s | attempt 상한의 2배. 정상 실행 중 만료가 구조적으로 일어나지 않는다 |
+| `backoffs` | 10s, 30s, 2m | `push_deliveries`의 1s/5s/30s보다 길다. LLM은 즉시 재시도가 의미 없다 |
+| `max-attempts` | 4 | `push_deliveries`와 같다 |
+| `concurrency` | 4 | 멈춘 호출이 묶을 수 있는 슬롯의 상한이기도 하다(9.1절) |
+| drain 주기 | 1s | 주기가 곧 `generating` 구간의 하한이다 |
+
+부등식은 `30s < 60s < 55m < 60m`으로 성립한다. 최악의 총 소요는 시도 4회(120초)와 백오프
+대기(2분 40초)를 합쳐 약 4분 40초이므로 `apply_cutoff_at`까지 열 배 이상 여유가 있다. 이
+부등식은 부팅 시점에 `MinsuAsyncProperties`가 강제한다.
+
+**lease 갱신은 두지 않는다**(8.2절이 구현 티켓으로 넘긴 항목). 8.2절이 단 조건("갱신하지 않으면
+lease를 비동기 timeout보다 충분히 크게")을 attempt 상한의 두 배인 lease가 충족한다.
+`notification`의 `renewLease`는 event 그룹 단위 배치 발송이라 claim과 발송 사이가 벌어져서
+필요했고, minsu는 건당 실행이라 그 간격이 없다.
+
+**scheduler 스레드 풀 크기는 2다**(11.3절이 넘긴 항목). `spring.task.scheduling.pool.size`이며,
+기본값 1이면 minsu drain과 `notification`의 1초 push 폴링이 한 스레드에서 서로를 밀어낸다.
+스케줄러가 둘이므로 2로 둔다.
+
+### 13.2 남은 `pending`을 닫는 운영 절차
+
+11.1절이 구현 티켓으로 넘긴 항목이다. 설정 rollback 뒤 남은 원장은 **기본적으로 계속
+처리한다.** 아래 절차는 그것을 멈추기로 판단했을 때, 지표를 깨끗하게 유지하기 위해 쓴다.
+앱은 이 절차 없이도 `generating`에 갇히지 않는다. `read_deadline_at`이 지나면 읽기 투영이
+`ready`로 닫기 때문이다(8.6절).
+
+admin API로 만들지 않았다. 운영자가 상황을 보고 한 번 실행하는 조치이고, 상시 진입점을 두면
+그 자체가 잘못 눌릴 수 있는 표면이 된다.
+
+```sql
+-- 1. 대상 확인. 반드시 먼저 실행한다.
+SELECT status, count(*), min(created_at) AS oldest
+  FROM minsu_task_draft_generations
+ WHERE status <> 'completed'
+ GROUP BY status;
+
+-- 2. 종결. claim 보유 중인 행도 함께 닫으므로 claim CHECK를 만족하도록 token과 lease를 비운다.
+UPDATE minsu_task_draft_generations
+   SET status = 'completed',
+       completion_reason = 'operationally_closed',
+       claim_token = NULL,
+       lease_expires_at = NULL,
+       updated_at = NOW()
+ WHERE status <> 'completed';
+```
+
+- **`drain` 축을 먼저 끄고 실행한다.** 켜진 채로 닫으면 이미 claim된 실행이 결과를 기록할 때
+  token 불일치로 무시되기는 하지만, 그때까지 provider 호출이 계속 나간다.
+- `invalid_config`를 재사용하지 않는다. 실제 설정 오류 지표가 오염된다.
+- `updated_at`을 직접 갱신하는 것은 이 문장이 JPA Auditing을 거치지 않기 때문이다
+  (`docs/rules/persistence.md`).
+- 닫은 뒤 되살릴 방법은 없다. 그래서 이것이 `disabled`를 종료 사유로 만들지 않은 이유와 같은
+  선택의 반대편이다(11.2절).
