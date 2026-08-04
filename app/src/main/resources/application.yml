@@ -19,6 +19,14 @@ spring:
   modulith:
     moments:
       enabled: false
+  # 기본 TaskScheduler는 풀 크기가 1이라 모든 @Scheduled가 한 스레드에서 직렬 실행됩니다(MOM-0810
+  # 설계 11.3절). minsu drain은 claim 트랜잭션만 이 스레드에서 하고 LLM 호출은 자기 실행기로
+  # 넘기지만, 그래도 notification의 1초 주기 push 폴링과 같은 스레드를 쓰면 서로를 밀어냅니다.
+  # 스케줄러가 둘이므로 2로 둡니다.
+  task:
+    scheduling:
+      pool:
+        size: 2
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
@@ -70,6 +78,18 @@ momens:
       async:
         enroll: ${MOMENS_MINSU_TASK_DRAFT_ASYNC_ENROLL:false}
         drain: ${MOMENS_MINSU_TASK_DRAFT_ASYNC_DRAIN:false}
+        # 실행·재시도 정책(MOM-0819). 전부 잠정값이고 MOM-0824의 dev 재측정으로 조정합니다.
+        # 부등식 attempt-timeout < lease < (generation-deadline - apply-margin)은 부팅에서 강제합니다.
+        # provider-timeout은 동기 경로의 momens.minsu.llm.timeout(8s)과 별도 키입니다. 비동기는
+        # 아무도 기다리지 않으므로 더 크게 잡되, SDK가 wall-clock 상한보다 먼저 끊어야 슬롯이 정상
+        # 반환되므로 attempt-timeout 이하로 둡니다.
+        execution:
+          provider-timeout: ${MOMENS_MINSU_TASK_DRAFT_ASYNC_PROVIDER_TIMEOUT:20s}
+          attempt-timeout: ${MOMENS_MINSU_TASK_DRAFT_ASYNC_ATTEMPT_TIMEOUT:30s}
+          lease: ${MOMENS_MINSU_TASK_DRAFT_ASYNC_LEASE:60s}
+          max-attempts: ${MOMENS_MINSU_TASK_DRAFT_ASYNC_MAX_ATTEMPTS:4}
+          backoffs: ${MOMENS_MINSU_TASK_DRAFT_ASYNC_BACKOFFS:10s,30s,2m}
+          concurrency: ${MOMENS_MINSU_TASK_DRAFT_ASYNC_CONCURRENCY:4}
     llm:
       provider: ${MOMENS_MINSU_LLM_PROVIDER:google}
       model: ${MOMENS_MINSU_LLM_MODEL:gemini-3.5-flash-lite}
