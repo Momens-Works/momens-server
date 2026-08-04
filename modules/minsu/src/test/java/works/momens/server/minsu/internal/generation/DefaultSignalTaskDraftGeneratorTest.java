@@ -49,6 +49,16 @@ class DefaultSignalTaskDraftGeneratorTest {
   private static final ModelSelection SELECTION =
       new ModelSelection("google", "gemini-3.5-flash-lite", "project", "global");
 
+  /** 이 테스트는 요청 경로만 다루므로 실행 정책 값은 부등식을 만족하기만 하면 된다. */
+  private static final MinsuAsyncProperties.Execution EXECUTION =
+      new MinsuAsyncProperties.Execution(
+          Duration.ofSeconds(20),
+          Duration.ofSeconds(30),
+          Duration.ofSeconds(60),
+          4,
+          List.of(Duration.ofSeconds(10)),
+          4);
+
   private final TaskDraftGenerationEnroller enroller = mock(TaskDraftGenerationEnroller.class);
 
   @BeforeEach
@@ -477,7 +487,8 @@ class DefaultSignalTaskDraftGeneratorTest {
     MinsuJson json = new MinsuJson();
     return new DefaultSignalTaskDraftGenerator(
         config,
-        new MinsuAsyncProperties(asyncEnroll, false, Duration.ofHours(1), Duration.ofMinutes(5)),
+        new MinsuAsyncProperties(
+            asyncEnroll, false, Duration.ofHours(1), Duration.ofMinutes(5), EXECUTION),
         enroller,
         selectionPolicy,
         client,
