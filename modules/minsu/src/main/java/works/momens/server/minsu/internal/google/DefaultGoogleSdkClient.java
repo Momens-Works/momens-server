@@ -9,6 +9,7 @@ import com.google.genai.types.GenerateContentResponseUsageMetadata;
 import com.google.genai.types.Part;
 import com.google.genai.types.Schema;
 import com.google.genai.types.Type;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -27,13 +28,17 @@ final class DefaultGoogleSdkClient implements GoogleSdkClient {
   }
 
   @Override
-  public LlmResponse generate(ModelSelection selection, LlmRequest request) {
+  public LlmResponse generate(ModelSelection selection, LlmRequest request, Duration timeout) {
     GenerateContentConfig config =
         GenerateContentConfig.builder()
             .candidateCount(1)
             .responseMimeType("application/json")
             .responseSchema(RESPONSE_SCHEMA)
             .systemInstruction(Content.fromParts(Part.fromText(request.systemInstruction())))
+            // 요청별 timeout(9.1절). client는 하나를 캐시해 재사용하므로 client-level 값으로는 동기와
+            // 비동기가 다른 값을 가질 수 없다. apiVersion·retryOptions까지 포함해 통째로 넘기는 것은
+            // 요청 옵션과 client 옵션의 병합 방식에 기대지 않기 위해서다.
+            .httpOptions(DefaultGoogleClientFactory.httpOptions(timeout))
             .build();
     GenerateContentResponse response =
         client.models.generateContent(selection.model(), request.dataJson(), config);

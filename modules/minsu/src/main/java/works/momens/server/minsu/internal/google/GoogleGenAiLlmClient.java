@@ -3,6 +3,7 @@ package works.momens.server.minsu.internal.google;
 import jakarta.annotation.PreDestroy;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
+import java.time.Duration;
 import org.springframework.stereotype.Component;
 import works.momens.server.minsu.internal.llm.LlmClient;
 import works.momens.server.minsu.internal.llm.LlmRequest;
@@ -22,9 +23,9 @@ final class GoogleGenAiLlmClient implements LlmClient {
   }
 
   @Override
-  public LlmResponse generate(ModelSelection selection, LlmRequest request) {
+  public LlmResponse generate(ModelSelection selection, LlmRequest request, Duration timeout) {
     try {
-      return client(selection).generate(selection, request);
+      return client(selection).generate(selection, request, timeout);
     } catch (RuntimeException error) {
       if (isTimeout(error)) {
         throw new LlmTimeoutException(error);
