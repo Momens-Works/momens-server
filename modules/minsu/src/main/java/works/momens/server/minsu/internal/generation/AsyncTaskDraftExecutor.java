@@ -78,16 +78,20 @@ public class AsyncTaskDraftExecutor implements DisposableBean {
           pool.submit(
               () -> attempt.run(input, GenerationMode.ASYNCHRONOUS, execution.providerTimeout())));
     }
-    long deadlineNanos = System.nanoTime() + execution.attemptTimeout().toNanos();
+    long startedAtNanos = System.nanoTime();
+    long deadlineNanos = startedAtNanos + execution.attemptTimeout().toNanos();
     List<AsyncGenerationResult> results = new ArrayList<>(inputs.size());
     for (int i = 0; i < futures.size(); i++) {
-      results.add(await(futures.get(i), inputs.get(i), deadlineNanos));
+      results.add(await(futures.get(i), inputs.get(i), startedAtNanos, deadlineNanos));
     }
     return results;
   }
 
   private AsyncGenerationResult await(
-      Future<TaskDraftAttempt.Result> future, SignalTaskDraftInput input, long deadlineNanos) {
+      Future<TaskDraftAttempt.Result> future,
+      SignalTaskDraftInput input,
+      long startedAtNanos,
+      long deadlineNanos) {
     try {
       TaskDraftAttempt.Result result =
           future.get(Math.max(deadlineNanos - System.nanoTime(), 0), TimeUnit.NANOSECONDS);
@@ -96,8 +100,10 @@ public class AsyncTaskDraftExecutor implements DisposableBean {
       // interrupt를 무시하는 호출이면 이 취소는 효과가 없고 슬롯은 계속 점유된다. 그래도 호출자는 대기에서
       // 풀려나 원장에 결과를 남길 수 있다.
       future.cancel(true);
+      // 기준은 제출 시각이다. deadline을 기준으로 재면 초과분(거의 0)이 찍혀 상한 값을 조정할 때
+      // 근거가 되지 못한다.
       log.warn(
-          "Minsu 비동기 시도가 wall-clock 상한을 넘겨 결과를 버립니다 durationMs={}", elapsedMillis(deadlineNanos));
+          "Minsu 비동기 시도가 wall-clock 상한을 넘겨 결과를 버립니다 durationMs={}", elapsedMillis(startedAtNanos));
       return timedOut(input);
     } catch (InterruptedException e) {
       // 종료 중이다. 원장은 processing으로 남고 lease 만료 후 다음 인스턴스가 회수한다(8.5절).
@@ -117,8 +123,8 @@ public class AsyncTaskDraftExecutor implements DisposableBean {
     return new AsyncGenerationResult(TaskDraftAttempt.fallbackOf(input), GenerationOutcome.TIMEOUT);
   }
 
-  private static long elapsedMillis(long deadlineNanos) {
-    return Duration.ofNanos(System.nanoTime() - deadlineNanos).toMillis();
+  private static long elapsedMillis(long startedAtNanos) {
+    return Duration.ofNanos(System.nanoTime() - startedAtNanos).toMillis();
   }
 
   /**
