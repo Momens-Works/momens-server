@@ -82,21 +82,31 @@ docker compose up -d
 트리의 줄바꿈 상태를 확인합니다.
 
 ```bash
-git ls-files --eol | grep ' w/crlf'
+git ls-files --eol | grep ' w/crlf' | grep -v 'eol=crlf'
 ```
 
-결과에 `gradlew.bat`만 표시되면 정상입니다. 다른 파일도 함께 표시된다면 `.gitattributes`
-설정이 적용되기 전에 저장소를 클론한 상태이므로, 워킹 트리를 다시 체크아웃해 LF로 맞춰야
-합니다.
+출력이 비어 있으면 정상입니다. `eol=crlf`로 지정된 예외 파일은 필터링되기 때문에, 예외가
+추가되더라도 동일한 명령을 그대로 사용할 수 있습니다.
+
+만약 파일이 출력된다면 `.gitattributes` 설정이 적용되기 전에 저장소를 클론한 상태일 가능성이
+있습니다. 이 경우 아래 명령으로 인덱스 내용을 워킹 트리에 다시 반영합니다.
 
 ```bash
-git status              # 커밋하지 않은 변경 사항이 없는지 먼저 확인합니다.
+git status              # 커밋되지 않은 변경 사항이 없는지 먼저 확인합니다.
+git restore .
+```
+
+`git restore`는 인덱스는 건드리지 않고 워킹 트리만 다시 체크아웃합니다. 이 과정에서 `eol=lf`
+규칙이 적용되면서 CRLF가 LF로 정리됩니다. 다만 커밋되지 않은 변경 사항도 함께 사라지므로,
+반드시 `git status` 결과가 비어 있는지 먼저 확인해야 합니다.
+
+`git restore` 이후에도 `w/crlf` 표시가 남아 있다면, 인덱스를 초기화한 뒤 전체 파일을 다시
+체크아웃해야 합니다.
+
+```bash
 git rm --cached -r .
 git reset --hard
 ```
-
-`git reset --hard`는 커밋하지 않은 변경 사항을 모두 삭제합니다. 반드시 `git status` 결과가
-비어 있는지 확인한 후 실행해야 합니다.
 
 CRLF가 섞인 상태로 두면 워킹 트리를 검사하는 `spotlessCheck`가 실패합니다. 이 경우 코드를
 수정하지 않은 커밋에서도 pre-commit 훅이 차단될 수 있습니다.
