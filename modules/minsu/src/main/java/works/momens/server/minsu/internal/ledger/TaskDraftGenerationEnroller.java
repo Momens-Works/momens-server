@@ -14,8 +14,10 @@ import works.momens.server.minsu.internal.json.MinsuJson;
 /**
  * 생성 원장 적재(docs/design/minsu-async-task-draft-design.md 5.3절).
  *
- * <p>호출자(convert)의 쓰기 트랜잭션 안에서 실행된다. 여기에 {@code @Transactional}을 두지 않는 것은 의도적이다. 원장 insert는 {@code
- * tasks}·{@code signal_actions}와 <b>같은</b> 트랜잭션이어야 하고, 별도 경계를 만들면 롤백이 갈려 fail-closed가 깨진다.
+ * <p>호출자(convert)의 쓰기 트랜잭션 안에서 실행된다. 원장 insert는 {@code tasks}·{@code signal_actions}와 <b>같은</b>
+ * 트랜잭션이어야 하고, 별도 경계를 만들면 롤백이 갈려 fail-closed가 깨진다. 활성 트랜잭션 요구는 공개 진입점인 {@link
+ * works.momens.server.minsu.SignalTaskDraftGenerator#enroll}의 {@code MANDATORY}가 강제하므로 여기에는 전파 속성을
+ * 두지 않는다.
  */
 @Component
 public class TaskDraftGenerationEnroller {

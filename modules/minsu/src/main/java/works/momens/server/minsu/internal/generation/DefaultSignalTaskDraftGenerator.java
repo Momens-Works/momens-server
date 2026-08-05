@@ -6,6 +6,8 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.spi.LoggingEventBuilder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.minsu.PreparedTaskDraft;
 import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
@@ -30,10 +32,12 @@ import works.momens.server.minsu.internal.prompt.SignalTaskDraftPrompt;
  *
  * <p>비동기 활성 판정을 이 클래스가 소유한다(5.5절). 판정은 {@code prepare}에서 한 번만 하고 그 결과를 {@link PreparedTaskDraft}에
  * 담아 내보내므로, 한 요청 안에서 판정이 두 번 갈릴 수 없다.
+ *
+ * <p>{@code @Transactional} 프록시가 걸리므로 {@code final}일 수 없다.
  */
 @Slf4j
 @Component
-final class DefaultSignalTaskDraftGenerator implements SignalTaskDraftGenerator {
+class DefaultSignalTaskDraftGenerator implements SignalTaskDraftGenerator {
 
   private final MinsuConfigStatus configStatus;
   private final MinsuAsyncProperties asyncProperties;
@@ -79,7 +83,10 @@ final class DefaultSignalTaskDraftGenerator implements SignalTaskDraftGenerator 
   }
 
   @Override
+  @Transactional(propagation = Propagation.MANDATORY)
   public void enroll(PreparedTaskDraft prepared, UUID taskId, UUID workspaceId) {
+    // 동기 경로의 no-op에도 MANDATORY가 걸리는 것이 의도다. 여기서만 강제하면 위반이 비동기를 켠
+    // 환경에서 처음 드러난다. 계약 위반은 설정과 무관하게 같은 자리에서 드러나야 한다.
     if (prepared instanceof SynchronousDraft) {
       return;
     }
