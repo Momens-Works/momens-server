@@ -1,14 +1,17 @@
 package works.momens.server.mobile.signal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -18,8 +21,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.IllegalTransactionStateException;
 import works.momens.server.auth.AccessTokenTestFactory;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.minsu.PreparedTaskDraft;
+import works.momens.server.minsu.SignalTaskDraftGenerator;
+import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 
@@ -44,6 +51,7 @@ class MobileSignalConvertAsyncEnrollmentIntegrationTest extends AbstractPostgres
   @Autowired private UserService userService;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private MeterRegistry meterRegistry;
+  @Autowired private SignalTaskDraftGenerator taskDraftGenerator;
 
   @Test
   @DisplayName("비동기 활성이면 LLM을 부르지 않고 고정 fallback task와 pending 원장을 함께 커밋한다")
@@ -53,6 +61,8 @@ class MobileSignalConvertAsyncEnrollmentIntegrationTest extends AbstractPostgres
     addMember(workspace, jinsu.id(), "owner");
     UUID project = insertProject(workspace, jinsu.id(), "convert-async-project");
     UUID signal = insertSignal(workspace, project, "risk", "결제 실패율이 올라감", "카드 결제 실패", "전환율 하락");
+    // 같은 컨텍스트를 공유하므로 지표는 증분으로 본다. 절대값으로 보면 실행 순서에 묶인다.
+    double deferredBefore = asyncDeferredCount();
 
     mockMvc
         .perform(
@@ -86,13 +96,37 @@ class MobileSignalConvertAsyncEnrollmentIntegrationTest extends AbstractPostgres
         .isEqualTo(Duration.ofMinutes(5));
 
     // provider를 부르지 않고 비동기로 미뤘다는 사실을 지표로 확인한다.
+    assertThat(asyncDeferredCount() - deferredBefore).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("트랜잭션 밖에서 적재를 부르면 원장을 쓰기 전에 거부한다")
+  void rejectsEnrollmentOutsideCallerTransaction() {
+    UUID taskId = UUID.randomUUID();
+    PreparedTaskDraft prepared =
+        taskDraftGenerator.prepare(
+            new SignalTaskDraftInput("결제 실패율이 올라감", "risk", "카드 결제 실패", "전환율 하락", List.of()));
+
+    // 트랜잭션이 없으면 saveAndFlush가 자기 트랜잭션을 열어 원장만 커밋한다. task 없이 남은 그 행은
+    // 적재에 성공했으므로 실패율 지표에도 잡히지 않는다(MANDATORY로 막는 대상).
+    assertThatThrownBy(() -> taskDraftGenerator.enroll(prepared, taskId, UUID.randomUUID()))
+        .isInstanceOf(IllegalTransactionStateException.class);
+
     assertThat(
-            meterRegistry
-                .get("momens.minsu.task.draft.requests")
-                .tag("fallback.reason", "async_deferred")
-                .counter()
-                .count())
-        .isEqualTo(1);
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM minsu_task_draft_generations WHERE task_id = ?",
+                Long.class,
+                taskId))
+        .isZero();
+  }
+
+  private double asyncDeferredCount() {
+    Counter counter =
+        meterRegistry
+            .find("momens.minsu.task.draft.requests")
+            .tag("fallback.reason", "async_deferred")
+            .counter();
+    return counter == null ? 0 : counter.count();
   }
 
   private static Instant instant(Map<String, Object> row, String column) {

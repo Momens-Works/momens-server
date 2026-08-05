@@ -30,7 +30,11 @@ public interface SignalTaskDraftGenerator {
    * <p>반영 CAS의 기준값(baseline)은 {@code prepared.draft()}를 그대로 복사한다(8.1절). 호출자가 그 draft를 {@code
    * tasks}에 썼다는 것이 이 계약의 전제이고, 다른 값을 썼다면 반영 시점에 사용자 편집으로 오분류된다.
    *
+   * <p><b>호출자 트랜잭션 안에서만 부를 수 있다</b>({@code MANDATORY}). 트랜잭션 밖에서 부르면 원장 insert가 자기 트랜잭션을 열어 커밋하므로
+   * {@code tasks}가 롤백돼도 원장만 남는다. 그 행은 적재에 성공했으므로 실패율 지표에도 잡히지 않는다. 계약을 문서가 아니라 전파 속성으로 강제한다.
+   *
    * @throws TaskDraftEnrollmentException 원장 적재에 실패한 경우
+   * @throws org.springframework.transaction.IllegalTransactionStateException 활성 트랜잭션 없이 호출한 경우
    */
   void enroll(PreparedTaskDraft prepared, UUID taskId, UUID workspaceId);
 }
