@@ -6,6 +6,7 @@
 # Windows 배치 파일에 한해서만 CRLF로 체크아웃되도록 예외를 둡니다.
 *.bat text eol=crlf
 
-# `gradle-wrapper.jar`는 줄바꿈이 변환되면 빌드가 실패할 수 있으므로 바이너리 파일로 명시적으로 고정합니다.
-# PNG, WebP 파일은 `text=auto` 설정에 따라 자동으로 바이너리로 처리됩니다.
+# JAR 파일은 줄바꿈 변환 과정에서 손상될 수 있으므로 바이너리로 명시합니다.
+# 특히 gradle-wrapper.jar가 손상되면 빌드가 즉시 실패합니다.
+# PNG와 WebP 파일은 text=auto 규칙에 따라 자동으로 바이너리로 처리됩니다.
 *.jar binary
