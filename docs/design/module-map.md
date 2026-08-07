@@ -47,6 +47,11 @@
   상세 응답의 evidence는 `source`의 source_ref 조회 public API로 hydrate한다.
   Signal을 task로 수용할 때 `minsu`의 `SignalTaskDraftGenerator`와 `project`의 task 생성 public
   API를 사용한다([ADR-0014](../adr/0014-minsu-task-draft-module-and-llm-boundary.md)).
+- `minsu`는 비동기로 생성한 task draft를 반영할 때 `project`의 조건부 반영 public API
+  (`TaskDraftApplier`)와 `outbox`의 `OutboxAppender`를 사용한다
+  ([ADR-0015](../adr/0015-minsu-async-task-draft-generation.md)). `project` 참조는 draft 반영 하나로
+  제한하고, 반대 방향(`project` → `minsu`)은 순환이라 두지 않는다. 반영과 원장 종료가 원자적이어야
+  해서 `project`의 반영 API가 `minsu`가 연 트랜잭션에 참여한다(같은 ADR이 정한 예외).
 - `signal`과 `project`는 확정 액션 결과를 같은 트랜잭션에서 남기기 위해 `outbox`의
   `OutboxAppender` public API를 사용한다(CO-6). `signal`의 dev Signal 생성 쓰기 경로는 `source`의
   dev 쓰기 public API(`DevSourceRefWriter`)에도 위임한다.
@@ -425,7 +430,9 @@ public API 또는 application event로 발행한다.
 
 Minsu 유스케이스와 LLM provider/model 경계를 담당한다.
 
-- Signal `convert-to-task`의 task draft 생성 공개 API `SignalTaskDraftGenerator`
+- Signal `convert-to-task`의 task draft 생성 공개 API `SignalTaskDraftGenerator`와 생성 상태 조회
+  `TaskDraftStatusReader`. 비동기 생성 원장을 소유하고, 생성 결과를 `tasks`에 반영하며 그 트랜잭션에서
+  `task.draft_generated`를 발행한다(ADR-0015, MOM-0817·0818·0819·0820)
 - `/workspaces/:id/minsu/query`
 - retrieval SearchRequest assembly, PermissionContext assembly, answer synthesis
 - Slack bot 표면, LLM adapter, retrieval gRPC client adapter
