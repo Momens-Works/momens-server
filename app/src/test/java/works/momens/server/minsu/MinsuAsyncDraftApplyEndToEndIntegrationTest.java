@@ -70,8 +70,8 @@ class MinsuAsyncDraftApplyEndToEndIntegrationTest extends AbstractPostgresIntegr
   }
 
   @Test
-  @DisplayName("생성 결과를 tasks에 반영하고 task.draft_generated를 한 번 발행한다")
-  void appliesGeneratedDraftAndPublishesEvent() throws Exception {
+  @DisplayName("생성 결과를 tasks에 반영하고 worker가 읽을 task.draft_generated를 남긴다")
+  void appliesGeneratedDraftAndLeavesEventForWorker() throws Exception {
     UUID taskId = convert("apply-success");
 
     awaitCompletion(taskId);
@@ -83,6 +83,10 @@ class MinsuAsyncDraftApplyEndToEndIntegrationTest extends AbstractPostgresIntegr
         () -> assertThat(task).containsEntry("role", "backend"),
         () -> assertThat(task).containsEntry("priority", "high"),
         () -> assertThat(completionReason(taskId)).isEqualTo("generated"),
+        // 이 단언이 보는 것은 worker가 실제로 마주하는 행의 수다. 호출 횟수는 여기서 증명되지 않는다.
+        // `OutboxAppender`가 `idempotency_key`(=`{event_type}:{aggregate_id}`) UNIQUE에
+        // `ON CONFLICT DO NOTHING`으로 넣으므로 두 번 불러도 행은 하나다. 단일 호출은 minsu 슬라이스의
+        // `RecordingOutboxAppender` 단언이 본다.
         () -> assertThat(draftGeneratedEvents(taskId)).isEqualTo(1));
   }
 

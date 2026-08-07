@@ -34,6 +34,8 @@ import works.momens.server.project.TaskDraftValues;
 @Component
 class TaskDraftGenerationLedger {
 
+  private static final String EVENT_TASK_DRAFT_GENERATED = "task.draft_generated";
+
   private final TaskDraftGenerationRepository repository;
   private final MinsuAsyncProperties asyncProperties;
   private final MinsuJson json;
@@ -131,6 +133,10 @@ class TaskDraftGenerationLedger {
       // 분기를 잘못 타고 있는 것이므로 조용히 닫지 않는다.
       case DISABLED, DEFERRED ->
           throw new IllegalStateException("비동기 실행이 요청 경로 outcome을 돌려줬습니다: " + result.outcome());
+      // outcome이 늘어나면 여기서 크게 실패해야 한다. arrow switch 문은 enum을 다 덮지 않아도 컴파일되고,
+      // 그대로 두면 어떤 전이도 없이 트랜잭션이 정상 커밋된다. 원장은 processing으로 남아 lease 만료마다
+      // 재claim되므로 provider 비용만 반복되고 아무도 그 사실을 모른다.
+      default -> throw new IllegalStateException("처리하지 않은 생성 outcome입니다: " + result.outcome());
     }
   }
 
@@ -162,12 +168,14 @@ class TaskDraftGenerationLedger {
             generation.getWorkspaceId(),
             "task",
             generation.getTaskId().toString(),
-            "task.draft_generated",
+            EVENT_TASK_DRAFT_GENERATED,
             Map.of());
       }
       // baseline과 달라진 이유를 project는 모른다. baseline을 소유한 이쪽이 사용자 편집으로 해석한다(8.1절).
       case BASELINE_MISMATCH -> generation.complete(CompletionReason.USER_EDITED);
       case TASK_GONE -> generation.complete(CompletionReason.TASK_GONE);
+      // 반영 결과가 늘어나면 크게 실패한다. 빠뜨리면 원장이 닫히지 않은 채 커밋된다(위 switch와 같은 이유).
+      default -> throw new IllegalStateException("처리하지 않은 draft 반영 결과입니다: " + applied);
     }
   }
 

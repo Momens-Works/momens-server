@@ -136,6 +136,21 @@ class Task extends BaseEntity {
    * 수정 화면이 저장한 편집 상태 전체로 태스크를 갱신합니다. title, role, priority, status는 mobile이 검증한 값이라 항상 채워집니다.
    * description은 목적을 비운 경우 빈 문자열이나 null로 들어옵니다. assigneeId는 담당자를 지정하면 값이, 비우면 null이 들어옵니다.
    */
+  void update(
+      String title,
+      String role,
+      String priority,
+      String status,
+      String description,
+      UUID assigneeId) {
+    this.title = title;
+    this.role = role;
+    this.priority = priority;
+    this.status = status;
+    this.description = description;
+    this.assigneeId = assigneeId;
+  }
+
   /** draft 반영이 비교하는 세 필드가 주어진 값과 같은지. 하나라도 다르면 반영하지 않습니다. */
   boolean matchesDraft(String title, String role, String priority) {
     return Objects.equals(this.title, title)
@@ -151,21 +166,6 @@ class Task extends BaseEntity {
     this.title = title;
     this.role = role;
     this.priority = priority;
-  }
-
-  void update(
-      String title,
-      String role,
-      String priority,
-      String status,
-      String description,
-      UUID assigneeId) {
-    this.title = title;
-    this.role = role;
-    this.priority = priority;
-    this.status = status;
-    this.description = description;
-    this.assigneeId = assigneeId;
   }
 
   /**

@@ -1145,6 +1145,12 @@ provider 호출 여부만 제어한다. 세 축으로 나눈다.
    - `REQUIRES_NEW`, 별도 transaction manager, 명시적 조기 commit은 금지한다.
    - CAS가 0건이거나 원장의 token·deadline 조건 갱신이 0건이면 예외 없이 커밋하지 않고 전체를
      롤백한다. task만 바뀌고 원장이 남는 상태를 만들지 않는다.
+
+     이 문장이 금지하는 것은 **부분 커밋**이지 baseline 불일치 자체가 아니다. 8.1절이 정한
+     `user_edited`·`task_gone` 종료는 "반영하지 않고 원장을 닫는" 정상 경로이며, 반영과 종료가
+     같은 트랜잭션 안에 있으므로 위 조건을 어기지 않는다. 구현(MOM-0820)은 반영 API가 조건
+     불일치를 **쓰기 전에** 판정해 결과로 돌려주므로 "CAS 0건" 상태가 아예 생기지 않는다.
+     위 문장은 반영이 커밋됐는데 원장 전이가 빠지는 조합을 막는 규칙으로 읽는다.
    - 반영에 성공하면 같은 트랜잭션에서 `task.draft_generated`를 append한다(5.4절).
 
    조건부 UPDATE를 native·JPQL bulk update로 구현하면 JPA Auditing이 동작하지 않아
