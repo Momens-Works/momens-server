@@ -46,6 +46,10 @@ class TaskDraftApplierIntegrationTest extends AbstractPostgresIntegrationTest {
     TaskDraftApplyResult result =
         taskDraftApplier.apply(new ApplyTaskDraftCommand(taskId, BASELINE, DRAFT));
 
+    // 여기서만 flush·clear로 DB를 거쳐 다시 읽는다. 1차 캐시가 돌려주는 메모리 상태만 보면 매핑과
+    // tasks_role_check(backend 허용)를 한 번도 지나지 않는다.
+    entityManager.flush();
+    entityManager.clear();
     Task task = reload(taskId);
     assertAll(
         () -> assertThat(result).isEqualTo(TaskDraftApplyResult.APPLIED),
