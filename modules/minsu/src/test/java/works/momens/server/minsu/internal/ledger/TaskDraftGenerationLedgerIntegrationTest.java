@@ -119,7 +119,7 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
   void reclaimsExpiredLease() {
     UUID taskId = persistPending();
     ledger.claimDue(10);
-    expireLease();
+    expireLease(taskId);
 
     List<ClaimedGeneration> reclaimed = ledger.claimDue(10);
 
@@ -137,7 +137,7 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
   void expiredLeaseIsReclaimedEvenWhenPendingFillsEverySlot() {
     UUID stalled = persistPending();
     ledger.claimDue(1);
-    expireLease();
+    expireLease(stalled);
     // 회수를 기다리는 동안에도 사용자 convert는 계속 들어온다. 신규를 먼저 보면 매 주기 pending이
     // 슬롯을 모두 채우는 사이 만료 행이 한 번도 집히지 않고, 그대로 apply_cutoff_at을 지나면 두
     // 쿼리 모두에서 빠져 영영 회수되지 않는다(8.5절의 복구 보장이 부하에 따라 깨진다).
@@ -214,7 +214,7 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
     UUID taskId = persistPending();
 
     for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      dueNow();
+      dueNow(taskId);
       List<ClaimedGeneration> claims = ledger.claimDue(10);
       assertThat(claims).hasSize(1);
       ledger.record(claims.getFirst(), result(GenerationOutcome.PROVIDER_ERROR));
@@ -261,7 +261,7 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
     UUID taskId = persistPending();
     ClaimedGeneration claim = ledger.claimDue(10).getFirst();
     // 실행 도중 반영 창이 닫힌 상황. 읽기 투영이 이미 ready로 알렸을 수 있어 반영하면 안 된다(8.6절).
-    passApplyCutoff();
+    passApplyCutoff(taskId);
 
     ledger.record(claim, result(GenerationOutcome.GENERATED));
 
@@ -271,8 +271,7 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
   @Test
   @DisplayName("반영 창을 지난 행은 claim 대상이 아니다")
   void doesNotClaimPastApplyCutoff() {
-    persistPending();
-    passApplyCutoff();
+    passApplyCutoff(persistPending());
 
     // 결과를 쓸 수 없는 작업이므로 claim하면 provider 호출만 낭비된다.
     assertThat(ledger.claimDue(10)).isEmpty();
@@ -286,8 +285,10 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
         .createNativeQuery(
             "UPDATE minsu_task_draft_generations SET attempt_count = :maxAttempts,"
                 + " status = 'processing', claim_token = gen_random_uuid(),"
-                + " lease_expires_at = NOW() - INTERVAL '1 minute'")
+                + " lease_expires_at = NOW() - INTERVAL '1 minute'"
+                + " WHERE task_id = :taskId")
         .setParameter("maxAttempts", MAX_ATTEMPTS)
+        .setParameter("taskId", taskId)
         .executeUpdate();
     entityManager.clear();
 
@@ -304,7 +305,7 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
     UUID taskId = inTransaction(this::persistPending);
     try {
       ClaimedGeneration stale = ledger.claimDue(10).getFirst();
-      inTransaction(this::expireLease);
+      inTransaction(() -> expireLease(taskId));
       ClaimedGeneration current = ledger.claimDue(10).getFirst();
       assertThat(current.claimToken()).isNotEqualTo(stale.claimToken());
 
@@ -334,30 +335,33 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
   }
 
   /** lease만 되돌린다. {@code next_attempt_at}은 그대로 두어 만료 회수 경로만 재현한다. */
-  private void expireLease() {
+  private void expireLease(UUID taskId) {
     entityManager
         .createNativeQuery(
             "UPDATE minsu_task_draft_generations"
-                + " SET lease_expires_at = NOW() - INTERVAL '1 minute' WHERE status = 'processing'")
+                + " SET lease_expires_at = NOW() - INTERVAL '1 minute' WHERE task_id = :taskId")
+        .setParameter("taskId", taskId)
         .executeUpdate();
     entityManager.clear();
   }
 
   /** 백오프 대기를 지나게 한다. lease는 건드리지 않아 pending 재시도 경로만 재현한다. */
-  private void dueNow() {
+  private void dueNow(UUID taskId) {
     entityManager
         .createNativeQuery(
             "UPDATE minsu_task_draft_generations"
-                + " SET next_attempt_at = NOW() - INTERVAL '1 minute' WHERE status = 'pending'")
+                + " SET next_attempt_at = NOW() - INTERVAL '1 minute' WHERE task_id = :taskId")
+        .setParameter("taskId", taskId)
         .executeUpdate();
     entityManager.clear();
   }
 
-  private void passApplyCutoff() {
+  private void passApplyCutoff(UUID taskId) {
     entityManager
         .createNativeQuery(
             "UPDATE minsu_task_draft_generations"
-                + " SET apply_cutoff_at = NOW() - INTERVAL '1 second'")
+                + " SET apply_cutoff_at = NOW() - INTERVAL '1 second' WHERE task_id = :taskId")
+        .setParameter("taskId", taskId)
         .executeUpdate();
     entityManager.clear();
   }
