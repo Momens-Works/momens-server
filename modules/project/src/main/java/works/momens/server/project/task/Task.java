@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
@@ -135,6 +136,23 @@ class Task extends BaseEntity {
    * 수정 화면이 저장한 편집 상태 전체로 태스크를 갱신합니다. title, role, priority, status는 mobile이 검증한 값이라 항상 채워집니다.
    * description은 목적을 비운 경우 빈 문자열이나 null로 들어옵니다. assigneeId는 담당자를 지정하면 값이, 비우면 null이 들어옵니다.
    */
+  /** draft 반영이 비교하는 세 필드가 주어진 값과 같은지. 하나라도 다르면 반영하지 않습니다. */
+  boolean matchesDraft(String title, String role, String priority) {
+    return Objects.equals(this.title, title)
+        && Objects.equals(this.role, role)
+        && Objects.equals(this.priority, priority);
+  }
+
+  /**
+   * AI가 생성한 draft를 반영합니다. {@link #update}와 달리 세 필드만 바꿉니다. status·description·assignee는 사용자와 다른 경로가
+   * 소유하는 값이라 생성 결과가 건드리지 않습니다.
+   */
+  void applyDraft(String title, String role, String priority) {
+    this.title = title;
+    this.role = role;
+    this.priority = priority;
+  }
+
   void update(
       String title,
       String role,
