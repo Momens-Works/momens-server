@@ -82,6 +82,17 @@ class MinsuDrainRestartRecoveryIntegrationTest extends AbstractPostgresIntegrati
               List.of(Duration.ofSeconds(1)),
               1));
     }
+
+    // 이 테스트가 보는 것은 원장과 scheduler의 복구 경로다. 반영과 발행은 항상 성공한 것으로 둔다.
+    @Bean
+    FakeTaskDraftApplier taskDraftApplier() {
+      return new FakeTaskDraftApplier();
+    }
+
+    @Bean
+    RecordingOutboxAppender outboxAppender() {
+      return new RecordingOutboxAppender();
+    }
   }
 
   @BeforeEach

@@ -1,6 +1,7 @@
 package works.momens.server.minsu.internal.ledger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 import jakarta.persistence.EntityManager;
@@ -8,7 +9,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +34,9 @@ import works.momens.server.minsu.internal.config.MinsuAsyncProperties;
 import works.momens.server.minsu.internal.generation.AsyncGenerationResult;
 import works.momens.server.minsu.internal.generation.GenerationOutcome;
 import works.momens.server.minsu.internal.json.MinsuJson;
+import works.momens.server.project.ApplyTaskDraftCommand;
+import works.momens.server.project.TaskDraftApplyResult;
+import works.momens.server.project.TaskDraftValues;
 
 /**
  * claim·재시도·결과 기록을 실제 PostgreSQL로 검증한다(MOM-0819, 설계 7.1·8.2·8.5절).
@@ -56,6 +62,8 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
   @Autowired private TaskDraftGenerationRepository repository;
   @Autowired private EntityManager entityManager;
   @Autowired private PlatformTransactionManager transactionManager;
+  @Autowired private FakeTaskDraftApplier applier;
+  @Autowired private RecordingOutboxAppender outbox;
 
   @TestConfiguration
   static class LedgerTestConfig {
@@ -75,6 +83,23 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
               List.of(FIRST_BACKOFF, Duration.ofSeconds(2)),
               2));
     }
+
+    @Bean
+    FakeTaskDraftApplier taskDraftApplier() {
+      return new FakeTaskDraftApplier();
+    }
+
+    @Bean
+    RecordingOutboxAppender outboxAppender() {
+      return new RecordingOutboxAppender();
+    }
+  }
+
+  @BeforeEach
+  void resetDoubles() {
+    // 컨텍스트를 공유하므로 대역 상태는 테스트마다 되돌린다.
+    applier.reset();
+    outbox.reset();
   }
 
   @Test
@@ -176,8 +201,30 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
   }
 
   @Test
-  @DisplayName("성공 결과는 원장을 generated로 닫는다")
-  void successCompletesAsGenerated() {
+  @DisplayName("성공 결과는 원장이 보유한 baseline으로 반영을 요청한다")
+  void successAppliesDraftAgainstStoredBaseline() {
+    UUID taskId = persistPending();
+    ClaimedGeneration claim = ledger.claimDue(10).getFirst();
+
+    ledger.record(claim, result(GenerationOutcome.GENERATED));
+
+    // 반영 규칙을 다시 계산하지 않고 적재 시점에 복사한 값을 그대로 쓴다(6절). 재계산하면 fallback 규칙이
+    // 바뀌는 순간 진행 중이던 작업 전부가 user_edited로 오분류된다.
+    ApplyTaskDraftCommand command = applier.commands().getFirst();
+    assertAll(
+        () -> assertThat(applier.commands()).hasSize(1),
+        () -> assertThat(command.taskId()).isEqualTo(taskId),
+        () ->
+            assertThat(command.baseline())
+                .isEqualTo(new TaskDraftValues("결제 실패율 대응", "backend", "medium")),
+        () ->
+            assertThat(command.draft())
+                .isEqualTo(new TaskDraftValues("결제 실패율 대응", "backend", "high")));
+  }
+
+  @Test
+  @DisplayName("반영에 성공하면 generated로 닫고 task.draft_generated를 한 번 발행한다")
+  void appliedResultCompletesAsGeneratedAndPublishesEvent() {
     UUID taskId = persistPending();
     ClaimedGeneration claim = ledger.claimDue(10).getFirst();
 
@@ -187,7 +234,69 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
     assertAll(
         () -> assertThat(generation.getStatus()).isEqualTo("completed"),
         () -> assertThat(generation.getCompletionReason()).isEqualTo("generated"),
-        () -> assertThat(generation.getClaimToken()).isNull());
+        () -> assertThat(generation.getClaimToken()).isNull(),
+        () -> assertThat(outbox.appended()).hasSize(1),
+        () ->
+            assertThat(outbox.appended().getFirst())
+                .isEqualTo(
+                    new RecordingOutboxAppender.Appended(
+                        generation.getWorkspaceId(),
+                        "task",
+                        taskId.toString(),
+                        "task.draft_generated",
+                        Map.of())));
+  }
+
+  @Test
+  @DisplayName("baseline이 달라졌으면 user_edited로 닫고 event를 발행하지 않는다")
+  void baselineMismatchClosesAsUserEdited() {
+    UUID taskId = persistPending();
+    ClaimedGeneration claim = ledger.claimDue(10).getFirst();
+    applier.willReturn(TaskDraftApplyResult.BASELINE_MISMATCH);
+
+    ledger.record(claim, result(GenerationOutcome.GENERATED));
+
+    assertAll(
+        () -> assertThat(reload(taskId).getCompletionReason()).isEqualTo("user_edited"),
+        // tasks가 그대로이므로 projection도 바뀔 것이 없다(5.4절).
+        () -> assertThat(outbox.appended()).isEmpty());
+  }
+
+  @Test
+  @DisplayName("대상 task가 사라졌으면 task_gone으로 닫고 event를 발행하지 않는다")
+  void goneTaskClosesAsTaskGone() {
+    UUID taskId = persistPending();
+    ClaimedGeneration claim = ledger.claimDue(10).getFirst();
+    applier.willReturn(TaskDraftApplyResult.TASK_GONE);
+
+    ledger.record(claim, result(GenerationOutcome.GENERATED));
+
+    assertAll(
+        () -> assertThat(reload(taskId).getCompletionReason()).isEqualTo("task_gone"),
+        () -> assertThat(outbox.appended()).isEmpty());
+  }
+
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  @DisplayName("반영이 실패하면 원장 전이도 함께 롤백된다")
+  void applyFailureRollsBackLedgerTransition() {
+    UUID taskId = inTransaction(this::persistPending);
+    try {
+      ClaimedGeneration claim = ledger.claimDue(10).getFirst();
+      applier.willThrow(new IllegalStateException("반영 실패"));
+
+      assertThatThrownBy(() -> ledger.record(claim, result(GenerationOutcome.GENERATED)))
+          .isInstanceOf(IllegalStateException.class);
+
+      // 종료가 커밋되면 안 된다. processing으로 남아야 lease 만료 후 회수돼 다시 시도된다(8.3·8.5절).
+      TaskDraftGeneration generation = repository.findByTaskId(taskId).orElseThrow();
+      assertAll(
+          () -> assertThat(generation.getStatus()).isEqualTo("processing"),
+          () -> assertThat(generation.getCompletionReason()).isNull(),
+          () -> assertThat(generation.getClaimToken()).isEqualTo(claim.claimToken()));
+    } finally {
+      inTransaction(() -> repository.findByTaskId(taskId).ifPresent(repository::delete));
+    }
   }
 
   @Test
