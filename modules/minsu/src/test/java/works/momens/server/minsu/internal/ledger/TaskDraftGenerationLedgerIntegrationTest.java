@@ -248,6 +248,29 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
   }
 
   @Test
+  @DisplayName("생성 결과가 baseline과 같으면 generated로 닫되 event를 발행하지 않는다")
+  void unchangedDraftCompletesAsGeneratedWithoutEvent() {
+    // GENERATED_TITLE_FALLBACK은 성공 outcome이면서 title을 convert 시점 고정 fallback과 같은 규칙으로
+    // 만든다. role·priority까지 겹치면 세 값이 정확히 일치하고, 그때 tasks는 반영해도 그대로다. 이 경우까지
+    // 발행하면 worker가 바뀐 것 없는 projection을 다시 hydrate한다(5.4절).
+    UUID taskId = persistPending();
+    ClaimedGeneration claim = ledger.claimDue(10).getFirst();
+
+    ledger.record(
+        claim,
+        new AsyncGenerationResult(
+            new TaskDraft("결제 실패율 대응", Role.BACKEND, Priority.MEDIUM),
+            GenerationOutcome.GENERATED_TITLE_FALLBACK));
+
+    TaskDraftGeneration generation = reload(taskId);
+    assertAll(
+        // 생성 자체는 성공이므로 종료 사유는 그대로 generated다.
+        () -> assertThat(generation.getStatus()).isEqualTo("completed"),
+        () -> assertThat(generation.getCompletionReason()).isEqualTo("generated"),
+        () -> assertThat(outbox.appended()).isEmpty());
+  }
+
+  @Test
   @DisplayName("baseline이 달라졌으면 user_edited로 닫고 event를 발행하지 않는다")
   void baselineMismatchClosesAsUserEdited() {
     UUID taskId = persistPending();

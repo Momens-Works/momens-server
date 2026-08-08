@@ -149,27 +149,35 @@ class TaskDraftGenerationLedger {
    *
    * <p>{@code task.draft_generated}는 <b>실제로 갱신했을 때만</b> 발행한다(5.4절). {@code tasks}가 그대로인 종료에서는
    * projection도 바뀔 것이 없다.
+   *
+   * <p>생성 결과가 baseline과 같은 값일 수 있다. {@code GENERATED_TITLE_FALLBACK}은 성공 outcome이면서 title이 convert
+   * 시점 고정 fallback과 같은 규칙으로 만들어지므로, role·priority까지 {@code pm}·{@code medium}이면 세 값이 정확히 일치한다. 이때
+   * {@code APPLIED}가 돌아오지만 dirty check가 UPDATE를 내지 않아 {@code tasks}는 그대로다. 원장은 성공으로 닫되 발행은 건너뛴다.
+   * 비교를 {@code project}가 아니라 여기서 하는 이유는 baseline을 소유한 쪽이 이 모듈이고, "값이 그대로다"를 결과 enum으로 만들면 {@code
+   * project}가 알 필요 없는 어휘가 늘기 때문이다(8.1절이 {@code USER_EDITED}를 두지 않은 것과 같은 이유).
    */
   private void applyDraft(TaskDraftGeneration generation, TaskDraft draft) {
+    TaskDraftValues baseline =
+        new TaskDraftValues(
+            generation.getBaselineTitle(),
+            generation.getBaselineRole(),
+            generation.getBaselinePriority());
+    TaskDraftValues generated =
+        new TaskDraftValues(draft.title(), draft.role().value(), draft.priority().value());
     TaskDraftApplyResult applied =
         taskDraftApplier.apply(
-            new ApplyTaskDraftCommand(
-                generation.getTaskId(),
-                new TaskDraftValues(
-                    generation.getBaselineTitle(),
-                    generation.getBaselineRole(),
-                    generation.getBaselinePriority()),
-                new TaskDraftValues(
-                    draft.title(), draft.role().value(), draft.priority().value())));
+            new ApplyTaskDraftCommand(generation.getTaskId(), baseline, generated));
     switch (applied) {
       case APPLIED -> {
         generation.complete(CompletionReason.GENERATED);
-        outboxAppender.append(
-            generation.getWorkspaceId(),
-            "task",
-            generation.getTaskId().toString(),
-            EVENT_TASK_DRAFT_GENERATED,
-            Map.of());
+        if (!generated.equals(baseline)) {
+          outboxAppender.append(
+              generation.getWorkspaceId(),
+              "task",
+              generation.getTaskId().toString(),
+              EVENT_TASK_DRAFT_GENERATED,
+              Map.of());
+        }
       }
       // baseline과 달라진 이유를 project는 모른다. baseline을 소유한 이쪽이 사용자 편집으로 해석한다(8.1절).
       case BASELINE_MISMATCH -> generation.complete(CompletionReason.USER_EDITED);
