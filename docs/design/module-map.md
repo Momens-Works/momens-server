@@ -196,8 +196,11 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 - 태스크(`task`)는 Spring Modulith nested 논리 모듈이고, 프로젝트 코어는 `internal`에 둔다.
   공개 계약은 모듈 root의 public API 그대로다.
 - 하위 도메인마다 aggregate가 하나씩이고(`Project`, `Task`) 트랜잭션은 자기 aggregate 안에
-  닫힌다. 예외는 태스크 생성 트랜잭션에 참여하는 라벨 발급 한 곳이고, 위 workspace 절에
-  문서화했다. `Task`는 `Project`를 엔티티 연관이 아니라 projectId로만 참조한다.
+  닫힌다. 예외는 두 곳이고 방향이 서로 반대다. 하나는 project가 연 태스크 생성 트랜잭션에
+  workspace의 라벨 발급이 참여하는 것이고(위 workspace 절), 다른 하나는 `minsu`가 연 트랜잭션에서
+  `TaskDraftApplier`로 `Task`가 변경되는 것이다(위 `minsu` 절,
+  [ADR-0015](../adr/0015-minsu-async-task-draft-generation.md)가 소유한다). `Task`는 `Project`를
+  엔티티 연관이 아니라 projectId로만 참조한다.
 
 ### outbox
 

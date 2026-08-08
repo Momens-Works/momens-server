@@ -2,6 +2,7 @@ package works.momens.server.project.task;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.project.ApplyTaskDraftCommand;
 import works.momens.server.project.TaskDraftApplier;
@@ -15,8 +16,10 @@ class TaskDraftApplierImpl implements TaskDraftApplier {
   private final TaskRepository taskRepository;
 
   /**
-   * 기본 전파로 호출자 트랜잭션에 합류합니다. {@code TaskEditorImpl.update}와 같은 방식이며, 여기에 별도 경계를 만들면 호출자의 원장 종료와 원자성이
-   * 깨집니다.
+   * 호출자 트랜잭션에 합류합니다({@code Propagation.MANDATORY}). 여기에 별도 경계를 만들면 호출자의 원장 종료와 원자성이 깨집니다. 반영만 커밋되고
+   * 원장이 {@code processing}으로 남으면 이후 재시도가 자기 자신이 쓴 값을 baseline 불일치로 보고 사용자 편집으로 오분류하며, 그 종료 사유는 운영
+   * 판단에 쓰입니다. 기본 전파는 트랜잭션이 없을 때 스스로 열어 이 상황을 허용하므로 쓰지 않습니다. 호출자 트랜잭션을 요구하는 모듈 간 협력자라는 점에서 {@code
+   * OutboxAppender}·{@code LabelAllocator}와 같은 방식입니다.
    *
    * <p>조건 검사와 갱신을 native bulk update가 아니라 <b>행 잠금 후 엔티티 변경</b>으로 합니다. bulk update는 JPA Auditing을
    * 우회해 {@code tasks.updated_at}이 갱신되지 않고, 그러면 수정 테이블의 {@code updated_at}을 Auditing으로 관리하는
@@ -28,7 +31,7 @@ class TaskDraftApplierImpl implements TaskDraftApplier {
    * projection 결과 자체는 정확해 이 창은 감수합니다. 잠금 범위를 이보다 넓게 읽지 마십시오.
    */
   @Override
-  @Transactional
+  @Transactional(propagation = Propagation.MANDATORY)
   public TaskDraftApplyResult apply(ApplyTaskDraftCommand command) {
     Task task = taskRepository.lockByIdAndDeletedAtIsNull(command.taskId()).orElse(null);
     if (task == null) {
