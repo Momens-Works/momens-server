@@ -253,6 +253,13 @@ payload       {} (ID 중심 원칙, worker가 DB에서 hydrate)
 `task_gone`·`retry_exhausted`처럼 `tasks`가 바뀌지 않은 종료에서는 projection도 바뀔 것이
 없으므로 발행하지 않는다.
 
+**성공했지만 값이 그대로인 경우도 여기에 포함된다.** `GENERATED_TITLE_FALLBACK`은 성공
+outcome이면서 title을 convert 시점 고정 fallback과 같은 규칙(`normalize(signal.title)`)으로
+만들기 때문에, role·priority까지 `pm`·`medium`이면 생성 결과가 baseline과 정확히 일치한다.
+반영은 `applied`로 돌아오지만 dirty check가 UPDATE를 내지 않아 `tasks`는 그대로다. 원장은
+`generated`로 닫되 발행은 건너뛴다. 판단은 baseline을 소유한 `minsu`가 하고, `project`의 반영
+결과 enum에 "값이 그대로다"를 추가하지 않는다(8.1절이 `USER_EDITED`를 두지 않은 것과 같은 이유).
+
 발행은 8.3절의 반영 트랜잭션에 합류한다. 따라서 `minsu → outbox` 의존이 하나 더 생긴다.
 `OutboxAppender`는 호출자 트랜잭션 안에서 호출해야 하므로(트랜잭션 없이 호출하면 실패한다)
 이 배치가 계약과 맞는다.
