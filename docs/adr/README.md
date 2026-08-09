@@ -21,3 +21,4 @@
 | [0013](0013-project-progress-derivation.md) | 프로젝트 진행률을 태스크에서 계산 | Accepted |
 | [0014](0014-minsu-task-draft-module-and-llm-boundary.md) | Minsu task draft 모듈과 LLM 경계 | Accepted (생성 시점·저장·모듈 의존 부분은 [0015](0015-minsu-async-task-draft-generation.md)로 대체) |
 | [0015](0015-minsu-async-task-draft-generation.md) | Minsu task draft 비동기 생성과 `minsu` 영속성 소유 | Accepted |
+| [0016](0016-user-identity-key-google-sub.md) | 사용자 신원 식별 키를 이메일에서 Google `sub`으로 전환 | Accepted |
