@@ -390,6 +390,11 @@ class DefaultSignalTaskDraftGeneratorTest {
                         .summary()
                         .totalAmount())
                 .isEqualTo(10),
+        // total은 나머지 셋의 합이라 시계열로 두면 type을 가로지른 합산이 두 배가 된다.
+        // 지표 규약(docs/rules/observability.md)이 금지하는 형태라 되살아나지 않게 고정한다.
+        () ->
+            assertThat(meterRegistry.find("momens.minsu.llm.tokens").tag("type", "total").summary())
+                .isNull(),
         () ->
             assertThat(
                     handler.stoppedContext.getLowCardinalityKeyValues().stream()
