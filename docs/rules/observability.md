@@ -64,8 +64,10 @@ momens.<모듈>.<대상>.<측정>
   않습니다.** 합산이 이중 계상됩니다.
 - **값이 없어도 태그를 빼지 않고 명시적인 값을 씁니다**(`none` 등). 시계열마다 태그 집합이 달라지면
   집계가 깨집니다.
-- 값 집합이 코드에 열거돼 있으면 사건이 일어나기 전에도 `0`으로 등록해, 시계열이 뒤늦게 나타나지
-  않게 합니다.
+- **태그 조합이 부팅 시점에 모두 정해지는 지표는 `0`으로 미리 등록합니다.** 등록하지 않으면 재시작
+  후 첫 사건 전까지 시계열이 없어 `rate()`가 값을 내지 못하고, 그 구간이 장애와 구분되지 않습니다.
+  실제 선택된 모델처럼 런타임에 정해지는 태그가 섞여 있으면 예외이며, 그 사실을 지표를 만드는
+  자리에 남깁니다.
 
 ### 카디널리티
 
@@ -152,8 +154,8 @@ Micrometer Tracing 브리지를 함께 제공 — 브리지 단독 의존성으�
 starter가 OTLP exporter도 함께 들이므로, collector가 없는 동안 기본 endpoint로 전송을 시도해
 연결 오류가 납니다. 따라서 trace context(로그 상관관계)는 유지하되 export는 기본 비활성화합니다
 (`management.tracing.export.enabled: false`, `management.otlp.metrics.export.enabled: false`,
-`management.logging.export.otlp.enabled: false`). OTLP collector endpoint와 sampling 비율은 배포
-환경이 정해질 때 켭니다(위 [적용 범위](#적용-범위) 참고).
+`management.logging.export.otlp.enabled: false`). OTLP collector endpoint와 sampling 비율은 수집
+백엔드를 정하고 배선할 때 켭니다(위 [적용 범위](#적용-범위) 참고).
 
 | 목적 | 식별자 |
 | --- | --- |

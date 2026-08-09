@@ -131,8 +131,8 @@ management:
       probes:
         enabled: true
   # 로그 상관관계용 trace context(traceId/spanId)는 유지하되, 분산추적/메트릭/로그 OTLP
-  # export는 비활성화합니다. collector endpoint와 sampling은 배포 환경 확정 시(별도 OTel
-  # 티켓) 켭니다 — 그전엔 기본 endpoint(localhost:4318)로 전송을 시도해 연결 오류가 납니다.
+  # export는 비활성화합니다. collector endpoint와 sampling은 수집 백엔드를 정하고 배선할 때
+  # (MOM-0834) 켭니다 — 그전엔 기본 endpoint(localhost:4318)로 전송을 시도해 연결 오류가 납니다.
   tracing:
     export:
       enabled: false

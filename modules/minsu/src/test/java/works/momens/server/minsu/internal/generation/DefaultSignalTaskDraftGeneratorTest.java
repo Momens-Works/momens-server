@@ -405,6 +405,21 @@ class DefaultSignalTaskDraftGeneratorTest {
                     "finish.reason=safety"));
   }
 
+  /**
+   * 지표 규약의 "0 선등록"(docs/rules/observability.md). 태그 값이 enum이라 조합이 부팅 시점에 모두 정해지므로, 첫 생성 전에도 시계열이
+   * 있어야 재시작 직후 구간이 장애와 구분된다.
+   */
+  @Test
+  void preRegistersRequestCountersForEveryOutcome() {
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+
+    new MinsuObservability(meterRegistry, ObservationRegistry.create());
+
+    assertThat(meterRegistry.find("momens.minsu.task.draft.requests").counters())
+        .hasSize(GenerationOutcome.values().length)
+        .allSatisfy(counter -> assertThat(counter.count()).isZero());
+  }
+
   @Test
   void logsInvalidResponseAtWarn() {
     List<ILoggingEvent> events =
