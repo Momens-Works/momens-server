@@ -7,6 +7,20 @@ spring:
     show-sql: false
   flyway:
     enabled: true
+  datasource:
+    hikari:
+      # Testcontainers 컨테이너 하나를 모든 컨텍스트가 공유하는데, Spring 컨텍스트마다 별도 풀이 생깁니다.
+      # 기본 풀 크기 10이면 컨텍스트 10개에서 Postgres 기본 max_connections(100)에 정확히 닿아
+      # "too many clients already"로 깨집니다. 테스트는 동시성이 낮아 작은 풀로 충분합니다.
+      maximum-pool-size: 5
+
+# local 프로필과 같은 노출 값입니다. 별도 컨텍스트를 만들지 않으려고 프로필에 둡니다.
+# @SpringBootTest(properties = ...)로 주입하면 컨텍스트 캐시 키가 갈려 풀이 하나 더 생깁니다.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
 
 # 테스트 전용 고정 secret(실제 secret 아님). HS256 최소 길이(32바이트) 충족.
 momens:
