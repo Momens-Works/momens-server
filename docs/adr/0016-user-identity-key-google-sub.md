@@ -93,7 +93,7 @@
 
    ```sql
    CREATE TABLE user_identities (
-       id UUID PRIMARY KEY,
+       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
        provider TEXT NOT NULL CHECK (provider IN ('google')),
        provider_user_id TEXT NOT NULL,
@@ -109,6 +109,11 @@
    `provider`에는 CHECK 제약을 두어 허용되지 않은 값이 저장되는 것을 막는다. 이는 `signals.type`,
    `signal_actions.action_type`, `tasks.status`, `tasks.priority`, `push_installations.platform`과 동일한
    패턴이다. 새로운 로그인 수단을 추가할 때는 허용 값도 함께 확장한다.
+
+   `id`에는 `DEFAULT uuid_generate_v4()`를 지정한다. 애플리케이션에서는 식별자를 직접 생성하므로 일반적인
+   실행 경로에서 이 기본값을 사용하지 않는다. 하지만 시드나 수동 SQL처럼 애플리케이션을 거치지 않고 행을
+   생성할 때도 식별자가 자동으로 할당되도록 기본값을 유지한다([데이터](../rules/persistence.md)).
+   `uuid-ossp` 확장은 `common`이 소유하며, 레거시 스키마에도 이미 적용되어 있다.
 
    이 테이블을 `user` 모듈이 소유하는 이유는 사용자를 생성할 때 `users`와 `user_identities`가 반드시 함께
    생성되어야 하기 때문이다. `auth`가 소유하면 두 테이블의 생성이 서로 다른 모듈로 분리되어 하나의
