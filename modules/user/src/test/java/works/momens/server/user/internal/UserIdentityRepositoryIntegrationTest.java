@@ -41,11 +41,15 @@ class UserIdentityRepositoryIntegrationTest extends AbstractPostgresIntegrationT
     UUID userId = persistUser("identity-save@momens.works");
 
     UserIdentity saved = userIdentityRepository.save(identity(userId, GOOGLE, "sub-save"));
+    entityManager.flush();
+    entityManager.clear();
 
-    assertThat(saved.getId()).isNotNull();
-    assertThat(saved.getId().version()).as("UUID v4 PK").isEqualTo(4);
-    assertThat(saved.getCreatedAt()).isNotNull();
-    assertThat(saved.getUpdatedAt()).isNotNull();
+    UserIdentity found = userIdentityRepository.findById(saved.getId()).orElseThrow();
+
+    assertThat(found.getId()).isNotNull();
+    assertThat(found.getId().version()).as("UUID v4 PK").isEqualTo(4);
+    assertThat(found.getCreatedAt()).isNotNull();
+    assertThat(found.getUpdatedAt()).isNotNull();
   }
 
   @Test
@@ -74,6 +78,26 @@ class UserIdentityRepositoryIntegrationTest extends AbstractPostgresIntegrationT
     assertThatThrownBy(
             () -> userIdentityRepository.saveAndFlush(identity(second, GOOGLE, "sub-dup")))
         .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  @DisplayName("이미 연결된 로그인 수단을 다시 삽입하면 예외가 발생하지 않고 0건을 반환한다")
+  void insertIgnoringConflictReturnsZeroOnDuplicate() {
+    UUID first = persistUser("identity-conflict-1@momens.works");
+    UUID second = persistUser("identity-conflict-2@momens.works");
+    userIdentityRepository.saveAndFlush(identity(first, GOOGLE, "sub-conflict"));
+
+    int inserted =
+        userIdentityRepository.insertIgnoringConflict(
+            UUID.randomUUID(), second, GOOGLE, "sub-conflict");
+
+    assertThat(inserted).isZero();
+    assertThat(
+            userIdentityRepository
+                .findByProviderAndProviderUserId(GOOGLE, "sub-conflict")
+                .orElseThrow()
+                .getUserId())
+        .isEqualTo(first);
   }
 
   @Test
