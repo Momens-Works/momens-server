@@ -113,6 +113,7 @@ Google ID token을 Momens access/refresh token으로 교환합니다.
 
 - `AUTH_GOOGLE_TOKEN_INVALID`
 - `AUTH_GOOGLE_EMAIL_NOT_VERIFIED`
+- `USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY`
 - `COMMON_VALIDATION_FAILED`
 
 ### POST /api/auth/refresh
