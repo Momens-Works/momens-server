@@ -26,7 +26,12 @@ public class AuthService {
   public TokenPair loginWithGoogleToken(String idToken, String device) {
     GoogleUserInfo googleUser = googleIdTokenVerifier.verify(idToken);
     UserProfile user =
-        userService.findOrCreate(googleUser.email(), displayName(googleUser), googleUser.picture());
+        userService.findOrCreateByIdentity(
+            UserService.PROVIDER_GOOGLE,
+            googleUser.sub(),
+            googleUser.email(),
+            displayName(googleUser),
+            googleUser.picture());
     return jwtTokenService.issueTokenPair(user.id(), ClientType.MOBILE, device);
   }
 
