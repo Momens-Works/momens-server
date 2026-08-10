@@ -39,6 +39,35 @@ class MinsuLedgerObservabilityTest {
   }
 
   @Test
+  @DisplayName("태그 없는 timer도 선등록 대상이다")
+  void preRegistersUntaggedTimers() {
+    // 규약의 기준은 값이 아니라 태그 조합이 부팅 시점에 정해지는가다. 태그가 없으면 조합은 자명하게
+    // 확정이고, 첫 사건 전까지 _count가 없어 rate()가 값을 못 내는 문제도 그대로 생긴다.
+    assertAll(
+        () ->
+            assertThat(meterRegistry.get("momens.minsu.ledger.claim.wait.duration").timer().count())
+                .isZero(),
+        () ->
+            assertThat(meterRegistry.get("momens.minsu.ledger.generation.duration").timer().count())
+                .isZero());
+  }
+
+  @Test
+  @DisplayName("소진에 이를 수 있는 실패 종류를 0으로 등록하고 원인별로 센다")
+  void countsRetryExhaustionByFailureReason() {
+    // 종료 사유는 retry_exhausted 하나라 timeout 소진과 invalid_output 소진이 섞인다. 두 실패의
+    // 대응이 정반대라 원인을 따로 세지 않으면 값을 조정할 근거가 되지 못한다(9.2절).
+    assertThat(meterRegistry.find("momens.minsu.ledger.retry.exhaustions").counters()).hasSize(5);
+
+    observability.recordRetryExhaustion("timeout");
+
+    assertAll(
+        () -> assertThat(retryExhaustions("timeout")).isEqualTo(1),
+        () -> assertThat(retryExhaustions("invalid_output")).isZero(),
+        () -> assertThat(retryExhaustions("none")).isZero());
+  }
+
+  @Test
   @DisplayName("지표 하나가 종료 건수와 시도 분포를 함께 준다")
   void recordsCompletionCountAndAttemptDistribution() {
     observability.recordCompletion(CompletionReason.RETRY_EXHAUSTED, 4);
@@ -132,6 +161,14 @@ class MinsuLedgerObservabilityTest {
         .get("momens.minsu.ledger.completion.attempts")
         .tag("completion.reason", reason)
         .summary();
+  }
+
+  private double retryExhaustions(String failureReason) {
+    return meterRegistry
+        .get("momens.minsu.ledger.retry.exhaustions")
+        .tag("failure.reason", failureReason)
+        .counter()
+        .count();
   }
 
   private double counter(String name) {

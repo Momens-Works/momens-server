@@ -57,7 +57,7 @@ class MinsuLedgerMetricsIntegrationTest extends AbstractPostgresIntegrationTest 
         () ->
             assertThat(gauge(meterRegistry, "momens.minsu.ledger.expired.lease.max.age")).isZero(),
         () ->
-            assertThat(gauge(meterRegistry, "momens.minsu.ledger.read.deadline.exceeded"))
+            assertThat(gauge(meterRegistry, "momens.minsu.ledger.deadline.exceeded.generations"))
                 .isZero());
   }
 
@@ -123,7 +123,8 @@ class MinsuLedgerMetricsIntegrationTest extends AbstractPostgresIntegrationTest 
 
     metrics.refresh();
 
-    assertThat(gauge(meterRegistry, "momens.minsu.ledger.read.deadline.exceeded")).isEqualTo(1);
+    assertThat(gauge(meterRegistry, "momens.minsu.ledger.deadline.exceeded.generations"))
+        .isEqualTo(1);
   }
 
   @Test
@@ -165,8 +166,8 @@ class MinsuLedgerMetricsIntegrationTest extends AbstractPostgresIntegrationTest 
    * <p>부분 인덱스는 술어가 쿼리 WHERE와 맞아야 planner가 후보로 올린다. 테스트 데이터량에서는 seq scan이 정상적으로 더 싸서 실제 선택 여부로는 확인할
    * 수 없으므로, seq scan을 끄고 후보로 오르는지를 본다. 술어가 어긋나면 이 상태에서도 인덱스가 쓰이지 않는다.
    *
-   * <p>여기서 확인하지 못하는 것도 분명히 해 둔다. 실제 집계 쿼리가 이 술어를 계속 쓰는지는 검사하지 않는다. WHERE를 바꾸면 이 테스트는 통과한 채로 인덱스만
-   * 놓치게 되므로, 마이그레이션과 쿼리 주석이 서로를 가리키게 해 뒀다.
+   * <p>EXPLAIN 대상은 <b>실제 집계 SQL 그대로</b>다. 테스트에 복사해 두면 WHERE를 바꿔도 복사본은 그대로라 통과한 채 인덱스만 놓치므로, 쿼리를 상수로
+   * 빼 공유한다.
    */
   @Test
   @DisplayName("미종료 부분 인덱스가 집계 술어에 사용 가능하다")
@@ -181,11 +182,7 @@ class MinsuLedgerMetricsIntegrationTest extends AbstractPostgresIntegrationTest 
     java.util.List<String> plan =
         entityManager
             .getEntityManager()
-            .createNativeQuery(
-                """
-                EXPLAIN SELECT COUNT(*) FROM minsu_task_draft_generations
-                WHERE status <> 'completed'
-                """)
+            .createNativeQuery("EXPLAIN " + TaskDraftGenerationRepository.SNAPSHOT_UNFINISHED_SQL)
             .getResultList();
 
     assertThat(String.join("\n", plan)).contains("idx_minsu_task_draft_generations_unfinished");

@@ -91,8 +91,8 @@ class TaskDraftGenerationLedger {
     // 회수 행은 대기 지연을 재지 않는다. 그쪽 next_attempt_at은 직전 시도의 예약 시각이라 구간에 직전
     // 실행 시간과 lease 만료 대기가 통째로 들어간다. 그러면 이 지표가 scheduler 적체가 아니라 멈춘
     // 호출의 길이를 재게 된다. 회수가 얼마나 밀리는지는 expired.lease.max.age gauge가 이미 본다.
-    claimInto(claimed, reclaimed, execution, now, leaseExpiresAt, false);
-    claimInto(claimed, duePending, execution, now, leaseExpiresAt, true);
+    claimInto(claimed, reclaimed, execution, now, leaseExpiresAt, ClaimSource.RECLAIMED);
+    claimInto(claimed, duePending, execution, now, leaseExpiresAt, ClaimSource.DUE_PENDING);
     return claimed;
   }
 
@@ -102,15 +102,17 @@ class TaskDraftGenerationLedger {
       Execution execution,
       Instant now,
       Instant leaseExpiresAt,
-      boolean recordWait) {
+      ClaimSource source) {
     for (TaskDraftGeneration generation : due) {
       if (generation.isExhausted(execution.maxAttempts())) {
         // 마지막 시도를 claim한 뒤 결과를 기록하기 전에 종료된 잔여 행이다. 다시 집으면 상한을 넘겨
         // 실행하게 되므로 여기서 종결한다.
         complete(generation, CompletionReason.RETRY_EXHAUSTED);
+        // claim만 남기고 죽은 잔여 행이라 어떤 실패였는지 알 수 없다.
+        observability.recordRetryExhaustion(MinsuLedgerObservability.NO_OUTCOME);
         continue;
       }
-      if (recordWait) {
+      if (source == ClaimSource.DUE_PENDING) {
         // 재시도 시각이 지난 뒤 실제로 집히기까지의 지연. 배치가 밀리는 정도가 여기로 드러난다.
         observability.recordClaimWait(Duration.between(generation.getNextAttemptAt(), now));
       }
@@ -154,7 +156,7 @@ class TaskDraftGenerationLedger {
       // structured output 위반은 결정적 오류가 아니다. 같은 입력으로 반복 실패하면 프롬프트·스키마
       // 문제이고 그것은 outcome별 retry_exhausted 비율로 구분한다.
       case TIMEOUT, PROVIDER_ERROR, INVALID_RESPONSE, INVALID_OUTPUT ->
-          scheduleRetryOrExhaust(generation, now);
+          scheduleRetryOrExhaust(generation, now, result.outcome().reason());
       // 이 둘은 요청 경로의 값이라 claim된 실행에서는 나올 수 없다. 나왔다면 실행 경로가 요청 경로의
       // 분기를 잘못 타고 있는 것이므로 조용히 닫지 않는다.
       case DISABLED, DEFERRED ->
@@ -217,14 +219,26 @@ class TaskDraftGenerationLedger {
     }
   }
 
-  private void scheduleRetryOrExhaust(TaskDraftGeneration generation, Instant now) {
+  private void scheduleRetryOrExhaust(
+      TaskDraftGeneration generation, Instant now, String failureReason) {
     Execution execution = asyncProperties.execution();
     if (generation.isExhausted(execution.maxAttempts())) {
       complete(generation, CompletionReason.RETRY_EXHAUSTED);
+      // 어떤 실패로 소진됐는지는 종료 사유만으로 갈리지 않는다. timeout 편중과 invalid_output 편중은
+      // 대응이 정반대다(9.2절).
+      observability.recordRetryExhaustion(failureReason);
       return;
     }
     // 백오프는 결과를 기록한 시점부터 잰다. claim 시점부터 재면 실행에 걸린 시간만큼 대기가 짧아진다.
     generation.scheduleRetry(now.plus(execution.backoffFor(generation.getAttemptCount())));
+  }
+
+  /** 집힌 행이 어디서 왔는지. 대기 지연을 재는 대상이 갈리므로 호출부에서 의미가 보여야 한다. */
+  private enum ClaimSource {
+    /** lease가 만료돼 회수한 행. next_attempt_at이 직전 시도의 예약 시각이라 대기 지연을 재지 않는다. */
+    RECLAIMED,
+    /** 재시도 시각이 지난 신규·재시도 행. 이쪽의 대기가 scheduler 적체다. */
+    DUE_PENDING
   }
 
   /**

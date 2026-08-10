@@ -32,7 +32,8 @@ public enum GenerationOutcome {
     return outcome;
   }
 
-  String reason() {
+  /** 실패의 종류. 재시도 소진의 원인을 가르는 값이라 원장 쪽 계측도 읽는다(9.2절). */
+  public String reason() {
     return reason;
   }
 }

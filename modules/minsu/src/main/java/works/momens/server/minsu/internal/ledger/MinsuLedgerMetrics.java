@@ -63,7 +63,7 @@ class MinsuLedgerMetrics {
         "momens.minsu.ledger.expired.lease.max.age",
         metrics -> metrics.snapshot.get().expiredLeaseMaxAgeSeconds());
     Gauge.builder(
-            "momens.minsu.ledger.read.deadline.exceeded",
+            "momens.minsu.ledger.deadline.exceeded.generations",
             this,
             metrics -> metrics.snapshot.get().readDeadlineExceeded())
         .register(meterRegistry);
@@ -76,9 +76,14 @@ class MinsuLedgerMetrics {
    * <p>읽기 전용 트랜잭션 하나로 끝난다. 실패하면 스냅샷과 나이를 <b>갱신하지 않는다.</b> 갱신하면 조회가 계속 실패하는 동안에도 나이가 0으로 유지돼 정지가
    * 드러나지 않는다.
    */
-  @Scheduled(
-      fixedDelayString = "${momens.minsu.task-draft.metrics.snapshot-interval:10s}",
-      initialDelayString = "${momens.minsu.task-draft.metrics.snapshot-interval:10s}")
+  // initialDelay를 두지 않는다. 기본값 0이라 스케줄러가 뜨는 즉시 한 번 돌고, @Scheduled 등록은
+  // 컨텍스트 refresh 이후라 그 시점에 repository는 이미 준비돼 있다. 주기만큼 미루면 그 사이 여섯
+  // gauge가 EMPTY를 읽어 0을 보고하는데, snapshot.age도 같은 구간에서 0부터 자라므로 "아직 한 번도
+  // 돌지 않음"과 "방금 성공함"이 모든 지표에서 똑같이 보인다. 롤링 배포마다 그 창이 열린다.
+  // 값은 MinsuTaskDraftProperties.Metrics가 바인딩·검증하고, 여기서는 같은 키를 placeholder로 읽는다.
+  // @ConfigurationProperties 빈은 prefix 기반 이름을 받아 SpEL 빈 참조로 가리킬 수 없다. 키를 잘못
+  // 적으면 양쪽 모두 기본값으로 떨어지는 것은 남는 한계다.
+  @Scheduled(fixedDelayString = "${momens.minsu.task-draft.metrics.snapshot-interval:10s}")
   void refresh() {
     try {
       snapshot.set(Snapshot.of(repository.snapshotUnfinished()));

@@ -12,13 +12,17 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class MinsuConfigStatusTest {
 
+  /** 이 테스트는 provider 축만 보므로 지표 주기는 기본값이면 된다. */
+  private static final MinsuTaskDraftProperties.Metrics METRICS =
+      new MinsuTaskDraftProperties.Metrics(java.time.Duration.ofSeconds(10));
+
   @Test
   void disabledDefaultIsValidWithoutGoogleProject() {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
     MinsuConfigStatus status =
         new MinsuConfigStatus(
-            new MinsuTaskDraftProperties(false),
+            new MinsuTaskDraftProperties(false, METRICS),
             properties("google", "gemini-3.5-flash-lite", "", "global"),
             registry);
 
@@ -33,7 +37,7 @@ class MinsuConfigStatusTest {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
     MinsuConfigStatus status =
-        new MinsuConfigStatus(new MinsuTaskDraftProperties(true), properties, registry);
+        new MinsuConfigStatus(new MinsuTaskDraftProperties(true, METRICS), properties, registry);
 
     assertThat(status.valid()).isFalse();
     assertThat(registry.get("momens.minsu.llm.config.valid").gauge().value()).isZero();
@@ -43,7 +47,7 @@ class MinsuConfigStatusTest {
   void enabledCatalogConfigurationIsValid() {
     MinsuConfigStatus status =
         new MinsuConfigStatus(
-            new MinsuTaskDraftProperties(true),
+            new MinsuTaskDraftProperties(true, METRICS),
             properties("google", "gemini-3.5-flash-lite", "project", "eu"),
             new SimpleMeterRegistry());
 
@@ -54,7 +58,7 @@ class MinsuConfigStatusTest {
   void enabledMaximumTimeoutIsValid() {
     MinsuConfigStatus status =
         new MinsuConfigStatus(
-            new MinsuTaskDraftProperties(true),
+            new MinsuTaskDraftProperties(true, METRICS),
             new MinsuLlmProperties(
                 "google",
                 "gemini-3.5-flash-lite",
