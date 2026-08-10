@@ -18,6 +18,61 @@ import works.momens.server.user.UserService;
 class UserServiceImpl implements UserService {
 
   private final UserRepository userRepository;
+  private final UserIdentityRepository userIdentityRepository;
+
+  @Override
+  @Transactional
+  public UserProfile findOrCreateByIdentity(
+      String provider, String providerUserId, String email, String name, String avatarUrl) {
+    Optional<UserIdentity> identity =
+        userIdentityRepository.findByProviderAndProviderUserId(provider, providerUserId);
+    if (identity.isPresent()) {
+      return refreshProfile(identity.get().getUserId(), email, name, avatarUrl);
+    }
+
+    Optional<User> byEmail = userRepository.findByEmail(email);
+    if (byEmail.isPresent()) {
+      UUID userId = byEmail.get().getId();
+      // 이메일이 다른 계정으로 재할당된 경우, 이메일 조회 시 이전 사용자의 행이 반환될 수 있다.
+      // 해당 사용자에게 이미 다른 로그인 수단이 연결되어 있다면
+      // 다른 사람의 계정에 로그인 수단을 연결하는 상황이 되므로 요청을 거부한다.
+      // 이관 기간에는 email UNIQUE 제약이 유지되므로 동일 이메일로 신규 사용자 생성도 불가능하다.
+      if (userIdentityRepository.existsByUserId(userId)) {
+        throw new BusinessException(
+            UserErrorCode.USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY, Map.of("email", email));
+      }
+      userIdentityRepository.insertIgnoringConflict(
+          UUID.randomUUID(), userId, provider, providerUserId);
+      return refreshProfile(userId, email, name, avatarUrl);
+    }
+
+    // 동일한 이메일로 최초 로그인 요청이 동시에 들어오더라도 upsert를 통해 하나의 users 행으로 수렴한다.
+    // 이후 로그인 수단 삽입 과정에서 경쟁에 진 요청은 0건을 반환한다.
+    // 경쟁에서 승리한 요청도 동일한 users 행에 로그인 수단을 연결하므로,
+    // 이후 조회 시 두 요청 모두 동일한 사용자를 반환한다.
+    userRepository.upsertByEmail(UUID.randomUUID(), email, name, avatarUrl);
+    UUID userId = userRepository.findByEmail(email).orElseThrow().getId();
+    int inserted =
+        userIdentityRepository.insertIgnoringConflict(
+            UUID.randomUUID(), userId, provider, providerUserId);
+    if (inserted == 0) {
+      UUID winner =
+          userIdentityRepository
+              .findByProviderAndProviderUserId(provider, providerUserId)
+              .orElseThrow()
+              .getUserId();
+      return refreshProfile(winner, email, name, avatarUrl);
+    }
+    return toProfile(userRepository.findById(userId).orElseThrow());
+  }
+
+  /** 로그인 시점의 최신 프로필을 반영합니다. 이메일은 충돌 시 건너뛰므로 별도 쿼리로 처리합니다. */
+  private UserProfile refreshProfile(UUID userId, String email, String name, String avatarUrl) {
+    User user = userRepository.findById(userId).orElseThrow(() -> notFound(userId));
+    user.refreshLoginProfile(name, avatarUrl);
+    userRepository.updateEmailIfUnused(userId, email);
+    return toProfile(userRepository.findById(userId).orElseThrow());
+  }
 
   @Override
   @Transactional

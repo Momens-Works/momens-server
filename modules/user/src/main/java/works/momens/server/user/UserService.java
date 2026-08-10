@@ -13,11 +13,26 @@ import java.util.UUID;
  */
 public interface UserService {
 
+  /** Google 로그인 수단의 provider 값. {@code user_identities}의 CHECK 제약 허용 목록과 같습니다. */
+  String PROVIDER_GOOGLE = "google";
+
   /**
-   * 검증된 외부 신원 정보로 email 기준 upsert.
+   * 검증된 외부 신원 정보를 기준으로 사용자를 조회하거나 생성합니다.
    *
-   * <p>기존 사용자는 name/avatar를 최신값으로 갱신하고, 없으면 생성합니다. email 검증(email_verified) 게이트는 호출자({@code auth})가
-   * 책임지고, 여기서는 검증된 정보로 upsert만 수행합니다.
+   * <p>먼저 로그인 수단으로 사용자를 조회하고, 연결된 사용자가 없으면 이메일로 기존 사용자를 조회합니다. 이메일로도 사용자를 찾지 못하면 새로운 사용자를 생성합니다.
+   *
+   * <p>이메일로 조회된 사용자에게 이미 다른 로그인 수단이 연결되어 있는 경우 {@link
+   * UserErrorCode#USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY}로 요청을 거부합니다(ADR-0016).
+   *
+   * <p>이메일 기반으로 기존 사용자를 연결하는 로직은 외부 신원과 이메일 검증이 완료된 경우에만 동작합니다.
+   */
+  UserProfile findOrCreateByIdentity(
+      String provider, String providerUserId, String email, String name, String avatarUrl);
+
+  /**
+   * 로그인 수단 없이 이메일을 기준으로 사용자를 조회하거나 생성합니다.
+   *
+   * <p>dev 전용 토큰 발급처럼 외부 신원을 사용하지 않는 경로에서 호출됩니다. 이 메서드로 생성된 사용자에는 로그인 수단이 연결되지 않습니다(ADR-0016).
    */
   UserProfile findOrCreate(String email, String name, String avatarUrl);
 
