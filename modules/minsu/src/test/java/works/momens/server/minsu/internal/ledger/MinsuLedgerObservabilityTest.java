@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /** 원장 사건 지표의 이름·태그와 선등록을 고정한다(MOM-0821, 설계 9.3절). */
 class MinsuLedgerObservabilityTest {
@@ -102,6 +103,53 @@ class MinsuLedgerObservabilityTest {
                         .timer()
                         .totalTime(java.util.concurrent.TimeUnit.SECONDS))
                 .isZero());
+  }
+
+  @Test
+  @DisplayName("트랜잭션 안에서는 커밋 전까지 영속 상태 지표를 올리지 않는다")
+  void defersStateAssertingMetricsUntilCommit() {
+    // counter는 롤백되지 않는다. 트랜잭션 안에서 바로 올리면 그 트랜잭션이 뒤집혔을 때 원장은
+    // processing으로 돌아가는데 종료 counter만 남고, 그 행이 회수돼 다시 닫히면 두 번 세어진다.
+    TransactionSynchronizationManager.initSynchronization();
+    try {
+      observability.recordCompletion(CompletionReason.GENERATED, 1);
+      observability.recordEnrollment(true);
+      observability.recordReclaims(1);
+
+      assertAll(
+          () ->
+              assertThat(
+                      meterRegistry
+                          .get("momens.minsu.ledger.completions")
+                          .tag("reason", "generated")
+                          .counter()
+                          .count())
+                  .isZero(),
+          () -> assertThat(enrollments("success")).isZero(),
+          () -> assertThat(counter("momens.minsu.ledger.reclaims")).isZero());
+    } finally {
+      TransactionSynchronizationManager.clearSynchronization();
+    }
+  }
+
+  @Test
+  @DisplayName("상태를 바꾸지 않는 관측과 적재 실패는 트랜잭션 안에서도 즉시 올린다")
+  void recordsObservationsImmediately() {
+    TransactionSynchronizationManager.initSynchronization();
+    try {
+      // 앞의 둘은 읽기만 하고 끝나 미룰 이유가 없다. 적재 실패는 그 트랜잭션이 어차피 커밋되지
+      // 않으므로 미루면 기록이 사라진다.
+      observability.recordStaleResult();
+      observability.recordDeadlineProjection();
+      observability.recordEnrollment(false);
+
+      assertAll(
+          () -> assertThat(counter("momens.minsu.ledger.stale.results")).isEqualTo(1),
+          () -> assertThat(counter("momens.minsu.ledger.deadline.projections")).isEqualTo(1),
+          () -> assertThat(enrollments("failure")).isEqualTo(1));
+    } finally {
+      TransactionSynchronizationManager.clearSynchronization();
+    }
   }
 
   private double counter(String name) {
