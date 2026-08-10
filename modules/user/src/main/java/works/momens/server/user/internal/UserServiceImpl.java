@@ -42,6 +42,11 @@ class UserServiceImpl implements UserService {
       if (userIdentityRepository.existsOtherIdentity(userId, provider, providerUserId)) {
         throw new BusinessException(UserErrorCode.USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY);
       }
+      // 삽입 결과를 별도로 확인하지 않아도 되는 이유는 users.email에 UNIQUE 제약이 있기 때문이다.
+      // 동일한 이메일로 들어온 요청은 모두 하나의 users 행으로 수렴하므로,
+      // 경합에서 실패한 요청도 결국 같은 사용자로 연결된다.
+      // 이관이 완료되어 해당 제약을 제거하게 되면 이 전제가 더 이상 성립하지 않으므로,
+      // 이 코드 역시 함께 검토해야 한다(ADR-0016 결정 6).
       userIdentityRepository.insertIgnoringConflict(
           UUID.randomUUID(), userId, provider, providerUserId);
       return refreshProfile(userId, email, name, avatarUrl);
@@ -52,10 +57,10 @@ class UserServiceImpl implements UserService {
     // 경쟁에서 승리한 요청도 동일한 users 행에 로그인 수단을 연결하므로,
     // 이후 조회 시 두 요청 모두 동일한 사용자를 반환한다.
     userRepository.upsertByEmail(UUID.randomUUID(), email, name, avatarUrl);
-    UUID userId = userRepository.findByEmail(email).orElseThrow().getId();
+    User created = userRepository.findByEmail(email).orElseThrow();
     int inserted =
         userIdentityRepository.insertIgnoringConflict(
-            UUID.randomUUID(), userId, provider, providerUserId);
+            UUID.randomUUID(), created.getId(), provider, providerUserId);
     if (inserted == 0) {
       UUID winner =
           userIdentityRepository
@@ -64,7 +69,7 @@ class UserServiceImpl implements UserService {
               .getUserId();
       return refreshProfile(winner, email, name, avatarUrl);
     }
-    return toProfile(userRepository.findById(userId).orElseThrow());
+    return toProfile(created);
   }
 
   /** 로그인 시점의 최신 프로필을 반영합니다. 이메일은 충돌 시 건너뛰므로 별도 쿼리로 처리합니다. */
