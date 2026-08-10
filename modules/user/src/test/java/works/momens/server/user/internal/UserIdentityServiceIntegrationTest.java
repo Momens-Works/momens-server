@@ -10,6 +10,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.locks.LockSupport;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -206,6 +207,66 @@ class UserIdentityServiceIntegrationTest extends AbstractPostgresIntegrationTest
       tx.executeWithoutResult(
           status ->
               userRepository.findByEmail("race@momens.works").ifPresent(userRepository::delete));
+    }
+  }
+
+  /**
+   * 로그인 수단이 없는 기존 사용자에게 로그인 요청이 잇따라 들어와도 모두 동일한 사용자로 이어지는지 검증합니다.
+   *
+   * <p>경합 상황을 재현하려면 두 번째 요청이 첫 번째 요청의 트랜잭션이 진행 중인 동안 도착해야 합니다. 두 요청을 동시에 시작하면 로그인 수단 조회와 중복 확인이 나란히
+   * 수행되어 의도한 경합이 발생하지 않습니다. 따라서 요청 시작 시점을 조금씩 지연시키며 반복 실행합니다.
+   */
+  @Test
+  @DisplayName("전환 대상 사용자에게 로그인 요청이 잇따라 들어와도 모두 동일한 사용자로 이어진다")
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  void linksIdentityOnceUnderStaggeredFallbackLogin() throws Exception {
+    int rounds = 120;
+    TransactionTemplate tx = new TransactionTemplate(transactionManager);
+    ExecutorService pool = Executors.newFixedThreadPool(2);
+    try {
+      for (int round = 0; round < rounds; round++) {
+        String email = "fallback-race-" + round + "@momens.works";
+        String providerUserId = "sub-fallback-race-" + round;
+        long delayNanos = (round % 80) * 250_000L;
+        UUID existingId = userService.findOrCreate(email, "기존", null).id();
+        try {
+          CountDownLatch start = new CountDownLatch(1);
+          List<Future<UUID>> futures =
+              IntStream.range(0, 2)
+                  .mapToObj(
+                      i ->
+                          pool.submit(
+                              () -> {
+                                start.await();
+                                if (i > 0) {
+                                  LockSupport.parkNanos(delayNanos);
+                                }
+                                return tx.execute(
+                                        status ->
+                                            userService.findOrCreateByIdentity(
+                                                UserService.PROVIDER_GOOGLE,
+                                                providerUserId,
+                                                email,
+                                                "홍길동",
+                                                null))
+                                    .id();
+                              }))
+                  .toList();
+          start.countDown();
+
+          List<UUID> ids = new ArrayList<>();
+          for (Future<UUID> future : futures) {
+            ids.add(future.get());
+          }
+
+          assertThat(ids).as("round=%d delayNanos=%d", round, delayNanos).containsOnly(existingId);
+        } finally {
+          tx.executeWithoutResult(
+              status -> userRepository.findByEmail(email).ifPresent(userRepository::delete));
+        }
+      }
+    } finally {
+      pool.shutdownNow();
     }
   }
 }
