@@ -162,6 +162,7 @@ Standard 모드의 에러 응답은 아래 형태를 사용합니다.
 | 401 | `AUTH_DEV_TOKEN_SECRET_INVALID` | dev 토큰 발급 요청에서 공유 시크릿 헤더가 없거나 일치하지 않음 (dev 계열 프로필 전용) |
 | 403 | `AUTH_DEV_TOKEN_EMAIL_NOT_ALLOWED` | dev 토큰 발급 대상 이메일이 allowlist에 없음 (dev 계열 프로필 전용) |
 | 404 | `USER_NOT_FOUND` | 사용자를 찾을 수 없음 (`GET/PATCH /api/me` 등) |
+| 409 | `USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY` | 이메일로 조회한 사용자에게 이미 다른 로그인 수단이 연결되어 있어 Google 계정을 연결할 수 없음 |
 | 409 | `SIGNAL_INVALID_STATE` | 이미 다른 action으로 처리된 Signal에 다른 action을 요청함(같은 action 재요청은 200 멱등 응답) |
 
 ### 모바일 MVP 예정 도메인 코드
@@ -185,6 +186,7 @@ JSON 에러 본문을 쓰지 않습니다. 콜백 실패는 브라우저에 JSON
 | --- | --- | --- |
 | `invalid_state` | state 불일치·누락 또는 code 누락 | `AUTH_OAUTH_STATE_INVALID` |
 | `email_not_verified` | Google 이메일 미검증 | `AUTH_GOOGLE_EMAIL_NOT_VERIFIED` |
+| `email_conflict` | 이메일로 조회한 사용자에게 이미 다른 로그인 수단이 연결되어 있음 | `USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY` |
 | `google_error` | code 교환·userinfo 실패 | `AUTH_OAUTH_EXCHANGE_FAILED` |
 | `server_error` | 그 외 예기치 못한 오류 | (기타) |
 
