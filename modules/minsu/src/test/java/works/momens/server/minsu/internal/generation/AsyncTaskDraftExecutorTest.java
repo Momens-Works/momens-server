@@ -105,6 +105,25 @@ class AsyncTaskDraftExecutorTest {
   }
 
   @Test
+  @DisplayName("상한을 넘긴 시도를 hung으로 세고, 뒤늦게 돌아오면 되돌린다")
+  void tracksHungAttemptsUntilTheyReturn() throws InterruptedException {
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    executor = executor(meterRegistry);
+    when(attempt.run(any(), any(), any())).thenAnswer(invocation -> blockIgnoringInterrupt());
+
+    executor.executeAll(List.of(input("하나"), input("둘")));
+
+    // 상한이 지났는데 두 시도 모두 반환하지 않았다. availableSlots가 activeCount 기반이라 이 값이 곧
+    // 영구히 잃은 슬롯 수다.
+    assertThat(hungAttempts(meterRegistry)).isEqualTo(2);
+
+    // 늦게라도 돌아오면 슬롯이 회수된다. 실행 스레드와 대기 스레드가 결말을 한 번만 가져가지 않으면
+    // 이 값이 늘기만 하고 줄지 않는다.
+    release.countDown();
+    assertThat(awaitHungAttempts(meterRegistry, 0)).isZero();
+  }
+
+  @Test
   @DisplayName("빈 슬롯을 넘지 않는 배치는 모두 즉시 시작해 같은 상한을 받는다")
   void everySubmittedAttemptStartsImmediately() {
     executor = executor();
@@ -120,6 +139,10 @@ class AsyncTaskDraftExecutorTest {
   }
 
   private AsyncTaskDraftExecutor executor() {
+    return executor(new SimpleMeterRegistry());
+  }
+
+  private AsyncTaskDraftExecutor executor(SimpleMeterRegistry meterRegistry) {
     return new AsyncTaskDraftExecutor(
         attempt,
         new MinsuAsyncProperties(
@@ -134,10 +157,26 @@ class AsyncTaskDraftExecutorTest {
                 2,
                 List.of(Duration.ofSeconds(1)),
                 CONCURRENCY)),
-        new SimpleMeterRegistry());
+        meterRegistry);
   }
 
   /** interrupt에 응답하지 않는 호출. 멈춘 SDK·ADC 호출이 스레드를 놓지 않는 상황을 그대로 흉내 낸다. */
+  private static double hungAttempts(SimpleMeterRegistry meterRegistry) {
+    return meterRegistry.get("momens.minsu.drain.hung.attempts").gauge().value();
+  }
+
+  /** 멈춘 호출이 풀려나는 것은 다른 스레드에서 일어나므로 값이 내려올 때까지 짧게 기다린다. */
+  private static double awaitHungAttempts(SimpleMeterRegistry meterRegistry, double expected)
+      throws InterruptedException {
+    for (int attempt = 0; attempt < 50; attempt++) {
+      if (hungAttempts(meterRegistry) == expected) {
+        return expected;
+      }
+      Thread.sleep(100);
+    }
+    return hungAttempts(meterRegistry);
+  }
+
   private TaskDraftAttempt.Result blockIgnoringInterrupt() {
     boolean released = false;
     while (!released) {

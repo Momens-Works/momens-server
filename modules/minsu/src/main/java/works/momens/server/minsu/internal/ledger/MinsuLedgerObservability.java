@@ -15,7 +15,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * <p>상태 gauge는 {@link MinsuLedgerMetrics}가 주기 스냅샷으로 낸다. 여기는 사건이 일어난 그 자리에서 올리는 counter·timer만 모은다.
  * 원장 전이가 여러 파일에 흩어져 있어 {@code MeterRegistry}를 직접 쓰게 두면 이름과 태그 어휘가 갈리기 쉽다.
  *
- * <p>counter는 값 집합이 enum이라 조합이 부팅 시점에 정해지므로 생성자에서 0으로 선등록한다(지표 규약). timer·summary는 분포라 선등록 대상이 아니다.
+ * <p>태그 조합이 부팅 시점에 정해지는 지표는 생성자에서 선등록한다(지표 규약). 기준은 계기 종류가 아니라 조합이 정해지는가이므로 summary도 대상이다. 값이 런타임에
+ * 정해지는 timer는 해당하지 않는다.
  *
  * <p><b>영속 상태를 주장하는 지표는 커밋 후에 올린다.</b> counter는 롤백되지 않으므로 트랜잭션 안에서 올리면 그 트랜잭션이 뒤집혔을 때 원장과 지표가 갈린다.
  * 예컨대 종료 전이 뒤 outbox append가 실패하면 원장은 {@code processing}으로 되돌아가지만 종료 counter는 이미 올라간 상태로 남고, 그 행이
@@ -27,17 +28,16 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Component
 class MinsuLedgerObservability {
 
-  private static final String COMPLETIONS = "momens.minsu.ledger.completions";
-  private static final String ATTEMPTS = "momens.minsu.ledger.attempts";
+  private static final String COMPLETION_ATTEMPTS = "momens.minsu.ledger.completion.attempts";
   private static final String ENROLLMENTS = "momens.minsu.ledger.enrollments";
-  private static final String REASON = "reason";
+  private static final String COMPLETION_REASON = "completion.reason";
 
   private final MeterRegistry meterRegistry;
 
   MinsuLedgerObservability(MeterRegistry meterRegistry) {
     this.meterRegistry = meterRegistry;
     for (CompletionReason reason : CompletionReason.values()) {
-      completions(reason);
+      completionAttempts(reason);
     }
     enrollments(true);
     enrollments(false);
@@ -49,19 +49,15 @@ class MinsuLedgerObservability {
   /**
    * 원장이 종료로 닫힐 때 사유와 그때까지의 시도 횟수를 함께 남긴다.
    *
+   * <p><b>지표 하나가 두 질문에 답한다.</b> 관측 사건이 종료이고 관측 값이 그 시도 횟수라, {@code _count}가 사유별 종료 건수이고 {@code
+   * _sum}이 누적 시도 수다. 종료 counter를 따로 두면 그 값이 {@code _count}와 항상 같아 순수한 중복이 되고, 대시보드가 서로 다른 쪽을 참조하기
+   * 시작하면 되돌릴 수 없다.
+   *
    * <p>시도 횟수는 claim 시점에 증가하므로(7.1절) <b>provider 호출 수가 아니라 claim 수</b>다. 실행되지 못하고 소모된 시도가 포함되며, 그
    * 차이는 hung attempt gauge와 같이 봐야 드러난다.
    */
   void recordCompletion(CompletionReason reason, int attemptCount) {
-    afterCommit(
-        () -> {
-          completions(reason).increment();
-          DistributionSummary.builder(ATTEMPTS)
-              .baseUnit("attempts")
-              .tag(REASON, reason.value())
-              .register(meterRegistry)
-              .record(attemptCount);
-        });
+    afterCommit(() -> completionAttempts(reason).record(attemptCount));
   }
 
   /** lease 만료로 회수한 수. stale 결과 수와 함께 오르면 lease가 짧다는 신호다(티켓 완료 조건). */
@@ -122,8 +118,11 @@ class MinsuLedgerObservability {
     deadlineProjections().increment();
   }
 
-  private Counter completions(CompletionReason reason) {
-    return meterRegistry.counter(COMPLETIONS, REASON, reason.value());
+  private DistributionSummary completionAttempts(CompletionReason reason) {
+    return DistributionSummary.builder(COMPLETION_ATTEMPTS)
+        .baseUnit("attempts")
+        .tag(COMPLETION_REASON, reason.value())
+        .register(meterRegistry);
   }
 
   private Counter enrollments(boolean success) {

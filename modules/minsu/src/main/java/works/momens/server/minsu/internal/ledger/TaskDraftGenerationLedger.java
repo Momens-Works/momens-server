@@ -145,7 +145,7 @@ class TaskDraftGenerationLedger {
     }
     switch (result.outcome()) {
       case GENERATED, GENERATED_TITLE_FALLBACK, GENERATED_TRUNCATED ->
-          applyDraft(generation, result.draft());
+          applyDraft(generation, result.draft(), now);
       // 입력이 그대로이므로 재시도해도 같다.
       case INSUFFICIENT_CONTEXT -> complete(generation, CompletionReason.INSUFFICIENT_CONTEXT);
       // 설정 수정은 배포 사건이라 재시도로 기다리지 않는다. claim 자체가 설정 유효를 전제하므로
@@ -182,7 +182,7 @@ class TaskDraftGenerationLedger {
    * 비교를 {@code project}가 아니라 여기서 하는 이유는 baseline을 소유한 쪽이 이 모듈이고, "값이 그대로다"를 결과 enum으로 만들면 {@code
    * project}가 알 필요 없는 어휘가 늘기 때문이다(8.1절이 {@code USER_EDITED}를 두지 않은 것과 같은 이유).
    */
-  private void applyDraft(TaskDraftGeneration generation, TaskDraft draft) {
+  private void applyDraft(TaskDraftGeneration generation, TaskDraft draft, Instant now) {
     TaskDraftValues baseline =
         new TaskDraftValues(
             generation.getBaselineTitle(),
@@ -197,8 +197,9 @@ class TaskDraftGenerationLedger {
       case APPLIED -> {
         complete(generation, CompletionReason.GENERATED);
         // 성공 반영에서만 end-to-end 지연을 남긴다. 다른 종료는 tasks를 바꾸지 않아 잴 구간이 없다.
-        observability.recordGenerationDuration(
-            Duration.between(generation.getCreatedAt(), repository.currentDatabaseTime()));
+        // now는 호출자가 이미 DB에서 읽어 둔 값이다. NOW()는 transaction_timestamp라 같은 트랜잭션에서
+        // 다시 물어도 값이 같고 왕복만 하나 더 나간다.
+        observability.recordGenerationDuration(Duration.between(generation.getCreatedAt(), now));
         if (!generated.equals(baseline)) {
           outboxAppender.append(
               generation.getWorkspaceId(),

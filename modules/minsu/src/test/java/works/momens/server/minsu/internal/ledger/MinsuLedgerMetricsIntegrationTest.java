@@ -2,6 +2,8 @@ package works.momens.server.minsu.internal.ledger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
@@ -14,6 +16,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataAccessResourceFailureException;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 
@@ -136,6 +139,24 @@ class MinsuLedgerMetricsIntegrationTest extends AbstractPostgresIntegrationTest 
     assertThat(gauge(meterRegistry, "momens.minsu.ledger.snapshot.age"))
         .isLessThan(beforeRefresh)
         .isNotNegative();
+  }
+
+  @Test
+  @DisplayName("스냅샷 갱신이 실패하면 나이를 되돌리지 않는다")
+  void keepsSnapshotAgeGrowingWhenRefreshFails() throws InterruptedException {
+    // 조회가 실패해도 직전 값이 남아 있으므로, 나이까지 갱신하면 낡은 숫자를 최신인 것처럼 계속
+    // 보고하게 된다. 지표가 멀쩡해 보이는 것이 가장 나쁘다.
+    TaskDraftGenerationRepository failing = mock(TaskDraftGenerationRepository.class);
+    when(failing.snapshotUnfinished()).thenThrow(new DataAccessResourceFailureException("DB 장애"));
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    MinsuLedgerMetrics metrics = new MinsuLedgerMetrics(failing, meterRegistry);
+    Thread.sleep(30);
+    double beforeFailure = gauge(meterRegistry, "momens.minsu.ledger.snapshot.age");
+
+    metrics.refresh();
+
+    assertThat(gauge(meterRegistry, "momens.minsu.ledger.snapshot.age"))
+        .isGreaterThan(beforeFailure);
   }
 
   /**
