@@ -37,6 +37,7 @@ class GoogleIdTokenVerifierTest {
 
       GoogleUserInfo user = verifier.verify(idToken(key, AUDIENCE, true));
 
+      assertThat(user.sub()).isEqualTo("google-sub");
       assertThat(user.email()).isEqualTo("user@example.com");
       assertThat(user.name()).isEqualTo("홍길동");
       assertThat(user.picture()).isEqualTo("https://cdn.momens.works/avatar.png");
@@ -63,6 +64,19 @@ class GoogleIdTokenVerifierTest {
       GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier(properties(jwks.jwkSetUri()));
 
       assertThatThrownBy(() -> verifier.verify(idTokenWithoutAudience(key)))
+          .isInstanceOfSatisfying(
+              BusinessException.class,
+              e -> assertThat(e.getErrorCode()).isEqualTo(AuthErrorCode.AUTH_GOOGLE_TOKEN_INVALID));
+    }
+  }
+
+  @Test
+  void rejectsMissingSubjectAsInvalidToken() throws Exception {
+    RSAKey key = new RSAKeyGenerator(2048).keyID("test-key").generate();
+    try (JwksServer jwks = JwksServer.start(key)) {
+      GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier(properties(jwks.jwkSetUri()));
+
+      assertThatThrownBy(() -> verifier.verify(idTokenWithoutSubject(key)))
           .isInstanceOfSatisfying(
               BusinessException.class,
               e -> assertThat(e.getErrorCode()).isEqualTo(AuthErrorCode.AUTH_GOOGLE_TOKEN_INVALID));
@@ -107,6 +121,28 @@ class GoogleIdTokenVerifierTest {
             .claim("email_verified", emailVerified)
             .claim("name", "홍길동")
             .claim("picture", "https://cdn.momens.works/avatar.png")
+            .build();
+    SignedJWT jwt =
+        new SignedJWT(
+            new JWSHeader.Builder(JWSAlgorithm.RS256)
+                .keyID(key.getKeyID())
+                .type(JOSEObjectType.JWT)
+                .build(),
+            claims);
+    jwt.sign(new RSASSASigner(key.toPrivateKey()));
+    return jwt.serialize();
+  }
+
+  private static String idTokenWithoutSubject(RSAKey key) throws Exception {
+    Instant now = Instant.now();
+    JWTClaimsSet claims =
+        new JWTClaimsSet.Builder()
+            .issuer("https://accounts.google.com")
+            .audience(AUDIENCE)
+            .issueTime(Date.from(now))
+            .expirationTime(Date.from(now.plusSeconds(300)))
+            .claim("email", "user@example.com")
+            .claim("email_verified", true)
             .build();
     SignedJWT jwt =
         new SignedJWT(

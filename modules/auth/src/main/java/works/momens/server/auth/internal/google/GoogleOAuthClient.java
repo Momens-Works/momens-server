@@ -85,8 +85,13 @@ public class GoogleOAuthClient {
     } catch (RestClientException e) {
       throw new BusinessException(AuthErrorCode.AUTH_OAUTH_EXCHANGE_FAILED);
     }
-    // email_verified 누락은 정상 응답이 아니므로 미검증이 아니라 교환 실패로 분류합니다.
+    // email_verified가 누락된 응답은 정상 응답으로 볼 수 없으므로,
+    // 미검증 계정이 아니라 토큰 교환 실패로 처리합니다.
+    // 사용자 식별 키인 sub이 누락된 경우도 로그인을 이어갈 수 없으므로
+    // 같은 기준으로 처리합니다(ADR-0016).
     if (response == null
+        || response.sub() == null
+        || response.sub().isBlank()
         || response.email() == null
         || response.email().isBlank()
         || response.emailVerified() == null) {
@@ -95,12 +100,14 @@ public class GoogleOAuthClient {
     if (!response.emailVerified()) {
       throw new BusinessException(AuthErrorCode.AUTH_GOOGLE_EMAIL_NOT_VERIFIED);
     }
-    return new GoogleUserInfo(response.email(), response.name(), response.picture());
+    return new GoogleUserInfo(
+        response.sub(), response.email(), response.name(), response.picture());
   }
 
   private record TokenResponse(@JsonProperty("access_token") String accessToken) {}
 
   private record UserInfoResponse(
+      String sub,
       String email,
       @JsonProperty("email_verified") Boolean emailVerified,
       String name,
