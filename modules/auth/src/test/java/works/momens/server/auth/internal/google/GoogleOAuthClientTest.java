@@ -20,12 +20,15 @@ class GoogleOAuthClientTest {
 
   private static final String TOKEN_BODY = "{\"access_token\":\"google-access-token\"}";
   private static final String VERIFIED_USERINFO =
-      "{\"email\":\"user@example.com\",\"email_verified\":true,"
+      "{\"sub\":\"google-sub\",\"email\":\"user@example.com\",\"email_verified\":true,"
           + "\"name\":\"홍길동\",\"picture\":\"https://cdn.momens.works/avatar.png\"}";
   private static final String UNVERIFIED_USERINFO =
-      "{\"email\":\"user@example.com\",\"email_verified\":false,\"name\":\"홍길동\"}";
+      "{\"sub\":\"google-sub\",\"email\":\"user@example.com\",\"email_verified\":false,"
+          + "\"name\":\"홍길동\"}";
   private static final String MISSING_VERIFIED_USERINFO =
-      "{\"email\":\"user@example.com\",\"name\":\"홍길동\"}";
+      "{\"sub\":\"google-sub\",\"email\":\"user@example.com\",\"name\":\"홍길동\"}";
+  private static final String MISSING_SUB_USERINFO =
+      "{\"email\":\"user@example.com\",\"email_verified\":true,\"name\":\"홍길동\"}";
 
   @Test
   void exchangeCodeReturnsGoogleAccessToken() throws Exception {
@@ -45,6 +48,7 @@ class GoogleOAuthClientTest {
 
       GoogleUserInfo user = client.fetchUserInfo("google-access-token");
 
+      assertThat(user.sub()).isEqualTo("google-sub");
       assertThat(user.email()).isEqualTo("user@example.com");
       assertThat(user.name()).isEqualTo("홍길동");
       assertThat(user.picture()).isEqualTo("https://cdn.momens.works/avatar.png");
@@ -62,6 +66,19 @@ class GoogleOAuthClientTest {
               e ->
                   assertThat(e.getErrorCode())
                       .isEqualTo(AuthErrorCode.AUTH_GOOGLE_EMAIL_NOT_VERIFIED));
+    }
+  }
+
+  @Test
+  void fetchUserInfoTreatsMissingSubAsExchangeFailure() throws Exception {
+    try (GoogleServer server = GoogleServer.start(TOKEN_BODY, MISSING_SUB_USERINFO)) {
+      GoogleOAuthClient client = client(server);
+
+      assertThatThrownBy(() -> client.fetchUserInfo("google-access-token"))
+          .isInstanceOfSatisfying(
+              BusinessException.class,
+              e ->
+                  assertThat(e.getErrorCode()).isEqualTo(AuthErrorCode.AUTH_OAUTH_EXCHANGE_FAILED));
     }
   }
 

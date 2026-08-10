@@ -48,12 +48,18 @@ public class GoogleIdTokenVerifier {
       throw new BusinessException(AuthErrorCode.AUTH_GOOGLE_EMAIL_NOT_VERIFIED);
     }
 
+    String subject = jwt.getSubject();
+    if (subject == null || subject.isBlank()) {
+      throw new BusinessException(AuthErrorCode.AUTH_GOOGLE_TOKEN_INVALID);
+    }
+
     String email = jwt.getClaimAsString("email");
     if (email == null || email.isBlank()) {
       throw new BusinessException(AuthErrorCode.AUTH_GOOGLE_TOKEN_INVALID);
     }
 
-    return new GoogleUserInfo(email, jwt.getClaimAsString("name"), jwt.getClaimAsString("picture"));
+    return new GoogleUserInfo(
+        subject, email, jwt.getClaimAsString("name"), jwt.getClaimAsString("picture"));
   }
 
   private static OAuth2TokenValidator<Jwt> googleValidator(Iterable<String> audiences) {

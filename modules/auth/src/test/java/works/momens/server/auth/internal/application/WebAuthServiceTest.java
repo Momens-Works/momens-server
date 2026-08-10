@@ -36,7 +36,7 @@ class WebAuthServiceTest {
             userId, "hong@momens.works", "홍길동", null, "pic", Instant.now(), Instant.now());
     when(googleOAuthClient.exchangeCode("auth-code", "verifier")).thenReturn("google-access");
     when(googleOAuthClient.fetchUserInfo("google-access"))
-        .thenReturn(new GoogleUserInfo("hong@momens.works", "홍길동", "pic"));
+        .thenReturn(new GoogleUserInfo("google-sub", "hong@momens.works", "홍길동", "pic"));
     when(userService.findOrCreate("hong@momens.works", "홍길동", "pic")).thenReturn(profile);
     when(jwtTokenService.issueTokenPair(userId, ClientType.WEB, null))
         .thenReturn(new TokenPair("access-jwt", "refresh-token", 900));
