@@ -61,6 +61,39 @@ interface TaskDraftGenerationRepository extends JpaRepository<TaskDraftGeneratio
       nativeQuery = true)
   List<TaskDraftGeneration> lockExpiredProcessing(@Param("limit") int limit);
 
+  /**
+   * 원장 운영 지표를 한 번에 집계한다(9.3절).
+   *
+   * <p>여섯 값이 모두 미종료 행만 필요해 스캔을 {@code status <> 'completed'}로 좁힌다. 미종료 집합은 처리량에 묶여 유계이므로 테이블이 커져도
+   * 비용이 늘지 않는다. {@code completed} 건수를 여기에 넣지 않는 이유가 이것이다. 하나만 넣어도 전체 스캔이 된다.
+   *
+   * <p>WHERE 절이 {@code idx_minsu_task_draft_generations_unfinished}의 부분 인덱스 술어와 <b>문자 그대로</b> 같아야
+   * planner가 그 인덱스를 쓴다. 조건을 바꿀 때 마이그레이션도 함께 봐야 한다.
+   *
+   * <p>나이는 애플리케이션이 아니라 DB 시계로 계산한다. 인스턴스 간 시계 편차가 그대로 지표 편차가 되기 때문이고, 원장의 두 deadline이 같은 시계를 쓰는 것과
+   * 같은 이유다(8.6절).
+   *
+   * <p>별칭을 큰따옴표로 감싼 것은 Postgres가 따옴표 없는 식별자를 소문자로 접기 때문이다. interface projection은 별칭과 속성명을 맞춰야 한다.
+   */
+  @Query(
+      value =
+          """
+          SELECT COUNT(*) FILTER (WHERE status = 'pending') AS "pending",
+                 COUNT(*) FILTER (WHERE status = 'processing') AS "processing",
+                 COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(created_at)), 0)::double precision
+                     AS "oldestUnfinishedAgeSeconds",
+                 COUNT(*) FILTER (
+                     WHERE status = 'processing' AND lease_expires_at <= NOW()) AS "expiredLeases",
+                 COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(lease_expires_at) FILTER (
+                     WHERE status = 'processing' AND lease_expires_at <= NOW())), 0)::double precision
+                     AS "expiredLeaseMaxAgeSeconds",
+                 COUNT(*) FILTER (WHERE read_deadline_at <= NOW()) AS "readDeadlineExceeded"
+          FROM minsu_task_draft_generations
+          WHERE status <> 'completed'
+          """,
+      nativeQuery = true)
+  LedgerSnapshotRow snapshotUnfinished();
+
   /** 결과 기록 트랜잭션이 대상 행을 잠근다. 여기서 잠가야 claim token 재검증과 전이가 원자적이다(8.2절). */
   @Query(
       value = "SELECT * FROM minsu_task_draft_generations WHERE id = :id FOR UPDATE",
