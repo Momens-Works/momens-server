@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
@@ -15,6 +16,7 @@ import works.momens.server.user.UserService;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 class UserServiceImpl implements UserService {
 
   private final UserRepository userRepository;
@@ -69,7 +71,10 @@ class UserServiceImpl implements UserService {
   private UserProfile refreshProfile(UUID userId, String email, String name, String avatarUrl) {
     User user = userRepository.findById(userId).orElseThrow(() -> notFound(userId));
     user.refreshLoginProfile(name, avatarUrl);
-    userRepository.updateEmailIfUnused(userId, email);
+    if (userRepository.updateEmailIfUnused(userId, email) == 0) {
+      // 개인정보(email)는 로그에 남기지 않으며, 식별은 userId로만 수행한다. (code-conventions 규칙)
+      log.warn("로그인 이메일을 갱신하지 않았습니다. 해당 이메일은 이미 다른 사용자가 사용 중입니다. userId={}", userId);
+    }
     return toProfile(userRepository.findById(userId).orElseThrow());
   }
 
