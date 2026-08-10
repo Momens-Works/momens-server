@@ -61,7 +61,7 @@ dependencies {
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
     // 기능 모듈의 swagger-annotations와 core/models 버전을 맞춥니다. 서로 다르면 @Schema의
     // 기본값 sentinel이 잘못 해석되어 request schema에 default: null이 생깁니다.
-    implementation 'io.swagger.core.v3:swagger-core-jakarta:2.2.52'
+    implementation 'io.swagger.core.v3:swagger-core-jakarta:2.2.53'
     implementation "me.paulschwarz:spring-dotenv:${springDotenvVersion}"
 
     // Lombok
