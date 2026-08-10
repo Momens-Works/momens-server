@@ -78,16 +78,31 @@ class TaskDraftGenerationLedger {
     Execution execution = asyncProperties.execution();
     List<TaskDraftGeneration> reclaimed = repository.lockExpiredProcessing(limit);
     observability.recordReclaims(reclaimed.size());
-    List<TaskDraftGeneration> due = new ArrayList<>(reclaimed);
-    if (due.size() < limit) {
-      due.addAll(repository.lockDuePending(limit - due.size()));
-    }
-    if (due.isEmpty()) {
+    List<TaskDraftGeneration> duePending =
+        reclaimed.size() < limit
+            ? repository.lockDuePending(limit - reclaimed.size())
+            : List.<TaskDraftGeneration>of();
+    if (reclaimed.isEmpty() && duePending.isEmpty()) {
       return List.of();
     }
     Instant now = repository.currentDatabaseTime();
     Instant leaseExpiresAt = now.plus(execution.lease());
     List<ClaimedGeneration> claimed = new ArrayList<>();
+    // 회수 행은 대기 지연을 재지 않는다. 그쪽 next_attempt_at은 직전 시도의 예약 시각이라 구간에 직전
+    // 실행 시간과 lease 만료 대기가 통째로 들어간다. 그러면 이 지표가 scheduler 적체가 아니라 멈춘
+    // 호출의 길이를 재게 된다. 회수가 얼마나 밀리는지는 expired.lease.max.age gauge가 이미 본다.
+    claimInto(claimed, reclaimed, execution, now, leaseExpiresAt, false);
+    claimInto(claimed, duePending, execution, now, leaseExpiresAt, true);
+    return claimed;
+  }
+
+  private void claimInto(
+      List<ClaimedGeneration> claimed,
+      List<TaskDraftGeneration> due,
+      Execution execution,
+      Instant now,
+      Instant leaseExpiresAt,
+      boolean recordWait) {
     for (TaskDraftGeneration generation : due) {
       if (generation.isExhausted(execution.maxAttempts())) {
         // 마지막 시도를 claim한 뒤 결과를 기록하기 전에 종료된 잔여 행이다. 다시 집으면 상한을 넘겨
@@ -95,15 +110,16 @@ class TaskDraftGenerationLedger {
         complete(generation, CompletionReason.RETRY_EXHAUSTED);
         continue;
       }
-      // 재시도 시각이 지난 뒤 실제로 집히기까지의 지연. 배치가 밀리는 정도가 여기로 드러난다.
-      observability.recordClaimWait(Duration.between(generation.getNextAttemptAt(), now));
+      if (recordWait) {
+        // 재시도 시각이 지난 뒤 실제로 집히기까지의 지연. 배치가 밀리는 정도가 여기로 드러난다.
+        observability.recordClaimWait(Duration.between(generation.getNextAttemptAt(), now));
+      }
       UUID claimToken = UUID.randomUUID();
       generation.claim(claimToken, leaseExpiresAt);
       claimed.add(
           new ClaimedGeneration(
               generation.getId(), generation.getTaskId(), claimToken, snapshotOf(generation)));
     }
-    return claimed;
   }
 
   /**
