@@ -34,6 +34,7 @@ import works.momens.server.auth.internal.config.AuthProperties;
 import works.momens.server.auth.internal.jwt.TokenPair;
 import works.momens.server.auth.internal.web.WebAuthCookies;
 import works.momens.server.common.api.BusinessException;
+import works.momens.server.user.UserErrorCode;
 
 @WebMvcTest(WebAuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -171,6 +172,25 @@ class WebAuthControllerTest {
                     new Cookie("oauth_pkce_verifier", "verifier-xyz")))
         .andExpect(status().isFound())
         .andExpect(redirectedUrlPattern(FAILURE_URI + "*error=email_not_verified*"));
+  }
+
+  @Test
+  void googleCallbackRedirectsToEmailConflictWhenEmailAlreadyLinked() throws Exception {
+    when(webAuthService.completeLogin(
+            eq("auth-code"), eq("state-xyz"), eq("state-xyz"), eq("verifier-xyz")))
+        .thenThrow(new BusinessException(UserErrorCode.USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY));
+
+    mockMvc
+        .perform(
+            get("/api/auth/google/callback")
+                .header(API_VERSION_HEADER, API_VERSION)
+                .param("code", "auth-code")
+                .param("state", "state-xyz")
+                .cookie(
+                    new Cookie("oauth_state", "state-xyz"),
+                    new Cookie("oauth_pkce_verifier", "verifier-xyz")))
+        .andExpect(status().isFound())
+        .andExpect(redirectedUrlPattern(FAILURE_URI + "*error=email_conflict*"));
   }
 
   @Test
