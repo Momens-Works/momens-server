@@ -70,8 +70,9 @@ interface TaskDraftGenerationRepository extends JpaRepository<TaskDraftGeneratio
    * <p>WHERE 절이 {@code idx_minsu_task_draft_generations_unfinished}의 부분 인덱스 술어와 <b>문자 그대로</b> 같아야
    * planner가 그 인덱스를 쓴다. 조건을 바꿀 때 마이그레이션도 함께 봐야 한다.
    *
-   * <p>나이는 애플리케이션이 아니라 DB 시계로 계산한다. 인스턴스 간 시계 편차가 그대로 지표 편차가 되기 때문이고, 원장의 두 deadline이 같은 시계를 쓰는 것과
-   * 같은 이유다(8.6절).
+   * <p>{@code lease_expires_at}은 claim이 DB 시계로 계산해 저장한 값이라 여기서 {@code NOW()}와 빼는 것이 같은 시계 안의 연산이다.
+   * 반면 <b>{@code created_at}은 JPA Auditing이 애플리케이션 시계로 쓴다.</b> 두 시계가 어긋나면 나이가 음수가 될 수 있어 {@code
+   * GREATEST}로 0에서 자른다. 편차는 보통 밀리초 단위이고, 이 지표가 보려는 것은 정지로 인한 큰 양수라 0 절단이 판정을 가리지 않는다.
    *
    * <p>별칭을 큰따옴표로 감싼 것은 Postgres가 따옴표 없는 식별자를 소문자로 접기 때문이다. interface projection은 별칭과 속성명을 맞춰야 한다.
    */
@@ -80,8 +81,8 @@ interface TaskDraftGenerationRepository extends JpaRepository<TaskDraftGeneratio
           """
           SELECT COUNT(*) FILTER (WHERE status = 'pending') AS "pending",
                  COUNT(*) FILTER (WHERE status = 'processing') AS "processing",
-                 COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(created_at)), 0)::double precision
-                     AS "oldestUnfinishedAgeSeconds",
+                 GREATEST(COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(created_at)), 0), 0)
+                     ::double precision AS "oldestUnfinishedAgeSeconds",
                  COUNT(*) FILTER (
                      WHERE status = 'processing' AND lease_expires_at <= NOW()) AS "expiredLeases",
                  COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(lease_expires_at) FILTER (
