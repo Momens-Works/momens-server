@@ -50,7 +50,13 @@ public class WebAuthService {
     requireValidHandshake(code, state, stateCookie, codeVerifier);
     String googleAccessToken = googleOAuthClient.exchangeCode(code, codeVerifier);
     GoogleUserInfo user = googleOAuthClient.fetchUserInfo(googleAccessToken);
-    UserProfile profile = userService.findOrCreate(user.email(), displayName(user), user.picture());
+    UserProfile profile =
+        userService.findOrCreateByIdentity(
+            UserService.PROVIDER_GOOGLE,
+            user.sub(),
+            user.email(),
+            displayName(user),
+            user.picture());
     return jwtTokenService.issueTokenPair(profile.id(), ClientType.WEB, null);
   }
 
