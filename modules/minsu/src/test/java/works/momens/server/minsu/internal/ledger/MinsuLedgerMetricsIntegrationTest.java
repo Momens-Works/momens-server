@@ -61,10 +61,13 @@ class MinsuLedgerMetricsIntegrationTest extends AbstractPostgresIntegrationTest 
   @Test
   @DisplayName("미종료 원장만 집계하고 completed는 세지 않는다")
   void countsOnlyUnfinishedGenerations() {
-    persist(pending());
+    backdate(persist(pending()), 120);
     persist(pending());
     persistProcessing(Instant.now().plus(1, ChronoUnit.MINUTES));
-    completed(persist(pending()));
+    // 미종료 중 가장 오래된 것보다 더 오래된 종료 행. 나이 집계가 이걸 집으면 값이 600 쪽으로 튄다.
+    UUID finished = persist(pending());
+    backdate(finished, 600);
+    completed(finished);
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     MinsuLedgerMetrics metrics = new MinsuLedgerMetrics(repository, meterRegistry);
 
@@ -80,7 +83,7 @@ class MinsuLedgerMetricsIntegrationTest extends AbstractPostgresIntegrationTest 
         // 종료된 행은 나이 집계에서도 빠져야 한다. 남아 있으면 테이블이 쌓일수록 age가 계속 커진다.
         () ->
             assertThat(gauge(meterRegistry, "momens.minsu.ledger.oldest.unfinished.age"))
-                .isPositive());
+                .isBetween(115.0, 125.0));
   }
 
   @Test
@@ -178,6 +181,24 @@ class MinsuLedgerMetricsIntegrationTest extends AbstractPostgresIntegrationTest 
   private UUID persist(TaskDraftGeneration.TaskDraftGenerationBuilder builder) {
     TaskDraftGeneration saved = repository.saveAndFlush(builder.build());
     return saved.getId();
+  }
+
+  /**
+   * {@code created_at}을 과거로 민다.
+   *
+   * <p>이 컬럼은 JPA Auditing이 애플리케이션 시계로 쓰는데 나이는 DB의 {@code NOW()}로 뺀다. 게다가 {@code NOW()}는 트랜잭션 시작
+   * 시각이라 삽입과 집계가 한 트랜잭션인 이 테스트에서는 갓 넣은 행의 나이가 0 근처(혹은 살짝 음수)가 된다. 나이 집계를 제대로 보려면 DB 시계 기준으로 값을 직접
+   * 밀어야 한다.
+   */
+  private void backdate(UUID id, int seconds) {
+    entityManager
+        .getEntityManager()
+        .createNativeQuery(
+            "UPDATE minsu_task_draft_generations "
+                + "SET created_at = NOW() - make_interval(secs => :seconds) WHERE id = :id")
+        .setParameter("seconds", seconds)
+        .setParameter("id", id)
+        .executeUpdate();
   }
 
   /** 종료 전이는 상태와 사유를 함께 세우는 CHECK가 있어 native update로 한 번에 맞춘다. */
