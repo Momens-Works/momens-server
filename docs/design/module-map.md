@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | `app` | 실행·조립, 전체 컨텍스트 테스트, Modulith 경계 검증 | `bootstrap` |
 | `common` | 영속성 베이스·공유 확장·테스트 fixture (최소) | — |
-| `user` | 사용자 엔티티·프로필·`/me`, FindOrCreate public API | `domain.User` |
+| `user` | 사용자 엔티티·로그인 수단·프로필·`/me`, FindOrCreate public API | `domain.User` |
 | `auth` | OAuth 로그인·JWT·SecurityFilterChain·logout | `auth` |
 | `workspace` | workspace·멤버·초대·RBAC·label 발급 (중심 모듈) | `workspace`·`access`·`label` |
 | `project` | project·milestone·task·decision·blocker 운영 흐름 | 동명 5개 패키지 |
@@ -35,7 +35,7 @@
 
 협력 기본은 application event, 단순한 경우 상대 모듈의 public API 직접 참조입니다([아키텍처 > 모듈 간 의존](../rules/architecture.md)).
 
-- `auth` → `user` public API (로그인 시 FindOrCreate·프로필).
+- `auth` → `user` public API (로그인 시 로그인 수단 기준 조회·생성, 프로필).
 - `workspace`는 RBAC·label을 public API로 제공하고 `project`·`memory`·`source`·`minsu`가 사용한다.
 - `context`는 `entity_relations`를 읽어 연결된 식별자만 돌려준다. 지금은 도메인 모듈에 의존하지 않고,
   식별자로 본문을 채우는 조합은 소비하는 쪽이 한다(`mobile`이 `context`의 링크와 `source`의
@@ -87,18 +87,25 @@
 
 ### user
 
-사용자 자체와 프로필 속성을 담당한다.
+사용자 자체와 프로필 속성, 그리고 사용자를 식별하는 로그인 수단을 담당한다.
 
 - user entity (email/name/avatar/job role)
-- user repository
+- user identity entity (provider/provider_user_id, ADR-0016)
+- user repository, user identity repository
 - `/me` 프로필 조회/수정
-- FindOrCreate·프로필 read/update public API (로그인 시 `auth`가 사용)
+- 로그인 수단 기준 사용자 조회·생성 public API (`findOrCreateByIdentity`, 로그인 시 `auth`가 사용)
+- 로그인 수단 없이 사용자를 생성하는 public API (`findOrCreate`, dev 토큰 발급 경로가 사용)
+- 프로필 read/update public API
 - 프로필 벌크 조회 public API (`getProfiles`, 멤버 목록처럼 다른 모듈의 userId 목록에 프로필을
   결합할 때 사용. MOM-61)
 
 `user`와 `auth`는 별도 모듈로 둔다. 레거시는 `auth`가 User 영속을 직접 소유했지만, 신규
 구조에서는 `user`가 엔티티·프로필·public API를 소유하고 `auth`는 그 public API에 의존한다.
 (`identity`로 통합하는 안은 검토했으나 분리 유지로 확정.)
+
+로그인 수단(`user_identities`)도 `user`가 소유한다. 신규 사용자를 만들 때 `users` 행과 로그인 수단이
+하나의 트랜잭션에서 함께 생성되어야 하기 때문이다. `auth`가 소유하면 두 행의 생성이 서로 다른 모듈로
+나뉘어 중간 실패 시 로그인 수단이 없는 사용자가 남을 수 있다(ADR-0016).
 
 ### auth
 
