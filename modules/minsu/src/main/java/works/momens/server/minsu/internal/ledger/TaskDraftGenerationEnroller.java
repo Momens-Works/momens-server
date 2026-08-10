@@ -25,14 +25,17 @@ public class TaskDraftGenerationEnroller {
   private final TaskDraftGenerationRepository repository;
   private final MinsuAsyncProperties asyncProperties;
   private final MinsuJson json;
+  private final MinsuLedgerObservability observability;
 
   TaskDraftGenerationEnroller(
       TaskDraftGenerationRepository repository,
       MinsuAsyncProperties asyncProperties,
-      MinsuJson json) {
+      MinsuJson json,
+      MinsuLedgerObservability observability) {
     this.repository = repository;
     this.asyncProperties = asyncProperties;
     this.json = json;
+    this.observability = observability;
   }
 
   /** draft 확보 시점에 draft와 입력 snapshot을 함께 봉인한다. 해석은 {@link #enroll}만 한다. */
@@ -75,7 +78,9 @@ public class TaskDraftGenerationEnroller {
               // 적재 직후부터 처리 대상이다. 첫 시도의 대기는 백오프가 아니라 scheduler 주기다.
               .nextAttemptAt(enrolledAt)
               .build());
+      observability.recordEnrollment(true);
     } catch (DataAccessException e) {
+      observability.recordEnrollment(false);
       throw new TaskDraftEnrollmentException("Minsu 생성 원장 적재에 실패했습니다: taskId=" + taskId, e);
     }
   }

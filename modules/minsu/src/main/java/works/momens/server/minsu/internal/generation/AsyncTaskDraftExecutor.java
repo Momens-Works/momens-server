@@ -1,5 +1,9 @@
 package works.momens.server.minsu.internal.generation;
 
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,6 +13,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.stereotype.Component;
@@ -42,7 +48,16 @@ public class AsyncTaskDraftExecutor implements DisposableBean {
   private final MinsuAsyncProperties asyncProperties;
   private final ThreadPoolExecutor pool;
 
-  AsyncTaskDraftExecutor(TaskDraftAttempt attempt, MinsuAsyncProperties asyncProperties) {
+  /**
+   * 상한을 넘겼는데도 아직 반환하지 않은 시도 수(9.1절의 포화).
+   *
+   * <p>{@link #availableSlots()}가 {@code activeCount} 기반이라 이 값이 곧 <b>영구히 잃은 슬롯 수</b>다. 동시성 설정에 도달하면
+   * claim이 완전히 멈춘다. 시도 횟수 분포만 보면 이 상태가 재시도처럼 보이므로 둘을 같이 봐야 한다.
+   */
+  private final AtomicInteger hungAttempts = new AtomicInteger();
+
+  AsyncTaskDraftExecutor(
+      TaskDraftAttempt attempt, MinsuAsyncProperties asyncProperties, MeterRegistry meterRegistry) {
     this.attempt = attempt;
     this.asyncProperties = asyncProperties;
     int concurrency = asyncProperties.execution().concurrency();
@@ -58,6 +73,13 @@ public class AsyncTaskDraftExecutor implements DisposableBean {
               thread.setDaemon(true);
               return thread;
             });
+    // active·queued·completed·rejected를 Micrometer 표준 이름으로 낸다. 직접 gauge를 만들면 이름만
+    // 우리 것이 되고 의미는 같아진다. monitor()가 아니라 bindTo()를 쓰는 이유는 전자가 실행기를 감싼
+    // ExecutorService를 돌려주기 때문이다. 이 클래스는 ThreadPoolExecutor의 activeCount로 빈 슬롯을
+    // 세므로 래퍼로 바꾸면 availableSlots()가 성립하지 않는다.
+    new ExecutorServiceMetrics(pool, "minsu-draft-drain", Tags.empty()).bindTo(meterRegistry);
+    Gauge.builder("momens.minsu.drain.hung.attempts", hungAttempts, AtomicInteger::get)
+        .register(meterRegistry);
   }
 
   /** 지금 즉시 시작할 수 있는 시도 수. 멈춘 호출이 점유한 슬롯은 여기서 빠진다. */
@@ -73,16 +95,32 @@ public class AsyncTaskDraftExecutor implements DisposableBean {
   public List<AsyncGenerationResult> executeAll(List<SignalTaskDraftInput> inputs) {
     Execution execution = asyncProperties.execution();
     List<Future<TaskDraftAttempt.Result>> futures = new ArrayList<>(inputs.size());
+    List<AtomicBoolean> settled = new ArrayList<>(inputs.size());
     for (SignalTaskDraftInput input : inputs) {
+      // 시도 하나의 결말을 실행 스레드와 대기 스레드 중 <b>먼저 도달한 쪽</b>이 가져간다. 이 합의가
+      // 없으면 상한과 정상 종료가 겹칠 때 hung 수가 늘기만 하고 줄지 않는다.
+      AtomicBoolean attemptSettled = new AtomicBoolean();
+      settled.add(attemptSettled);
       futures.add(
           pool.submit(
-              () -> attempt.run(input, GenerationMode.ASYNCHRONOUS, execution.providerTimeout())));
+              () -> {
+                try {
+                  return attempt.run(
+                      input, GenerationMode.ASYNCHRONOUS, execution.providerTimeout());
+                } finally {
+                  if (!attemptSettled.compareAndSet(false, true)) {
+                    // 대기 쪽이 먼저 상한으로 포기한 시도가 뒤늦게 돌아왔다. 슬롯이 회수된다.
+                    hungAttempts.decrementAndGet();
+                  }
+                }
+              }));
     }
     long startedAtNanos = System.nanoTime();
     long deadlineNanos = startedAtNanos + execution.attemptTimeout().toNanos();
     List<AsyncGenerationResult> results = new ArrayList<>(inputs.size());
     for (int i = 0; i < futures.size(); i++) {
-      results.add(await(futures.get(i), inputs.get(i), startedAtNanos, deadlineNanos));
+      results.add(
+          await(futures.get(i), inputs.get(i), settled.get(i), startedAtNanos, deadlineNanos));
     }
     return results;
   }
@@ -90,6 +128,7 @@ public class AsyncTaskDraftExecutor implements DisposableBean {
   private AsyncGenerationResult await(
       Future<TaskDraftAttempt.Result> future,
       SignalTaskDraftInput input,
+      AtomicBoolean settled,
       long startedAtNanos,
       long deadlineNanos) {
     try {
@@ -100,6 +139,7 @@ public class AsyncTaskDraftExecutor implements DisposableBean {
       // interrupt를 무시하는 호출이면 이 취소는 효과가 없고 슬롯은 계속 점유된다. 그래도 호출자는 대기에서
       // 풀려나 원장에 결과를 남길 수 있다.
       future.cancel(true);
+      markHungIfUnsettled(settled);
       // 기준은 제출 시각이다. deadline을 기준으로 재면 초과분(거의 0)이 찍혀 상한 값을 조정할 때
       // 근거가 되지 못한다.
       log.warn(
@@ -109,6 +149,7 @@ public class AsyncTaskDraftExecutor implements DisposableBean {
       // 종료 중이다. 원장은 processing으로 남고 lease 만료 후 다음 인스턴스가 회수한다(8.5절).
       Thread.currentThread().interrupt();
       future.cancel(true);
+      markHungIfUnsettled(settled);
       return timedOut(input);
     } catch (ExecutionException e) {
       // TaskDraftAttempt는 실패를 outcome으로 돌려주므로 여기까지 오는 것은 예상하지 못한 오류다.
@@ -116,6 +157,13 @@ public class AsyncTaskDraftExecutor implements DisposableBean {
       log.error("Minsu 비동기 시도가 예기치 못한 예외로 끝났습니다", e.getCause());
       return new AsyncGenerationResult(
           TaskDraftAttempt.fallbackOf(input), GenerationOutcome.PROVIDER_ERROR);
+    }
+  }
+
+  /** 시도가 아직 끝나지 않았을 때만 hung으로 센다. 이미 끝났다면 실행 쪽이 결말을 가져갔으므로 셀 것이 없다. */
+  private void markHungIfUnsettled(AtomicBoolean settled) {
+    if (settled.compareAndSet(false, true)) {
+      hungAttempts.incrementAndGet();
     }
   }
 

@@ -3,6 +3,7 @@ package works.momens.server.minsu.internal.ledger;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static works.momens.server.minsu.internal.ledger.LedgerObservabilityFixture.observability;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -57,7 +58,8 @@ class TaskDraftGenerationEnrollerIntegrationTest extends AbstractPostgresIntegra
         new TaskDraftGenerationEnroller(
             repository,
             new MinsuAsyncProperties(true, false, DEADLINE, MARGIN, EXECUTION),
-            new MinsuJson());
+            new MinsuJson(),
+            observability());
   }
 
   @Test

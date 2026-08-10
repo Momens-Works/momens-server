@@ -1,7 +1,9 @@
 package works.momens.server.minsu.internal.ledger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static works.momens.server.minsu.internal.ledger.LedgerObservabilityFixture.observability;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -62,8 +64,26 @@ class TaskDraftStatusReaderIntegrationTest extends AbstractPostgresIntegrationTe
     assertThat(statusOf(taskId)).isEqualTo(DraftStatus.READY);
   }
 
+  @Test
+  @DisplayName("deadline으로 닫은 경우에만 투영 counter를 올린다")
+  void countsOnlyDeadlineClosedProjections() {
+    // 세 ready의 사유가 다르다. 앱에게는 같지만 운영에서는 이것만 0이 아니면 생성이 제때 끝나지 않았다는
+    // 신호다(9.3절). EXISTS 하나로는 이 구분이 나오지 않아 읽기 쿼리를 3분기로 넓혔다.
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    MinsuLedgerObservability observability = new MinsuLedgerObservability(meterRegistry);
+    TaskDraftStatusReaderImpl reader = new TaskDraftStatusReaderImpl(repository, observability);
+
+    reader.statusOf(UUID.randomUUID());
+    reader.statusOf(persist(Instant.now().plus(1, ChronoUnit.HOURS), null));
+    reader.statusOf(persist(Instant.now().plus(1, ChronoUnit.HOURS), "retry_exhausted"));
+    reader.statusOf(persist(Instant.now().minus(1, ChronoUnit.MINUTES), null));
+
+    assertThat(meterRegistry.get("momens.minsu.ledger.deadline.projections").counter().count())
+        .isEqualTo(1);
+  }
+
   private DraftStatus statusOf(UUID taskId) {
-    return new TaskDraftStatusReaderImpl(repository).statusOf(taskId);
+    return new TaskDraftStatusReaderImpl(repository, observability()).statusOf(taskId);
   }
 
   /** 종료 사유를 주면 completed로 닫는다. status와 사유의 정합은 DB 제약이 이미 강제한다. */

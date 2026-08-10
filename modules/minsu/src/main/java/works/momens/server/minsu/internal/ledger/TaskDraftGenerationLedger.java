@@ -1,5 +1,6 @@
 package works.momens.server.minsu.internal.ledger;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,18 +42,21 @@ class TaskDraftGenerationLedger {
   private final MinsuJson json;
   private final TaskDraftApplier taskDraftApplier;
   private final OutboxAppender outboxAppender;
+  private final MinsuLedgerObservability observability;
 
   TaskDraftGenerationLedger(
       TaskDraftGenerationRepository repository,
       MinsuAsyncProperties asyncProperties,
       MinsuJson json,
       TaskDraftApplier taskDraftApplier,
-      OutboxAppender outboxAppender) {
+      OutboxAppender outboxAppender,
+      MinsuLedgerObservability observability) {
     this.repository = repository;
     this.asyncProperties = asyncProperties;
     this.json = json;
     this.taskDraftApplier = taskDraftApplier;
     this.outboxAppender = outboxAppender;
+    this.observability = observability;
   }
 
   /**
@@ -72,22 +76,27 @@ class TaskDraftGenerationLedger {
   @Transactional
   public List<ClaimedGeneration> claimDue(int limit) {
     Execution execution = asyncProperties.execution();
-    List<TaskDraftGeneration> due = new ArrayList<>(repository.lockExpiredProcessing(limit));
+    List<TaskDraftGeneration> reclaimed = repository.lockExpiredProcessing(limit);
+    observability.recordReclaims(reclaimed.size());
+    List<TaskDraftGeneration> due = new ArrayList<>(reclaimed);
     if (due.size() < limit) {
       due.addAll(repository.lockDuePending(limit - due.size()));
     }
     if (due.isEmpty()) {
       return List.of();
     }
-    Instant leaseExpiresAt = repository.currentDatabaseTime().plus(execution.lease());
+    Instant now = repository.currentDatabaseTime();
+    Instant leaseExpiresAt = now.plus(execution.lease());
     List<ClaimedGeneration> claimed = new ArrayList<>();
     for (TaskDraftGeneration generation : due) {
       if (generation.isExhausted(execution.maxAttempts())) {
         // 마지막 시도를 claim한 뒤 결과를 기록하기 전에 종료된 잔여 행이다. 다시 집으면 상한을 넘겨
         // 실행하게 되므로 여기서 종결한다.
-        generation.complete(CompletionReason.RETRY_EXHAUSTED);
+        complete(generation, CompletionReason.RETRY_EXHAUSTED);
         continue;
       }
+      // 재시도 시각이 지난 뒤 실제로 집히기까지의 지연. 배치가 밀리는 정도가 여기로 드러난다.
+      observability.recordClaimWait(Duration.between(generation.getNextAttemptAt(), now));
       UUID claimToken = UUID.randomUUID();
       generation.claim(claimToken, leaseExpiresAt);
       claimed.add(
@@ -107,6 +116,7 @@ class TaskDraftGenerationLedger {
   public void record(ClaimedGeneration claim, AsyncGenerationResult result) {
     TaskDraftGeneration generation = repository.lockById(claim.id()).orElseThrow();
     if (!generation.isClaimedBy(claim.claimToken())) {
+      observability.recordStaleResult();
       log.warn("만료된 minsu claim 결과 무시 taskId={} outcome={}", claim.taskId(), result.outcome());
       return;
     }
@@ -114,17 +124,17 @@ class TaskDraftGenerationLedger {
     if (generation.isPastApplyCutoff(now)) {
       // 반영 창이 닫힌 뒤의 결과는 쓰지 않는다(8.6절). 읽기 투영이 이미 ready로 알렸을 수 있어, 여기서
       // 반영하면 ready로 알린 title이 뒤늦게 바뀐다.
-      generation.complete(CompletionReason.DEADLINE_EXCEEDED);
+      complete(generation, CompletionReason.DEADLINE_EXCEEDED);
       return;
     }
     switch (result.outcome()) {
       case GENERATED, GENERATED_TITLE_FALLBACK, GENERATED_TRUNCATED ->
           applyDraft(generation, result.draft());
       // 입력이 그대로이므로 재시도해도 같다.
-      case INSUFFICIENT_CONTEXT -> generation.complete(CompletionReason.INSUFFICIENT_CONTEXT);
+      case INSUFFICIENT_CONTEXT -> complete(generation, CompletionReason.INSUFFICIENT_CONTEXT);
       // 설정 수정은 배포 사건이라 재시도로 기다리지 않는다. claim 자체가 설정 유효를 전제하므로
       // (11.2절) 이 값은 claim 이후 설정이 무효해진 경합에서만 도달한다.
-      case INVALID_CONFIG -> generation.complete(CompletionReason.INVALID_CONFIG);
+      case INVALID_CONFIG -> complete(generation, CompletionReason.INVALID_CONFIG);
       // structured output 위반은 결정적 오류가 아니다. 같은 입력으로 반복 실패하면 프롬프트·스키마
       // 문제이고 그것은 outcome별 retry_exhausted 비율로 구분한다.
       case TIMEOUT, PROVIDER_ERROR, INVALID_RESPONSE, INVALID_OUTPUT ->
@@ -169,7 +179,10 @@ class TaskDraftGenerationLedger {
             new ApplyTaskDraftCommand(generation.getTaskId(), baseline, generated));
     switch (applied) {
       case APPLIED -> {
-        generation.complete(CompletionReason.GENERATED);
+        complete(generation, CompletionReason.GENERATED);
+        // 성공 반영에서만 end-to-end 지연을 남긴다. 다른 종료는 tasks를 바꾸지 않아 잴 구간이 없다.
+        observability.recordGenerationDuration(
+            Duration.between(generation.getCreatedAt(), repository.currentDatabaseTime()));
         if (!generated.equals(baseline)) {
           outboxAppender.append(
               generation.getWorkspaceId(),
@@ -180,8 +193,8 @@ class TaskDraftGenerationLedger {
         }
       }
       // baseline과 달라진 이유를 project는 모른다. baseline을 소유한 이쪽이 사용자 편집으로 해석한다(8.1절).
-      case BASELINE_MISMATCH -> generation.complete(CompletionReason.USER_EDITED);
-      case TASK_GONE -> generation.complete(CompletionReason.TASK_GONE);
+      case BASELINE_MISMATCH -> complete(generation, CompletionReason.USER_EDITED);
+      case TASK_GONE -> complete(generation, CompletionReason.TASK_GONE);
       // 반영 결과가 늘어나면 크게 실패한다. 빠뜨리면 원장이 닫히지 않은 채 커밋된다(위 switch와 같은 이유).
       default -> throw new IllegalStateException("처리하지 않은 draft 반영 결과입니다: " + applied);
     }
@@ -190,11 +203,21 @@ class TaskDraftGenerationLedger {
   private void scheduleRetryOrExhaust(TaskDraftGeneration generation, Instant now) {
     Execution execution = asyncProperties.execution();
     if (generation.isExhausted(execution.maxAttempts())) {
-      generation.complete(CompletionReason.RETRY_EXHAUSTED);
+      complete(generation, CompletionReason.RETRY_EXHAUSTED);
       return;
     }
     // 백오프는 결과를 기록한 시점부터 잰다. claim 시점부터 재면 실행에 걸린 시간만큼 대기가 짧아진다.
     generation.scheduleRetry(now.plus(execution.backoffFor(generation.getAttemptCount())));
+  }
+
+  /**
+   * 종료 전이를 지표와 묶는다.
+   *
+   * <p>{@code complete}를 직접 부르는 자리가 여럿이라 하나라도 빠지면 그 사유만 조용히 집계에서 사라진다. 전이와 계측을 한 자리로 모아 그 경로를 없앤다.
+   */
+  private void complete(TaskDraftGeneration generation, CompletionReason reason) {
+    generation.complete(reason);
+    observability.recordCompletion(reason, generation.getAttemptCount());
   }
 
   private SignalTaskDraftInput snapshotOf(TaskDraftGeneration generation) {

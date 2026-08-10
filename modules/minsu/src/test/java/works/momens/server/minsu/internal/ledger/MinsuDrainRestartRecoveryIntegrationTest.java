@@ -8,6 +8,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.time.Instant;
@@ -52,6 +53,7 @@ import works.momens.server.minsu.internal.json.MinsuJson;
   JpaAuditingConfig.class,
   MinsuJson.class,
   TaskDraftGenerationLedger.class,
+  LedgerObservabilityFixture.class,
   MinsuDrainRestartRecoveryIntegrationTest.RecoveryTestConfig.class
 })
 class MinsuDrainRestartRecoveryIntegrationTest extends AbstractPostgresIntegrationTest {
@@ -99,7 +101,7 @@ class MinsuDrainRestartRecoveryIntegrationTest extends AbstractPostgresIntegrati
   void wireScheduler() {
     when(configStatus.enabled()).thenReturn(true);
     when(configStatus.valid()).thenReturn(true);
-    scheduler = new MinsuDrainScheduler(configStatus, ledger, executor);
+    scheduler = new MinsuDrainScheduler(configStatus, ledger, executor, new SimpleMeterRegistry());
   }
 
   @Test

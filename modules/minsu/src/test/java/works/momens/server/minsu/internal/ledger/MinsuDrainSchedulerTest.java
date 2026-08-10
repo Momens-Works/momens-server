@@ -11,6 +11,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -33,7 +35,7 @@ class MinsuDrainSchedulerTest {
   private final TaskDraftGenerationLedger ledger = mock(TaskDraftGenerationLedger.class);
   private final AsyncTaskDraftExecutor executor = mock(AsyncTaskDraftExecutor.class);
   private final MinsuDrainScheduler scheduler =
-      new MinsuDrainScheduler(configStatus, ledger, executor);
+      new MinsuDrainScheduler(configStatus, ledger, executor, new SimpleMeterRegistry());
 
   @Test
   @DisplayName("provider가 비활성이면 claim하지 않는다")
@@ -124,6 +126,7 @@ class MinsuDrainSchedulerTest {
             .withBean(MinsuConfigStatus.class, () -> configStatus)
             .withBean(TaskDraftGenerationLedger.class, () -> ledger)
             .withBean(AsyncTaskDraftExecutor.class, () -> executor)
+            .withBean(MeterRegistry.class, SimpleMeterRegistry::new)
             .withUserConfiguration(MinsuDrainScheduler.class);
 
     runner
