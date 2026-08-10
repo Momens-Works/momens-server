@@ -43,6 +43,12 @@ class User extends BaseEntity {
     this.jobRole = jobRole;
   }
 
+  /** 로그인 시점의 이름과 프로필 이미지를 기준으로 사용자 정보를 갱신합니다. 이메일은 다른 사용자와 충돌할 수 있으므로 리포지토리에서 별도로 처리합니다. */
+  void refreshLoginProfile(String name, String avatarUrl) {
+    this.name = name;
+    this.avatarUrl = avatarUrl;
+  }
+
   /** 프로필 부분 수정. {@code null} 필드는 변경하지 않습니다(job_role 비우기는 미지원). */
   void updateProfile(String name, String jobRole) {
     if (name != null) {
