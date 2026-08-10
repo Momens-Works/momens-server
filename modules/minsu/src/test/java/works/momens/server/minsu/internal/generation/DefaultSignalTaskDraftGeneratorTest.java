@@ -364,7 +364,7 @@ class DefaultSignalTaskDraftGeneratorTest {
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     LlmResponse safetyResponse =
         new LlmResponse(
-            true, "SAFETY", "", "response-id", new LlmResponse.TokenUsage(10, 0, 0, 10));
+            true, "SAFETY", "", "response-id", new LlmResponse.TokenUsage(10, 7, 3, 20));
 
     TaskDraft result =
         generator(responding(safetyResponse), true, true, registry, meterRegistry)
@@ -382,15 +382,11 @@ class DefaultSignalTaskDraftGeneratorTest {
                         .counter()
                         .count())
                 .isEqualTo(1),
-        () ->
-            assertThat(
-                    meterRegistry
-                        .get("momens.minsu.llm.tokens")
-                        .tag("type", "prompt")
-                        .summary()
-                        .totalAmount())
-                .isEqualTo(10),
-        // total은 나머지 셋의 합이라 시계열로 두면 type을 가로지른 합산이 두 배가 된다.
+        // 허용된 세 type이 모두 기록되는지 값까지 본다. prompt만 보면 candidate·thoughts가 빠져도 통과한다.
+        () -> assertThat(tokenAmount(meterRegistry, "prompt")).isEqualTo(10),
+        () -> assertThat(tokenAmount(meterRegistry, "candidate")).isEqualTo(7),
+        () -> assertThat(tokenAmount(meterRegistry, "thoughts")).isEqualTo(3),
+        // total은 나머지를 포함하므로 시계열로 두면 type을 가로지른 합산이 이중 계상된다.
         // 지표 규약(docs/rules/observability.md)이 금지하는 형태라 되살아나지 않게 고정한다.
         () ->
             assertThat(meterRegistry.find("momens.minsu.llm.tokens").tag("type", "total").summary())
@@ -408,6 +404,9 @@ class DefaultSignalTaskDraftGeneratorTest {
   /**
    * 지표 규약의 "0 선등록"(docs/rules/observability.md). 태그 값이 enum이라 조합이 부팅 시점에 모두 정해지므로, 첫 생성 전에도 시계열이
    * 있어야 재시작 직후 구간이 장애와 구분된다.
+   *
+   * <p>개수만 보면 매핑이 틀려도 조합 수만 같으면 통과하므로 태그 값까지 조회한다. 태그 값은 대시보드·경보가 붙는 계약이라 조용히 바뀌면 안 된다. 개수 검증은 의도치
+   * 않게 늘어난 시계열을 잡기 위해 함께 둔다.
    */
   @Test
   void preRegistersRequestCountersForEveryOutcome() {
@@ -418,6 +417,23 @@ class DefaultSignalTaskDraftGeneratorTest {
     assertThat(meterRegistry.find("momens.minsu.task.draft.requests").counters())
         .hasSize(GenerationOutcome.values().length)
         .allSatisfy(counter -> assertThat(counter.count()).isZero());
+    assertAll(
+        Stream.of(GenerationOutcome.values())
+            .map(
+                outcome ->
+                    () ->
+                        assertThat(
+                                meterRegistry
+                                    .get("momens.minsu.task.draft.requests")
+                                    .tag("outcome", outcome.outcome())
+                                    .tag("fallback.reason", outcome.reason())
+                                    .counter()
+                                    .count())
+                            .isZero()));
+  }
+
+  private static double tokenAmount(SimpleMeterRegistry meterRegistry, String type) {
+    return meterRegistry.get("momens.minsu.llm.tokens").tag("type", type).summary().totalAmount();
   }
 
   @Test
