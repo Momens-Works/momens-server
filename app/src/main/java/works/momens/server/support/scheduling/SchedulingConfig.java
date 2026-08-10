@@ -6,6 +6,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 /**
  * 스케줄링 인프라 활성화(MOM-0816).
  *
+ * <p><b>{@code @Scheduled} 빈을 추가하면 {@code spring.task.scheduling.pool.size}를 함께 본다.</b> 풀이 모자라면 오래
+ * 블로킹하는 주기가 다른 주기를 굶기는데, 그 실패가 조용하다. 특히 {@code minsu}의 지표 스냅샷이 밀리면 원장 상태 gauge가 낡은 값으로 굳어, 하필 관측이
+ * 필요한 순간에 관측이 멈춘다.
+ *
  * <p>인프라 활성화는 조립 모듈인 {@code app}이 소유하고 항상 켠다. {@code @Scheduled} 빈의 실행 여부는 각 모듈이 자신의 설정으로 판정한다(예:
  * notification의 폴링 스케줄러는 {@code momens.notification.push.enabled}로 등록 자체가 갈린다). 게이트를 특정 모듈이 소유하면 다른
  * 모듈의 스케줄러가 그 모듈의 설정에 우연히 종속되므로 여기로 올렸다.

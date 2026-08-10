@@ -10,6 +10,26 @@ import org.springframework.data.repository.query.Param;
 
 interface TaskDraftGenerationRepository extends JpaRepository<TaskDraftGeneration, UUID> {
 
+  /**
+   * {@link #snapshotUnfinished()}의 SQL. 상수로 뺀 이유는 테스트가 <b>이 문장 그대로</b> EXPLAIN해 부분 인덱스가 실제로 쓰이는지 보기
+   * 위해서다. 테스트에 복사해 두면 WHERE를 바꿔도 복사본은 그대로라 통과한 채 인덱스만 놓친다.
+   */
+  String SNAPSHOT_UNFINISHED_SQL =
+      """
+          SELECT COUNT(*) FILTER (WHERE status = 'pending') AS "pending",
+                 COUNT(*) FILTER (WHERE status = 'processing') AS "processing",
+                 GREATEST(COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(created_at)), 0), 0)
+                     ::double precision AS "oldestUnfinishedAgeSeconds",
+                 COUNT(*) FILTER (
+                     WHERE status = 'processing' AND lease_expires_at <= NOW()) AS "expiredLeases",
+                 COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(lease_expires_at) FILTER (
+                     WHERE status = 'processing' AND lease_expires_at <= NOW())), 0)::double precision
+                     AS "expiredLeaseMaxAgeSeconds",
+                 COUNT(*) FILTER (WHERE read_deadline_at <= NOW()) AS "readDeadlineExceeded"
+          FROM minsu_task_draft_generations
+          WHERE status <> 'completed'
+          """;
+
   Optional<TaskDraftGeneration> findByTaskId(UUID taskId);
 
   /** 적재 시점의 두 deadline은 원장과 같은 시계로 계산한다(8.6절). 읽기 투영도 같은 {@code NOW()}를 쓴다. */
@@ -86,23 +106,7 @@ interface TaskDraftGenerationRepository extends JpaRepository<TaskDraftGeneratio
    *
    * <p>별칭을 큰따옴표로 감싼 것은 Postgres가 따옴표 없는 식별자를 소문자로 접기 때문이다. interface projection은 별칭과 속성명을 맞춰야 한다.
    */
-  @Query(
-      value =
-          """
-          SELECT COUNT(*) FILTER (WHERE status = 'pending') AS "pending",
-                 COUNT(*) FILTER (WHERE status = 'processing') AS "processing",
-                 GREATEST(COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(created_at)), 0), 0)
-                     ::double precision AS "oldestUnfinishedAgeSeconds",
-                 COUNT(*) FILTER (
-                     WHERE status = 'processing' AND lease_expires_at <= NOW()) AS "expiredLeases",
-                 COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(lease_expires_at) FILTER (
-                     WHERE status = 'processing' AND lease_expires_at <= NOW())), 0)::double precision
-                     AS "expiredLeaseMaxAgeSeconds",
-                 COUNT(*) FILTER (WHERE read_deadline_at <= NOW()) AS "readDeadlineExceeded"
-          FROM minsu_task_draft_generations
-          WHERE status <> 'completed'
-          """,
-      nativeQuery = true)
+  @Query(value = SNAPSHOT_UNFINISHED_SQL, nativeQuery = true)
   LedgerSnapshotRow snapshotUnfinished();
 
   /** 결과 기록 트랜잭션이 대상 행을 잠근다. 여기서 잠가야 claim token 재검증과 전이가 원자적이다(8.2절). */
