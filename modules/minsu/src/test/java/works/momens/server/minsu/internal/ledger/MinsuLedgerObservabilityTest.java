@@ -20,20 +20,11 @@ class MinsuLedgerObservabilityTest {
   @Test
   @DisplayName("사건이 없어도 모든 종료 사유가 0으로 등록돼 있다")
   void preRegistersEveryCompletionReason() {
-    assertThat(meterRegistry.find("momens.minsu.ledger.completions").counters())
+    assertThat(meterRegistry.find("momens.minsu.ledger.completion.attempts").summaries())
         .hasSize(CompletionReason.values().length);
     assertAll(
         Stream.of(CompletionReason.values())
-            .map(
-                reason ->
-                    () ->
-                        assertThat(
-                                meterRegistry
-                                    .get("momens.minsu.ledger.completions")
-                                    .tag("reason", reason.value())
-                                    .counter()
-                                    .count())
-                            .isZero()));
+            .map(reason -> () -> assertThat(completions(reason.value())).isZero()));
   }
 
   @Test
@@ -48,29 +39,16 @@ class MinsuLedgerObservabilityTest {
   }
 
   @Test
-  @DisplayName("종료를 사유별 counter와 시도 횟수 분포로 함께 남긴다")
-  void recordsCompletionWithAttemptCount() {
+  @DisplayName("지표 하나가 종료 건수와 시도 분포를 함께 준다")
+  void recordsCompletionCountAndAttemptDistribution() {
     observability.recordCompletion(CompletionReason.RETRY_EXHAUSTED, 4);
+    observability.recordCompletion(CompletionReason.RETRY_EXHAUSTED, 2);
 
+    // count가 종료 건수, sum이 누적 시도 수다. 종료 counter를 따로 두면 그 값이 count와 항상 같아
+    // 순수한 중복이 되고, 대시보드가 서로 다른 쪽을 참조하기 시작하면 되돌릴 수 없다.
     assertAll(
-        () ->
-            assertThat(
-                    meterRegistry
-                        .get("momens.minsu.ledger.completions")
-                        .tag("reason", "retry_exhausted")
-                        .counter()
-                        .count())
-                .isEqualTo(1),
-        // 재시도 상한을 조정하려면 사유별 시도 분포가 필요하다. 전체 평균으로는 어떤 사유가 상한을
-        // 소모하는지 갈라지지 않는다.
-        () ->
-            assertThat(
-                    meterRegistry
-                        .get("momens.minsu.ledger.attempts")
-                        .tag("reason", "retry_exhausted")
-                        .summary()
-                        .totalAmount())
-                .isEqualTo(4));
+        () -> assertThat(completions("retry_exhausted")).isEqualTo(2),
+        () -> assertThat(summary("retry_exhausted").totalAmount()).isEqualTo(6));
   }
 
   @Test
@@ -117,14 +95,7 @@ class MinsuLedgerObservabilityTest {
       observability.recordReclaims(1);
 
       assertAll(
-          () ->
-              assertThat(
-                      meterRegistry
-                          .get("momens.minsu.ledger.completions")
-                          .tag("reason", "generated")
-                          .counter()
-                          .count())
-                  .isZero(),
+          () -> assertThat(completions("generated")).isZero(),
           () -> assertThat(enrollments("success")).isZero(),
           () -> assertThat(counter("momens.minsu.ledger.reclaims")).isZero());
     } finally {
@@ -150,6 +121,17 @@ class MinsuLedgerObservabilityTest {
     } finally {
       TransactionSynchronizationManager.clearSynchronization();
     }
+  }
+
+  private double completions(String reason) {
+    return summary(reason).count();
+  }
+
+  private io.micrometer.core.instrument.DistributionSummary summary(String reason) {
+    return meterRegistry
+        .get("momens.minsu.ledger.completion.attempts")
+        .tag("completion.reason", reason)
+        .summary();
   }
 
   private double counter(String name) {

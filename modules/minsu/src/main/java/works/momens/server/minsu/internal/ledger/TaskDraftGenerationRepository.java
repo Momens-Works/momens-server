@@ -28,6 +28,9 @@ interface TaskDraftGenerationRepository extends JpaRepository<TaskDraftGeneratio
    * 구분이 나오지 않는다.
    *
    * <p>{@code task_id}가 UNIQUE라 미종료 행은 많아야 하나다(8.4절).
+   *
+   * <p><b>이 3분기는 {@code read_deadline_at}이 NOT NULL이라는 데 기대고 있다.</b> nullable이 되면 행이 있는데도 빈 값이 돌아와
+   * "원장 없음"과 구분되지 않고 조용히 {@code ready}가 된다. 컬럼 제약을 풀려면 이 판정부터 바꿔야 한다.
    */
   @Query(
       value =

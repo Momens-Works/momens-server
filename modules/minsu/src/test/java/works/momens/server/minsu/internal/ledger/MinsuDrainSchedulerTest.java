@@ -34,8 +34,9 @@ class MinsuDrainSchedulerTest {
   private final MinsuConfigStatus configStatus = mock(MinsuConfigStatus.class);
   private final TaskDraftGenerationLedger ledger = mock(TaskDraftGenerationLedger.class);
   private final AsyncTaskDraftExecutor executor = mock(AsyncTaskDraftExecutor.class);
+  private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
   private final MinsuDrainScheduler scheduler =
-      new MinsuDrainScheduler(configStatus, ledger, executor, new SimpleMeterRegistry());
+      new MinsuDrainScheduler(configStatus, ledger, executor, meterRegistry);
 
   @Test
   @DisplayName("provider가 비활성이면 claim하지 않는다")
@@ -119,6 +120,35 @@ class MinsuDrainSchedulerTest {
   }
 
   @Test
+  @DisplayName("실패한 주기는 heartbeat를 갱신하지 않는다")
+  void doesNotRefreshHeartbeatOnFailedPass() throws InterruptedException {
+    enabled();
+    when(executor.availableSlots()).thenReturn(1);
+    when(ledger.claimDue(1)).thenThrow(new IllegalStateException("DB 연결 실패"));
+    Thread.sleep(20);
+    double beforeFailure = heartbeatAge();
+
+    scheduler.drain();
+
+    // catch에서도 갱신하면 매 주기 실패하는 상태가 정상으로 보인다. 나이가 계속 자라야 정지가 드러난다.
+    assertThat(heartbeatAge()).isGreaterThan(beforeFailure);
+  }
+
+  @Test
+  @DisplayName("성공한 주기는 heartbeat를 되돌린다")
+  void refreshesHeartbeatOnSuccessfulPass() throws InterruptedException {
+    enabled();
+    when(executor.availableSlots()).thenReturn(1);
+    when(ledger.claimDue(1)).thenReturn(List.of());
+    Thread.sleep(20);
+    double beforeSuccess = heartbeatAge();
+
+    scheduler.drain();
+
+    assertThat(heartbeatAge()).isLessThan(beforeSuccess);
+  }
+
+  @Test
   @DisplayName("drain 축이 꺼져 있으면 빈 자체가 등록되지 않고, 켜면 push 설정과 무관하게 등록된다")
   void registrationFollowsDrainAxisOnly() {
     ApplicationContextRunner runner =
@@ -138,6 +168,10 @@ class MinsuDrainSchedulerTest {
         .withPropertyValues(
             "momens.minsu.task-draft.async.drain=true", "momens.notification.push.enabled=false")
         .run(context -> assertThat(context).hasSingleBean(MinsuDrainScheduler.class));
+  }
+
+  private double heartbeatAge() {
+    return meterRegistry.get("momens.minsu.drain.heartbeat.age").gauge().value();
   }
 
   private void enabled() {

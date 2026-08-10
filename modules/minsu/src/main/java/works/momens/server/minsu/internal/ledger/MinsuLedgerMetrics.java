@@ -7,7 +7,6 @@ import java.util.function.ToDoubleFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 원장 운영 지표(docs/design/minsu-async-task-draft-design.md 9.3절).
@@ -38,14 +37,17 @@ class MinsuLedgerMetrics {
   /** 마지막으로 성공한 스냅샷 시각. 첫 주기 전에도 나이가 0에서 자라도록 생성 시점으로 시작한다. */
   private volatile long refreshedAtNanos = System.nanoTime();
 
+  /** 직전 주기가 실패했는지. 지속 실패를 매 주기 로그로 남기지 않기 위한 것이다. */
+  private volatile boolean failing;
+
   MinsuLedgerMetrics(TaskDraftGenerationRepository repository, MeterRegistry meterRegistry) {
     this.repository = repository;
     // 생성자에서 등록하므로 첫 사건이 없어도 시계열이 존재한다(지표 규약의 "0 선등록").
     Gauge.builder(GENERATIONS, this, metrics -> metrics.snapshot.get().pending())
-        .tag("status", "pending")
+        .tag("status", GenerationStatus.PENDING.value())
         .register(meterRegistry);
     Gauge.builder(GENERATIONS, this, metrics -> metrics.snapshot.get().processing())
-        .tag("status", "processing")
+        .tag("status", GenerationStatus.PROCESSING.value())
         .register(meterRegistry);
     registerSeconds(
         meterRegistry,
@@ -77,13 +79,18 @@ class MinsuLedgerMetrics {
   @Scheduled(
       fixedDelayString = "${momens.minsu.task-draft.metrics.snapshot-interval:10s}",
       initialDelayString = "${momens.minsu.task-draft.metrics.snapshot-interval:10s}")
-  @Transactional(readOnly = true)
   void refresh() {
     try {
       snapshot.set(Snapshot.of(repository.snapshotUnfinished()));
       refreshedAtNanos = System.nanoTime();
+      failing = false;
     } catch (RuntimeException e) {
-      log.error("Minsu 원장 지표 스냅샷 갱신 실패", e);
+      // 실패로 <b>전이할 때만</b> 남긴다. 주기가 10초라 지속 실패를 매번 찍으면 하루 8천 건이 쌓이는데,
+      // 그 사이 새로 알 수 있는 것이 없다. 실패가 계속되는지는 snapshot.age gauge가 이미 보고한다.
+      if (!failing) {
+        failing = true;
+        log.error("Minsu 원장 지표 스냅샷 갱신 실패. 복구까지 이 로그를 반복하지 않습니다", e);
+      }
     }
   }
 
