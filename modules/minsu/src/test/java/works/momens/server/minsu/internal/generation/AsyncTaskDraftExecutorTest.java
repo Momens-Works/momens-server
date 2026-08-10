@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -132,7 +133,8 @@ class AsyncTaskDraftExecutorTest {
                 Duration.ofSeconds(1),
                 2,
                 List.of(Duration.ofSeconds(1)),
-                CONCURRENCY)));
+                CONCURRENCY)),
+        new SimpleMeterRegistry());
   }
 
   /** interrupt에 응답하지 않는 호출. 멈춘 SDK·ADC 호출이 스레드를 놓지 않는 상황을 그대로 흉내 낸다. */

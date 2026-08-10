@@ -50,6 +50,7 @@ import works.momens.server.project.TaskDraftValues;
   JpaAuditingConfig.class,
   MinsuJson.class,
   TaskDraftGenerationLedger.class,
+  LedgerObservabilityFixture.class,
   TaskDraftGenerationLedgerIntegrationTest.LedgerTestConfig.class
 })
 class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrationTest {

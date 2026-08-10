@@ -21,13 +21,20 @@ interface TaskDraftGenerationRepository extends JpaRepository<TaskDraftGeneratio
    *
    * <p>나이 상한을 DB에서 비교 하나로 끝내므로 scheduler가 멈춰 있어도, 설정을 꺼서 rollback해도 앱이 {@code generating}에 무기한 갇히지
    * 않는다. 상한을 scheduler가 강제하게 두면 scheduler가 멈춘 상황을 막으려는 장치를 그 scheduler가 실행하는 순환이 된다.
+   *
+   * <p>결과가 셋으로 갈린다. 빈 값은 미종료 원장이 없다는 뜻이고({@code ready}), {@code true}는 아직 창이 열려 있다는 뜻이며({@code
+   * generating}), {@code false}는 deadline이 지나 투영이 닫는 경우다. 앞의 둘은 공개 계약에서 모두 {@code ready}지만 운영에서는
+   * 구분해야 한다. deadline으로 닫힌 건수가 0이 아니면 생성이 제때 끝나지 않았다는 뜻이라 경보 대상이기 때문이다(9.3절). {@code EXISTS} 하나로는 이
+   * 구분이 나오지 않는다.
+   *
+   * <p>{@code task_id}가 UNIQUE라 미종료 행은 많아야 하나다(8.4절).
    */
   @Query(
       value =
-          "SELECT EXISTS (SELECT 1 FROM minsu_task_draft_generations "
-              + "WHERE task_id = :taskId AND status <> 'completed' AND read_deadline_at > NOW())",
+          "SELECT read_deadline_at > NOW() FROM minsu_task_draft_generations "
+              + "WHERE task_id = :taskId AND status <> 'completed'",
       nativeQuery = true)
-  boolean existsGenerating(@Param("taskId") UUID taskId);
+  Optional<Boolean> generationWindowOpen(@Param("taskId") UUID taskId);
 
   /**
    * 재시도 시각이 지난 {@code pending} 원장을 claim 대상으로 잠근다(8.5절).

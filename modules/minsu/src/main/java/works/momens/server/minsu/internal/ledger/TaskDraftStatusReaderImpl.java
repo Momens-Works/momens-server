@@ -16,14 +16,31 @@ import works.momens.server.minsu.TaskDraftStatusReader;
 class TaskDraftStatusReaderImpl implements TaskDraftStatusReader {
 
   private final TaskDraftGenerationRepository repository;
+  private final MinsuLedgerObservability observability;
 
-  TaskDraftStatusReaderImpl(TaskDraftGenerationRepository repository) {
+  TaskDraftStatusReaderImpl(
+      TaskDraftGenerationRepository repository, MinsuLedgerObservability observability) {
     this.repository = repository;
+    this.observability = observability;
   }
 
+  /**
+   * 공개 계약은 그대로 {@code generating}과 {@code ready} 둘이다. 내부에서만 {@code ready}의 두 경로를 가른다.
+   *
+   * <p>미종료 원장이 없어서 {@code ready}인 경우와 deadline이 지나 투영이 닫은 경우는 앱에게 같지만 운영에서는 전혀 다르다. 뒤쪽은 생성이 제때 끝나지
+   * 않았다는 뜻이고 0이 정상이다(9.3절). 그래서 그 경로에서만 counter를 올린다.
+   */
   @Override
   @Transactional(readOnly = true)
   public DraftStatus statusOf(UUID taskId) {
-    return repository.existsGenerating(taskId) ? DraftStatus.GENERATING : DraftStatus.READY;
+    return repository
+        .generationWindowOpen(taskId)
+        .map(windowOpen -> windowOpen ? DraftStatus.GENERATING : closedByDeadline())
+        .orElse(DraftStatus.READY);
+  }
+
+  private DraftStatus closedByDeadline() {
+    observability.recordDeadlineProjection();
+    return DraftStatus.READY;
   }
 }

@@ -1,5 +1,7 @@
 package works.momens.server.minsu.internal.ledger;
 
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -35,23 +37,42 @@ class MinsuDrainScheduler {
   private final TaskDraftGenerationLedger ledger;
   private final AsyncTaskDraftExecutor executor;
 
+  /**
+   * 마지막으로 성공한 주기 시각. 이 값이 자라면 drain이 멈춘 것이다.
+   *
+   * <p>이 빈 자체가 drain 축에 걸려 있어 <b>축을 끄면 지표도 사라진다.</b> 부재를 정지로 읽으면 안 된다. 원장이 쌓이는지는 축과 무관하게 도는 {@link
+   * MinsuLedgerMetrics} 쪽 gauge가 본다.
+   */
+  private volatile long lastSuccessNanos = System.nanoTime();
+
   MinsuDrainScheduler(
       MinsuConfigStatus configStatus,
       TaskDraftGenerationLedger ledger,
-      AsyncTaskDraftExecutor executor) {
+      AsyncTaskDraftExecutor executor,
+      MeterRegistry meterRegistry) {
     this.configStatus = configStatus;
     this.ledger = ledger;
     this.executor = executor;
+    Gauge.builder("momens.minsu.drain.heartbeat.age", this, MinsuDrainScheduler::heartbeatAge)
+        .baseUnit("seconds")
+        .register(meterRegistry);
   }
 
   @Scheduled(fixedDelayString = "1s")
   void drain() {
     try {
       runPass();
+      // 예외 없이 끝난 주기만 heartbeat를 갱신한다. catch에서도 갱신하면 매 주기 실패하는 상태가
+      // 정상으로 보인다.
+      lastSuccessNanos = System.nanoTime();
     } catch (RuntimeException e) {
       // claim은 커밋됐고 결과 기록만 실패했을 수 있다. 그 원장은 lease 만료 후 회수된다(8.5절).
       log.error("Minsu draft drain 주기 실패", e);
     }
+  }
+
+  private double heartbeatAge() {
+    return (System.nanoTime() - lastSuccessNanos) / 1_000_000_000.0;
   }
 
   private void runPass() {
