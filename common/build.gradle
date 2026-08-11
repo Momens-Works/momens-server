@@ -5,11 +5,6 @@ plugins {
     id 'java-test-fixtures'
 }
 
-// Spring Modulith는 별도 릴리스 트레인이라 명시적 버전을 둡니다.
-ext {
-    springModulithVersion = '2.1.0'
-}
-
 dependencies {
     // Boot BOM으로 버전을 관리합니다(boot 플러그인은 app만 적용).
     api platform(SpringBootPlugin.BOM_COORDINATES)
@@ -20,7 +15,7 @@ dependencies {
     api 'org.springframework.boot:spring-boot-starter-data-jpa'
 
     // @ApplicationModule(OPEN) 등 modulith 메타데이터.
-    api "org.springframework.modulith:spring-modulith-starter-core:${springModulithVersion}"
+    api libs.spring.modulith.starter.core
 
     // 공유 에러 응답(ErrorResponse)의 @JsonInclude. spring-web 없이 애너테이션만 사용합니다.
     implementation 'com.fasterxml.jackson.core:jackson-annotations'

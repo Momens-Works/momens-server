@@ -22,8 +22,9 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    // FCM 발송(Boot BOM 비관리, 명시적 버전). 인증은 ADC를 씁니다(12절).
-    implementation 'com.google.firebase:firebase-admin:9.10.0'
+    // FCM 발송에 사용합니다. Spring Boot BOM 관리 대상이 아니므로 버전 카탈로그에서 버전을
+    // 고정합니다. 인증은 ADC를 사용합니다(12절).
+    implementation libs.firebase.admin
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

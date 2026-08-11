@@ -4,15 +4,6 @@ plugins {
     id 'org.springframework.boot'
 }
 
-// 비-Boot 관리 의존성 버전.
-// Spring Boot BOM이 관리하지 않는 의존성만 명시적으로 버전을 지정합니다.
-ext {
-    springModulithVersion = '2.1.0'
-    springdocVersion = '3.1.0'
-    springDotenvVersion = '5.1.0'
-    openapiRequestValidatorVersion = '3.0.0'
-}
-
 dependencies {
     // Spring Boot Gradle plugin이 제공하는 기본 BOM만 사용합니다.
     implementation platform(SpringBootPlugin.BOM_COORDINATES)
@@ -54,15 +45,14 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
     runtimeOnly 'org.postgresql:postgresql'
 
-    // Spring Modulith (별도 릴리스 트레인, 명시적 버전)
-    implementation "org.springframework.modulith:spring-modulith-starter-core:${springModulithVersion}"
+    // Spring Modulith는 Spring Boot BOM과 별도의 릴리스 트레인을 따르므로, 버전은 버전 카탈로그에서 고정합니다.
+    implementation libs.spring.modulith.starter.core
 
-    // API 문서 / 로컬 env (Boot BOM 비관리, 명시적 버전)
-    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
-    // 기능 모듈의 swagger-annotations와 core/models 버전을 맞춥니다. 서로 다르면 @Schema의
-    // 기본값 sentinel이 잘못 해석되어 request schema에 default: null이 생깁니다.
-    implementation 'io.swagger.core.v3:swagger-core-jakarta:2.2.53'
-    implementation "me.paulschwarz:spring-dotenv:${springDotenvVersion}"
+    // API 문서 및 로컬 env 관련 의존성입니다. Spring Boot BOM 관리 대상이 아니므로
+    // 버전 카탈로그에서 버전을 고정합니다.
+    implementation libs.springdoc.openapi.starter.webmvc.ui
+    implementation libs.swagger.core.jakarta
+    implementation libs.spring.dotenv
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -73,13 +63,13 @@ dependencies {
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation "org.springframework.modulith:spring-modulith-starter-test:${springModulithVersion}"
+    testImplementation libs.spring.modulith.starter.test
     // Testcontainers 통합테스트 베이스(common testFixtures)를 재사용합니다.
     testImplementation testFixtures(project(':common'))
     // 보안 통합테스트용 access token 팩토리(auth public testFixtures). auth.internal 직접 참조를 피합니다.
     testImplementation testFixtures(project(':auth'))
     // 실제 request/response를 /v3/api-docs 스펙과 대조하는 계약 검증(문서-응답 드리프트 방지).
-    testImplementation "com.atlassian.oai:openapi-request-validator-mockmvc:${openapiRequestValidatorVersion}"
-    // push 활성 배선 통합 테스트가 FirebaseMessaging을 mock으로 대체할 때 필요합니다(notification 모듈과 버전 일치).
-    testImplementation 'com.google.firebase:firebase-admin:9.10.0'
+    testImplementation libs.openapi.request.validator.mockmvc
+    // push 기능 활성화를 검증하는 통합 테스트에서 FirebaseMessaging을 mock으로 대체하기 위해 필요합니다.
+    testImplementation libs.firebase.admin
 }
