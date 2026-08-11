@@ -39,7 +39,7 @@ interface UserIdentityRepository extends JpaRepository<UserIdentity, UUID> {
    *
    * <p>삽입된 행 수를 반환하며, 0이 반환되면 동시에 들어온 다른 요청이 먼저 해당 로그인 수단을 연결한 것입니다.
    */
-  @Modifying(flushAutomatically = true)
+  @Modifying
   @Query(
       value =
           """
