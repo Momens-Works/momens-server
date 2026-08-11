@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -22,6 +24,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import works.momens.server.auth.AccessTokenTestFactory;
@@ -72,7 +75,7 @@ class MinsuAsyncDraftApplyEndToEndIntegrationTest extends AbstractPostgresIntegr
   @Test
   @DisplayName("생성 결과를 tasks에 반영하고 worker가 읽을 task.draft_generated를 남긴다")
   void appliesGeneratedDraftAndLeavesEventForWorker() throws Exception {
-    UUID taskId = convert("apply-success");
+    UUID taskId = convert("apply-success").taskId();
 
     awaitCompletion(taskId);
 
@@ -96,7 +99,7 @@ class MinsuAsyncDraftApplyEndToEndIntegrationTest extends AbstractPostgresIntegr
     // provider를 붙들어 두고 그 사이에 편집한다. 사용자가 convert 직후 제목을 고치는 것이 이 경합의 실제
     // 모습이고, 뒤늦게 도착한 AI 결과가 그것을 덮으면 명시적으로 한 편집이 사라진다(8.1절).
     CountDownLatch release = latchProvider();
-    UUID taskId = convert("apply-user-edit");
+    UUID taskId = convert("apply-user-edit").taskId();
     editTitle(taskId, "사용자가 고친 제목");
     release.countDown();
 
@@ -113,7 +116,7 @@ class MinsuAsyncDraftApplyEndToEndIntegrationTest extends AbstractPostgresIntegr
   @DisplayName("한 트랜잭션 안에서 원장을 먼저 읽어도 ready와 fallback title이 함께 나오지 않는다")
   void readOrderNeverYieldsReadyWithFallbackTitle() throws Exception {
     CountDownLatch release = latchProvider();
-    UUID taskId = convert("apply-read-order");
+    UUID taskId = convert("apply-read-order").taskId();
 
     new TransactionTemplate(transactionManager)
         .executeWithoutResult(
@@ -133,6 +136,36 @@ class MinsuAsyncDraftApplyEndToEndIntegrationTest extends AbstractPostgresIntegr
                   () -> assertThat(draftStatusReader.statusOf(taskId)).isEqualTo(DraftStatus.READY),
                   () -> assertThat(taskTitle(taskId)).isEqualTo(GENERATED_TITLE));
             });
+  }
+
+  @Test
+  @DisplayName("태스크 상세는 생성 중에 generating을, 반영 뒤에 ready와 최종 title을 함께 돌려준다")
+  void taskDetailFlipsToReadyWithGeneratedTitle() throws Exception {
+    CountDownLatch release = latchProvider();
+    Converted converted = convert("apply-detail-status");
+
+    // 앱이 재조회로 종료를 확인하는 경로다(설계 7.2절). 생성 중에는 generating이고, title은 그동안에도
+    // 항상 유효한 fallback이다.
+    getTaskDetail(converted)
+        .andExpect(jsonPath("$.draft_status").value("generating"))
+        .andExpect(jsonPath("$.title").value(SIGNAL_TITLE));
+
+    release.countDown();
+    awaitCompletion(converted.taskId());
+
+    // ready와 함께 돌려준 title이 최종 값이다. 앱이 여기서 재조회를 멈춰도 갱신을 놓치지 않는다.
+    getTaskDetail(converted)
+        .andExpect(jsonPath("$.draft_status").value("ready"))
+        .andExpect(jsonPath("$.title").value(GENERATED_TITLE));
+  }
+
+  private ResultActions getTaskDetail(Converted converted) throws Exception {
+    return mockMvc
+        .perform(
+            get("/api/mobile/tasks/{taskId}", converted.taskId())
+                .header("Authorization", converted.authorization())
+                .header("API-Version", "1"))
+        .andExpect(status().isOk());
   }
 
   /** provider를 붙들어 두고 반환 시점을 테스트가 정한다. 해제 전까지 원장은 {@code processing}에 머문다. */
@@ -158,23 +191,30 @@ class MinsuAsyncDraftApplyEndToEndIntegrationTest extends AbstractPostgresIntegr
         LlmResponse.TokenUsage.EMPTY);
   }
 
+  /** convert 결과. 상세 조회에 호출자 토큰이 필요해 함께 돌려준다. */
+  private record Converted(UUID taskId, String authorization) {}
+
   /** convert-to-task를 호출하고 생성된 task의 식별자를 돌려준다. */
-  private UUID convert(String slug) throws Exception {
+  private Converted convert(String slug) throws Exception {
     UserProfile actor = userService.findOrCreate(slug + "@momens.works", "홍길동", null);
     UUID workspace = insertWorkspace(slug);
     addMember(workspace, actor.id(), "owner");
     UUID project = insertProject(workspace, actor.id(), slug);
     UUID signal = insertSignal(workspace, project, SIGNAL_TITLE);
 
+    String authorization = "Bearer " + accessTokens.issueAccessToken(actor.id());
     mockMvc
         .perform(
             post("/api/mobile/signals/{signalId}/actions/convert-to-task", signal)
-                .header("Authorization", "Bearer " + accessTokens.issueAccessToken(actor.id()))
+                .header("Authorization", authorization)
                 .header("API-Version", "1"))
-        .andExpect(status().isCreated());
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.task.draft_status").value("generating"));
 
-    return jdbcTemplate.queryForObject(
-        "SELECT id FROM tasks WHERE origin_signal_id = ?", UUID.class, signal);
+    UUID taskId =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM tasks WHERE origin_signal_id = ?", UUID.class, signal);
+    return new Converted(taskId, authorization);
   }
 
   private void editTitle(UUID taskId, String title) {

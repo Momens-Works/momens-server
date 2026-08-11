@@ -26,6 +26,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import works.momens.server.minsu.DraftStatus;
 import works.momens.server.project.TaskDetail;
 
 /**
@@ -55,29 +56,31 @@ class TaskControllerTest {
     UUID openItemId = UUID.randomUUID();
     when(projectTaskService.getTaskDetail(TASK_ID, USER_ID))
         .thenReturn(
-            new MobileTaskDetail(
-                TASK_ID,
-                PROJECT_ID,
-                "1차 와이어프레임",
-                "todo",
-                "frontend",
-                new MobileTaskDetail.Assignee(
-                    assigneeId, "김규일", "https://lh3.googleusercontent.com/a/gyuil"),
-                "medium",
-                "이번 범위의 화면 흐름을 정리한다",
-                List.of(
-                    new TaskDetail.ChecklistItem(doneItemId, "완료된 기준", true),
-                    new TaskDetail.ChecklistItem(openItemId, "남은 기준", false)),
-                List.of(
-                    new MobileTaskDetail.Material(
-                        MATERIAL_ID,
-                        "권한 요청 화면 v2",
-                        "설명 문구 변경",
-                        "figma",
-                        OCCURRED_AT,
-                        "https://figma.example/p")),
-                List.of(new TaskDetail.OpenQuestion(QUESTION_ID, "권한 거부 시 대체 흐름을 둘지 검토 필요")),
-                "권한 거부 흐름을 PM과 확정한 뒤 화면 카피를 수정하세요."));
+            new MobileTaskDetailView(
+                DraftStatus.GENERATING,
+                new MobileTaskDetail(
+                    TASK_ID,
+                    PROJECT_ID,
+                    "1차 와이어프레임",
+                    "todo",
+                    "frontend",
+                    new MobileTaskDetail.Assignee(
+                        assigneeId, "김규일", "https://lh3.googleusercontent.com/a/gyuil"),
+                    "medium",
+                    "이번 범위의 화면 흐름을 정리한다",
+                    List.of(
+                        new TaskDetail.ChecklistItem(doneItemId, "완료된 기준", true),
+                        new TaskDetail.ChecklistItem(openItemId, "남은 기준", false)),
+                    List.of(
+                        new MobileTaskDetail.Material(
+                            MATERIAL_ID,
+                            "권한 요청 화면 v2",
+                            "설명 문구 변경",
+                            "figma",
+                            OCCURRED_AT,
+                            "https://figma.example/p")),
+                    List.of(new TaskDetail.OpenQuestion(QUESTION_ID, "권한 거부 시 대체 흐름을 둘지 검토 필요")),
+                    "권한 거부 흐름을 PM과 확정한 뒤 화면 카피를 수정하세요.")));
 
     mockMvc
         .perform(get("/api/mobile/tasks/{taskId}", TASK_ID).principal(principal))
@@ -108,26 +111,30 @@ class TaskControllerTest {
         .andExpect(jsonPath("$.open_questions.length()").value(1))
         .andExpect(jsonPath("$.open_questions[0].id").value(QUESTION_ID.toString()))
         .andExpect(jsonPath("$.open_questions[0].body").value("권한 거부 시 대체 흐름을 둘지 검토 필요"))
-        .andExpect(jsonPath("$.next_action").value("권한 거부 흐름을 PM과 확정한 뒤 화면 카피를 수정하세요."));
+        .andExpect(jsonPath("$.next_action").value("권한 거부 흐름을 PM과 확정한 뒤 화면 카피를 수정하세요."))
+        // 원장이 아직 열려 있으면 앱은 이 값을 보고 재조회한다(설계 7.2절).
+        .andExpect(jsonPath("$.draft_status").value("generating"));
   }
 
   @Test
   void getTaskDetailReturnsNullAssigneePurposeAndEmptyChecklist() throws Exception {
     when(projectTaskService.getTaskDetail(TASK_ID, USER_ID))
         .thenReturn(
-            new MobileTaskDetail(
-                TASK_ID,
-                PROJECT_ID,
-                "빈 상세",
-                "todo",
-                "pm",
-                null,
-                "low",
-                null,
-                List.of(),
-                List.of(),
-                List.of(),
-                null));
+            new MobileTaskDetailView(
+                DraftStatus.READY,
+                new MobileTaskDetail(
+                    TASK_ID,
+                    PROJECT_ID,
+                    "빈 상세",
+                    "todo",
+                    "pm",
+                    null,
+                    "low",
+                    null,
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    null)));
 
     mockMvc
         .perform(get("/api/mobile/tasks/{taskId}", TASK_ID).principal(principal))
@@ -139,7 +146,8 @@ class TaskControllerTest {
         .andExpect(jsonPath("$.checklist.items.length()").value(0))
         .andExpect(jsonPath("$.materials.length()").value(0))
         .andExpect(jsonPath("$.open_questions.length()").value(0))
-        .andExpect(jsonPath("$.next_action").value((Object) null));
+        .andExpect(jsonPath("$.next_action").value((Object) null))
+        .andExpect(jsonPath("$.draft_status").value("ready"));
   }
 
   @Test

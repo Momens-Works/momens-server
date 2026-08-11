@@ -24,6 +24,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import works.momens.server.auth.AccessTokenTestFactory;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.minsu.DraftStatus;
 import works.momens.server.minsu.PreparedTaskDraft;
 import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
@@ -64,6 +65,8 @@ class MobileSignalConvertDraftIntegrationTest extends AbstractPostgresIntegratio
     insertEvidence(workspace, signal, 0, "결제 정책", "논의 중단", "출시 지연");
     when(taskDraftGenerator.prepare(any()))
         .thenReturn(prepared(new TaskDraft("결제 정책 확정하기", Role.BACKEND, Priority.HIGH)));
+    // 동기 경로라 적재하지 않는다. 원장 행이 없으므로 응답도 replay도 ready다(설계 7.1절).
+    when(taskDraftGenerator.enroll(any(), any(), any())).thenReturn(DraftStatus.READY);
     String token = "Bearer " + accessTokens.issueAccessToken(jinsu.id());
 
     mockMvc
@@ -73,7 +76,8 @@ class MobileSignalConvertDraftIntegrationTest extends AbstractPostgresIntegratio
                 .header("API-Version", "1"))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.task.title").value("결제 정책 확정하기"))
-        .andExpect(jsonPath("$.task.status").value("todo"));
+        .andExpect(jsonPath("$.task.status").value("todo"))
+        .andExpect(jsonPath("$.task.draft_status").value("ready"));
 
     assertThat(
             jdbcTemplate.queryForMap(
@@ -101,7 +105,8 @@ class MobileSignalConvertDraftIntegrationTest extends AbstractPostgresIntegratio
                 .header("Authorization", token)
                 .header("API-Version", "1"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.task.title").value("결제 정책 확정하기"));
+        .andExpect(jsonPath("$.task.title").value("결제 정책 확정하기"))
+        .andExpect(jsonPath("$.task.draft_status").value("ready"));
 
     verify(taskDraftGenerator, times(1)).prepare(any());
   }

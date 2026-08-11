@@ -2,6 +2,7 @@ package works.momens.server.mobile.signal.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;
+import works.momens.server.mobile.MobileDraftStatus;
 import works.momens.server.signal.SignalActionResult;
 
 /**
@@ -14,14 +15,24 @@ import works.momens.server.signal.SignalActionResult;
 @Schema(description = "convert-to-task 처리 결과")
 public record ConvertToTaskResponse(Task task, Signal signal) {
 
-  public record Task(UUID id, String title, String status) {}
+  @Schema(description = "convert 결과 태스크")
+  public record Task(
+      @Schema(description = "태스크 식별자") UUID id,
+      @Schema(description = "제목. generating 동안에도 항상 유효한 draft입니다") String title,
+      @Schema(description = "상태", example = "todo") String status,
+      @Schema(
+              description =
+                  "AI가 제목을 더 손볼 것이 남았는지. generating이면 나중에 다시 조회해야 하고, ready면 지금 title이 최종 값입니다.",
+              allowableValues = {"generating", "ready"},
+              example = "generating")
+          String draftStatus) {}
 
   public record Signal(UUID id, String action) {}
 
   public static ConvertToTaskResponse from(SignalActionResult result) {
     SignalActionResult.TaskResult task = result.task();
     return new ConvertToTaskResponse(
-        new Task(task.id(), task.title(), task.status()),
+        new Task(task.id(), task.title(), task.status(), MobileDraftStatus.key(task.draftStatus())),
         new Signal(result.signalId(), result.actionType()));
   }
 }

@@ -23,6 +23,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import works.momens.server.minsu.DraftStatus;
 import works.momens.server.signal.SignalActionResult;
 import works.momens.server.signal.SignalActionService;
 import works.momens.server.signal.SignalDetail;
@@ -170,7 +171,7 @@ class SignalControllerTest {
                 signalId,
                 "convert_to_task",
                 true,
-                new SignalActionResult.TaskResult(taskId, "제목", "todo")));
+                new SignalActionResult.TaskResult(taskId, "제목", "todo", DraftStatus.GENERATING)));
 
     mockMvc
         .perform(
@@ -181,6 +182,8 @@ class SignalControllerTest {
         .andExpect(jsonPath("$.task.id").value(taskId.toString()))
         .andExpect(jsonPath("$.task.title").value("제목"))
         .andExpect(jsonPath("$.task.status").value("todo"))
+        // 공개 어휘는 소문자 두 값뿐이다(설계 7.1절).
+        .andExpect(jsonPath("$.task.draft_status").value("generating"))
         .andExpect(jsonPath("$.signal.id").value(signalId.toString()))
         .andExpect(jsonPath("$.signal.action").value("convert_to_task"));
   }
@@ -196,7 +199,7 @@ class SignalControllerTest {
                 signalId,
                 "convert_to_task",
                 false,
-                new SignalActionResult.TaskResult(taskId, "제목", "todo")));
+                new SignalActionResult.TaskResult(taskId, "제목", "todo", DraftStatus.READY)));
 
     mockMvc
         .perform(
@@ -204,7 +207,8 @@ class SignalControllerTest {
                 .principal(principal)
                 .header("API-Version", "1"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.task.id").value(taskId.toString()));
+        .andExpect(jsonPath("$.task.id").value(taskId.toString()))
+        .andExpect(jsonPath("$.task.draft_status").value("ready"));
   }
 
   @Test

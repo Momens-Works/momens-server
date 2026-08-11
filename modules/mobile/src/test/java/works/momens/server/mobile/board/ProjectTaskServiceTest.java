@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -15,12 +16,15 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.context.EntityRelationReader;
+import works.momens.server.minsu.DraftStatus;
+import works.momens.server.minsu.TaskDraftStatusReader;
 import works.momens.server.project.BoardTask;
 import works.momens.server.project.CreateTaskCommand;
 import works.momens.server.project.CreatedTask;
@@ -52,6 +56,7 @@ class ProjectTaskServiceTest {
   @Mock private UserService userService;
   @Mock private EntityRelationReader entityRelationReader;
   @Mock private SourceRefReader sourceRefReader;
+  @Mock private TaskDraftStatusReader taskDraftStatusReader;
   @InjectMocks private ProjectTaskService projectTaskService;
 
   private static final UUID PROJECT_ID = UUID.randomUUID();
@@ -224,6 +229,33 @@ class ProjectTaskServiceTest {
   }
 
   @Test
+  void getTaskDetailReadsLedgerBeforeTask() {
+    when(taskDraftStatusReader.statusOf(TASK_ID)).thenReturn(DraftStatus.GENERATING);
+    when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
+    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
+
+    MobileTaskDetailView view = projectTaskService.getTaskDetail(TASK_ID, CALLER_ID);
+
+    assertThat(view.draftStatus()).isEqualTo(DraftStatus.GENERATING);
+    // 순서가 계약이다(설계 7.3절). 역순이면 이전 title과 ready가 함께 나가는 창이 열리고, 그때 앱은
+    // 재조회를 멈춰 갱신을 영구히 놓친다.
+    InOrder order = inOrder(taskDraftStatusReader, taskReader);
+    order.verify(taskDraftStatusReader).statusOf(TASK_ID);
+    order.verify(taskReader).findDetail(TASK_ID);
+  }
+
+  @Test
+  void getTaskDetailReturnsReadyWhenTaskHasNoLedgerRow() {
+    // 비동기 도입 이전·비활성·Signal을 거치지 않은 task가 여기 해당한다(설계 7.1절).
+    when(taskDraftStatusReader.statusOf(TASK_ID)).thenReturn(DraftStatus.READY);
+    when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
+    when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
+
+    assertThat(projectTaskService.getTaskDetail(TASK_ID, CALLER_ID).draftStatus())
+        .isEqualTo(DraftStatus.READY);
+  }
+
+  @Test
   void getTaskDetailJoinsAssigneeProfileAndMapsUrgentToHigh() {
     UUID assigneeId = UUID.randomUUID();
     when(taskReader.findDetail(TASK_ID))
@@ -236,7 +268,7 @@ class ProjectTaskServiceTest {
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
     when(userService.getProfile(assigneeId)).thenReturn(profile(assigneeId, "김규일"));
 
-    MobileTaskDetail result = projectTaskService.getTaskDetail(TASK_ID, CALLER_ID);
+    MobileTaskDetail result = projectTaskService.getTaskDetail(TASK_ID, CALLER_ID).detail();
 
     assertThat(result.assignee())
         .isEqualTo(
@@ -254,7 +286,7 @@ class ProjectTaskServiceTest {
     when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
 
-    MobileTaskDetail result = projectTaskService.getTaskDetail(TASK_ID, CALLER_ID);
+    MobileTaskDetail result = projectTaskService.getTaskDetail(TASK_ID, CALLER_ID).detail();
 
     assertThat(result.assignee()).isNull();
     assertThat(result.purpose()).isNull();
@@ -278,7 +310,7 @@ class ProjectTaskServiceTest {
                     "권한 거부 흐름을 PM과 확정하세요.")));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
 
-    MobileTaskDetail result = projectTaskService.getTaskDetail(TASK_ID, CALLER_ID);
+    MobileTaskDetail result = projectTaskService.getTaskDetail(TASK_ID, CALLER_ID).detail();
 
     // 민수 산출물은 모바일 표기 매핑 없이 그대로 내려간다(priority의 urgent→high 매핑과 대비).
     assertThat(result.openQuestions())
@@ -311,7 +343,7 @@ class ProjectTaskServiceTest {
                     OCCURRED_AT)));
 
     List<MobileTaskDetail.Material> materials =
-        projectTaskService.getTaskDetail(TASK_ID, CALLER_ID).materials();
+        projectTaskService.getTaskDetail(TASK_ID, CALLER_ID).detail().materials();
 
     assertThat(materials).extracting(MobileTaskDetail.Material::id).containsExactly(figma, slack);
     assertThat(materials.getFirst())
