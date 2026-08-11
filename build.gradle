@@ -18,6 +18,12 @@ spotless {
         trimTrailingWhitespace()
         endWithNewline()
     }
+
+    format 'versionCatalog', {
+        target 'gradle/*.versions.toml'
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
 }
 
 // 로컬 git 훅을 설치합니다. hooks/ 는 버전 관리되지만 .git/hooks 는 아니므로,
