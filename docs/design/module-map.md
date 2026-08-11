@@ -40,9 +40,12 @@
 - `context`는 `entity_relations`를 읽어 연결된 식별자만 돌려준다. 지금은 도메인 모듈에 의존하지 않고,
   식별자로 본문을 채우는 조합은 소비하는 쪽이 한다(`mobile`이 `context`의 링크와 `source`의
   source_ref 조회를 엮어 태스크 관련자료를 만든다).
-- `mobile`은 `user`, `project`, `workspace`, `signal`, `context`, `source`, `notification`의 public
-  API만 조합한다(bootstrap, 멤버 조회, 브리프, 태스크 관련자료, push 설치 등록·해제). 도메인 정책을
-  소유하지 않는다.
+- `mobile`은 `user`, `project`, `workspace`, `signal`, `context`, `source`, `notification`, `minsu`의
+  public API만 조합한다(bootstrap, 멤버 조회, 브리프, 태스크 관련자료, push 설치 등록·해제, 태스크
+  상세의 draft 생성 상태). 도메인 정책을 소유하지 않는다.
+- 태스크 상세의 `draft_status`를 `mobile`이 읽는 이유는 태스크 상세를 소유한 `project`에서
+  `minsu`를 부르면 `minsu` → `project`(draft 반영)와 맞물려 순환이 되기 때문이다. 두 원장을 엮는
+  조합은 표면이 한다(MOM-0822).
 - `signal`은 `project`의 project/workspace 해석 public API와 `workspace`의 RBAC public API를 사용한다.
   상세 응답의 evidence는 `source`의 source_ref 조회 public API로 hydrate한다.
   Signal을 task로 수용할 때 `minsu`의 `SignalTaskDraftGenerator`와 `project`의 task 생성 public
@@ -290,7 +293,9 @@ dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패
   (도메인 description), priority 매핑, 빈 값 고정(open_questions는 빈 배열, next_action은 null)은
   조합 규칙이라 이 모듈이 소유한다(MOM-63). 관련자료는 context의 링크와 source의 원본을 조합해
   채우고, 연결이 없으면 빈 배열이다(MOM-0779). 수정 계열은 MOM-75가 같은 `/tasks/*` 표면에
-  추가한다.
+  추가한다. `draft_status`는 minsu의 `TaskDraftStatusReader`로 읽으며, **원장을 task보다 먼저
+  읽는 순서가 계약이다**(MOM-0822, 비동기 생성 설계 7.3절). 역순이면 이전 title과 `ready`가 함께
+  나가 앱이 재조회를 멈춘 채 갱신을 놓친다.
 - `GET /api/mobile/projects/{projectId}/signals`, `GET /api/mobile/signals/{signalId}`,
   `POST /api/mobile/signals/{signalId}/actions/convert-to-task`,
   `POST /api/mobile/signals/{signalId}/actions/dismiss`: Signal 목록·상세·action 컨트롤러를 소유하고

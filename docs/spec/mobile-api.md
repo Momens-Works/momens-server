@@ -376,6 +376,18 @@ backing에 저장하지 않습니다.
 
 클라이언트는 title·role·priority를 선택하거나 전송하지 않습니다.
 
+`draft_status`는 민수가 이 태스크의 제목을 더 손볼 것이 남았는지를 알립니다. 값은 `generating`과
+`ready` 둘뿐이며, 생성이 실패했는지 사용자가 먼저 편집했는지는 구분하지 않고 모두 `ready`입니다.
+서버가 보장하는 것은 셋입니다.
+
+- `draft_status`는 반드시 `ready`에 도달합니다. `generating`에 갇히지 않습니다.
+- `ready`와 함께 돌려준 `title`이 최종 값입니다. 여기서 재조회를 멈춰도 갱신을 놓치지 않습니다.
+- `generating` 동안에도 `title`은 항상 유효한 값입니다. 로딩을 표시하지 않고 그대로 렌더해도 됩니다.
+
+`generating`을 어떻게 표시할지와 재조회 간격은 앱이 정합니다. 결과를 확인하는 경로는 이 응답과
+태스크 상세 둘뿐이고, **보드·목록에는 `draft_status`가 없습니다.** 보드 카드의 title은 사용자가
+상세에 들어가지 않으면 이전 값인 채로 있다가 다음 목록 조회에서 조용히 바뀝니다.
+
 #### Response 201
 
 ```json
@@ -383,7 +395,8 @@ backing에 저장하지 않습니다.
   "task": {
     "id": "new-task-uuid",
     "title": "권한 요청 플로우 점검",
-    "status": "todo"
+    "status": "todo",
+    "draft_status": "generating"
   },
   "signal": {
     "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
@@ -401,7 +414,8 @@ backing에 저장하지 않습니다.
   "task": {
     "id": "existing-task-uuid",
     "title": "권한 요청 플로우 점검",
-    "status": "todo"
+    "status": "todo",
+    "draft_status": "ready"
   },
   "signal": {
     "id": "6f3d8a61-4de7-4c01-9d2b-16fdf182e9a1",
@@ -762,9 +776,17 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
       "body": "약한 비밀번호 기준을 얼마나 구체적으로 안내할지 결정 필요"
     }
   ],
-  "next_action": "에러 메시지 정책 초안을 검토하고 핵심 문구 다섯 가지를 먼저 확정하세요."
+  "next_action": "에러 메시지 정책 초안을 검토하고 핵심 문구 다섯 가지를 먼저 확정하세요.",
+  "draft_status": "ready"
 }
 ```
+
+`draft_status`는 민수가 이 태스크의 제목을 더 손볼 것이 남았는지를 알립니다. 값과 보장은
+convert-to-task 응답과 같습니다. 앱은 `generating`이면 나중에 다시 조회해 종료를 확인합니다.
+`convert-to-task`를 거치지 않은 태스크는 항상 `ready`입니다.
+
+다만 이 조회는 담당자·관련자료를 함께 구성하는 무거운 경로라 짧은 간격의 폴링에는 적합하지 않습니다.
+폴링 부담이 문제가 되면 경량 상태 조회 엔드포인트나 재조회 간격 힌트를 후속으로 검토합니다.
 
 `materials[].source_url`은 관련자료에서 원본 문서로 이동할 때 사용합니다.
 
