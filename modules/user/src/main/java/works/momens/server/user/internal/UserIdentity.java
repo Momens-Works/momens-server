@@ -20,6 +20,10 @@ import works.momens.server.common.persistence.BaseEntity;
  *
  * <p>{@code @Enumerated(EnumType.STRING)}은 enum 이름을 대문자로 저장하므로 DB에 저장되는 {@code 'google'}과 일치하지
  * 않습니다. 따라서 provider는 문자열로 저장하고, 허용할 값의 범위는 마이그레이션의 CHECK 제약으로 관리합니다.
+ *
+ * <p>운영 경로에서는 이 엔티티로 직접 행을 저장하지 않습니다. 쓰기 작업은 {@code UserIdentityRepository.insertIgnoringConflict}의
+ * 네이티브 INSERT로 처리하며, 아래 생성자는 테스트에서 스키마 제약을 검증할 때 사용합니다. 네이티브 INSERT는 JPA 감사 기능을 거치지 않기 때문에 {@code
+ * created_at}과 {@code updated_at}은 스키마에 정의된 기본값으로 채워집니다.
  */
 @Getter
 @Entity
