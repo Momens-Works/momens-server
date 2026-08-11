@@ -22,7 +22,9 @@ public record ConvertToTaskResponse(Task task, Signal signal) {
       @Schema(description = "상태", example = "todo") String status,
       @Schema(
               description =
-                  "AI가 제목을 더 손볼 것이 남았는지. generating이면 나중에 다시 조회해야 하고, ready면 지금 title이 최종 값입니다.",
+                  "AI가 제목을 더 손볼 것이 남았는지. generating이면 나중에 다시 조회해야 합니다."
+                      + " ready면 정상 종료 기준으로 지금 title이 최종 값이며, 생성이 deadline을 넘겨 닫힌"
+                      + " 경우에만 뒤늦은 반영으로 한 번 더 바뀔 수 있습니다.",
               allowableValues = {"generating", "ready"},
               example = "generating")
           String draftStatus) {}
