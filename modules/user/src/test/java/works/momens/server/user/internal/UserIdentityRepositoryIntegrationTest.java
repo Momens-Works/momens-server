@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.user.UserService;
 
 /**
  * {@code user_identities} 스키마와 엔티티 매핑을 검증합니다.
@@ -29,8 +30,6 @@ import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 @Import(JpaAuditingConfig.class)
 class UserIdentityRepositoryIntegrationTest extends AbstractPostgresIntegrationTest {
 
-  private static final String GOOGLE = "google";
-
   @Autowired private UserIdentityRepository userIdentityRepository;
   @Autowired private UserRepository userRepository;
   @Autowired private TestEntityManager entityManager;
@@ -40,7 +39,8 @@ class UserIdentityRepositoryIntegrationTest extends AbstractPostgresIntegrationT
   void savesIdentityWithGeneratedIdAndAuditFields() {
     UUID userId = persistUser("identity-save@momens.works");
 
-    UserIdentity saved = userIdentityRepository.save(identity(userId, GOOGLE, "sub-save"));
+    UserIdentity saved =
+        userIdentityRepository.save(identity(userId, UserService.PROVIDER_GOOGLE, "sub-save"));
     entityManager.flush();
     entityManager.clear();
 
@@ -56,15 +56,17 @@ class UserIdentityRepositoryIntegrationTest extends AbstractPostgresIntegrationT
   @DisplayName("저장한 로그인 수단을 provider와 provider_user_id로 조회할 수 있다")
   void readsBackByProviderAndProviderUserId() {
     UUID userId = persistUser("identity-read@momens.works");
-    userIdentityRepository.save(identity(userId, GOOGLE, "sub-read"));
+    userIdentityRepository.save(identity(userId, UserService.PROVIDER_GOOGLE, "sub-read"));
     entityManager.flush();
     entityManager.clear();
 
     UserIdentity found =
-        userIdentityRepository.findByProviderAndProviderUserId(GOOGLE, "sub-read").orElseThrow();
+        userIdentityRepository
+            .findByProviderAndProviderUserId(UserService.PROVIDER_GOOGLE, "sub-read")
+            .orElseThrow();
 
     assertThat(found.getUserId()).isEqualTo(userId);
-    assertThat(found.getProvider()).isEqualTo(GOOGLE);
+    assertThat(found.getProvider()).isEqualTo(UserService.PROVIDER_GOOGLE);
     assertThat(found.getProviderUserId()).isEqualTo("sub-read");
   }
 
@@ -73,10 +75,12 @@ class UserIdentityRepositoryIntegrationTest extends AbstractPostgresIntegrationT
   void rejectsDuplicateProviderUserId() {
     UUID first = persistUser("identity-dup-1@momens.works");
     UUID second = persistUser("identity-dup-2@momens.works");
-    userIdentityRepository.saveAndFlush(identity(first, GOOGLE, "sub-dup"));
+    userIdentityRepository.saveAndFlush(identity(first, UserService.PROVIDER_GOOGLE, "sub-dup"));
 
     assertThatThrownBy(
-            () -> userIdentityRepository.saveAndFlush(identity(second, GOOGLE, "sub-dup")))
+            () ->
+                userIdentityRepository.saveAndFlush(
+                    identity(second, UserService.PROVIDER_GOOGLE, "sub-dup")))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
@@ -85,16 +89,17 @@ class UserIdentityRepositoryIntegrationTest extends AbstractPostgresIntegrationT
   void insertIgnoringConflictReturnsZeroOnDuplicate() {
     UUID first = persistUser("identity-conflict-1@momens.works");
     UUID second = persistUser("identity-conflict-2@momens.works");
-    userIdentityRepository.saveAndFlush(identity(first, GOOGLE, "sub-conflict"));
+    userIdentityRepository.saveAndFlush(
+        identity(first, UserService.PROVIDER_GOOGLE, "sub-conflict"));
 
     int inserted =
         userIdentityRepository.insertIgnoringConflict(
-            UUID.randomUUID(), second, GOOGLE, "sub-conflict");
+            UUID.randomUUID(), second, UserService.PROVIDER_GOOGLE, "sub-conflict");
 
     assertThat(inserted).isZero();
     assertThat(
             userIdentityRepository
-                .findByProviderAndProviderUserId(GOOGLE, "sub-conflict")
+                .findByProviderAndProviderUserId(UserService.PROVIDER_GOOGLE, "sub-conflict")
                 .orElseThrow()
                 .getUserId())
         .isEqualTo(first);
@@ -117,7 +122,7 @@ class UserIdentityRepositoryIntegrationTest extends AbstractPostgresIntegrationT
   @DisplayName("사용자를 삭제하면 해당 사용자의 로그인 수단도 함께 삭제된다")
   void cascadesDeleteFromUser() {
     UUID userId = persistUser("identity-cascade@momens.works");
-    userIdentityRepository.save(identity(userId, GOOGLE, "sub-cascade"));
+    userIdentityRepository.save(identity(userId, UserService.PROVIDER_GOOGLE, "sub-cascade"));
     entityManager.flush();
 
     userRepository.deleteById(userId);
@@ -126,7 +131,9 @@ class UserIdentityRepositoryIntegrationTest extends AbstractPostgresIntegrationT
     // 실제 삭제 여부를 확인하려면 clear() 이후 다시 조회해야 한다.
     entityManager.clear();
 
-    assertThat(userIdentityRepository.findByProviderAndProviderUserId(GOOGLE, "sub-cascade"))
+    assertThat(
+            userIdentityRepository.findByProviderAndProviderUserId(
+                UserService.PROVIDER_GOOGLE, "sub-cascade"))
         .isEmpty();
   }
 
