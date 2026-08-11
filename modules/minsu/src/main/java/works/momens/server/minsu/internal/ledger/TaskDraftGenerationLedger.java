@@ -125,6 +125,26 @@ class TaskDraftGenerationLedger {
   }
 
   /**
+   * 반영 창이 닫힌 미종료 원장을 종료로 닫는다(11.1절).
+   *
+   * <p>사유는 {@code operationally_closed}가 아니라 <b>{@code deadline_exceeded}</b>다. 전자는 운영자가 명시적으로 끝내는
+   * 경우이고(11.1절), 이건 나이 상한을 넘겨 자동으로 닫히는 것이라 {@link #record}가 같은 상황에 이미 쓰는 사유와 같다.
+   *
+   * <p>bulk update가 아니라 행을 잠그고 엔티티를 바꾼다. bulk는 JPA Auditing을 우회해 {@code updated_at}이 멈추고(MOM-0819
+   * 코멘트 1번), 무엇보다 종료 지표가 이 경로만 비게 된다. 한 번에 처리할 수를 제한해 rollback 직후처럼 대상이 많을 때도 트랜잭션이 길어지지 않게 한다.
+   *
+   * @return 이번 주기에 닫은 수. 남은 것이 있으면 다음 주기가 이어서 처리한다
+   */
+  @Transactional
+  public int closeAbandoned(int limit) {
+    List<TaskDraftGeneration> abandoned = repository.lockAbandoned(limit);
+    for (TaskDraftGeneration generation : abandoned) {
+      complete(generation, CompletionReason.DEADLINE_EXCEEDED);
+    }
+    return abandoned.size();
+  }
+
+  /**
    * 실행 결과를 원장에 기록한다(9.2절 표).
    *
    * <p>claim token이 다르면 그 결과는 stale이므로 버린다(8.2절). lease가 만료돼 다른 worker가 재claim한 뒤 이전 실행이 뒤늦게 돌아오는

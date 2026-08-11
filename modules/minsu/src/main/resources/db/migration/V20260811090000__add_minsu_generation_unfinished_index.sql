@@ -3,6 +3,10 @@
 -- 지표 스냅샷은 다음 여섯을 한 쿼리로 집계한다: pending·processing 건수, 가장 오래된 미종료 age,
 -- 만료 lease 수와 최대 age, read_deadline_at을 지난 미종료 수.
 --
+-- 이 유계성은 공짜가 아니다. 두 claim 쿼리가 apply_cutoff_at > NOW()를 요구하므로 그 시각을 지난
+-- 행은 영영 집히지 않고, 닫아 주는 경로가 없으면 미종료로 영구히 쌓인다. MinsuAbandonedGenerationScheduler가
+-- 그 행들을 deadline_exceeded로 닫는 것이 이 인덱스와 집계 설계의 전제다(설계 11.1절).
+--
 -- 여섯 모두 미종료 행만 필요하다. completed를 보는 집계가 하나도 없어서 스캔 대상을
 -- `status <> 'completed'`로 좁힐 수 있고, 미종료 집합은 처리량에 묶여 유계이므로 테이블이 아무리
 -- 커져도 이 쿼리 비용이 늘지 않는다. 이 성질이 "completed 건수를 gauge로 두지 않는다"는 판단의

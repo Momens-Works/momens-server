@@ -467,6 +467,50 @@ class TaskDraftGenerationLedgerIntegrationTest extends AbstractPostgresIntegrati
     return repository.findByTaskId(taskId).orElseThrow();
   }
 
+  @Test
+  @DisplayName("반영 창이 닫힌 pending을 deadline_exceeded로 닫는다")
+  void closesAbandonedPending() {
+    // 두 claim 쿼리가 apply_cutoff_at > NOW()를 요구하므로 이 행은 영영 집히지 않는다. 닫아 주는
+    // 경로가 없으면 미종료로 영구히 남아 상태 gauge가 현재 적체와 버려진 행을 구분하지 못하고,
+    // 부분 인덱스의 "미종료 집합은 유계" 전제도 깨진다(11.1절).
+    UUID taskId = persistPending();
+    passApplyCutoff(taskId);
+
+    int closed = ledger.closeAbandoned(100);
+
+    TaskDraftGeneration closedGeneration = repository.findByTaskId(taskId).orElseThrow();
+    assertAll(
+        () -> assertThat(closed).isEqualTo(1),
+        () -> assertThat(closedGeneration.getStatus()).isEqualTo("completed"),
+        // operationally_closed는 운영자가 명시적으로 끝내는 경우다. 이건 나이 상한 초과라 record()가
+        // 같은 상황에 쓰는 사유와 같아야 한다.
+        () -> assertThat(closedGeneration.getCompletionReason()).isEqualTo("deadline_exceeded"),
+        () -> assertThat(repository.snapshotUnfinished().getPending()).isZero());
+  }
+
+  @Test
+  @DisplayName("lease가 살아 있는 processing은 닫지 않는다")
+  void keepsInFlightGenerationUntilItsResultArrives() {
+    // 지금 누군가 실행 중이고 그 결과는 record()의 cutoff 분기가 닫는다. 여기서 먼저 닫으면 claim
+    // token이 지워져 그 결과가 stale로 잘못 집계된다.
+    UUID taskId = persistPending();
+    ledger.claimDue(1);
+    passApplyCutoff(taskId);
+
+    assertThat(ledger.closeAbandoned(100)).isZero();
+  }
+
+  @Test
+  @DisplayName("워커가 사라진 processing은 lease가 만료된 뒤 닫는다")
+  void closesInFlightGenerationOnceItsLeaseExpires() {
+    UUID taskId = persistPending();
+    ledger.claimDue(1);
+    passApplyCutoff(taskId);
+    expireLease(taskId);
+
+    assertThat(ledger.closeAbandoned(100)).isEqualTo(1);
+  }
+
   /** lease만 되돌린다. {@code next_attempt_at}은 그대로 두어 만료 회수 경로만 재현한다. */
   private void expireLease(UUID taskId) {
     entityManager

@@ -22,15 +22,16 @@ spring:
   # 기본 TaskScheduler는 풀 크기가 1이라 모든 @Scheduled가 한 스레드에서 직렬 실행됩니다(MOM-0810
   # 설계 11.3절). minsu drain은 claim 트랜잭션만 이 스레드에서 하고 LLM 호출은 자기 실행기로
   # 넘기지만, 그래도 notification의 1초 주기 push 폴링과 같은 스레드를 쓰면 서로를 밀어냅니다.
-  # @Scheduled 빈이 셋입니다: notification push 폴링, minsu drain, minsu 지표 스냅샷. 앞의 둘은
-  # 오래 블로킹합니다(drain은 배치의 wall-clock 상한까지, push는 FCM 발송까지). 풀이 그보다 작으면
-  # 지표 스냅샷이 그만큼 밀리는데, 하필 drain이 느린 상황이 그 지표가 존재하는 이유라 관측이 필요한
-  # 순간에 관측이 멈춥니다. 빈 수보다 하나 크게 둔 것은 그 실패가 조용하기 때문입니다. 다른 모듈이
-  # 폴러를 하나 더 붙일 때 이 파일을 볼 사람이 minsu 담당자가 아닙니다(SchedulingConfig 참고).
+  # @Scheduled 빈이 넷입니다: notification push 폴링, minsu drain, minsu 지표 스냅샷,
+  # minsu 원장 종료. 앞의 둘은 오래 블로킹합니다(drain은 배치의 wall-clock 상한까지, push는 FCM
+  # 발송까지). 풀이 그보다 작으면 뒤의 둘이 그만큼 밀리는데, 하필 drain이 느린 상황이 그 둘이
+  # 존재하는 이유라 관측이 필요한 순간에 관측이 멈춥니다. 빈 수보다 하나 크게 둔 것은 그 실패가
+  # 조용하기 때문입니다. 다른 모듈이 폴러를 하나 더 붙일 때 이 파일을 볼 사람이 minsu 담당자가
+  # 아닙니다(SchedulingConfig 참고).
   task:
     scheduling:
       pool:
-        size: 4
+        size: 5
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}

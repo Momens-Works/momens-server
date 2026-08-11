@@ -109,6 +109,28 @@ interface TaskDraftGenerationRepository extends JpaRepository<TaskDraftGeneratio
   @Query(value = SNAPSHOT_UNFINISHED_SQL, nativeQuery = true)
   LedgerSnapshotRow snapshotUnfinished();
 
+  /**
+   * 반영 창이 닫혀 아무도 집을 수 없게 된 미종료 원장을 회수 대상으로 잠근다(11.1절).
+   *
+   * <p>두 claim 쿼리가 {@code apply_cutoff_at > NOW()}를 요구하므로 그 시각을 지난 행은 <b>영영 claim되지 않는다.</b> 종료 전이는
+   * claim된 행에만 일어나므로 닫아 주는 경로가 없으면 미종료로 영구히 남고, 그러면 상태 gauge가 현재 적체와 버려진 행을 구분하지 못하며 {@link
+   * #snapshotUnfinished()}의 "미종료 집합은 유계"라는 전제도 깨진다.
+   *
+   * <p><b>진행 중인 시도와 겹치지 않도록 조건을 좁힌다.</b> lease가 살아 있는 {@code processing}은 지금 누군가 실행 중이고, 그 결과는
+   * {@link TaskDraftGenerationLedger#record}의 cutoff 분기가 {@code deadline_exceeded}로 닫는다. 여기서 먼저 닫으면
+   * claim token이 지워져 그 결과가 stale로 잘못 집계된다. 워커가 죽었으면 lease가 만료되므로 다음 주기에 이쪽으로 들어온다.
+   *
+   * <p>이 조건은 두 claim 쿼리와 <b>교집합이 없다.</b> 양쪽 모두 {@code apply_cutoff_at > NOW()}를 요구하므로 경합하지 않는다.
+   */
+  @Query(
+      value =
+          "SELECT * FROM minsu_task_draft_generations "
+              + "WHERE status <> 'completed' AND apply_cutoff_at <= NOW() "
+              + "AND (status = 'pending' OR lease_expires_at <= NOW()) "
+              + "ORDER BY apply_cutoff_at ASC LIMIT :limit FOR UPDATE SKIP LOCKED",
+      nativeQuery = true)
+  List<TaskDraftGeneration> lockAbandoned(@Param("limit") int limit);
+
   /** 결과 기록 트랜잭션이 대상 행을 잠근다. 여기서 잠가야 claim token 재검증과 전이가 원자적이다(8.2절). */
   @Query(
       value = "SELECT * FROM minsu_task_draft_generations WHERE id = :id FOR UPDATE",
