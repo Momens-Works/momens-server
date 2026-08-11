@@ -71,7 +71,10 @@ class MobileSignalConvertAsyncEnrollmentIntegrationTest extends AbstractPostgres
                 .header("API-Version", "1"))
         .andExpect(status().isCreated())
         // 요청 경로는 고정 fallback만 돌려준다. 풍부한 draft는 scheduler가 나중에 반영한다.
-        .andExpect(jsonPath("$.task.title").value("결제 실패율이 올라감"));
+        .andExpect(jsonPath("$.task.title").value("결제 실패율이 올라감"))
+        // 적재했으므로 generating이다. 이 값은 적재가 돌려준 것이고 원장을 다시 읽어 얻은 것이 아니다.
+        // 재조회하면 위 fallback title과 짝이 맞지 않는 ready가 나올 수 있다(설계 7.3절, MOM-0822).
+        .andExpect(jsonPath("$.task.draft_status").value("generating"));
 
     Map<String, Object> ledger =
         jdbcTemplate.queryForMap(

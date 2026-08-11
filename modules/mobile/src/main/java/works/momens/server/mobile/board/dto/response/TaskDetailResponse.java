@@ -4,7 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import works.momens.server.mobile.MobileDraftStatus;
 import works.momens.server.mobile.board.MobileTaskDetail;
+import works.momens.server.mobile.board.MobileTaskDetailView;
 
 /**
  * {@code GET /api/mobile/tasks/{taskId}} 응답. 응답 형식은 docs/spec/mobile-api.md 태스크 상세 절을 따릅니다.
@@ -12,6 +14,9 @@ import works.momens.server.mobile.board.MobileTaskDetail;
  * <p>완료 수와 전체 수는 항목 목록에서 파생합니다(별도 저장 없음). {@code materials}는 태스크에 연결된 source_ref를 조합한 값이고, 연결된 자료가
  * 없으면 빈 배열입니다. {@code open_questions}와 {@code next_action}은 민수가 생산한 값을 그대로 내려줍니다(ADR-0011). 열린질문이
  * 없으면 빈 배열이고, 다음행동을 아직 만들지 않았으면 null입니다.
+ *
+ * <p>{@code draft_status}는 이 태스크의 제목을 AI가 더 손볼 것이 남았는지를 알립니다(MOM-0822). 앱이 결과를 확인하는 경로는 convert 응답과
+ * 이 상세 둘뿐이고, 보드·목록에는 노출하지 않습니다(설계 7.2절).
  */
 @Schema(description = "태스크 상세 응답")
 public record TaskDetailResponse(
@@ -31,7 +36,13 @@ public record TaskDetailResponse(
     @Schema(description = "완료기준") ChecklistResponse checklist,
     @Schema(description = "관련자료 목록. 연결된 자료가 없으면 빈 배열") List<MaterialResponse> materials,
     @Schema(description = "열린질문 목록. 민수가 만든 질문이 없으면 빈 배열") List<OpenQuestionResponse> openQuestions,
-    @Schema(description = "다음행동. 민수가 아직 만들지 않았으면 null", nullable = true) String nextAction) {
+    @Schema(description = "다음행동. 민수가 아직 만들지 않았으면 null", nullable = true) String nextAction,
+    @Schema(
+            description =
+                "AI가 제목을 더 손볼 것이 남았는지. generating이면 나중에 다시 조회해야 하고, ready면 지금 title이 최종 값입니다.",
+            allowableValues = {"generating", "ready"},
+            example = "ready")
+        String draftStatus) {
 
   @Schema(description = "담당자")
   public record AssigneeResponse(
@@ -68,7 +79,8 @@ public record TaskDetailResponse(
   public record OpenQuestionResponse(
       @Schema(description = "질문 식별자") UUID id, @Schema(description = "질문 본문") String body) {}
 
-  public static TaskDetailResponse from(MobileTaskDetail detail) {
+  public static TaskDetailResponse from(MobileTaskDetailView view) {
+    MobileTaskDetail detail = view.detail();
     List<ChecklistItemResponse> items =
         detail.checklistItems().stream()
             .map(item -> new ChecklistItemResponse(item.id(), item.title(), item.completed()))
@@ -96,7 +108,8 @@ public record TaskDetailResponse(
         checklist,
         materials,
         openQuestions,
-        detail.nextAction());
+        detail.nextAction(),
+        MobileDraftStatus.key(view.draftStatus()));
   }
 
   private static MaterialResponse toMaterial(MobileTaskDetail.Material material) {

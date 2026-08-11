@@ -24,6 +24,9 @@ dependencies {
     implementation project(':source')
     // push 설치 등록·해제 HTTP 표면이 notification public API에 위임합니다(MOM-0690).
     implementation project(':notification')
+    // 태스크 상세가 draft 생성 상태를 함께 내려줍니다(MOM-0822). 상태를 읽는 쪽이 조합 표면이어야 하는
+    // 이유는 task 상세를 소유한 project에서 minsu를 부르면 minsu → project와 맞물려 순환이 되기 때문입니다.
+    implementation project(':minsu')
 
     // bootstrap 컨트롤러(presentation).
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'

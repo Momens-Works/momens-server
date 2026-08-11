@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import works.momens.server.minsu.DraftStatus;
 import works.momens.server.minsu.PreparedTaskDraft;
 import works.momens.server.minsu.SignalTaskDraftGenerator;
 import works.momens.server.minsu.SignalTaskDraftInput;
@@ -70,14 +71,17 @@ class DefaultSignalTaskDraftGenerator implements SignalTaskDraftGenerator {
 
   @Override
   @Transactional(propagation = Propagation.MANDATORY)
-  public void enroll(PreparedTaskDraft prepared, UUID taskId, UUID workspaceId) {
+  public DraftStatus enroll(PreparedTaskDraft prepared, UUID taskId, UUID workspaceId) {
     // 동기 경로의 no-op에도 MANDATORY가 걸리는 것이 의도다. 여기서만 강제하면 위반이 비동기를 켠
     // 환경에서 처음 드러난다. 계약 위반은 설정과 무관하게 같은 자리에서 드러나야 한다.
     if (prepared instanceof SynchronousDraft) {
-      return;
+      return DraftStatus.READY;
     }
     // 우리가 만들지 않은 준비 결과는 적재기가 거부한다. 조용히 넘기면 적재되지 않은 채 ready가 된다.
     enroller.enroll(prepared, taskId, workspaceId);
+    // 적재에 성공한 행만 여기 도달한다(실패는 예외로 호출자 트랜잭션을 롤백시킨다). 따라서 이 값은
+    // 커밋될 원장의 상태와 어긋날 수 없다.
+    return DraftStatus.GENERATING;
   }
 
   private static PreparedTaskDraft synchronous(TaskDraft draft) {

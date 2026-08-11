@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.context.EntityRelationReader;
+import works.momens.server.minsu.DraftStatus;
+import works.momens.server.minsu.TaskDraftStatusReader;
 import works.momens.server.mobile.MobilePriority;
 import works.momens.server.project.BoardTask;
 import works.momens.server.project.CreateTaskCommand;
@@ -32,7 +34,7 @@ import works.momens.server.workspace.WorkspaceAccess;
 
 /**
  * 모바일 태스크 표면(보드 조회, 생성, 상세 조회)의 조합 서비스입니다. project(태스크 도메인), workspace(멤버십), user(프로필),
- * context(관련자료 연결), source(연결된 원본) public API를 조합하고 도메인 정책을 소유하지 않습니다.
+ * context(관련자료 연결), source(연결된 원본), minsu(draft 생성 상태) public API를 조합하고 도메인 정책을 소유하지 않습니다.
  *
  * <p>보드 그룹 구성과 상세의 purpose 개명은 모바일 조합 규칙이므로 이 서비스가 소유하고, 저장 priority 해석(urgent를 high로 반환)은 {@link
  * MobilePriority}가 소유합니다.
@@ -58,6 +60,7 @@ class ProjectTaskService {
   private final UserService userService;
   private final EntityRelationReader entityRelationReader;
   private final SourceRefReader sourceRefReader;
+  private final TaskDraftStatusReader taskDraftStatusReader;
 
   @Transactional(readOnly = true)
   public List<MobileTaskGroup> getBoard(UUID projectId, UUID userId) {
@@ -88,8 +91,20 @@ class ProjectTaskService {
         CreateTaskCommand.manual(projectId, workspaceId, title, role, priority));
   }
 
+  /**
+   * 태스크 상세를 조합한다. <b>원장 상태를 task보다 먼저 읽는다</b>(설계 7.3절). 순서를 뒤집으면 fallback title을 읽은 뒤 생성이 끝나는 창에서
+   * "이전 title + {@code ready}"가 나가고, 앱은 재조회를 멈춰 갱신을 영구히 놓친다. 반대 순서에서 나올 수 있는 "새 title + {@code
+   * generating}"은 앱이 한 번 더 조회할 뿐이라 안전하다.
+   *
+   * <p>이 성질은 {@code READ COMMITTED}에서 두 SELECT가 각자 snapshot을 뜨는 데 기댄다. 격리 수준을 올리거나 두 값을 한 번에 뜨도록
+   * 최적화하면 순서만으로는 정합성이 유지되지 않는다.
+   *
+   * <p>접근 권한을 확인하기 전에 원장을 읽지만, 원장 조회는 taskId로 상태 하나만 판정할 뿐 어떤 내용도 응답에 싣지 않는다. 권한이 없으면 아래에서 그대로
+   * 실패한다.
+   */
   @Transactional(readOnly = true)
-  public MobileTaskDetail getTaskDetail(UUID taskId, UUID userId) {
+  public MobileTaskDetailView getTaskDetail(UUID taskId, UUID userId) {
+    DraftStatus draftStatus = taskDraftStatusReader.statusOf(taskId);
     TaskDetail detail =
         taskReader
             .findDetail(taskId)
@@ -102,7 +117,7 @@ class ProjectTaskService {
       throw new BusinessException(
           CommonErrorCode.AUTH_FORBIDDEN, Map.of("task_id", taskId.toString()));
     }
-    return toMobileDetail(detail);
+    return new MobileTaskDetailView(draftStatus, toMobileDetail(detail));
   }
 
   @Transactional

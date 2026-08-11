@@ -3,6 +3,7 @@ package works.momens.server.signal.action;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -16,9 +17,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.dao.DataIntegrityViolationException;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.minsu.DraftStatus;
 import works.momens.server.minsu.PreparedTaskDraft;
 import works.momens.server.minsu.Priority;
 import works.momens.server.minsu.Role;
@@ -26,6 +29,7 @@ import works.momens.server.minsu.SignalTaskDraftGenerator;
 import works.momens.server.minsu.SignalTaskDraftInput;
 import works.momens.server.minsu.TaskDraft;
 import works.momens.server.minsu.TaskDraftEnrollmentException;
+import works.momens.server.minsu.TaskDraftStatusReader;
 import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
 import works.momens.server.signal.SignalActionResult;
@@ -47,6 +51,7 @@ class SignalActionServiceImplTest {
   private final SignalActionExecutor executor = mock(SignalActionExecutor.class);
   private final TaskReader taskReader = mock(TaskReader.class);
   private final SignalTaskDraftGenerator taskDraftGenerator = mock(SignalTaskDraftGenerator.class);
+  private final TaskDraftStatusReader taskDraftStatusReader = mock(TaskDraftStatusReader.class);
 
   private SignalActionServiceImpl service;
 
@@ -59,7 +64,8 @@ class SignalActionServiceImplTest {
             signalActionRepository,
             executor,
             taskReader,
-            taskDraftGenerator);
+            taskDraftGenerator,
+            taskDraftStatusReader);
   }
 
   /**
@@ -117,7 +123,8 @@ class SignalActionServiceImplTest {
                 SIGNAL_ID,
                 "convert_to_task",
                 true,
-                new SignalActionResult.TaskResult(UUID.randomUUID(), "결제 정책 확정하기", "todo")));
+                new SignalActionResult.TaskResult(
+                    UUID.randomUUID(), "결제 정책 확정하기", "todo", DraftStatus.GENERATING)));
 
     SignalActionResult result = service.convertToTask(SIGNAL_ID, USER_ID);
 
@@ -141,7 +148,8 @@ class SignalActionServiceImplTest {
                 SIGNAL_ID,
                 "convert_to_task",
                 true,
-                new SignalActionResult.TaskResult(UUID.randomUUID(), "제목", "todo")));
+                new SignalActionResult.TaskResult(
+                    UUID.randomUUID(), "제목", "todo", DraftStatus.GENERATING)));
 
     SignalActionResult result = service.convertToTask(SIGNAL_ID, USER_ID);
 
@@ -255,6 +263,53 @@ class SignalActionServiceImplTest {
     verify(executor, never()).convert(any(), any(), any());
     verify(taskDraftGenerator, never()).prepare(any());
     verify(signalReader, never()).findDraftEvidence(any());
+  }
+
+  private static SignalAction existingConvert(UUID taskId) {
+    return SignalAction.builder()
+        .workspaceId(WORKSPACE_ID)
+        .signalId(SIGNAL_ID)
+        .actionType("convert_to_task")
+        .resultTaskId(taskId)
+        .processedByUserId(USER_ID)
+        .build();
+  }
+
+  private static TaskDetail taskDetail(UUID taskId, String title) {
+    return new TaskDetail(
+        taskId,
+        PROJECT_ID,
+        WORKSPACE_ID,
+        title,
+        "todo",
+        "medium",
+        "pm",
+        null,
+        null,
+        List.of(),
+        List.of(),
+        null);
+  }
+
+  @Test
+  @DisplayName("replay는 원장을 task보다 먼저 읽고 그 상태를 응답에 담는다")
+  void replayReadsLedgerBeforeTask() {
+    when(signalReader.findLive(SIGNAL_ID)).thenReturn(Optional.of(snapshot()));
+    when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
+    UUID taskId = UUID.randomUUID();
+    when(signalActionRepository.findBySignalId(SIGNAL_ID))
+        .thenReturn(Optional.of(existingConvert(taskId)));
+    when(taskDraftStatusReader.statusOf(taskId)).thenReturn(DraftStatus.GENERATING);
+    when(taskReader.findDetail(taskId)).thenReturn(Optional.of(taskDetail(taskId, "제목")));
+
+    SignalActionResult result = service.convertToTask(SIGNAL_ID, USER_ID);
+
+    assertThat(result.task().draftStatus()).isEqualTo(DraftStatus.GENERATING);
+    // 역순이면 이전 title을 읽은 뒤 생성이 끝나 "이전 title + ready"가 나가고, 앱은 재조회를 멈춘 채
+    // 그 title에 영구히 갇힌다(설계 7.3절).
+    InOrder order = inOrder(taskDraftStatusReader, taskReader);
+    order.verify(taskDraftStatusReader).statusOf(taskId);
+    order.verify(taskReader).findDetail(taskId);
   }
 
   @Test

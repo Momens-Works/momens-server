@@ -5,6 +5,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import works.momens.server.minsu.DraftStatus;
 import works.momens.server.minsu.PreparedTaskDraft;
 import works.momens.server.minsu.SignalTaskDraftGenerator;
 import works.momens.server.minsu.TaskDraft;
@@ -55,7 +56,10 @@ class SignalActionExecutor {
                 draft.priority().value(),
                 signal.id()));
     // 원장 baseline은 방금 tasks에 쓴 값이어야 한다(8.1절). task 생성 직후에 적재해 두 값이 갈릴 자리를 두지 않는다.
-    taskDraftGenerator.enroll(prepared, created.id(), signal.workspaceId());
+    // 응답의 draft_status는 이 반환값이고 원장을 다시 읽지 않는다(7.3절). 재조회하면 아래 title(방금 쓴
+    // fallback)과 짝이 맞지 않는 ready가 나올 수 있다.
+    DraftStatus draftStatus =
+        taskDraftGenerator.enroll(prepared, created.id(), signal.workspaceId());
     signalActionRepository.save(
         SignalAction.builder()
             .workspaceId(signal.workspaceId())
@@ -74,7 +78,8 @@ class SignalActionExecutor {
         signal.id(),
         SignalActionType.CONVERT_TO_TASK.value(),
         true,
-        new SignalActionResult.TaskResult(created.id(), created.title(), created.status()));
+        new SignalActionResult.TaskResult(
+            created.id(), created.title(), created.status(), draftStatus));
   }
 
   @Transactional
