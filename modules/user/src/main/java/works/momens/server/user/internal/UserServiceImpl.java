@@ -40,6 +40,10 @@ class UserServiceImpl implements UserService {
       // 다른 사람의 계정에 로그인 수단을 연결하는 상황이 되므로 요청을 거부한다.
       // 이관 기간에는 email UNIQUE 제약이 유지되므로 동일 이메일로 신규 사용자 생성도 불가능하다.
       if (userIdentityRepository.existsOtherIdentity(userId, provider, providerUserId)) {
+        log.warn(
+            "이메일로 조회한 사용자에게 이미 다른 로그인 수단이 연결되어 있어 로그인을 거부했습니다. userId={} provider={}",
+            userId,
+            provider);
         throw new BusinessException(UserErrorCode.USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY);
       }
       // 삽입 결과가 0건이면 동시에 들어온 다른 요청이 먼저 로그인 수단을 연결한 것이다.
