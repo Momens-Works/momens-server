@@ -23,8 +23,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
-    // Google Gen AI Java SDK 최신 안정 버전입니다(2026-07-29 공개). Spring Boot BOM 관리 대상이
-    // 아니므로 버전 카탈로그에서 버전을 고정합니다.
+    // Google Gen AI Java SDK입니다. Spring Boot BOM 관리 대상이 아니므로 버전 카탈로그에서
+    // 버전을 고정합니다.
     implementation libs.google.genai
 
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
