@@ -23,6 +23,9 @@ Gradle 멀티모듈(빌드 타임 컴파일 격리)과 Spring Modulith(런타임
   기능 모듈이 의존할 수 있는 별도 모듈에 둡니다(`app`에 두면 순환 의존이 생김).
 - 모든 모듈은 같은 base package `works.momens.server.*` 아래 패키지를 써서, `app`
   클래스패스에서 Spring Modulith가 하나로 조립해 검증할 수 있게 합니다.
+- 버전을 명시하는 의존성은 모듈 `build.gradle`이 아니라 **버전 카탈로그**
+  (`gradle/libs.versions.toml`)에 추가합니다. Spring Boot BOM이 버전을 관리하는 의존성은
+  카탈로그에 두지 않습니다.
 
 ```text
 root
