@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -209,7 +211,7 @@ class ProjectTaskServiceTest {
 
   @Test
   void getTaskDetailThrowsTaskNotFoundWhenTaskMissing() {
-    when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.empty());
+    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> projectTaskService.getTaskDetail(TASK_ID, CALLER_ID))
         .isInstanceOf(BusinessException.class)
@@ -219,18 +221,22 @@ class ProjectTaskServiceTest {
 
   @Test
   void getTaskDetailThrowsForbiddenForNonMemberOfTaskWorkspace() {
-    when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
+    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(false);
 
     assertThatThrownBy(() -> projectTaskService.getTaskDetail(TASK_ID, CALLER_ID))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(CommonErrorCode.AUTH_FORBIDDEN);
+    // 원장 조회는 deadline으로 닫는 경로에서 counter를 올린다(비동기 생성 설계 9.3절). 권한 없는
+    // 호출자가 경보 대상 지표를 건드리지 못하도록 권한 확인이 앞선다.
+    verify(taskDraftStatusReader, never()).statusOf(any());
   }
 
   @Test
   void getTaskDetailReadsLedgerBeforeTask() {
     when(taskDraftStatusReader.statusOf(TASK_ID)).thenReturn(DraftStatus.GENERATING);
+    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
     when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
 
@@ -248,6 +254,7 @@ class ProjectTaskServiceTest {
   void getTaskDetailReturnsReadyWhenTaskHasNoLedgerRow() {
     // 비동기 도입 이전·비활성·Signal을 거치지 않은 task가 여기 해당한다(설계 7.1절).
     when(taskDraftStatusReader.statusOf(TASK_ID)).thenReturn(DraftStatus.READY);
+    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
     when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
 
@@ -258,6 +265,7 @@ class ProjectTaskServiceTest {
   @Test
   void getTaskDetailJoinsAssigneeProfileAndMapsUrgentToHigh() {
     UUID assigneeId = UUID.randomUUID();
+    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
     when(taskReader.findDetail(TASK_ID))
         .thenReturn(
             Optional.of(
@@ -283,6 +291,7 @@ class ProjectTaskServiceTest {
 
   @Test
   void getTaskDetailReturnsNullAssigneeAndPurposeWhenUnset() {
+    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
     when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
 
@@ -299,6 +308,7 @@ class ProjectTaskServiceTest {
   @Test
   void getTaskDetailPassesMinsuFieldsThroughUnchanged() {
     UUID questionId = UUID.randomUUID();
+    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
     when(taskReader.findDetail(TASK_ID))
         .thenReturn(
             Optional.of(
@@ -323,6 +333,7 @@ class ProjectTaskServiceTest {
     UUID figma = UUID.randomUUID();
     UUID slack = UUID.randomUUID();
     UUID gone = UUID.randomUUID();
+    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
     when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
     when(entityRelationReader.findLinkedSourceRefIds(WORKSPACE_ID, List.of(TASK_ID)))
