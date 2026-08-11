@@ -42,14 +42,15 @@ class UserServiceImpl implements UserService {
       if (userIdentityRepository.existsOtherIdentity(userId, provider, providerUserId)) {
         throw new BusinessException(UserErrorCode.USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY);
       }
-      // 삽입 결과를 별도로 확인하지 않아도 되는 이유는 users.email에 UNIQUE 제약이 있기 때문이다.
-      // 동일한 이메일로 들어온 요청은 모두 하나의 users 행으로 수렴하므로,
-      // 경합에서 실패한 요청도 결국 같은 사용자로 연결된다.
-      // 이관이 완료되어 해당 제약을 제거하게 되면 이 전제가 더 이상 성립하지 않으므로,
-      // 이 코드 역시 함께 검토해야 한다(ADR-0016 결정 6).
-      userIdentityRepository.insertIgnoringConflict(
-          UUID.randomUUID(), userId, provider, providerUserId);
-      return refreshProfile(userId, email, name, avatarUrl);
+      // 삽입 결과가 0건이면 동시에 들어온 다른 요청이 먼저 로그인 수단을 연결한 것이다.
+      // 이메일 변경 시점에는 동일한 Google 계정에서 발생한 요청이 서로 다른 이메일로 들어올 수 있고,
+      // 이 경우 각 요청이 서로 다른 users 행을 조회하게 된다. 따라서 이메일로 조회한 사용자가 아니라
+      // 실제로 로그인 수단이 연결된 사용자를 다시 조회해 로그인 흐름을 이어간다.
+      int linked =
+          userIdentityRepository.insertIgnoringConflict(
+              UUID.randomUUID(), userId, provider, providerUserId);
+      UUID linkedUserId = linked == 0 ? winnerUserId(provider, providerUserId) : userId;
+      return refreshProfile(linkedUserId, email, name, avatarUrl);
     }
 
     // 동일한 이메일로 최초 로그인 요청이 동시에 들어오더라도 upsert를 통해 하나의 users 행으로 수렴한다.
@@ -62,14 +63,16 @@ class UserServiceImpl implements UserService {
         userIdentityRepository.insertIgnoringConflict(
             UUID.randomUUID(), created.getId(), provider, providerUserId);
     if (inserted == 0) {
-      UUID winner =
-          userIdentityRepository
-              .findByProviderAndProviderUserId(provider, providerUserId)
-              .orElseThrow()
-              .getUserId();
-      return refreshProfile(winner, email, name, avatarUrl);
+      return refreshProfile(winnerUserId(provider, providerUserId), email, name, avatarUrl);
     }
     return toProfile(created);
+  }
+
+  private UUID winnerUserId(String provider, String providerUserId) {
+    return userIdentityRepository
+        .findByProviderAndProviderUserId(provider, providerUserId)
+        .orElseThrow()
+        .getUserId();
   }
 
   /** 로그인 시점의 최신 프로필을 반영합니다. 이메일은 충돌 시 건너뛰므로 별도 쿼리로 처리합니다. */
