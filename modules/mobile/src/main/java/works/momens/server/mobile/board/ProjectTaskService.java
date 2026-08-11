@@ -99,11 +99,12 @@ class ProjectTaskService {
    * <p>이 성질은 {@code READ COMMITTED}에서 두 SELECT가 각자 snapshot을 뜨는 데 기댄다. 격리 수준을 올리거나 두 값을 한 번에 뜨도록
    * 최적화하면 순서만으로는 정합성이 유지되지 않는다.
    *
-   * <p>접근 권한을 확인하기 전에 원장을 읽지만, 원장 조회는 taskId로 상태 하나만 판정할 뿐 어떤 내용도 응답에 싣지 않는다. 권한이 없으면 아래에서 그대로
-   * 실패한다.
+   * <p>권한은 상세가 아니라 {@code workspaceIdOf}로 먼저 확인한다. 원장 조회가 deadline으로 닫는 경로에서 counter를 올리므로(비동기 생성
+   * 설계 9.3절), 권한 없는 호출자가 경보 대상 지표를 건드리게 두지 않기 위해서다. 그 조회는 title을 읽지 않아 위 순서 계약과 무관하다.
    */
   @Transactional(readOnly = true)
   public MobileTaskDetailView getTaskDetail(UUID taskId, UUID userId) {
+    requireTaskMember(taskId, userId);
     DraftStatus draftStatus = taskDraftStatusReader.statusOf(taskId);
     TaskDetail detail =
         taskReader
@@ -112,11 +113,6 @@ class ProjectTaskService {
                 () ->
                     new BusinessException(
                         ProjectErrorCode.TASK_NOT_FOUND, Map.of("task_id", taskId.toString())));
-    // 태스크가 속한 workspace는 상세가 들고 있으므로(레거시 WorkspaceForTask와 같은 해석) 멤버십만 확인한다.
-    if (!workspaceAccess.isMember(detail.workspaceId(), userId)) {
-      throw new BusinessException(
-          CommonErrorCode.AUTH_FORBIDDEN, Map.of("task_id", taskId.toString()));
-    }
     return new MobileTaskDetailView(draftStatus, toMobileDetail(detail));
   }
 

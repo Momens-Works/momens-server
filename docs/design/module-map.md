@@ -295,7 +295,9 @@ dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패
   채우고, 연결이 없으면 빈 배열이다(MOM-0779). 수정 계열은 MOM-75가 같은 `/tasks/*` 표면에
   추가한다. `draft_status`는 minsu의 `TaskDraftStatusReader`로 읽으며, **원장을 task보다 먼저
   읽는 순서가 계약이다**(MOM-0822, 비동기 생성 설계 7.3절). 역순이면 이전 title과 `ready`가 함께
-  나가 앱이 재조회를 멈춘 채 갱신을 놓친다.
+  나가 앱이 재조회를 멈춘 채 갱신을 놓친다. 권한은 그보다 앞서 `workspaceIdOf`로 확인한다. 원장
+  조회가 deadline 투영 counter를 올리므로 권한 없는 호출자가 경보 대상 지표를 건드리게 두지
+  않으며, 그 조회는 title을 읽지 않아 순서 계약과 무관하다.
 - `GET /api/mobile/projects/{projectId}/signals`, `GET /api/mobile/signals/{signalId}`,
   `POST /api/mobile/signals/{signalId}/actions/convert-to-task`,
   `POST /api/mobile/signals/{signalId}/actions/dismiss`: Signal 목록·상세·action 컨트롤러를 소유하고
