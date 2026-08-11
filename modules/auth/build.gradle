@@ -26,7 +26,7 @@ dependencies {
     // 스타터가 jackson-databind를 compile classpath로 노출하지 않아 명시합니다.
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     // auth 컨트롤러 OpenAPI 문서화 애너테이션만 사용합니다. Swagger UI·공통 설정은 app이 소유합니다.
-    implementation 'io.swagger.core.v3:swagger-annotations-jakarta:2.2.53'
+    implementation libs.swagger.annotations.jakarta
     // momens.auth.* 설정 메타데이터 생성.
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 

@@ -1,0 +1,34 @@
+# 명시적으로 버전을 지정하는 의존성은 이 파일에서 관리합니다.
+# Spring Boot BOM이 관리하는 의존성은 별도로 버전을 지정하지 않으므로 포함하지 않습니다.
+
+[versions]
+firebase-admin = "9.10.0"
+google-genai = "1.64.0"
+momens-proto = "1.0.0"
+openapi-request-validator = "3.0.0"
+spring-boot = "4.1.0"
+spring-dotenv = "5.1.0"
+spring-modulith = "2.1.0"
+springdoc = "3.1.0"
+spotless = "8.9.0"
+# swagger-core와 swagger-annotations는 동일한 버전을 사용해야 합니다. 버전이 다르면 @Schema의
+# 기본값 sentinel을 잘못 해석해 request schema에 default: null이 추가됩니다.
+swagger = "2.2.53"
+
+[libraries]
+firebase-admin = { module = "com.google.firebase:firebase-admin", version.ref = "firebase-admin" }
+google-genai = { module = "com.google.genai:google-genai", version.ref = "google-genai" }
+# settings.gradle의 includeBuild가 그룹과 이름을 기준으로 로컬 프로젝트를 대체하므로,
+# 이 버전은 실제 의존성 해소에 사용되지 않습니다.
+momens-proto = { module = "com.momens:momens-proto", version.ref = "momens-proto" }
+openapi-request-validator-mockmvc = { module = "com.atlassian.oai:openapi-request-validator-mockmvc", version.ref = "openapi-request-validator" }
+spring-dotenv = { module = "me.paulschwarz:spring-dotenv", version.ref = "spring-dotenv" }
+spring-modulith-starter-core = { module = "org.springframework.modulith:spring-modulith-starter-core", version.ref = "spring-modulith" }
+spring-modulith-starter-test = { module = "org.springframework.modulith:spring-modulith-starter-test", version.ref = "spring-modulith" }
+springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+swagger-annotations-jakarta = { module = "io.swagger.core.v3:swagger-annotations-jakarta", version.ref = "swagger" }
+swagger-core-jakarta = { module = "io.swagger.core.v3:swagger-core-jakarta", version.ref = "swagger" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

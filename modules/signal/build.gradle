@@ -23,7 +23,7 @@ dependencies {
     // convert-to-task의 task draft 생성 public API(ADR-0014, module-map 의존 방향).
     implementation project(':minsu')
     // worker가 발행하는 Signal·Outbox 이벤트의 공용 protobuf 계약.
-    implementation 'com.momens:momens-proto:1.0.0'
+    implementation libs.momens.proto
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     // dev 데모용 Signal 생성 컨트롤러(@DevOnly, docs/design/signal-push-demo-design.md 11.2절).
@@ -31,7 +31,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     // OpenAPI 문서화 애너테이션만 사용합니다. Swagger UI와 공통 설정은 app이 소유합니다(docs/spec/openapi.md).
-    implementation 'io.swagger.core.v3:swagger-annotations-jakarta:2.2.53'
+    implementation libs.swagger.annotations.jakarta
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
