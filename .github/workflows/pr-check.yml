@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.actor != 'dependabot[bot]'
     steps:
+      - uses: actions/checkout@v7
+
       - name: Validate PR title and body
         # PR 제목/본문은 신뢰할 수 없는 입력이므로 env 로만 전달하고 스크립트에 직접 보간하지 않습니다.
         env:
@@ -74,10 +76,9 @@ jobs:
           fi
           echo "PR 제목/본문 형식 OK"
 
-  prod-schema-ledger:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
+      # 아래 두 단계는 별도 job이 아니라 pr-format 안에 둡니다. ruleset(`protected-branches`)의
+      # 필수 체크가 `build`·`pr-format` 둘뿐이라, 새 job으로 두면 실패해도 머지를 막지 못합니다
+      # ([Git] docs/rules/git.md). 게이트는 차단해야 의미가 있으므로 이미 필수인 job에 싣습니다.
 
       # 마이그레이션의 prod 반영 헤더와 대장 문서가 맞는지 검사합니다([데이터] docs/rules/persistence.md).
       - name: Check prod schema headers and ledger
