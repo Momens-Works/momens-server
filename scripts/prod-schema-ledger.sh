@@ -17,7 +17,9 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ledger_doc="docs/prod-schema-ledger.md"
 
 # 헤더 문법. mirror 는 참조가 없고, 나머지 셋은 근거 참조가 필수다.
-header_pattern='^-- prod-schema: (mirror|required MOM-[0-9]+|pending momens-api#[0-9]+|applied momens-api#[0-9]+)$'
+# prod 반영을 수행하는 저장소는 스키마 소유자에 따라 갈린다. 레거시 소유는 momens-api,
+# worker가 생산하는 테이블은 momens-worker 마이그레이션이 될 수 있다(예: signals, ADR-0007).
+header_pattern='^-- prod-schema: (mirror|required MOM-[0-9]+|(pending|applied) (momens-api|momens-worker)#[0-9]+)$'
 
 migration_files() {
     find "$repo_root/modules" -path '*/src/main/resources/db/migration/V*.sql' \
