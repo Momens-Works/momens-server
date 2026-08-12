@@ -80,8 +80,9 @@ jobs:
       # 필수 체크가 `build`·`pr-format` 둘뿐이라, 새 job으로 두면 실패해도 머지를 막지 못합니다
       # ([Git] docs/rules/git.md). 게이트는 차단해야 의미가 있으므로 이미 필수인 job에 싣습니다.
 
-      # 마이그레이션의 prod 반영 헤더와 대장 문서가 맞는지 검사합니다([데이터] docs/rules/persistence.md).
-      - name: Check prod schema headers and ledger
+      # 마이그레이션의 prod 반영 헤더·대장과 prod 필수 설정 선언이 맞는지 검사합니다.
+      # 규약은 docs/rules/persistence.md 와 docs/rules/configuration.md 를 봅니다.
+      - name: Check prod schema and required config ledger
         run: ./scripts/prod-schema-ledger.sh --check
 
       # main 을 대상으로 하는 모든 PR에서 미반영 마이그레이션을 막습니다. 미반영 스키마로 배포하면
