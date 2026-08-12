@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- local/test와 dev에 태스크 상세의 민수 산출물 backing을 추가한다: 다음행동(next_action)과 열린질문(task_open_questions).
 --
 -- 두 값은 민수가 생산하고 api-server는 읽기만 한다(2026-07-08 화면설계서 task_002 8번, 9번 interaction X,

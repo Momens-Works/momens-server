@@ -1,3 +1,4 @@
+-- prod-schema: mirror
 -- local/test 전용 entity_relations 테이블.
 --
 -- entity_relations는 레거시 momens-api가 소유하는 외부 테이블이다

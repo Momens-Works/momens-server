@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- 태스크 역할은 다중 선택이 아니라 단일 선택이다(2026-07-07 확정, MOM-76). task_roles 조인
 -- 테이블 대신 tasks에 단일 role 컬럼을 둔다.
 ALTER TABLE tasks ADD COLUMN role TEXT;

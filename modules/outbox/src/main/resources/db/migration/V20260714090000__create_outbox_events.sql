@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- local/test 전용 outbox_events 미러(SD-2, ADR-0008).
 --
 -- append-only 발행 로그다. 이벤트를 발생시킨 쪽(worker 또는 api-server)이 자기 트랜잭션에서 INSERT하고,

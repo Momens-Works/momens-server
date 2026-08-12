@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- 원장 운영 지표를 받치는 부분 인덱스(MOM-0821, docs/design/minsu-async-task-draft-design.md 9.3절).
 --
 -- 지표 스냅샷은 다음 여섯을 한 쿼리로 집계한다: pending·processing 건수, 가장 오래된 미종료 age,

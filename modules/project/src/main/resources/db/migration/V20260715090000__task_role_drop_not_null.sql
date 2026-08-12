@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- 태스크 role의 NOT NULL 제약을 제거한다(2026-07-15 확정).
 -- momens-server와 레거시 momens-api는 tasks 테이블을 공유하며,
 -- 웹은 role 없이 태스크를 생성한다. 웹에서 생성한 태스크가
