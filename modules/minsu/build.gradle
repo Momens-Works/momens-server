@@ -34,6 +34,7 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
 
     testFixturesImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+    testFixturesImplementation 'com.fasterxml.jackson.core:jackson-databind'
     testFixturesImplementation 'org.springframework.boot:spring-boot-test'
     testFixturesImplementation 'org.springframework:spring-context'
 
