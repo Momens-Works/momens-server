@@ -45,7 +45,7 @@
 | 헤더 | 의미 |
 | --- | --- |
 | `-- prod-schema: mirror` | 레거시가 이미 소유한 스키마입니다. 이 파일은 `local`/`test` 미러이고 prod 반영 의무가 없습니다 |
-| `-- prod-schema: required MOM-<번호>` | prod 반영이 필요하고 아직 `momens-api` PR이 없습니다. 반영을 추적하는 작업 라벨을 적습니다 |
+| `-- prod-schema: required MOM-<번호>` | prod 반영이 필요하고 아직 반영 PR이 없습니다. 반영을 추적하는 작업 라벨을 적습니다 |
 | `-- prod-schema: pending <저장소>#<PR번호>` | 반영 PR이 열려 있고 아직 prod에 적용되지 않았습니다 |
 | `-- prod-schema: applied <저장소>#<PR번호>` | prod 적용이 끝났습니다 |
 
