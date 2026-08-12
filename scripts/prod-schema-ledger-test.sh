@@ -35,6 +35,36 @@ if [[ "$actual_config" != "$expected_config" ]]; then
 fi
 
 ledger_doc="docs/ledger.md"
+
+write_config_declarations() {
+    {
+        printf '%s\n' "$config_begin"
+        printf '%s\n' '| 환경변수 | 주입 위치 | prod 상태 |'
+        printf '%s\n' '| --- | --- | --- |'
+        printf '%s\n' "$@"
+        printf '%s\n' "$config_end"
+    } > "$repo_root/$ledger_doc"
+}
+
+expect_config_declaration_failure() {
+    local label="$1" required="$2"
+    shift 2
+    write_config_declarations "$@"
+    if check_config_declarations "$required" >/dev/null 2>&1; then
+        echo "prod 필수 설정 선언의 $label 검증을 통과했습니다." >&2
+        exit 1
+    fi
+}
+
+expect_config_declaration_failure "누락" $'ALPHA_REQUIRED\nBETA_REQUIRED' \
+    '| `ALPHA_REQUIRED` | `secret` | `applied` |'
+expect_config_declaration_failure "잉여" 'ALPHA_REQUIRED' \
+    '| `ALPHA_REQUIRED` | `secret` | `applied` |' \
+    '| `BETA_REQUIRED` | `configmap` | `required` |'
+expect_config_declaration_failure "중복" 'ALPHA_REQUIRED' \
+    '| `ALPHA_REQUIRED` | `secret` | `applied` |' \
+    '| `ALPHA_REQUIRED` | `secret` | `applied` |'
+
 cat > "$repo_root/$ledger_doc" <<EOF
 # fixture
 $schema_end
