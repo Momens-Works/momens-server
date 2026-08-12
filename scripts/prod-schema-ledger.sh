@@ -108,8 +108,8 @@ check_headers() {
   첫 줄은 다음 중 하나여야 합니다.
     -- prod-schema: mirror
     -- prod-schema: required MOM-<번호>
-    -- prod-schema: pending momens-api#<PR번호>
-    -- prod-schema: applied momens-api#<PR번호>
+    -- prod-schema: pending <momens-api|momens-worker>#<PR번호>
+    -- prod-schema: applied <momens-api|momens-worker>#<PR번호>
 
   규약은 docs/rules/persistence.md 를 보세요.
 USAGE
