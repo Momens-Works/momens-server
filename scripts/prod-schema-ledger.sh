@@ -35,7 +35,7 @@ migration_files() {
 # 각 파일을 "상태<TAB>참조<TAB>모듈<TAB>경로" 로 변환한다. 헤더가 규약을 벗어나면 상태가 invalid 다.
 scan() {
     local file header status reference module
-    while IFS= read -r file; do
+    migration_files | while IFS= read -r file; do
         # 워킹 트리가 CRLF로 남아 있는 경우에도 헤더를 같게 읽는다(.gitattributes 는 LF로 정규화한다).
         header="$(head -n 1 "$repo_root/$file" | tr -d '\r')"
         module="$(basename "${file%%/src/main/resources/db/migration/*}")"
@@ -49,7 +49,7 @@ scan() {
         # 탭은 IFS 공백이라 빈 필드가 읽는 쪽에서 사라진다. 참조가 없으면 자리표시자를 넣는다.
         reference="${reference:--}"
         printf '%s\t%s\t%s\t%s\n' "$status" "$reference" "$module" "$file"
-    done < <(migration_files)
+    done
 }
 
 render_section() {
@@ -151,7 +151,10 @@ check_release() {
 
 main() {
     local scanned status=0
-    scanned="$(scan)"
+    if ! scanned="$(scan)"; then
+        echo "::error::마이그레이션 파일 스캔에 실패했습니다." >&2
+        return 1
+    fi
 
     case "${1:---list}" in
         --list)
