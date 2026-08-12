@@ -35,6 +35,27 @@
   신규 테이블은 별도 레거시 마이그레이션으로 추가합니다. `local`/`test`는 새 서버 Flyway가 그대로
   소유합니다(별도 DB라 충돌 없음).
 
+### prod 반영 헤더
+
+위 규칙 때문에 이 서버의 마이그레이션은 대부분 **prod 반영 의무를 하나씩 만듭니다.** 반영되지
+않으면 매핑 검증에 실패해 애플리케이션이 기동하지 않으므로, 각 마이그레이션 **첫 줄**에 그 상태를
+적습니다. 이 헤더가 정본이고 [prod 스키마 반영 대장](../prod-schema-ledger.md)은
+`scripts/prod-schema-ledger.sh --write`가 헤더에서 생성합니다.
+
+| 헤더 | 의미 |
+| --- | --- |
+| `-- prod-schema: mirror` | 레거시가 이미 소유한 스키마입니다. 이 파일은 `local`/`test` 미러이고 prod 반영 의무가 없습니다 |
+| `-- prod-schema: required MOM-<번호>` | prod 반영이 필요하고 아직 `momens-api` PR이 없습니다. 반영을 추적하는 작업 라벨을 적습니다 |
+| `-- prod-schema: pending momens-api#<PR번호>` | `momens-api` PR이 열려 있고 아직 prod에 적용되지 않았습니다 |
+| `-- prod-schema: applied momens-api#<PR번호>` | prod 적용이 끝났습니다 |
+
+- 상태가 바뀌면 헤더를 고치고 `--write`로 대장을 다시 생성해 함께 커밋합니다.
+- `pr-format` CI가 헤더 누락과 대장 최신 여부를 검사하고, `develop` → `main` 릴리즈 PR에서는
+  `required`·`pending`이 하나라도 남아 있으면 실패합니다. 미반영 스키마가 prod에 나가는 것을
+  릴리스 직전이 아니라 PR 시점에 막기 위한 것입니다.
+- 판단이 서지 않으면 `required`로 두고 확인합니다. 잘못 `mirror`로 두면 게이트가 조용히
+  통과시킵니다.
+
 ## 시간 · 식별자
 
 레거시 `momens-api` 스키마와 호환을 유지합니다.
