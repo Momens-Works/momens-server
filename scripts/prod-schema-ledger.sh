@@ -111,12 +111,19 @@ HEADER
 }
 
 check_marker_pair() {
-    local begin="$1" end="$2" label="$3" begin_count end_count
+    local begin="$1" end="$2" label="$3" begin_count end_count begin_line end_line
     begin_count="$(grep -cFx "$begin" "$repo_root/$ledger_doc")"
     end_count="$(grep -cFx "$end" "$repo_root/$ledger_doc")"
 
     if [[ "$begin_count" -ne 1 || "$end_count" -ne 1 ]]; then
         echo "::error::$ledger_doc 의 $label 구간 표시는 시작과 끝이 각각 하나여야 합니다."
+        return 1
+    fi
+
+    begin_line="$(grep -nFx "$begin" "$repo_root/$ledger_doc" | cut -d: -f1)"
+    end_line="$(grep -nFx "$end" "$repo_root/$ledger_doc" | cut -d: -f1)"
+    if [[ "$begin_line" -ge "$end_line" ]]; then
+        echo "::error::$ledger_doc 의 $label 시작 표시는 끝 표시보다 앞에 있어야 합니다."
         return 1
     fi
 }
@@ -130,30 +137,73 @@ extract_schema_section() {
 }
 
 write_schema_section() {
-    local scanned="$1" generated temporary status=0
+    local scanned="$1" ledger_path ledger_dir generated temporary status=0
     check_marker_pair "$schema_begin" "$schema_end" "prod 스키마 생성" || return 1
 
+    ledger_path="$repo_root/$ledger_doc"
+    ledger_dir="$(dirname "$ledger_path")"
     generated="$(mktemp)" || return 1
-    temporary="$(mktemp)" || { rm -f "$generated"; return 1; }
-    render_schema_section "$scanned" > "$generated"
-
-    awk -v begin="$schema_begin" -v end="$schema_end" -v generated="$generated" '
-        $0 == begin {
-            print
-            while ((getline line < generated) > 0) print line
-            close(generated)
-            inside = 1
-            next
-        }
-        $0 == end { inside = 0; print; next }
-        !inside { print }
-    ' "$repo_root/$ledger_doc" > "$temporary" || status=1
+    temporary="$(mktemp "$ledger_dir/.${ledger_doc##*/}.XXXXXX")" \
+        || { rm -f "$generated"; return 1; }
+    cp -p "$ledger_path" "$temporary" || status=1
+    [[ "$status" -eq 0 ]] && { render_schema_section "$scanned" > "$generated" || status=1; }
 
     if [[ "$status" -eq 0 ]]; then
-        cat "$temporary" > "$repo_root/$ledger_doc" || status=1
+        awk -v begin="$schema_begin" -v end="$schema_end" -v generated="$generated" '
+            $0 == begin {
+                print
+                while ((getline line < generated) > 0) print line
+                close(generated)
+                inside = 1
+                next
+            }
+            $0 == end { inside = 0; print; next }
+            !inside { print }
+        ' "$ledger_path" > "$temporary" || status=1
+    fi
+
+    if [[ "$status" -eq 0 ]]; then
+        mv -f "$temporary" "$ledger_path" || status=1
     fi
     rm -f "$generated" "$temporary"
     return "$status"
+}
+
+strip_yaml_comments() {
+    awk '
+        {
+            output = ""
+            single_quoted = 0
+            double_quoted = 0
+            escaped = 0
+
+            for (position = 1; position <= length($0); position++) {
+                character = substr($0, position, 1)
+                previous = position == 1 ? "" : substr($0, position - 1, 1)
+                comment_start = character == "#" && (position == 1 || previous ~ /[[:space:]]/)
+
+                if (escaped) {
+                    output = output character
+                    escaped = 0
+                    continue
+                }
+                if (double_quoted && character == "\\") {
+                    output = output character
+                    escaped = 1
+                    continue
+                }
+                if (!double_quoted && character == "\047") {
+                    single_quoted = !single_quoted
+                } else if (!single_quoted && character == "\"") {
+                    double_quoted = !double_quoted
+                } else if (!single_quoted && !double_quoted && comment_start) {
+                    break
+                }
+                output = output character
+            }
+            print output
+        }
+    ' "$@"
 }
 
 scan_prod_required_config() {
@@ -166,7 +216,7 @@ scan_prod_required_config() {
         files+=("$repo_root/$file")
     done
 
-    sed -E '/^[[:space:]]*#/d' "${files[@]}" \
+    strip_yaml_comments "${files[@]}" \
         | grep -oE '\$\{[A-Z][A-Z0-9_]*\}' \
         | sed -E 's/^\$\{//; s/\}$//' \
         | sort -u
@@ -320,4 +370,6 @@ main() {
     return "$status"
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi
