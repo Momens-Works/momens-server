@@ -111,4 +111,6 @@ Flyway checksum은 주석을 포함한 파일 내용 전체로 계산합니다. 
 docker compose down -v && docker compose up -d
 ```
 
-테스트는 Testcontainers로 매번 새 DB를 쓰므로 영향을 받지 않습니다.
+테스트는 Testcontainers로 매번 새 DB를 쓰므로 영향을 받지 않습니다. `prod`는 Flyway가 꺼져 있어
+무관하고, Flyway가 켜지는 `dev`는 같은 문제를 만나므로 DB를 다시 만들거나 `flyway repair`로
+checksum을 갱신해야 합니다.
