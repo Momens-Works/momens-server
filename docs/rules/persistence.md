@@ -46,8 +46,12 @@
 | --- | --- |
 | `-- prod-schema: mirror` | 레거시가 이미 소유한 스키마입니다. 이 파일은 `local`/`test` 미러이고 prod 반영 의무가 없습니다 |
 | `-- prod-schema: required MOM-<번호>` | prod 반영이 필요하고 아직 `momens-api` PR이 없습니다. 반영을 추적하는 작업 라벨을 적습니다 |
-| `-- prod-schema: pending momens-api#<PR번호>` | `momens-api` PR이 열려 있고 아직 prod에 적용되지 않았습니다 |
-| `-- prod-schema: applied momens-api#<PR번호>` | prod 적용이 끝났습니다 |
+| `-- prod-schema: pending <저장소>#<PR번호>` | 반영 PR이 열려 있고 아직 prod에 적용되지 않았습니다 |
+| `-- prod-schema: applied <저장소>#<PR번호>` | prod 적용이 끝났습니다 |
+
+저장소는 `momens-api` 또는 `momens-worker`입니다. 레거시가 소유한 스키마는 `momens-api`가
+반영하지만, worker가 생산하는 테이블(`signals` 계열, ADR-0007)의 반영 위치는 아직 확정되지
+않았습니다. 확정 전에는 `required`로 두고 추적 작업이 소유합니다.
 
 - 상태가 바뀌면 헤더를 고치고 `--write`로 대장을 다시 생성해 함께 커밋합니다.
 - `pr-format` CI가 헤더 누락과 대장 최신 여부를 검사하고, `develop` → `main` 릴리즈 PR에서는
