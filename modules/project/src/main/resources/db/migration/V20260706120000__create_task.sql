@@ -1,3 +1,4 @@
+-- prod-schema: mirror
 -- 레거시 momens-api 000001_init.sql / 000006_fe_contract.sql 의 tasks 테이블과 호환됩니다.
 -- 모바일 보드/생성(MOM-62)이 읽고 쓰는 범위까지만 만듭니다. 제외한 레거시 컬럼은 태스크
 -- 상세/수정(MOM-63)과 웹 이관에서 별도 마이그레이션으로 추가합니다:

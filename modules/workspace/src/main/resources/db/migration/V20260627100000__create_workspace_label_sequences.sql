@@ -1,3 +1,4 @@
+-- prod-schema: mirror
 -- 레거시 momens-api 000006_fe_contract.sql 의 workspace_label_sequences 테이블과 호환됩니다.
 -- 레거시는 next_workspace_label() 함수와 BEFORE INSERT 트리거로 라벨을 자동 발급했지만,
 -- 새 서버는 트리거를 두지 않고 project 모듈이 workspace 모듈 public API(LabelAllocator)로

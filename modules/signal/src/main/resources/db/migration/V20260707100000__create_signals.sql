@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- local/test 전용 signals 미러.
 --
 -- signals는 worker가 생성하는 Signal 원본이다(ADR-0007). 서버는 signals를 쓰지 않고 읽기만 한다

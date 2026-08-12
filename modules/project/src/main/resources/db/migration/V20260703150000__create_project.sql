@@ -1,3 +1,4 @@
+-- prod-schema: mirror
 -- 레거시 momens-api 000001_init.sql 의 projects 테이블과 호환됩니다.
 -- 모바일 read 기반(MOM-59)이 읽는 범위까지만 만듭니다. 000006_fe_contract.sql 컬럼 중
 -- 모바일 project 스냅샷이 쓰는 target_date, progress, summary 만 포함합니다.

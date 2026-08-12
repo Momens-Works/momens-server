@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- local/test 전용 signal_actions 미러.
 --
 -- signal_actions는 api-server가 사용자 action(convert-to-task/dismiss)을 기록하는 원장이다(ADR-0008).

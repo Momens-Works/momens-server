@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- local/test·dev signal_evidence 미러에 ADR-0011 의미 필드(대상·변화·영향)를 추가한다.
 --
 -- signal_evidence는 worker가 Signal 생성 시 함께 적재하며(ADR-0007), ADR-0011로 근거마다의 대상(target)·

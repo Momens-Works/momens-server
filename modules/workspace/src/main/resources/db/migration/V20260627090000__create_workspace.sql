@@ -1,3 +1,4 @@
+-- prod-schema: mirror
 -- 레거시 momens-api 000001_init.sql 의 workspaces, workspace_members 테이블과 호환됩니다.
 -- workspace_members.onboarding_state 컬럼은 onboarding 이관(MOM-34)에서 별도 마이그레이션으로 추가합니다.
 CREATE TABLE workspaces (

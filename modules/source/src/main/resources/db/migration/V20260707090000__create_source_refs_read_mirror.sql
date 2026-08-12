@@ -1,3 +1,4 @@
+-- prod-schema: mirror
 -- local/test 전용 source_refs 미러.
 --
 -- source_refs는 레거시 momens-api가 소유하는 외부 테이블이다(momens-api 000002_retrieval_projection.sql).

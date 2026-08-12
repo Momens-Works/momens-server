@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- 모바일 태스크 상세(MOM-63)가 읽고, 수정(MOM-75)이 쓰는 저장 기반을 추가합니다.
 -- description, assignee_id 는 레거시 momens-api 000001_init.sql 의 tasks 원형 그대로입니다.
 -- 모바일이 안 쓰는 레거시 컬럼(milestone_id, due_date)은 웹 이관에서 추가합니다.

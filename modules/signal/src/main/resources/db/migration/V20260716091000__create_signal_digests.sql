@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- local/test 전용 signal_digests 미러.
 --
 -- signal_digests는 브리프의 "시그널 요약" 헤더 아래 문단이다(2026-07-10 화면설계서 /브리프 2번). 그날 신호를

@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- push 설치(FID/FCM token) 상태(MOM-0690, docs/design/signal-push-demo-design.md 8.4절).
 --
 -- 레거시 미러가 아니라 이 서버가 소유하는 신규 상태다. prod 스키마 반영 경로는 prod 배포와 함께
