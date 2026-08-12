@@ -1,9 +1,15 @@
-# prod 스키마 반영 대장
+# prod 운영 준비 대장
 
-<!--
-이 파일은 scripts/prod-schema-ledger.sh --write 가 생성합니다. 직접 수정하지 마세요.
-정본은 각 마이그레이션 첫 줄의 `-- prod-schema:` 헤더입니다.
--->
+prod 배포 전에 함께 확인해야 하는 스키마, 필수 설정, 파일 밖 운영 의무를 한곳에 모읍니다.
+
+- **생성 구간**: 스키마 헤더가 정본입니다. 직접 수정하지 않고
+  `scripts/prod-schema-ledger.sh --write`로 갱신합니다.
+- **선언 구간**: prod 필수 환경변수의 주입 위치와 반영 상태를 사람이 관리합니다. CI가
+  `application.yml`과 `application-prod.yml`의 기본값 없는 placeholder와 정확히 일치하는지 검사합니다.
+- **수기 구간**: 코드로 감지할 수 없는 외부 등록물과 배포 순서 의무를 사람이 확인합니다.
+
+<!-- BEGIN GENERATED: prod-schema -->
+## 스키마 반영
 
 prod는 레거시 `momens-api`와 공유 DB를 쓰는 전환기라 이 서버의 Flyway가 꺼져 있고
 `ddl-auto: validate`로 매핑만 검증합니다([데이터](rules/persistence.md)). 따라서 서버가 추가한
@@ -68,3 +74,41 @@ prod에 반영해야 하고 아직 반영 PR이 없는 항목입니다. 릴리�
 | `V20260706120000__create_task.sql` | `project` | - |
 | `V20260707090000__create_source_refs_read_mirror.sql` | `source` | - |
 | `V20260715100000__create_entity_relations_read_mirror.sql` | `context` | - |
+<!-- END GENERATED: prod-schema -->
+
+## prod 필수 설정 선언
+
+공통 설정과 prod 프로필을 함께 적용했을 때 기본값이 없는 `${VAR}`만 강제합니다. local/dev 전용
+설정은 prod provisioning 의무가 아니므로 이 선언과 스캔 대상에서 제외합니다.
+
+상태는 `required`(prod 반영 필요) 또는 `applied`(prod 반영 완료)입니다. 실제 값이나 secret 이름은
+기록하지 않습니다.
+
+<!-- BEGIN DECLARATION: prod-required-config -->
+| 환경변수 | 주입 위치 | prod 상태 |
+| --- | --- | --- |
+| `DATABASE_PASSWORD` | `secret` | `applied` |
+| `DATABASE_URL` | `secret` | `applied` |
+| `DATABASE_USERNAME` | `secret` | `applied` |
+| `MOMENS_AUTH_GOOGLE_AUDIENCES` | `secret` | `applied` |
+| `MOMENS_AUTH_GOOGLE_CLIENT_ID` | `secret` | `applied` |
+| `MOMENS_AUTH_GOOGLE_CLIENT_SECRET` | `secret` | `applied` |
+| `MOMENS_AUTH_GOOGLE_REDIRECT_URI` | `configmap` | `applied` |
+| `MOMENS_AUTH_JWT_SECRET` | `secret` | `applied` |
+| `MOMENS_AUTH_WEB_FAILURE_REDIRECT_URI` | `configmap` | `applied` |
+| `MOMENS_AUTH_WEB_SUCCESS_REDIRECT_URI` | `configmap` | `applied` |
+<!-- END DECLARATION: prod-required-config -->
+
+## 수기 prod 의무
+
+이 구간은 자동 생성하거나 릴리스 게이트로 차단하지 않습니다. 코드에서 감지할 수 없거나, 차단하면
+역방향 배포 순서가 교착되는 의무를 기록합니다. 릴리스 전에 상태와 근거를 사람이 다시 확인합니다.
+
+| 의무 | 현재 상태 | 확인 근거·다음 행동 |
+| --- | --- | --- |
+| MOM-0836 `users.email` UNIQUE 제거 | `required` | 서버 코드 배포가 먼저이고 제약 제거가 나중입니다. MOM-0836 완료 시 갱신합니다 |
+| Google OAuth redirect URI 등록 | `확인 필요` | Kubernetes 값은 `https://api.momens.works/api/auth/google/callback`입니다. Google Cloud 콘솔 등록 상태는 저장소에서 확인할 수 없습니다 |
+| 모바일·웹 client ID와 audiences 일치 | `확인 필요` | 실제 secret 값과 Google OAuth client ID 목록을 배포 전에 대조합니다 |
+| FCM 프로젝트·ADC 자격증명 | `비활성` | push 기본값은 꺼져 있습니다. 활성화할 때 `MOMENS_NOTIFICATION_PUSH_FIREBASE_PROJECT_ID`와 ADC를 확인합니다 |
+| Minsu GCP 프로젝트·리전·ADC | `비활성` | task draft와 비동기 enroll/drain 기본값은 꺼져 있습니다. 활성화 조건은 관련 설계 문서가 소유합니다 |
+| DNS·ingress·TLS 인증서 | `응답 확인` | 2026-08-13에 `https://api.momens.works/api/health`의 TLS 응답(HTTP 401)을 확인했습니다. 애플리케이션 readiness를 뜻하지는 않습니다 |

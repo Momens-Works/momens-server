@@ -24,6 +24,10 @@
 - env → 설정은 Spring relaxed binding을 사용합니다
   (`momens.auth.jwt-secret` ← `MOMENS_AUTH_JWT_SECRET`).
 - secret은 설정 파일에 두지 않고 env로 주입합니다([시크릿](#시크릿) 참고).
+- `application.yml`과 `application-prod.yml`의 기본값 없는 환경변수 placeholder는
+  [prod 운영 준비 대장](../prod-schema-ledger.md)에 주입 위치와 prod 반영 상태를 선언합니다.
+  `pr-format` CI가 설정 파일과 선언의 누락·잉여를 검사합니다. local/dev 전용 placeholder는 prod
+  provisioning 의무가 아니므로 검사 대상에서 제외합니다.
 
 ### 위치
 
