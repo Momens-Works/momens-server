@@ -10,9 +10,11 @@ permissions:
 jobs:
   pr-format:
     runs-on: ubuntu-latest
-    if: github.actor != 'dependabot[bot]'
     steps:
+      - uses: actions/checkout@v7
+
       - name: Validate PR title and body
+        if: github.actor != 'dependabot[bot]'
         # PR 제목/본문은 신뢰할 수 없는 입력이므로 env 로만 전달하고 스크립트에 직접 보간하지 않습니다.
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
@@ -73,3 +75,21 @@ jobs:
             exit 1
           fi
           echo "PR 제목/본문 형식 OK"
+
+      # 아래 두 단계는 별도 job이 아니라 pr-format 안에 둡니다. ruleset(`protected-branches`)의
+      # 필수 체크가 `build`·`pr-format` 둘뿐이라, 새 job으로 두면 실패해도 머지를 막지 못합니다
+      # ([Git] docs/rules/git.md). 게이트는 차단해야 의미가 있으므로 이미 필수인 job에 싣습니다.
+
+      # 마이그레이션의 prod 반영 헤더와 대장 문서가 맞는지 검사합니다([데이터] docs/rules/persistence.md).
+      - name: Check prod schema headers and ledger
+        run: ./scripts/prod-schema-ledger.sh --check
+
+      # main 을 대상으로 하는 모든 PR에서 미반영 마이그레이션을 막습니다. 미반영 스키마로 배포하면
+      # ddl-auto=validate 가 실패해 애플리케이션이 기동하지 않습니다.
+      #
+      # 조건을 `develop` → `main` 으로 좁히지 않는 이유는 운영 배포 트리거가 build-and-deploy.yml 의
+      # `push: branches: [main]` 이기 때문입니다. main 에 머지되는 모든 PR이 배포로 이어지므로,
+      # 검사 대상이 배포 대상보다 좁으면 hotfix 같은 경로가 게이트를 우회합니다.
+      - name: Block release with unreflected schema
+        if: github.base_ref == 'main'
+        run: ./scripts/prod-schema-ledger.sh --release-check

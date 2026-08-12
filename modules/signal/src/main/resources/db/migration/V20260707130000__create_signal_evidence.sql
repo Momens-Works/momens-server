@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- local/test 전용 signal_evidence 미러.
 --
 -- signal_evidence는 worker가 Signal 생성 시 함께 적재하는 근거 연결이다(ADR-0007). Signal과 source_refs를

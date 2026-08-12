@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- signal.created notification consumer 상태와 기기별 발송 상태(MOM-0690,
 -- docs/design/signal-push-demo-design.md 10절). push_installations와 같이 이 서버가 소유하는
 -- 신규 상태이며 prod 스키마 반영 경로는 범위 밖이다. 외부 테이블 FK는 같은 이유로 생략한다.

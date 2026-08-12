@@ -99,3 +99,18 @@ PostgreSQL을 사용합니다.
 
 테스트에서는 PostgreSQL Testcontainers를 사용합니다.
 H2 호환성을 가정하지 않습니다.
+
+### 마이그레이션 checksum 불일치
+
+Flyway checksum은 주석을 포함한 파일 내용 전체로 계산합니다. 이미 적용된 마이그레이션 파일이
+바뀌면(MOM-0839의 `prod-schema` 헤더 추가처럼) 다음 기동에서 checksum 불일치로 실패합니다.
+로컬 DB는 `docker-compose.yml`의 `momens-postgres-data` 볼륨에 남아 있으므로 컨테이너를 다시
+띄우는 것만으로는 해소되지 않습니다.
+
+```bash
+docker compose down -v && docker compose up -d
+```
+
+테스트는 Testcontainers로 매번 새 DB를 쓰므로 영향을 받지 않습니다. `prod`는 Flyway가 꺼져 있어
+무관하고, Flyway가 켜지는 `dev`는 같은 문제를 만나므로 DB를 다시 만들거나 `flyway repair`로
+checksum을 갱신해야 합니다.

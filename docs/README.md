@@ -11,6 +11,7 @@ docs/
 ├── README.md             # (이 문서) 인덱스
 ├── onboarding.md         # 신규 합류 가이드
 ├── local-development.md  # 로컬 개발
+├── prod-schema-ledger.md # prod 스키마 반영 대장 (스크립트 생성)
 ├── rules/                # 기반 규칙 (성격별 폴더)
 ├── adr/                  # 결정 기록 (ADR, 결정마다 파일 하나씩)
 ├── spec/                 # 서버 명세 (API/계약)
@@ -28,6 +29,7 @@ docs/
 
 - [온보딩](onboarding.md) — 처음 합류했다면 여기서 시작
 - [로컬 개발](local-development.md)
+- [prod 스키마 반영 대장](prod-schema-ledger.md) — 마이그레이션별 prod 반영 상태 (직접 수정하지 않습니다)
 - [기반 규칙](rules/README.md)
 - [ADR](adr/README.md)
 - [서버 명세](spec/README.md)

@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- Minsu task draft 비동기 생성 원장(MOM-0817, docs/design/minsu-async-task-draft-design.md 6절).
 --
 -- convert 트랜잭션이 pending 행을 적재하고 scheduler가 claim해 처리한다. tasks에는 생성이 성공한

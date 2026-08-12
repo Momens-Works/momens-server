@@ -1,3 +1,4 @@
+-- prod-schema: required MOM-0840
 -- 사용자 로그인 수단(MOM-0830, docs/adr/0016-user-identity-key-google-sub.md).
 --
 -- 로그인 시 사용자 식별 기준을 이메일에서 (provider, provider_user_id)로 옮기기 위한 테이블이다.
