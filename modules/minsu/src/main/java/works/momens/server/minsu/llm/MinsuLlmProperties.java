@@ -13,7 +13,7 @@ public record MinsuLlmProperties(
     @DefaultValue("8s") Duration timeout,
     @DefaultValue Google google) {
 
-  public static final String DEFAULT_MODEL = "gemini-3.5-flash-lite";
+  static final String DEFAULT_MODEL = "gemini-3.5-flash-lite";
 
   public record Google(@DefaultValue("") String project, @DefaultValue("global") String location) {}
 }

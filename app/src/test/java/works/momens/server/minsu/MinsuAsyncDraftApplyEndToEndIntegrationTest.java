@@ -2,8 +2,6 @@ package works.momens.server.minsu;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -21,16 +19,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import works.momens.server.auth.AccessTokenTestFactory;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
-import works.momens.server.minsu.llm.LlmClient;
-import works.momens.server.minsu.llm.LlmResponse;
 import works.momens.server.project.TaskEditor;
 import works.momens.server.project.UpdateTaskCommand;
 import works.momens.server.user.UserProfile;
@@ -51,6 +47,7 @@ import works.momens.server.user.UserService;
       "momens.minsu.llm.google.location=global"
     })
 @AutoConfigureMockMvc
+@Import(MinsuLlmTestFixture.Config.class)
 class MinsuAsyncDraftApplyEndToEndIntegrationTest extends AbstractPostgresIntegrationTest {
 
   private static final String GENERATED_TITLE = "결제 실패율 대응";
@@ -64,12 +61,12 @@ class MinsuAsyncDraftApplyEndToEndIntegrationTest extends AbstractPostgresIntegr
   @Autowired private TaskDraftStatusReader draftStatusReader;
   @Autowired private PlatformTransactionManager transactionManager;
 
-  @MockitoBean private LlmClient llmClient;
+  @Autowired private MinsuLlmTestFixture llm;
 
   /** 모델이 draft를 정상 생성한 응답. 검증·정규화는 실제 코드가 그대로 수행한다. */
   @BeforeEach
   void stubProvider() {
-    when(llmClient.generate(any(), any(), any())).thenReturn(generated());
+    llm.respondWith(generated());
   }
 
   @Test
@@ -170,25 +167,11 @@ class MinsuAsyncDraftApplyEndToEndIntegrationTest extends AbstractPostgresIntegr
 
   /** provider를 붙들어 두고 반환 시점을 테스트가 정한다. 해제 전까지 원장은 {@code processing}에 머문다. */
   private CountDownLatch latchProvider() {
-    CountDownLatch release = new CountDownLatch(1);
-    when(llmClient.generate(any(), any(), any()))
-        .thenAnswer(
-            invocation -> {
-              if (!release.await(20, TimeUnit.SECONDS)) {
-                throw new IllegalStateException("provider 해제를 기다리다 시간이 초과됐습니다");
-              }
-              return generated();
-            });
-    return release;
+    return llm.respondAfterRelease(generated());
   }
 
-  private static LlmResponse generated() {
-    return new LlmResponse(
-        true,
-        "STOP",
-        "{\"title\":\"" + GENERATED_TITLE + "\",\"role\":\"backend\",\"priority\":\"high\"}",
-        "response-id",
-        LlmResponse.TokenUsage.EMPTY);
+  private static TaskDraft generated() {
+    return new TaskDraft(GENERATED_TITLE, Role.BACKEND, Priority.HIGH);
   }
 
   /** convert 결과. 상세 조회에 호출자 토큰이 필요해 함께 돌려준다. */

@@ -7,19 +7,15 @@ import org.springframework.context.annotation.Configuration;
 import works.momens.server.minsu.draft.config.MinsuAsyncProperties;
 import works.momens.server.minsu.draft.config.MinsuConfigStatus;
 import works.momens.server.minsu.draft.config.MinsuTaskDraftProperties;
-import works.momens.server.minsu.llm.MinsuLlmProperties;
+import works.momens.server.minsu.llm.LlmConfigStatus;
 
 @Configuration
-@EnableConfigurationProperties({
-  MinsuTaskDraftProperties.class,
-  MinsuLlmProperties.class,
-  MinsuAsyncProperties.class
-})
+@EnableConfigurationProperties({MinsuTaskDraftProperties.class, MinsuAsyncProperties.class})
 class MinsuConfiguration {
 
   @Bean
   MinsuConfigStatus minsuConfigStatus(
-      MinsuTaskDraftProperties taskDraft, MinsuLlmProperties llm, MeterRegistry meterRegistry) {
-    return new MinsuConfigStatus(taskDraft, llm, meterRegistry);
+      MinsuTaskDraftProperties taskDraft, LlmConfigStatus llmStatus, MeterRegistry meterRegistry) {
+    return new MinsuConfigStatus(taskDraft, llmStatus, meterRegistry);
   }
 }
