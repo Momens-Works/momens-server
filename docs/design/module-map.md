@@ -461,6 +461,14 @@ model은 `gemini-3.5-flash-lite`다. `signal`에는 검증된 draft만 반환하
 [ADR-0014](../adr/0014-minsu-task-draft-module-and-llm-boundary.md)와
 [MOM-0803 설계](minsu-signal-task-draft-design.md)를 따른다.
 
+내부는 두 Spring Modulith nested module로 논리 분리한다(MOM-0843).
+
+- `draft`는 동기 draft 준비와 비동기 생성 원장의 적재·claim·실행·재시도·결과 반영·상태 조회를
+  소유한다. `generation`, `ledger`, `prompt`, `config`는 이 경계의 내부 패키지다.
+- `llm`은 provider 중립 호출 계약과 배포 model 선택을 소유한다. Google Gen AI SDK adapter는
+  `llm.google` 내부에 둔다. task draft와 향후 query는 이 계약만 공유한다.
+- 다른 Gradle 모듈에는 `minsu` root package의 공개 계약만 노출한다.
+
 Minsu query를 이관할 때는 별도 공개 유스케이스로 검색 호출과 답변 생성을 소유한다. task draft와
 query는 LLM adapter·model 선택·persona 기반만 공유하고 서로의 API DTO를 재사용하지 않는다.
 retrieval projection schema ownership과는 분리한다. 레거시 `slackbot`의 표면(Slack 이벤트 처리)도
