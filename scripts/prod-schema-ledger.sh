@@ -21,10 +21,15 @@ ledger_doc="docs/prod-schema-ledger.md"
 # worker가 생산하는 테이블은 momens-worker 마이그레이션이 될 수 있다(예: signals, ADR-0007).
 header_pattern='^-- prod-schema: (mirror|required MOM-[0-9]+|(pending|applied) (momens-api|momens-worker)#[0-9]+)$'
 
+# 마이그레이션은 기능 모듈(modules/<이름>)과 공유 모듈(common)이 함께 소유하므로 저장소 전체를
+# 훑는다. 정렬 기준은 경로가 아니라 파일명(= 타임스탬프 버전)이다. 모듈 깊이가 다르기 때문이다.
 migration_files() {
-    find "$repo_root/modules" -path '*/src/main/resources/db/migration/V*.sql' \
+    find "$repo_root" -type d \( -name build -o -name .git -o -name .gradle-work \) -prune -o \
+        -path '*/src/main/resources/db/migration/V*.sql' -print \
         | sed "s|^$repo_root/||" \
-        | sort -t/ -k7
+        | awk -F/ '{ print $NF "\t" $0 }' \
+        | sort \
+        | cut -f2-
 }
 
 # 각 파일을 "상태<TAB>참조<TAB>모듈<TAB>경로" 로 변환한다. 헤더가 규약을 벗어나면 상태가 invalid 다.
@@ -33,7 +38,7 @@ scan() {
     while IFS= read -r file; do
         # 워킹 트리가 CRLF로 남아 있는 경우에도 헤더를 같게 읽는다(.gitattributes 는 LF로 정규화한다).
         header="$(head -n 1 "$repo_root/$file" | tr -d '\r')"
-        module="$(printf '%s' "$file" | cut -d/ -f2)"
+        module="$(basename "${file%%/src/main/resources/db/migration/*}")"
         if [[ "$header" =~ $header_pattern ]]; then
             status="$(printf '%s' "${BASH_REMATCH[1]}" | cut -d' ' -f1)"
             reference="$(printf '%s' "${BASH_REMATCH[1]}" | cut -s -d' ' -f2)"
@@ -80,16 +85,19 @@ render_ledger() {
 
 prod는 레거시 `momens-api`와 공유 DB를 쓰는 전환기라 이 서버의 Flyway가 꺼져 있고
 `ddl-auto: validate`로 매핑만 검증합니다([데이터](rules/persistence.md)). 따라서 서버가 추가한
-신규 스키마는 별도 `momens-api` 마이그레이션으로 prod에 반영해야 하고, 반영되지 않으면 매핑
+신규 스키마는 **반영 담당 저장소**의 마이그레이션으로 prod에 반영해야 하고, 반영되지 않으면 매핑
 검증에 실패해 **애플리케이션이 기동하지 않습니다.**
+
+담당 저장소는 스키마 소유자에 따라 갈립니다. 레거시가 소유한 스키마는 `momens-api`가 반영하지만,
+worker가 생산하는 테이블(`signals` 계열, ADR-0007)의 반영 위치는 아직 확정되지 않았습니다.
 
 이 문서는 그 반영 상태를 마이그레이션 단위로 추적합니다.
 HEADER
 
     render_section "$scanned" "required" "미반영" \
-        "prod에 반영해야 하고 아직 \`momens-api\` PR이 없는 항목입니다. 릴리스 PR에서 차단됩니다."
+        "prod에 반영해야 하고 아직 반영 PR이 없는 항목입니다. 릴리스 PR에서 차단됩니다."
     render_section "$scanned" "pending" "반영 중" \
-        "\`momens-api\` PR이 열려 있고 아직 prod에 적용되지 않은 항목입니다. 릴리스 PR에서 차단됩니다."
+        "반영 PR이 열려 있고 아직 prod에 적용되지 않은 항목입니다. 릴리스 PR에서 차단됩니다."
     render_section "$scanned" "applied" "반영 완료" ""
     render_section "$scanned" "mirror" "레거시 소유 미러" \
         "레거시가 이미 소유한 스키마라 prod 반영 의무가 없습니다. 이 서버는 local/test용 미러만 만듭니다."
