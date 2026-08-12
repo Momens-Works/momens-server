@@ -106,6 +106,7 @@ class MinsuContextTest {
   // 실패한다(MOM-0817에서 minsu가 영속성을 갖게 된 뒤). 스캔 범위를 특정 nested module로 좁히는 대신 원인만
   // 빼는 이유는, 루트 패키지에 나중에 빈이 생겨도 이 테스트가 조용히 놓치지 않게 하기 위해서다.
   // 부트스트랩이 package-private이라 타입 대신 이름으로 지정한다.
+  // 앱 통합 테스트가 명시적으로 import하는 root test fixture도 이 독립 컨텍스트에서는 제외한다.
   //
   // 원장 패키지도 같은 이유로 뺀다. 이 컨텍스트에는 DataSource가 없어 repository 빈이 만들어지지
   // 않는다. 이 테스트가 보는 것은 설정 축과 provider 배선이므로 적재기는 mock으로 대체한다.
@@ -117,6 +118,7 @@ class MinsuContextTest {
               type = FilterType.REGEX,
               pattern =
                   "works\\.momens\\.server\\.minsu\\.MinsuModuleTestApplication"
+                      + "|works\\.momens\\.server\\.minsu\\.MinsuLlmTestFixture.*"
                       + "|works\\.momens\\.server\\.minsu\\.draft\\.ledger\\..*"))
   static class TestApplication {
 

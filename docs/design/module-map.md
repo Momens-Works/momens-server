@@ -465,7 +465,7 @@ model은 `gemini-3.5-flash-lite`다. `signal`에는 검증된 draft만 반환하
 
 - `draft`는 동기 draft 준비와 비동기 생성 원장의 적재·claim·실행·재시도·결과 반영·상태 조회를
   소유한다. `generation`, `ledger`, `prompt`, `config`는 이 경계의 내부 패키지다.
-- `llm`은 provider 중립 호출 계약과 배포 model 선택을 소유한다. Google Gen AI SDK adapter는
+- `llm`은 provider 중립 호출 계약과 배포 설정 검증·model 선택을 소유한다. Google Gen AI SDK adapter는
   `llm.google` 내부에 둔다. task draft와 향후 query는 이 계약만 공유한다.
 - 다른 Gradle 모듈에는 `minsu` root package의 공개 계약만 노출한다.
 
