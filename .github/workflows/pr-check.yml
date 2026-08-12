@@ -73,3 +73,18 @@ jobs:
             exit 1
           fi
           echo "PR 제목/본문 형식 OK"
+
+  prod-schema-ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # 마이그레이션의 prod 반영 헤더와 대장 문서가 맞는지 검사합니다([데이터] docs/rules/persistence.md).
+      - name: Check prod schema headers and ledger
+        run: ./scripts/prod-schema-ledger.sh --check
+
+      # 릴리즈 PR(develop → main)에서는 prod에 반영되지 않은 마이그레이션이 남아 있으면 막습니다.
+      # 미반영 스키마로 배포하면 ddl-auto=validate 가 실패해 애플리케이션이 기동하지 않습니다.
+      - name: Block release with unreflected schema
+        if: github.head_ref == 'develop' && github.base_ref == 'main'
+        run: ./scripts/prod-schema-ledger.sh --release-check
