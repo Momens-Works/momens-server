@@ -10,7 +10,7 @@
 #   prod-schema-ledger.sh              헤더 상태를 표로 출력한다
 #   prod-schema-ledger.sh --write      대장 문서를 다시 생성한다
 #   prod-schema-ledger.sh --check      헤더·생성 구간과 prod 필수 설정 선언을 검사한다
-#   prod-schema-ledger.sh --release-check  미반영(required/pending) 항목이 남아 있으면 실패한다
+#   prod-schema-ledger.sh --release-check  미반영 스키마·필수 설정이 남아 있으면 실패한다
 
 set -uo pipefail
 
@@ -22,6 +22,13 @@ config_begin='<!-- BEGIN DECLARATION: prod-required-config -->'
 config_end='<!-- END DECLARATION: prod-required-config -->'
 prod_config_files=(
     "app/src/main/resources/application.yml"
+    "app/src/main/resources/application-prod.yml"
+)
+supported_config_files=(
+    "app/src/main/resources/application.yml"
+    "app/src/main/resources/application-local.yml"
+    "app/src/main/resources/application-dev.yml"
+    "app/src/main/resources/application-test.yml"
     "app/src/main/resources/application-prod.yml"
 )
 
@@ -208,6 +215,8 @@ strip_yaml_comments() {
 
 scan_prod_required_config() {
     local files=() file
+
+    check_prod_config_scope || return 1
     for file in "${prod_config_files[@]}"; do
         if [[ ! -f "$repo_root/$file" ]]; then
             echo "필수 prod 설정 파일을 찾을 수 없습니다: $file" >&2
@@ -220,6 +229,32 @@ scan_prod_required_config() {
         | grep -oE '\$\{[A-Z][A-Z0-9_]*\}' \
         | sed -E 's/^\$\{//; s/\}$//' \
         | sort -u
+}
+
+check_prod_config_scope() {
+    local file relative allowed supported unsupported=""
+
+    while IFS= read -r file; do
+        relative="${file#"$repo_root/"}"
+        supported=false
+        for allowed in "${supported_config_files[@]}"; do
+            if [[ "$relative" == "$allowed" ]]; then
+                supported=true
+                break
+            fi
+        done
+        [[ "$supported" == "true" ]] || unsupported+="$relative"$'\n'
+    done < <(
+        find "$repo_root" -type d \( -name build -o -name .git -o -name .gradle-work \) -prune -o \
+            -type f \( -path '*/src/main/resources/application*.yml' \
+                -o -path '*/src/main/resources/application*.yaml' \) -print | sort
+    )
+
+    if [[ -n "$unsupported" ]]; then
+        echo "지원하지 않는 런타임 설정 파일이 있습니다. prod 스캔 범위를 함께 갱신하세요:" >&2
+        printf '%s' "$unsupported" | sed 's/^/  /' >&2
+        return 1
+    fi
 }
 
 config_declarations() {
@@ -331,6 +366,21 @@ check_release() {
     return 0
 }
 
+check_config_release() {
+    local declarations unresolved
+    declarations="$(config_declarations)"
+    unresolved="$(printf '%s\n' "$declarations" | awk -F'\t' '$3 == "required" { print $1 "\t" $2 }')"
+
+    if [[ -n "$unresolved" ]]; then
+        echo "::error::prod에 반영되지 않은 필수 설정이 남아 있어 릴리스할 수 없습니다."
+        printf '%s\n' "$unresolved" | sed 's/^/  /'
+        echo "  반영을 확인하고 prod 상태를 applied 로 바꾼 뒤 다시 시도하세요."
+        return 1
+    fi
+    echo "미반영 필수 설정 없음"
+    return 0
+}
+
 main() {
     local scanned required_config status=0
     if ! scanned="$(scan)"; then
@@ -360,6 +410,8 @@ main() {
         --release-check)
             check_headers "$scanned" || status=1
             [[ "$status" -eq 0 ]] && { check_release "$scanned" || status=1; }
+            check_config_declarations "$required_config" || status=1
+            [[ "$status" -eq 0 ]] && { check_config_release || status=1; }
             ;;
         *)
             echo "알 수 없는 옵션: $1" >&2

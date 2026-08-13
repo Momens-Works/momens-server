@@ -18,6 +18,9 @@
 - 프로필: `local` / `dev` / `test` / `prod`. 활성화는 `SPRING_PROFILES_ACTIVE` 또는
   `--spring.profiles.active`. `dev`는 모바일 MVP 검증용 배포 환경(`momens-k8s-dev`)에서 씁니다.
 - `application.yml`(공통) + `application-<profile>.yml`(환경별). 민감값은 env placeholder.
+- 런타임 설정 파일은 `app/src/main/resources`의 공통 파일과 위 네 프로필 파일만 사용합니다.
+  `spring.config.import`, profile include/group 또는 새 설정 파일로 설정 그래프를 확장하려면 prod 필수
+  설정 스캐너와 이 규칙을 함께 갱신합니다.
 
 ### 환경변수
 
@@ -27,7 +30,8 @@
 - `application.yml`과 `application-prod.yml`의 기본값 없는 환경변수 placeholder는
   [prod 운영 준비 대장](../prod-schema-ledger.md)에 주입 위치와 prod 반영 상태를 선언합니다.
   `pr-format` CI가 설정 파일과 선언의 누락·잉여를 검사합니다. local/dev 전용 placeholder는 prod
-  provisioning 의무가 아니므로 검사 대상에서 제외합니다.
+  provisioning 의무가 아니므로 검사 대상에서 제외합니다. `required` 상태가 남아 있으면 main 대상
+  PR의 릴리스 검사가 실패합니다.
 
 ### 위치
 

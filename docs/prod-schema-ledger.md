@@ -5,7 +5,8 @@ prod 배포 전에 함께 확인해야 하는 스키마, 필수 설정, 파일 �
 - **생성 구간**: 스키마 헤더가 정본입니다. 직접 수정하지 않고
   `scripts/prod-schema-ledger.sh --write`로 갱신합니다.
 - **선언 구간**: prod 필수 환경변수의 주입 위치와 반영 상태를 사람이 관리합니다. CI가
-  `application.yml`과 `application-prod.yml`의 기본값 없는 placeholder와 정확히 일치하는지 검사합니다.
+  `application.yml`과 `application-prod.yml`의 기본값 없는 placeholder와 정확히 일치하는지 검사하고,
+  `required` 상태가 남은 릴리스를 차단합니다.
 - **수기 구간**: 코드로 감지할 수 없는 외부 등록물과 배포 순서 의무를 사람이 확인합니다.
 
 <!-- BEGIN GENERATED: prod-schema -->
@@ -81,8 +82,9 @@ prod에 반영해야 하고 아직 반영 PR이 없는 항목입니다. 릴리�
 공통 설정과 prod 프로필을 함께 적용했을 때 기본값이 없는 `${VAR}`만 강제합니다. local/dev 전용
 설정은 prod provisioning 의무가 아니므로 이 선언과 스캔 대상에서 제외합니다.
 
-상태는 `required`(prod 반영 필요) 또는 `applied`(prod 반영 완료)입니다. 실제 값이나 secret 이름은
-기록하지 않습니다.
+상태는 `required`(prod 반영 필요, 릴리스 차단) 또는 `applied`(prod 반영 완료)입니다. 실제 값이나
+secret 이름은 기록하지 않습니다. `applied`는 운영 환경 반영을 확인한 사람이 갱신하는 선언이며,
+CI가 실제 Secret·ConfigMap의 존재나 값을 조회해 증명하지는 않습니다.
 
 <!-- BEGIN DECLARATION: prod-required-config -->
 | 환경변수 | 주입 위치 | prod 상태 |
