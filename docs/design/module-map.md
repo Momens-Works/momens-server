@@ -124,7 +124,7 @@
 모델(모바일 Bearer / 웹 HttpOnly 쿠키 하이브리드, 공통 access+refresh)은 [ADR-0003](../adr/0003-auth-session-transport-model.md),
 토큰 발급·검증 스택(Resource Server + JOSE)은 [ADR-0004](../adr/0004-token-issuance-verification-stack.md),
 refresh token 저장 모델(서버 저장형 + PostgreSQL 원장)은 [ADR-0005](../adr/0005-refresh-token-storage-model.md)에
-기록한다. 웹 쿠키·CSRF 구현은 MOM-22가 맡는다. 이 모듈이 공통 기반 Architecture Spike(MOM-8)에 해당한다.
+기록한다. 웹 쿠키·CSRF는 MOM-22에서 구현했다. 이 모듈이 공통 기반 Architecture Spike(MOM-8)에 해당한다.
 
 ### workspace
 
