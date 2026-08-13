@@ -13,12 +13,15 @@
 판단할지를 정한다.
 
 현재 모바일 MVP 요구사항 문서는 웹 API 이관을 로드맵 단계 C, 레거시 종료를 단계 D로만 구분한다.
-그 구분은 범위를 설명하지만 실제 이관 단위, 인증 전환, writer 소유권, projection, 롤백 조건을
-정하지 않는다. 이 문서는 그 실행 규칙을 보완한다.
+그 구분은 범위를 설명하지만 실제 이관 단위, 레거시 웹 트래픽 컷오버, writer 소유권, projection,
+롤백 조건을 정하지 않는다. 이 문서는 그 실행 규칙을 보완한다.
 
 관련 상시 규칙과 결정은 [아키텍처](../rules/architecture.md), [영속성](../rules/persistence.md),
 [API 버저닝](../spec/api-versioning.md), [API 응답과 에러 코드](../spec/api-response-error-codes.md),
 [인증 세션·전송 모델](../adr/0003-auth-session-transport-model.md),
+[토큰 발급·검증 스택](../adr/0004-token-issuance-verification-stack.md),
+[refresh token 저장 모델](../adr/0005-refresh-token-storage-model.md),
+[사용자 신원 식별](../adr/0016-user-identity-key-google-sub.md),
 [projection 경계](../adr/0008-outbox-worker-projection-boundary.md)를 따른다. 현재 모듈 책임은
 [모듈 맵](module-map.md)을 기준으로 하되, 이관 중 발견한 충돌은 아래 미결정 절차로 다시 확정한다.
 
@@ -26,10 +29,10 @@
 
 포함한다.
 
-- 레거시 HTTP·protocol 표면의 전수 조사와 분류
+- 레거시 HTTP·protocol·background runtime 표면의 전수 조사와 분류
 - 최소 수직 슬라이스의 선정과 완료 기준
 - API 계약 보존·변경 절차
-- 인증 전환과 트래픽 컷오버의 결정 지점
+- 확정된 인증 계약과 레거시 웹 트래픽 컷오버의 결정 지점
 - aggregate writer와 retrieval projection 소유권 전환
 - 공유 DB 전환기 검증과 롤백 규칙
 - 이관 상태 원장과 레거시 종료 조건
@@ -38,7 +41,7 @@
 
 - 개별 endpoint의 request/response 상세 설계
 - 구현 일정과 담당자 배정
-- prod 스키마를 실제로 반영하는 작업
+- prod 스키마·필수 설정·수기 운영 의무를 실제로 반영하는 작업
 - ingress, 배포 manifest, DNS 변경의 구체 명령
 - `momens-worker`·`momens-retrieval` 내부 구현 상세
 
@@ -73,16 +76,17 @@
 
 ## 표면 분류
 
-레거시 라우터의 모든 경로를 하나의 REST 규칙으로 처리하지 않는다.
+레거시의 HTTP·비-HTTP 실행 표면을 하나의 REST 규칙으로 처리하지 않는다.
 
 | 표면 | 예 | 이관 원칙 |
 | --- | --- | --- |
 | Product JSON API | workspace, project, task, memory, source 조회·명령 | 신규 경로는 `/api`, handler `version = "1"`; 계약 모드를 endpoint별 기록 |
-| Product 인증 | Google login/callback, session refresh/logout, `/me` | 일반 도메인보다 먼저 인증 전환 모델을 확정하고 클라이언트와 함께 검증 |
+| Product 인증 | Google login/callback, session refresh/logout, `/me` | 확정된 신규 웹 인증 계약을 사용하고 클라이언트와 컷오버를 함께 검증 |
 | OAuth protocol | `/.well-known/*`, `/oauth/*` | 표준이 정한 path·method·content type을 우선하며 Product API path 규칙의 예외를 명시 |
 | MCP transport | `/mcp` | MCP·OAuth 계약과 기존 grant/token 처리 방식을 별도 슬라이스로 추적 |
 | 외부 webhook | `/slack/events`, source OAuth callback | 외부 provider 검증·재시도·redirect URI와 무중단 인계 절차를 별도 추적 |
 | 운영 표면 | `/health`, actuator | 제품 로직 이관과 분리하고 배포·관측성 기준으로 검증 |
+| 백그라운드 런타임 | scheduler, managed goroutine, startup migration·backfill | 시작 조건·side effect·재시도·멱등성·종료 순서와 대체 owner를 추적 |
 | 오프라인 도구 | seed, eval, CLI | 런타임 이관 대상이 아님. 대체·폐기·유지를 명시적으로 분류 |
 
 `/api`와 `API-Version` 규칙은 Product JSON API의 규칙이다. 표준 protocol과 provider callback에
@@ -174,26 +178,43 @@ Momens 작업 본문에 남긴다.
 그대로 비교할 수 없는 값은 의미 단위로 정규화한다. 레거시 테스트가 없으면 handler/service/repository
 추적 결과를 characterization test의 근거로 남긴다.
 
-## 인증 전환
+## 확정된 웹 인증 계약과 트래픽 전환
 
 레거시는 `session_token` 단일 쿠키를 사용하고 신규 서버는 `access_token`·`refresh_token` 및 모바일
 Bearer token을 사용한다. 두 서버가 같은 DB를 쓴다는 사실만으로 인증 세션이 호환되지는 않는다.
 
-따라서 아래 두 상태를 구분한다.
+신규 웹 인증 계약과 서버 구현은 이미 확정·완료됐다. 레거시 `session_token`은 신규 서버가 지원할
+호환 계약이 아니라 최종 컷오버에서 폐기할 대상이다.
+
+- 모바일·웹은 공통 access + refresh 세션 코어를 사용한다.
+- 웹은 서버 주도 Google Authorization Code + state·PKCE 흐름과 HttpOnly 쿠키를 사용한다.
+- 프런트와 API 서버는 same-domain(same-site)으로 배포하고 CSRF는 별도 토큰 없이 SameSite 쿠키로
+  방어한다. 배포 형태가 cross-domain으로 바뀌면 이 결정을 다시 검토한다.
+- refresh token은 PostgreSQL 세션 원장에 저장하고 회전·폐기한다.
+- 사용자 신원은 이메일이 아니라 `(provider, provider_user_id)`로 식별하며 Google `sub`을
+  `provider_user_id`로 사용한다.
+- 로그인·콜백·웹 refresh·logout의 경로와 응답 계약은
+  [API 응답과 에러 코드](../spec/api-response-error-codes.md)를 따른다.
+
+미확정인 것은 신규 인증 모델이 아니라 레거시와 신규 서버 사이의 **웹 트래픽 전환 단위**다. 다음
+상태를 구분한다.
 
 - **구현 병행**: 신규 `/api` endpoint를 구현·검증하지만 웹 운영 트래픽은 계속 레거시를 사용한다.
-- **트래픽 병행**: 한 웹 세션이 레거시 root endpoint와 신규 `/api` endpoint를 함께 호출한다.
+- **배포 병행**: 두 서버가 함께 떠 있어도 한 웹 세션은 컷오버 전까지 레거시만 사용한다.
+- **혼합 트래픽**: 한 웹 세션이 레거시 root endpoint와 신규 `/api` endpoint를 함께 호출한다.
 
-구현 병행에는 인증 브리지가 필요하지 않다. 트래픽 병행에는 아래 중 하나의 명시적 결정이 필요하다.
+구현·배포 병행에는 인증 브리지가 필요하지 않다. 혼합 트래픽을 사용하지 않고 필요한 웹 기능을
+준비한 뒤 신규 인증과 Product API를 함께 전환할 수도 있다. 혼합 트래픽이 필요하다면 아래 호환 방식
+중 하나를 명시적으로 결정해야 한다.
 
 1. 신규 서버가 전환기 동안 레거시 `session_token`을 제한적으로 신뢰한다.
 2. 레거시 서버가 신규 access token을 신뢰한다.
 3. 로그인 과정이 두 서버의 세션을 함께 만든다.
-4. 웹 Product API 구현을 작은 슬라이스로 진행하되 실제 트래픽은 필요한 기능이 모두 준비된 뒤 한 번에
-   신규 인증으로 전환한다.
 
-이 선택은 아직 확정하지 않는다. 보안 모델, 롤백, 세션 폐기, 클라이언트 공수를 함께 비교한 ADR이
-필요하다. 결정 전에는 “웹이 병행 운영될 수 있다”는 문구만으로 endpoint별 운영 전환을 승인하지 않는다.
+호환 방식을 도입하면 ADR-0003의 레거시 단일 세션 폐기 결정에 대한 한시적 예외가 되므로 보안 모델,
+롤백, 세션 폐기, 클라이언트 공수를 비교한 ADR이 필요하다. 혼합 트래픽을 사용하지 않는다면 별도 인증
+ADR 대신 이관 원장과 컷오버 계획에 전환 단위와 롤백 조건을 기록한다. 어느 쪽이든 “웹이 병행 운영될
+수 있다”는 문구만으로 endpoint별 운영 전환을 승인하지 않는다.
 
 ## writer와 projection 전환
 
@@ -230,20 +251,33 @@ Bearer token을 사용한다. 두 서버가 같은 DB를 쓴다는 사실만으�
 가진다. worker는 ADR-0008대로 outbox 소비, projection write, 재시도와 DLQ를 소유한다. 따라서 위
 조건이 준비되지 않은 aggregate는 Product API 구현이 끝나도 write 컷오버 준비 완료로 보지 않는다.
 
-## DB와 prod 스키마 작업의 관계
+## prod 운영 준비 조건
 
-공유 DB를 사용하므로 일반적인 데이터 복사 migration은 필요하지 않다. 그러나 스키마 존재와 writer
-호환성은 별도로 검증한다.
+prod 배포 전에는 [prod 운영 준비 대장](../prod-schema-ledger.md)에서 해당 슬라이스와 활성화할
+capability에 필요한 조건을 확인한다. 대장은 다음 세 종류를 함께 관리한다.
+
+- **스키마 반영**: 신규 객체의 prod 반영 위치·상태와 writer 호환성
+- **prod 필수 설정**: 기본값 없는 환경변수와 Secret·ConfigMap 주입 상태
+- **수기 prod 의무**: provider 등록, OAuth redirect URI, ADC·IAM, DNS·ingress·TLS, 배포 순서처럼
+  코드로 완전히 검증할 수 없는 조건
+
+공유 DB를 사용하므로 일반적인 데이터 복사 migration은 필요하지 않지만 스키마 조건은 다음과 같이
+별도로 검증한다.
 
 - local/test에서는 각 신규 모듈의 Flyway migration이 스키마를 만든다.
 - prod 전환기에는 신규 서버 Flyway가 꺼져 있고 `ddl-auto=validate`로 확인한다.
-- 신규 객체의 prod 반영 위치와 상태는 `docs/prod-schema-ledger.md`와 해당 Momens 작업이 소유한다.
+- 신규 객체의 prod 반영 위치와 상태는 prod 운영 준비 대장의 스키마 구간과 해당 Momens 작업이 소유한다.
 - 이미 적용된 객체를 레거시 migration에 다시 추가하지 않고 객체 단위로 대조한다.
 
 `MOM-0840`과 같은 prod 스키마 반영 작업은 로직 이관 전략의 선행 단계가 아니다. 분석, 문서화,
 구현, local/dev 검증과 독립적으로 진행할 수 있다. 다만 해당 배포가 요구하는 객체가 prod에 없으면
-그 배포의 release gate가 된다. 따라서 이관 원장에는 작업의 선후관계가 아니라 **배포 시 충족해야 할
-외부 조건**으로 연결한다.
+그 배포의 release gate가 된다. 필수 설정과 수기 의무도 같은 원칙으로, 구현의 일률적인 선행 조건이
+아니라 해당 capability를 prod에서 활성화하거나 트래픽을 전환할 때 충족해야 할 조건이다. 따라서 이관
+원장에는 작업의 선후관계가 아니라 적용 범위·현재 상태·확인 근거를 포함한 **prod gate**로 연결한다.
+
+prod gate 충족은 대장의 모든 항목이 일률적으로 `applied`여야 한다는 뜻이 아니다. 해당 슬라이스와
+활성화할 capability에 적용되는 자동 게이트가 충족되고, 수기 의무는 확인 완료·비활성·적용 제외 중
+하나로 근거가 기록돼야 한다.
 
 스키마 DDL 소유권을 신규 서버로 넘기는 시점은 모든 Product API 이관이 끝난 뒤 별도로 결정한다.
 레거시 종료와 동시에 자동으로 신규 서버 prod Flyway를 켠다고 가정하지 않는다.
@@ -254,8 +288,8 @@ Bearer token을 사용한다. 두 서버가 같은 DB를 쓴다는 사실만으�
 
 - 기준 SHA 고정
 - route와 비-HTTP entry point 추적
-- request/response/error/RBAC/transaction/schema/test 기록
-- 포함·제외 endpoint 명시
+- request/response/error/RBAC/transaction/schema/config/lifecycle/test 기록
+- 포함·제외 entry point 명시
 
 완료 기준: 독립적으로 구현 가능한 수직 슬라이스와 미결정 사항이 드러난다.
 
@@ -280,13 +314,13 @@ Bearer token을 사용한다. 두 서버가 같은 DB를 쓴다는 사실만으�
 
 ### 4. Cutover ready
 
-- 인증 전환 방식 준비
+- 확정된 신규 웹 인증 계약 및 필요한 경우 세션 공존 방식 준비
 - aggregate 단일 writer 전환 계획
-- projection·webhook·MCP 등 비-HTTP 경로 준비
-- prod 배포에 필요한 외부 조건 확인
+- projection·webhook·MCP·background runtime 등 비-HTTP 경로 준비
+- prod 운영 준비 대장에서 해당 스키마·필수 설정·수기 의무의 상태와 확인 근거 검증
 - rollback 호환성 검증
 
-완료 기준: 트래픽을 바꿔도 이중 write와 누락이 없고 되돌릴 수 있다.
+완료 기준: 해당 prod gate가 충족됐고, 트래픽을 바꿔도 이중 write와 누락이 없으며 되돌릴 수 있다.
 
 ### 5. Cutover
 
@@ -334,9 +368,9 @@ write 컷오버 전 다음을 확인한다.
 
 | 필드 | 내용 |
 | --- | --- |
-| surface | Product API, auth, OAuth, MCP, webhook, operational, offline |
+| surface | Product API, auth, OAuth, MCP, webhook, operational, background runtime, offline |
 | capability | workspace, task, memory 등 사용자 행위 또는 aggregate |
-| legacy entry point | method/path 또는 webhook·tool·scheduler 이름 |
+| legacy entry point | method/path 또는 webhook·tool·scheduler·goroutine·startup migration/backfill 이름 |
 | legacy baseline | 분석한 commit SHA |
 | legacy trace | handler/service/repository/model/migration/test 위치 |
 | target | Gradle module, package, public API |
@@ -344,7 +378,7 @@ write 컷오버 전 다음을 확인한다.
 | auth/RBAC | 인증 수단과 권한 규칙 |
 | writer | 현재 writer, 목표 writer, 전환 단위 |
 | projection/external | worker, retrieval, provider, MCP 등 의존 |
-| schema gate | 필요한 prod 객체와 외부 작업 링크 |
+| prod gate | 필요한 스키마·필수 설정·수기 prod 의무와 적용 범위·상태·근거·외부 작업 링크 |
 | client gate | FE·모바일·외부 provider 변경 |
 | rollback | 되돌릴 수 있는 범위와 제한 |
 | status | traced, contract_locked, implemented, cutover_ready, cutover, retired |
@@ -374,7 +408,7 @@ write 컷오버 전 다음을 확인한다.
 
 다음은 구현하면서 조용히 정하지 않는다.
 
-1. **웹 인증 전환 모델**: 혼합 트래픽을 허용할지, 허용한다면 어떤 세션 브리지를 둘지.
+1. **레거시 웹 트래픽 컷오버**: 혼합 트래픽을 허용할지, 허용한다면 어떤 세션 브리지를 둘지.
 2. **첫 수직 슬라이스**: 위 선정 기준에 따른 대상과 제외 endpoint.
 3. **retrieval 책임 문서 정합성**: `module-map`의 신규 서버 `retrieval` 모듈 책임과 ADR-0008의
    worker projection 책임을 어떻게 정리할지.
@@ -391,5 +425,5 @@ write 컷오버 전 다음을 확인한다.
 
 1. 고정 SHA 기준 route·비-HTTP entry point 전수 원장을 만든다.
 2. 원장에서 첫 수직 슬라이스 후보를 비교한다.
-3. 웹 인증 전환 ADR을 작성한다.
+3. 혼합 웹 트래픽이 필요한지 판단하고, 필요할 때만 세션 공존 ADR을 작성한다.
 4. 선택한 슬라이스마다 `migrate-slice` 추적과 구현 작업을 별도 Momens task로 만든다.
