@@ -1,0 +1,395 @@
+# 레거시 Product API 이관 전략
+
+상태: Draft
+
+기준일: 2026-08-13
+
+기준 레거시: `momens-api` `origin/main` `71bbd07614fd2aef4dec726bafdf86c1bd097ba6`
+
+## 목적
+
+이 문서는 Go/Gin `momens-api`의 로직을 Spring `momens-server`로 옮기는 실행 전략을 정의한다.
+개별 기능의 상세 설계나 일정표가 아니라, 어떤 단위로 조사·구현·검증·전환하고 언제 이관이 끝났다고
+판단할지를 정한다.
+
+현재 모바일 MVP 요구사항 문서는 웹 API 이관을 로드맵 단계 C, 레거시 종료를 단계 D로만 구분한다.
+그 구분은 범위를 설명하지만 실제 이관 단위, 인증 전환, writer 소유권, projection, 롤백 조건을
+정하지 않는다. 이 문서는 그 실행 규칙을 보완한다.
+
+관련 상시 규칙과 결정은 [아키텍처](../rules/architecture.md), [영속성](../rules/persistence.md),
+[API 버저닝](../spec/api-versioning.md), [API 응답과 에러 코드](../spec/api-response-error-codes.md),
+[인증 세션·전송 모델](../adr/0003-auth-session-transport-model.md),
+[projection 경계](../adr/0008-outbox-worker-projection-boundary.md)를 따른다. 현재 모듈 책임은
+[모듈 맵](module-map.md)을 기준으로 하되, 이관 중 발견한 충돌은 아래 미결정 절차로 다시 확정한다.
+
+## 범위
+
+포함한다.
+
+- 레거시 HTTP·protocol 표면의 전수 조사와 분류
+- 최소 수직 슬라이스의 선정과 완료 기준
+- API 계약 보존·변경 절차
+- 인증 전환과 트래픽 컷오버의 결정 지점
+- aggregate writer와 retrieval projection 소유권 전환
+- 공유 DB 전환기 검증과 롤백 규칙
+- 이관 상태 원장과 레거시 종료 조건
+
+포함하지 않는다.
+
+- 개별 endpoint의 request/response 상세 설계
+- 구현 일정과 담당자 배정
+- prod 스키마를 실제로 반영하는 작업
+- ingress, 배포 manifest, DNS 변경의 구체 명령
+- `momens-worker`·`momens-retrieval` 내부 구현 상세
+
+## 기준선
+
+### 코드 기준
+
+이관 분석의 정본은 계획 문서가 아니라 고정된 레거시 commit의 코드와 테스트다.
+
+1. 슬라이스를 계획할 때 `momens-api origin/main`을 갱신하고 commit SHA를 원장에 기록한다.
+2. route → handler → service → repository → domain model → migration → test 순서로 추적한다.
+3. 레거시 문서와 코드가 다르면 코드를 현재 동작으로 보고 차이를 이관 원장에 남긴다.
+4. 분석 뒤 레거시 `origin/main`이 변경되면 대상 파일의 diff를 확인하고 기준 SHA를 갱신한다.
+5. 구현 중 레거시에 같은 capability 변경이 들어오면 컷오버 전에 계약 추적을 다시 수행한다.
+
+2026-08-13 기준 레거시 라우터에는 조건부 등록을 포함해 96개의 route declaration이 있다. 반면
+신규 서버에 구현된 공개 handler mapping은 모바일·인증·사용자 표면 중심이다. 따라서 기존 문서의
+도메인 매핑 요약만으로는 잔여 범위를 판단하지 않고 route 전수 원장을 사용한다.
+
+### 문서 우선순위
+
+충돌 시 아래 순서로 판단한다.
+
+1. 제품 의미와 정책: `teams`의 PRD·ADR·용어집
+2. 신규 서버 외부 계약: `docs/spec/`
+3. 신규 서버 구조와 현재 책임: `docs/design/`, `docs/adr/`, `docs/rules/`
+4. 레거시 현재 동작: 고정 SHA의 코드와 테스트
+5. 레거시 설명 문서: `momens-api/docs/`
+
+문서에 없는 제품 결정을 레거시 코드만 보고 신규 정책으로 확정하지 않는다. 레거시 동작을 그대로
+보존할지 바꿀지는 별도 결정으로 드러낸다.
+
+## 표면 분류
+
+레거시 라우터의 모든 경로를 하나의 REST 규칙으로 처리하지 않는다.
+
+| 표면 | 예 | 이관 원칙 |
+| --- | --- | --- |
+| Product JSON API | workspace, project, task, memory, source 조회·명령 | 신규 경로는 `/api`, handler `version = "1"`; 계약 모드를 endpoint별 기록 |
+| Product 인증 | Google login/callback, session refresh/logout, `/me` | 일반 도메인보다 먼저 인증 전환 모델을 확정하고 클라이언트와 함께 검증 |
+| OAuth protocol | `/.well-known/*`, `/oauth/*` | 표준이 정한 path·method·content type을 우선하며 Product API path 규칙의 예외를 명시 |
+| MCP transport | `/mcp` | MCP·OAuth 계약과 기존 grant/token 처리 방식을 별도 슬라이스로 추적 |
+| 외부 webhook | `/slack/events`, source OAuth callback | 외부 provider 검증·재시도·redirect URI와 무중단 인계 절차를 별도 추적 |
+| 운영 표면 | `/health`, actuator | 제품 로직 이관과 분리하고 배포·관측성 기준으로 검증 |
+| 오프라인 도구 | seed, eval, CLI | 런타임 이관 대상이 아님. 대체·폐기·유지를 명시적으로 분류 |
+
+`/api`와 `API-Version` 규칙은 Product JSON API의 규칙이다. 표준 protocol과 provider callback에
+그 규칙을 억지로 적용하지 않는다. 예외 경로는 해당 표면의 ADR 또는 spec에서 소유한다.
+
+## 이관 단위
+
+### 구현 단위: 최소 수직 슬라이스
+
+구현은 한 사용자 행위를 끝까지 옮기는 최소 수직 슬라이스로 나눈다.
+
+- 하나 이상의 밀접한 endpoint
+- request parsing과 validation
+- 인증·인가 규칙
+- application/domain 규칙
+- repository query와 transaction
+- 필요한 schema mapping
+- 성공·실패 응답 계약
+- 단위·통합·계약 테스트
+
+같은 Go 파일에 있다는 이유로 관련 없는 endpoint를 함께 옮기지 않는다. 반대로 하나의 사용자 행위가
+여러 endpoint를 반드시 함께 요구하면 파일이 달라도 같은 슬라이스로 묶을 수 있다.
+
+기본적으로 한 슬라이스는 하나의 집중된 PR 안에서 구현·검증할 수 있어야 한다. 너무 크면 controller,
+service, repository 같은 수평 레이어가 아니라 독립적으로 검증 가능한 사용자 행위나 공개 계약을
+경계로 다시 나눈다.
+
+### 운영 전환 단위: read와 write를 구분
+
+작은 구현 단위와 실제 트래픽 전환 단위는 같지 않을 수 있다.
+
+- **read-only endpoint**는 인증과 응답 계약이 준비되면 endpoint 단위로 전환할 수 있다.
+- **write endpoint**는 같은 aggregate를 변경하는 모든 경로와 비-HTTP writer를 함께 조사한다.
+- aggregate의 writer는 한 시점에 하나만 둔다. 요청 복제나 dual-write를 기본 전략으로 사용하지 않는다.
+- 한 aggregate의 일부 명령만 신규 서버로 보내 두 서버가 동시에 상태를 변경하게 하지 않는다.
+- 외부 webhook·scheduler·MCP tool도 같은 aggregate를 쓴다면 writer 전환 범위에 포함한다.
+
+예를 들어 task는 REST create/update/delete뿐 아니라 Slack action과 MCP tool에서도 생성·변경된다.
+따라서 REST handler 하나를 구현한 것만으로 task write 컷오버 준비가 끝난 것이 아니다.
+
+### 슬라이스 선정 기준
+
+첫 슬라이스를 포함한 구현 순서는 아래 항목으로 비교한 뒤 별도 작업에서 확정한다.
+
+- 사용자 가치와 현재 클라이언트 사용 여부
+- 읽기 전용인지, writer 전환이 필요한지
+- 인증·권한 의존성
+- 다른 aggregate와의 transaction 결합도
+- 외부 provider·worker·retrieval 의존성
+- 레거시 테스트와 계약 근거의 충분성
+- 롤백 시 레거시가 신규 데이터 형상을 읽고 쓸 수 있는지
+
+이 문서는 특정 도메인을 첫 슬라이스로 고정하지 않는다. 후보를 고를 때 위 근거와 제외 endpoint를
+Momens 작업 본문에 남긴다.
+
+## 계약 전략
+
+### path와 version
+
+- Product API 신규 경로는 `/api` prefix를 사용한다.
+- 모든 Product API handler는 `version = "1"`을 갖는다.
+- 레거시 path alias는 만들지 않는다.
+- 클라이언트 계약은 `API-Version: 1`이고, 전환기의 기본 version fallback은 기존 ADR-0006을 따른다.
+
+### response mode
+
+각 endpoint는 구현 전에 다음 중 하나로 분류한다.
+
+- **Legacy compatible**: HTTP status와 성공·실패 JSON body shape를 보존한다.
+- **Standard**: 신규 계약 또는 클라이언트와 합의한 개편 계약을 사용한다.
+
+단순히 Java DTO를 새로 만든다는 이유로 Standard 모드로 바꾸지 않는다. 계약 변경에는 클라이언트
+합의와 spec 갱신이 필요하다. path·version 변경과 response body 호환 여부는 독립적으로 기록한다.
+
+### characterization
+
+레거시 동작을 보존하는 슬라이스는 구현 전에 최소 다음 사례를 고정한다.
+
+- 정상 응답 status와 body
+- 빈 목록·nullable·필드 생략
+- validation 실패
+- 인증 없음·잘못된 인증
+- 권한 부족
+- 리소스 없음과 상태 충돌
+- soft-delete 데이터 처리
+- pagination, filter, sort, default 값
+
+가능하면 같은 fixture와 요청을 두 구현에 적용해 결과를 비교한다. 시간·무작위 ID·외부 provider처럼
+그대로 비교할 수 없는 값은 의미 단위로 정규화한다. 레거시 테스트가 없으면 handler/service/repository
+추적 결과를 characterization test의 근거로 남긴다.
+
+## 인증 전환
+
+레거시는 `session_token` 단일 쿠키를 사용하고 신규 서버는 `access_token`·`refresh_token` 및 모바일
+Bearer token을 사용한다. 두 서버가 같은 DB를 쓴다는 사실만으로 인증 세션이 호환되지는 않는다.
+
+따라서 아래 두 상태를 구분한다.
+
+- **구현 병행**: 신규 `/api` endpoint를 구현·검증하지만 웹 운영 트래픽은 계속 레거시를 사용한다.
+- **트래픽 병행**: 한 웹 세션이 레거시 root endpoint와 신규 `/api` endpoint를 함께 호출한다.
+
+구현 병행에는 인증 브리지가 필요하지 않다. 트래픽 병행에는 아래 중 하나의 명시적 결정이 필요하다.
+
+1. 신규 서버가 전환기 동안 레거시 `session_token`을 제한적으로 신뢰한다.
+2. 레거시 서버가 신규 access token을 신뢰한다.
+3. 로그인 과정이 두 서버의 세션을 함께 만든다.
+4. 웹 Product API 구현을 작은 슬라이스로 진행하되 실제 트래픽은 필요한 기능이 모두 준비된 뒤 한 번에
+   신규 인증으로 전환한다.
+
+이 선택은 아직 확정하지 않는다. 보안 모델, 롤백, 세션 폐기, 클라이언트 공수를 함께 비교한 ADR이
+필요하다. 결정 전에는 “웹이 병행 운영될 수 있다”는 문구만으로 endpoint별 운영 전환을 승인하지 않는다.
+
+## writer와 projection 전환
+
+### 단일 writer
+
+공유 DB 전환기에도 aggregate별 단일 writer를 유지한다.
+
+1. 이관 원장에 현재 writer를 기록한다.
+2. REST 외 writer(webhook, MCP, Slack action, scheduler, worker)를 모두 찾는다.
+3. 신규 서버가 같은 데이터와 불변식을 처리할 수 있는지 검증한다.
+4. writer 트래픽을 한 단위로 신규 경로에 전환한다.
+5. 레거시 writer를 비활성화하거나 도달 불가능하게 만든다.
+6. 관측 후 레거시 코드를 제거한다.
+
+읽기는 양쪽에서 가능하지만 쓰기는 동시에 활성화하지 않는다. DB constraint가 충돌을 막아 준다는
+이유로 dual-write를 허용하지 않는다.
+
+### retrieval projection
+
+레거시 `momens-api`는 task·decision·blocker·memory write와 retrieval projection을 같은 transaction에서
+처리한다. 신규 서버는 domain write transaction에서 outbox를 남기고 worker가 projection을 처리하는
+방향이다.
+
+따라서 projection 대상 aggregate의 write 컷오버에는 다음이 필요하다.
+
+- 신규 write가 요구하는 outbox event 계약
+- worker consumer와 domain projection 지원 여부
+- event idempotency와 재처리 방식
+- 기존 문서 ID와 신규 문서 ID의 충돌·중복 여부
+- projection 지연·실패 관측
+- 컷오버 시점 이전 데이터의 backfill 또는 재projection 필요 여부
+
+신규 서버가 write를 넘겨받는 aggregate는 같은 transaction에서 필요한 outbox event를 남길 책임을
+가진다. worker는 ADR-0008대로 outbox 소비, projection write, 재시도와 DLQ를 소유한다. 따라서 위
+조건이 준비되지 않은 aggregate는 Product API 구현이 끝나도 write 컷오버 준비 완료로 보지 않는다.
+
+## DB와 prod 스키마 작업의 관계
+
+공유 DB를 사용하므로 일반적인 데이터 복사 migration은 필요하지 않다. 그러나 스키마 존재와 writer
+호환성은 별도로 검증한다.
+
+- local/test에서는 각 신규 모듈의 Flyway migration이 스키마를 만든다.
+- prod 전환기에는 신규 서버 Flyway가 꺼져 있고 `ddl-auto=validate`로 확인한다.
+- 신규 객체의 prod 반영 위치와 상태는 `docs/prod-schema-ledger.md`와 해당 Momens 작업이 소유한다.
+- 이미 적용된 객체를 레거시 migration에 다시 추가하지 않고 객체 단위로 대조한다.
+
+`MOM-0840`과 같은 prod 스키마 반영 작업은 로직 이관 전략의 선행 단계가 아니다. 분석, 문서화,
+구현, local/dev 검증과 독립적으로 진행할 수 있다. 다만 해당 배포가 요구하는 객체가 prod에 없으면
+그 배포의 release gate가 된다. 따라서 이관 원장에는 작업의 선후관계가 아니라 **배포 시 충족해야 할
+외부 조건**으로 연결한다.
+
+스키마 DDL 소유권을 신규 서버로 넘기는 시점은 모든 Product API 이관이 끝난 뒤 별도로 결정한다.
+레거시 종료와 동시에 자동으로 신규 서버 prod Flyway를 켠다고 가정하지 않는다.
+
+## 단계와 게이트
+
+### 1. Trace
+
+- 기준 SHA 고정
+- route와 비-HTTP entry point 추적
+- request/response/error/RBAC/transaction/schema/test 기록
+- 포함·제외 endpoint 명시
+
+완료 기준: 독립적으로 구현 가능한 수직 슬라이스와 미결정 사항이 드러난다.
+
+### 2. Contract lock
+
+- Legacy compatible 또는 Standard 선택
+- characterization 사례 고정
+- target module과 public API 경계 확인
+- writer·projection·외부 의존 확인
+- 새 의존성이 필요하면 기존 문서의 허용 여부 또는 팀 결정을 확인
+
+완료 기준: 클라이언트와 다른 서버가 기대할 계약을 구현 전에 검증할 수 있다.
+
+### 3. Implement
+
+- controller부터 persistence까지 수직 구현
+- 필요한 단위·slice·repository 통합 테스트
+- OpenAPI 성공·실패 예시
+- Modulith 경계 검증
+
+완료 기준: 신규 endpoint가 local/test에서 독립적으로 동작하고 계약 테스트가 통과한다.
+
+### 4. Cutover ready
+
+- 인증 전환 방식 준비
+- aggregate 단일 writer 전환 계획
+- projection·webhook·MCP 등 비-HTTP 경로 준비
+- prod 배포에 필요한 외부 조건 확인
+- rollback 호환성 검증
+
+완료 기준: 트래픽을 바꿔도 이중 write와 누락이 없고 되돌릴 수 있다.
+
+### 5. Cutover
+
+- 합의된 단위의 client/ingress/entry point 전환
+- 레거시 writer 차단
+- error rate, latency, DB constraint, outbox·projection 지연 관측
+- rollback window 유지
+
+완료 기준: 합의한 관측 기간 동안 신규 경로가 단일 owner로 동작한다.
+
+### 6. Retire
+
+- 레거시 route와 비-HTTP entry point 제거 또는 비활성 확인
+- 임시 호환 코드·feature flag 제거
+- runbook·spec·원장 갱신
+
+완료 기준: 해당 capability에 레거시 트래픽·writer·운영 의존이 없다.
+
+## 롤백
+
+롤백은 deploy rollback과 writer rollback을 구분한다.
+
+- **deploy rollback**: 신규 서버 코드나 routing을 직전 버전으로 되돌린다.
+- **writer rollback**: aggregate writer를 레거시로 되돌린다. 신규 서버가 쓴 행을 레거시가 안전하게
+  읽고 변경할 수 있을 때만 가능하다.
+
+write 컷오버 전 다음을 확인한다.
+
+- 신규 컬럼이 레거시 INSERT/UPDATE를 깨지 않는가
+- 신규 enum·status를 레거시가 읽을 수 있는가
+- label·sequence·soft-delete 규칙이 같은가
+- 신규 서버가 만든 relation과 FK를 레거시가 보존하는가
+- projection을 다시 레거시 방식으로 돌릴 때 중복이나 누락이 없는가
+- 신규 서버에서만 이해하는 데이터가 이미 생성됐다면 보상 절차가 있는가
+
+확인되지 않은 경우 writer rollback 가능하다고 기록하지 않는다. 읽기 전환은 routing rollback으로
+되돌릴 수 있어도 쓰기 전환은 데이터 호환성이 없으면 되돌릴 수 없다.
+
+## 이관 원장
+
+진행 상태는 Momens task 목록이나 이 문서의 서술만으로 추론하지 않고 별도 원장으로 관리한다. 원장은
+최초 route 전수 조사 작업에서 생성한다.
+
+필수 필드는 다음과 같다.
+
+| 필드 | 내용 |
+| --- | --- |
+| surface | Product API, auth, OAuth, MCP, webhook, operational, offline |
+| capability | workspace, task, memory 등 사용자 행위 또는 aggregate |
+| legacy entry point | method/path 또는 webhook·tool·scheduler 이름 |
+| legacy baseline | 분석한 commit SHA |
+| legacy trace | handler/service/repository/model/migration/test 위치 |
+| target | Gradle module, package, public API |
+| contract | Legacy/Standard, status·body·version 정책 |
+| auth/RBAC | 인증 수단과 권한 규칙 |
+| writer | 현재 writer, 목표 writer, 전환 단위 |
+| projection/external | worker, retrieval, provider, MCP 등 의존 |
+| schema gate | 필요한 prod 객체와 외부 작업 링크 |
+| client gate | FE·모바일·외부 provider 변경 |
+| rollback | 되돌릴 수 있는 범위와 제한 |
+| status | traced, contract_locked, implemented, cutover_ready, cutover, retired |
+| task/PR | 구현·결정·전환 작업 링크 |
+
+상태는 증거가 있을 때만 올린다. `implemented`는 코드가 존재한다는 뜻이고 `cutover`나 `retired`를
+뜻하지 않는다. 모바일용으로 같은 aggregate 일부가 구현돼 있어도 레거시 웹 표면의 계약이 다르면
+별도 entry로 추적한다.
+
+## 레거시 전체 종료 조건
+
+아래 조건이 모두 충족돼야 `momens-api`를 종료할 수 있다.
+
+- 전수 원장의 runtime entry point가 모두 `retired`이거나 명시적으로 다른 시스템에 남는다.
+- Product API와 Product 인증의 클라이언트 트래픽이 없다.
+- OAuth metadata/token/grant, MCP, Slack/source webhook의 소유 서버가 확정되고 전환됐다.
+- aggregate별 레거시 writer가 모두 중단됐다.
+- background goroutine, scheduler, migration runner 등 HTTP 밖의 실행 경로가 남아 있지 않다.
+- 신규 서버와 worker의 projection 경로가 필요한 aggregate를 모두 담당한다.
+- 미사용 세션·OAuth grant·provider callback의 drain 또는 폐기 정책이 실행됐다.
+- DB migration 권한과 runbook의 최종 소유자가 확정됐다.
+- 레거시 image·deployment·secret·alert·dashboard 제거 작업이 별도 확인됐다.
+
+코드가 이관됐다는 이유만으로 레거시 종료를 선언하지 않는다.
+
+## 선행해서 확정할 결정
+
+다음은 구현하면서 조용히 정하지 않는다.
+
+1. **웹 인증 전환 모델**: 혼합 트래픽을 허용할지, 허용한다면 어떤 세션 브리지를 둘지.
+2. **첫 수직 슬라이스**: 위 선정 기준에 따른 대상과 제외 endpoint.
+3. **retrieval 책임 문서 정합성**: `module-map`의 신규 서버 `retrieval` 모듈 책임과 ADR-0008의
+   worker projection 책임을 어떻게 정리할지.
+4. **MCP/OAuth 모듈 경계**: 최신 레거시에 추가된 `mcpauth`·`mcpserver`의 목표 모듈과 grant/token
+   이전 방식.
+5. **웹·모바일 task 계약**: MOM-0773의 필드·기본값·진행률 정책 정합화.
+6. **source_ref·signal evidence 관계**: MOM-0774의 스키마·조회 계약 정합화.
+7. **모바일 workspace scope**: MOM-0845 결정이 공통 workspace/project API 계약에 주는 영향.
+
+이 결정들은 전략 문서의 선행 조건이 아니라 각 영향 슬라이스의 `contract_locked` 또는
+`cutover_ready` 게이트다.
+
+## 다음 작업
+
+1. 고정 SHA 기준 route·비-HTTP entry point 전수 원장을 만든다.
+2. 원장에서 첫 수직 슬라이스 후보를 비교한다.
+3. 웹 인증 전환 ADR을 작성한다.
+4. 선택한 슬라이스마다 `migrate-slice` 추적과 구현 작업을 별도 Momens task로 만든다.
