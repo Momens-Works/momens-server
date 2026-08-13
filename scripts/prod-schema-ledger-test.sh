@@ -34,6 +34,13 @@ if [[ "$actual_config" != "$expected_config" ]]; then
     exit 1
 fi
 
+: > "$fixture_root/app/src/main/resources/application-extra.yml"
+if scan_prod_required_config >/dev/null 2>&1; then
+    echo "지원하지 않는 런타임 설정 파일을 허용했습니다." >&2
+    exit 1
+fi
+rm "$fixture_root/app/src/main/resources/application-extra.yml"
+
 ledger_doc="docs/ledger.md"
 
 write_config_declarations() {
@@ -56,6 +63,12 @@ expect_config_declaration_failure() {
     fi
 }
 
+write_config_declarations '| `ALPHA_REQUIRED` | `secret` | `applied` |'
+if ! check_config_declarations 'ALPHA_REQUIRED' >/dev/null 2>&1; then
+    echo "유효한 prod 필수 설정 선언을 거부했습니다." >&2
+    exit 1
+fi
+
 expect_config_declaration_failure "누락" $'ALPHA_REQUIRED\nBETA_REQUIRED' \
     '| `ALPHA_REQUIRED` | `secret` | `applied` |'
 expect_config_declaration_failure "잉여" 'ALPHA_REQUIRED' \
@@ -64,6 +77,23 @@ expect_config_declaration_failure "잉여" 'ALPHA_REQUIRED' \
 expect_config_declaration_failure "중복" 'ALPHA_REQUIRED' \
     '| `ALPHA_REQUIRED` | `secret` | `applied` |' \
     '| `ALPHA_REQUIRED` | `secret` | `applied` |'
+expect_config_declaration_failure "환경변수 형식" 'alpha_required' \
+    '| `alpha_required` | `secret` | `applied` |'
+expect_config_declaration_failure "주입 위치 형식" 'ALPHA_REQUIRED' \
+    '| `ALPHA_REQUIRED` | `file` | `applied` |'
+expect_config_declaration_failure "상태 형식" 'ALPHA_REQUIRED' \
+    '| `ALPHA_REQUIRED` | `secret` | `pending` |'
+
+write_config_declarations '| `ALPHA_REQUIRED` | `secret` | `required` |'
+if check_config_release >/dev/null 2>&1; then
+    echo "미반영 필수 설정의 릴리스를 허용했습니다." >&2
+    exit 1
+fi
+write_config_declarations '| `ALPHA_REQUIRED` | `secret` | `applied` |'
+if ! check_config_release >/dev/null 2>&1; then
+    echo "반영 완료 필수 설정의 릴리스를 차단했습니다." >&2
+    exit 1
+fi
 
 cat > "$repo_root/$ledger_doc" <<EOF
 # fixture
