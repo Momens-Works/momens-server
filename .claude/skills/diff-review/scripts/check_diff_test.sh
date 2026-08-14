@@ -16,6 +16,7 @@ git -C "${TEST_REPO}" commit -q --allow-empty -m "test base"
     '// CSRF token: SameSite cookie policy'
   printf '%s = "%s"\n' 'token' 'hardcoded-secret'
   printf '%s%s\n' '-----BEGIN PRIVATE' ' KEY-----'
+  printf '%s%s\n' '-----BEGIN ENCRYPTED' ' PRIVATE KEY-----'
 } >"${TEST_REPO}/fixture.txt"
 git -C "${TEST_REPO}" add fixture.txt
 
@@ -40,6 +41,12 @@ fi
 EXPECTED_LINE=$(printf '%s%s' '-----BEGIN PRIVATE' ' KEY-----')
 if ! grep -Fq -- "${EXPECTED_LINE}" <<<"${OUTPUT}"; then
   echo "error: private key header was not reported" >&2
+  exit 1
+fi
+
+EXPECTED_LINE=$(printf '%s%s' '-----BEGIN ENCRYPTED' ' PRIVATE KEY-----')
+if ! grep -Fq -- "${EXPECTED_LINE}" <<<"${OUTPUT}"; then
+  echo "error: encrypted private key header was not reported" >&2
   exit 1
 fi
 
