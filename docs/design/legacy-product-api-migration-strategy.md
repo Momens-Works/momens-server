@@ -120,12 +120,23 @@ service, repository 같은 수평 레이어가 아니라 독립적으로 검증 
 
 - **read-only endpoint**는 인증과 응답 계약이 준비되면 endpoint 단위로 전환할 수 있다.
 - **write endpoint**는 같은 aggregate를 변경하는 모든 경로와 비-HTTP writer를 함께 조사한다.
-- aggregate의 writer는 한 시점에 하나만 둔다. 요청 복제나 dual-write를 기본 전략으로 사용하지 않는다.
+- 원칙적으로 aggregate의 writer는 한 시점에 하나만 둔다. 요청 복제나 dual-write를 기본 전략으로 사용하지
+  않는다.
 - 한 aggregate의 일부 명령만 신규 서버로 보내 두 서버가 동시에 상태를 변경하게 하지 않는다.
 - 외부 webhook·scheduler·MCP tool도 같은 aggregate를 쓴다면 writer 전환 범위에 포함한다.
 
 예를 들어 task는 REST create/update/delete뿐 아니라 Slack action과 MCP tool에서도 생성·변경된다.
 따라서 REST handler 하나를 구현한 것만으로 task write 컷오버 준비가 끝난 것이 아니다.
+
+여기서 aggregate는 한 transaction에서 우연히 함께 변경된 모든 행의 묶음이 아니라, 하나의 root를 통해
+불변식을 원자적으로 지키는 일관성 경계다. 같은 aggregate의 write entry point는 서로 다른 PR에서 구현할
+수 있지만 운영 writer 전환은 함께 해야 한다. read-only entry point는 이 전환 단위에 포함하지 않는다.
+
+`users`는 [ADR-0016](../adr/0016-user-identity-key-google-sub.md)에 따라 이 원칙의 한시적 예외다. 모바일이
+신규 인증을 사용하는 동안에도 레거시 웹 로그인이 남아 있어 두 서버가 같은 `users` 행을 쓸 수 있다. 이는
+한 요청을 두 서버로 복제하는 dual-write가 아니라 클라이언트 경로별 writer가 공존하는 상태다. 이관 원장에는
+두 현재 writer, ADR-0016의 예외 근거, 레거시 `users` write 중단 조건을 함께 기록한다. 신규 서버가 유일한
+writer가 된 뒤 MOM-0836으로 `users.email` UNIQUE 제약을 제거한다.
 
 ### 슬라이스 선정 기준
 
@@ -220,7 +231,7 @@ ADR 대신 이관 원장과 컷오버 계획에 전환 단위와 롤백 조건�
 
 ### 단일 writer
 
-공유 DB 전환기에도 aggregate별 단일 writer를 유지한다.
+공유 DB 전환기에도 앞서 명시한 `users` 예외를 제외하고 aggregate별 단일 writer를 유지한다.
 
 1. 이관 원장에 현재 writer를 기록한다.
 2. REST 외 writer(webhook, MCP, Slack action, scheduler, worker)를 모두 찾는다.
@@ -236,7 +247,8 @@ ADR 대신 이관 원장과 컷오버 계획에 전환 단위와 롤백 조건�
 
 레거시 `momens-api`는 task·decision·blocker·memory write와 retrieval projection을 같은 transaction에서
 처리한다. 신규 서버는 domain write transaction에서 outbox를 남기고 worker가 projection을 처리하는
-방향이다.
+방향이다. 다만 2026-08-14 기준 `momens-worker@9c0c8a7`에는 outbox consumer가 없고, 수집 transaction
+안에서 `retrieval_documents`와 `retrieval_events`를 직접 쓰는 projection만 구현돼 있다.
 
 따라서 projection 대상 aggregate의 write 컷오버에는 다음이 필요하다.
 
@@ -248,8 +260,12 @@ ADR 대신 이관 원장과 컷오버 계획에 전환 단위와 롤백 조건�
 - 컷오버 시점 이전 데이터의 backfill 또는 재projection 필요 여부
 
 신규 서버가 write를 넘겨받는 aggregate는 같은 transaction에서 필요한 outbox event를 남길 책임을
-가진다. worker는 ADR-0008대로 outbox 소비, projection write, 재시도와 DLQ를 소유한다. 따라서 위
-조건이 준비되지 않은 aggregate는 Product API 구현이 끝나도 write 컷오버 준비 완료로 보지 않는다.
+가진다. worker에는 ADR-0008의 목표 상태에 맞는 outbox 소비 기반(offset, 멱등, 재시도, DLQ)과 aggregate별
+hydrate·projection 처리가 필요하다. 공통 소비 기반은 하나의 cross-repository 의존성으로 추적하되 task,
+decision, blocker, memory의 이벤트 계약과 projector 지원은 각각 구분한다. 이 의존성은 분석이나 Product
+API 구현 전체의 일률적인 선행 조건이 아니라 projection 대상 aggregate의 `cutover_ready` 게이트다. 전수
+원장에는 공통 의존성을 먼저 등록하고 각 aggregate 행의 `projection/external` 필드에서 필요한 구현 작업을
+참조한다.
 
 ## prod 운영 준비 조건
 
@@ -269,15 +285,16 @@ capability에 필요한 조건을 확인한다. 대장은 다음 세 종류를 �
 - 신규 객체의 prod 반영 위치와 상태는 prod 운영 준비 대장의 스키마 구간과 해당 Momens 작업이 소유한다.
 - 이미 적용된 객체를 레거시 migration에 다시 추가하지 않고 객체 단위로 대조한다.
 
-`MOM-0840`과 같은 prod 스키마 반영 작업은 로직 이관 전략의 선행 단계가 아니다. 분석, 문서화,
-구현, local/dev 검증과 독립적으로 진행할 수 있다. 다만 해당 배포가 요구하는 객체가 prod에 없으면
-그 배포의 release gate가 된다. 필수 설정과 수기 의무도 같은 원칙으로, 구현의 일률적인 선행 조건이
-아니라 해당 capability를 prod에서 활성화하거나 트래픽을 전환할 때 충족해야 할 조건이다. 따라서 이관
-원장에는 작업의 선후관계가 아니라 적용 범위·현재 상태·확인 근거를 포함한 **prod gate**로 연결한다.
+`MOM-0840`과 같은 prod 스키마 반영 작업은 로직 이관 전략의 선행 단계가 아니다. 분석, 문서화, 구현,
+local/dev 검증과 독립적으로 진행할 수 있다. 다만 현재 자동 release gate는 슬라이스 범위를 구분하지
+않는다. `main` 대상 PR에서는 대장 전체의 스키마 `required`·`pending` 상태와 prod 필수 설정의 `required`
+상태를 검사하며, 하나라도 남아 있으면 릴리스를 차단한다. `ddl-auto=validate`도 기동 시 매핑된 엔티티
+전체를 검증한다. 따라서 스키마와 prod 필수 설정은 해당 릴리스의 전역 조건이다.
 
-prod gate 충족은 대장의 모든 항목이 일률적으로 `applied`여야 한다는 뜻이 아니다. 해당 슬라이스와
-활성화할 capability에 적용되는 자동 게이트가 충족되고, 수기 의무는 확인 완료·비활성·적용 제외 중
-하나로 근거가 기록돼야 한다.
+수기 prod 의무는 자동 release gate 대상이 아니며 capability별로 확인 완료·비활성·적용 제외 상태와 근거를
+기록한다. 이관 원장의 **prod gate** 필드에는 슬라이스가 직접 요구하는 스키마·필수 설정·수기 의무와 적용
+범위를 기록하되, 릴리스 전체의 자동 게이트 충족 여부는 prod 운영 준비 대장에서 별도로 확인한다. 이 전역
+게이트 역시 로직 분석이나 구현의 일률적인 선행 조건이 아니라 prod 릴리스 시점의 조건이다.
 
 스키마 DDL 소유권을 신규 서버로 넘기는 시점은 모든 Product API 이관이 끝난 뒤 별도로 결정한다.
 레거시 종료와 동시에 자동으로 신규 서버 prod Flyway를 켠다고 가정하지 않는다.
@@ -378,7 +395,7 @@ write 컷오버 전 다음을 확인한다.
 | auth/RBAC | 인증 수단과 권한 규칙 |
 | writer | 현재 writer, 목표 writer, 전환 단위 |
 | projection/external | worker, retrieval, provider, MCP 등 의존 |
-| prod gate | 필요한 스키마·필수 설정·수기 prod 의무와 적용 범위·상태·근거·외부 작업 링크 |
+| prod gate | 슬라이스별 직접 의존성과 전역 release gate 확인 위치 |
 | client gate | FE·모바일·외부 provider 변경 |
 | rollback | 되돌릴 수 있는 범위와 제한 |
 | status | traced, contract_locked, implemented, cutover_ready, cutover, retired |
@@ -410,8 +427,9 @@ write 컷오버 전 다음을 확인한다.
 
 1. **레거시 웹 트래픽 컷오버**: 혼합 트래픽을 허용할지, 허용한다면 어떤 세션 브리지를 둘지.
 2. **첫 수직 슬라이스**: 위 선정 기준에 따른 대상과 제외 endpoint.
-3. **retrieval 책임 문서 정합성**: `module-map`의 신규 서버 `retrieval` 모듈 책임과 ADR-0008의
-   worker projection 책임을 어떻게 정리할지.
+3. **retrieval 책임과 worker 소비 계약**: `module-map`의 신규 서버 `retrieval` 모듈 책임과 ADR-0008의
+   worker projection 책임을 정합화하고, 공통 outbox 소비 기반과 aggregate별 hydrate·projection 경계를
+   어떻게 나눌지.
 4. **MCP/OAuth 모듈 경계**: 최신 레거시에 추가된 `mcpauth`·`mcpserver`의 목표 모듈과 grant/token
    이전 방식.
 5. **웹·모바일 task 계약**: MOM-0773의 필드·기본값·진행률 정책 정합화.
@@ -423,7 +441,8 @@ write 컷오버 전 다음을 확인한다.
 
 ## 다음 작업
 
-1. 고정 SHA 기준 route·비-HTTP entry point 전수 원장을 만든다.
-2. 원장에서 첫 수직 슬라이스 후보를 비교한다.
-3. 혼합 웹 트래픽이 필요한지 판단하고, 필요할 때만 세션 공존 ADR을 작성한다.
-4. 선택한 슬라이스마다 `migrate-slice` 추적과 구현 작업을 별도 Momens task로 만든다.
+1. 고정 SHA 기준 route·비-HTTP entry point 전수 원장을 만들고 공통 cross-repository 의존성을 등록한다.
+2. worker outbox 소비 기반과 aggregate별 projection 구현 작업을 분리해 만들고 원장에 연결한다.
+3. 원장에서 첫 수직 슬라이스 후보를 비교한다.
+4. 혼합 웹 트래픽이 필요한지 판단하고, 필요할 때만 세션 공존 ADR을 작성한다.
+5. 선택한 슬라이스마다 `migrate-slice` 추적과 구현 작업을 별도 Momens task로 만든다.
