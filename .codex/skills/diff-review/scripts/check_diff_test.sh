@@ -15,6 +15,12 @@ git -C "${TEST_REPO}" commit -q --allow-empty -m "test base"
     'String csrfToken = csrfTokenRepository.load(request);' \
     '// CSRF token: SameSite cookie policy'
   printf '%s = "%s"\n' 'token' 'hardcoded-secret'
+  printf '%s=%s\n' 'DATABASE_PASSWORD' 'momens'
+  printf '%s=%s\n' 'MOMENS_AUTH_JWT_SECRET' 'change-me'
+  printf '%s=%s\n' 'MOMENS_AUTH_GOOGLE_CLIENT_SECRET' 'change-me'
+  printf '%s=%s\n' 'POSTGRES_PASSWORD' 'momens'
+  printf '%s: %s\n' 'jwt-secret' 'test-only-abc'
+  printf '%s: %s\n' 'client-secret' 'test-web-client-secret'
   printf '%s%s\n' '-----BEGIN PRIVATE' ' KEY-----'
   printf '%s%s\n' '-----BEGIN ENCRYPTED' ' PRIVATE KEY-----'
 } >"${TEST_REPO}/fixture.txt"
@@ -37,6 +43,19 @@ if ! grep -Fq "${EXPECTED_LINE}" <<<"${OUTPUT}"; then
   echo "error: hardcoded token was not reported" >&2
   exit 1
 fi
+
+for EXPECTED_LINE in \
+  "$(printf '%s=%s' 'DATABASE_PASSWORD' 'momens')" \
+  "$(printf '%s=%s' 'MOMENS_AUTH_JWT_SECRET' 'change-me')" \
+  "$(printf '%s=%s' 'MOMENS_AUTH_GOOGLE_CLIENT_SECRET' 'change-me')" \
+  "$(printf '%s=%s' 'POSTGRES_PASSWORD' 'momens')" \
+  "$(printf '%s: %s' 'jwt-secret' 'test-only-abc')" \
+  "$(printf '%s: %s' 'client-secret' 'test-web-client-secret')"; do
+  if ! grep -Fq "${EXPECTED_LINE}" <<<"${OUTPUT}"; then
+    echo "error: config secret was not reported: ${EXPECTED_LINE}" >&2
+    exit 1
+  fi
+done
 
 EXPECTED_LINE=$(printf '%s%s' '-----BEGIN PRIVATE' ' KEY-----')
 if ! grep -Fq -- "${EXPECTED_LINE}" <<<"${OUTPUT}"; then
