@@ -44,7 +44,8 @@ git status --short --ignored --untracked-files=all \
 echo
 echo "== Sensitive-looking diff lines =="
 SENSITIVE_KEYS='password|passwd|secret|token|api[_-]?key|private[_-]?key|credential'
-SENSITIVE_LINE_PATTERN="(^\\+[[:space:]]*\"?(${SENSITIVE_KEYS})\"?[[:space:]]*(:[[:space:]]*[^[:space:]:].*|=[^=].*))|(^\\+.*(${SENSITIVE_KEYS})[[:alnum:]_-]*[[:space:]]*=[[:space:]]*['\"][^'\"]+['\"])|(^\\+.*BEGIN ((RSA|OPENSSH|EC|ENCRYPTED) )?PRIVATE KEY)"
+SENSITIVE_CONFIG_KEY="([[:alnum:]]+[._-])*(${SENSITIVE_KEYS})([._-][[:alnum:]]+)*"
+SENSITIVE_LINE_PATTERN="(^\\+[[:space:]]*\"?${SENSITIVE_CONFIG_KEY}\"?[[:space:]]*(:[[:space:]]*[^[:space:]:].*|=[^=].*))|(^\\+.*(${SENSITIVE_KEYS})[[:alnum:]_-]*[[:space:]]*=[[:space:]]*['\"][^'\"]+['\"])|(^\\+.*BEGIN ((RSA|OPENSSH|EC|ENCRYPTED) )?PRIVATE KEY)"
 git diff "${MERGE_BASE}" -- \
   ':!gradle/wrapper/gradle-wrapper.jar' \
   | grep -nEi "${SENSITIVE_LINE_PATTERN}" || true
