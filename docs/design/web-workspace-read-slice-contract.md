@@ -166,7 +166,7 @@ modules/workspace/src/main/java/works/momens/server/workspace/
 
 ## 6. 전환과 롤백
 
-ingress는 `API-Version` 헤더 유무로 신규 서버와 레거시를 분기한다.
+ingress는 `API-Version` 헤더 유무로 신규 서버와 레거시를 분기한다. path rewrite는 하지 않는다.
 
 이 방식에서 전환 단위는 **클라이언트 배포**다. 웹이 path(`/workspaces` → `/api/workspaces`)와
 `API-Version` 헤더를 함께 바꿔야 신규 서버로 넘어가고, 되돌리는 것도 클라이언트 배포다. 서버는
@@ -178,11 +178,9 @@ ingress는 `API-Version` 헤더 유무로 신규 서버와 레거시를 분기�
 
 구현 중 조용히 정하지 않는다.
 
-1. ingress가 path rewrite까지 수행하는지. 수행한다면 롤백 단위가 클라이언트 배포에서 ingress
-   규칙으로 바뀐다.
-2. 레거시 미들웨어의 토큰 추출 fallback(`Authorization` 헤더·`access_token` 쿠키) 반영 시점.
+1. 레거시 미들웨어의 토큰 추출 fallback(`Authorization` 헤더·`access_token` 쿠키) 반영 시점.
    기준선 SHA 기준으로 아직 반영되지 않았고, 이 슬라이스의 선행 조건은 아니다.
-3. 신규 endpoint로 전환한 뒤 레거시 `GET /workspaces`, `GET /workspaces/:id`를 retire하는 시점.
+2. 신규 endpoint로 전환한 뒤 레거시 `GET /workspaces`, `GET /workspaces/:id`를 retire하는 시점.
 
 ## 8. 후속 작업
 
