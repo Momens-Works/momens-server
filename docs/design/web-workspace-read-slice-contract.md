@@ -137,32 +137,48 @@ soft-delete 필터는 두지 않는다. 레거시에 해당 컬럼과 필터가 
 
 ## 5. Target 설계
 
-모듈은 `:workspace`로 확정한다. capability 모듈이 자기 도메인의 HTTP 입출력을 소유하고, 조회
-결과를 모듈 밖으로 공개하지 않아 reader를 `internal`에 닫아둘 수 있다. 웹 표면 전용 모듈은 만들지
-않는다.
+웹 HTTP 표면은 신규 orchestration module `:web`이 소유한다. `:mobile`과 같은 자리이며,
+capability 모듈의 public API만 조합하고 도메인 정책을 소유하지 않는다
+([아키텍처](../rules/architecture.md) 모듈 경계).
+
+capability 모듈에 웹 presentation을 두지 않는 이유는 의존 방향이다. 현재 그래프에서 `:workspace`는
+`:common`, `:user`만 참조하는 바닥 모듈이고 `:project`가 그것을 참조한다. 웹 응답이 다른
+capability의 데이터를 합성하는 순간 `:workspace → :project`가 필요해져 순환이 생긴다. 레거시 웹
+응답은 실제로 카운트·진행률을 싣고, H023 snapshot은 7개 capability를 합성한다. `:mobile`이 최상위
+표면으로 앉아 이 문제를 피하는 것과 같은 이유로 `:web`을 둔다.
+
+이 슬라이스 자체는 합성이 없지만, 모듈 결정은 남은 웹 endpoint 전체에 적용된다. 컨트롤러가 하나뿐인
+지금이 방향을 세우는 가장 싼 시점이다.
 
 ```text
+modules/web/src/main/java/works/momens/server/web/
+└── workspace/
+    ├── WorkspaceController.java         # 신규. /api/workspaces, version "1"
+    ├── WorkspaceControllerDocs.java     # 신규. OpenAPI
+    └── dto/response/
+        ├── WorkspaceResponse.java       # 신규
+        └── WorkspaceListResponse.java   # 신규
+
 modules/workspace/src/main/java/works/momens/server/workspace/
 ├── WorkspaceErrorCode.java              # 신규. WORKSPACE_NOT_FOUND
-├── presentation/
-│   ├── WorkspaceController.java         # 신규. /api/workspaces, version "1"
-│   ├── WorkspaceControllerDocs.java     # 신규. OpenAPI
-│   └── dto/response/
-│       ├── WorkspaceResponse.java       # 신규
-│       └── WorkspaceListResponse.java   # 신규
+├── WorkspaceReader.java                 # 신규. public API. 목록·단건 조회
+├── WorkspaceDetail.java                 # 신규. public API. 조회 결과 record
 └── internal/
-    ├── WorkspaceReader.java             # 신규. 목록·단건 조회
+    ├── WorkspaceReaderImpl.java         # 신규
     └── WorkspaceRepository.java         # 변경. 조회 메서드 2개 추가
 ```
 
+- `:web` 모듈을 `settings.gradle`, `app/build.gradle` 의존성, `Dockerfile`의 build script COPY
+  목록에 함께 추가한다(`verifyDockerModuleBuildScripts`가 누락을 잡는다).
+- `:web`은 `:common`과 `:workspace`만 의존한다. capability가 늘어날 때마다 의존을 추가한다.
+- `WorkspaceReader`는 `Optional`을 반환하고 에러 선택은 `:web`이 한다. `ProjectReader`와 같은 방식.
 - `WorkspaceRepository`에 멤버십 조인 목록 조회와 단건 조회를 추가한다. 정렬은 쿼리에서 고정한다.
-- 권한 판정은 `WorkspaceAccess.isMember`를 재사용한다. 이 API는 `boolean`만 반환하므로 에러 선택은
-  호출하는 쪽에서 한다.
+- 권한 판정은 `WorkspaceAccess.isMember`를 재사용한다.
 - 목록은 멤버십 조인이 필터라 별도 권한 검사를 하지 않는다.
 - 쓰기가 없어 트랜잭션 경계와 outbox는 이 슬라이스의 범위 밖이다.
-- `:workspace` `build.gradle`에 `spring-boot-starter-webmvc`(main)와
-  `spring-boot-starter-webmvc-test`(test)를 추가하고, 모듈 테스트 리소스에 전역과 같은
-  `SNAKE_CASE` 설정을 둔다. springdoc은 `app`이 소유하므로 모듈에 추가하지 않는다.
+- `:web` `build.gradle`에 `spring-boot-starter-webmvc`(main)와
+  `spring-boot-starter-webmvc-test`(test)를 둔다. springdoc은 `app`이 소유하므로 모듈에 추가하지
+  않는다. `:workspace`는 웹 의존성을 갖지 않는다.
 
 ## 6. 전환과 롤백
 
