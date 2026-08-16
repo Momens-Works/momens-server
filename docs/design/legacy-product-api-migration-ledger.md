@@ -115,7 +115,7 @@ handler/service/repository를 뜻한다.
 | `AUT` | `auth/handler.go` → `auth/service.go` → `auth/repository.go` → `domain.User`, `platform/auth/jwt.go`, `platform/oauth/google.go` | `000001_init.sql`, `000007_user_job_role.sql`, `000018_refresh_tokens.sql`; `auth/service_integration_test.go`, `platform/auth/jwt_test.go` | `auth` 세션과 `user` 신원·프로필 |
 | `USR` | legacy `auth/handler.go`의 `Me`·`UpdateMe` → `auth/service.go` → `auth/repository.go` → `domain.User` | `000001_init.sql`, `000007_user_job_role.sql`; `auth/service_integration_test.go` | `user`; `/api/me` GET/PATCH 구현 완료 |
 | `WSP` | `workspace/handler.go` → `service.go` → `repository.go`, `access/service.go`·`repository.go`, `label/label.go` → workspace 관련 `domain/models.go` | `000001_init.sql`, `000006_fe_contract.sql`, `000009_member_onboarding_state.sql`, `000011_workspace_invitations.sql`; `workspace/*_test.go`, `access/service_integration_test.go` | `workspace` |
-| `SNP` | `snapshot/handler.go` → workspace/project/milestone/task/blocker/memory/relation service·repository | 위 capability의 모든 schema; `snapshot/handler_integration_test.go` | 단일 모듈 소유 미확정. 얇은 웹 orchestration 표면 후보 |
+| `SNP` | `snapshot/handler.go` → workspace/project/milestone/task/blocker/memory/relation service·repository | 위 capability의 모든 schema; `snapshot/handler_integration_test.go` | 표면은 `:web`(`MOM-0850`). 합성 로직의 소유와 응답 계약은 미확정 |
 | `PRJ` | `project/handler.go` → `service.go` → `repository.go` → `domain.Project`, `access` | `000001_init.sql`, `000006_fe_contract.sql`, `000008_project_metadata.sql`, `000017_project_label.sql`; `project/handler_test.go`, `service_integration_test.go` | `project` |
 | `MIL` | `milestone/handler.go` → `service.go` → `repository.go` → `domain.Milestone`, `access` | `000001_init.sql`, `000006_fe_contract.sql`; `milestone/service_integration_test.go` | `project` |
 | `TSK` | `task/handler.go` → `service.go` → `repository.go` → `domain.Task`·`TaskUpdate`, `retrieval/projection.go`·`repository.go` | `000001_init.sql`, `000002_retrieval_projection.sql`, `000006_fe_contract.sql`, `000012_task_updates.sql`, `000013_task_workspace_cascade.sql`; `task/service_integration_test.go`, `retrieval/projection_test.go` | `project`의 nested `task`; 웹 계약은 `MOM-0773` 필요 |
@@ -347,7 +347,7 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 3. `momens-worker`의 공통 outbox 소비 기반(offset·멱등·재시도·DLQ)과 task/decision/blocker/memory
    projector 분리
 4. startup retrieval backfill·embedding의 최종 owner와 기존 document 재projection 방식
-5. snapshot 합성 endpoint의 target 표면 소유자
+5. snapshot 합성 endpoint의 합성 로직 소유와 응답 계약. 표면은 `:web`으로 확정됐다(`MOM-0850`)
 6. offline CLI 3개의 유지·대체·폐기와 소유 저장소
 7. `MOM-0773` task 계약, `MOM-0774` source-ref 관계, `MOM-0845` workspace scope
 8. Product JSON별 실제 웹 사용 여부와 컷오버 관측 기간
