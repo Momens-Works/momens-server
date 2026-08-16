@@ -38,6 +38,7 @@ docs/
 - [상세설계 > 모바일 MVP 서버 요구사항](design/mobile-mvp-server-requirements.md)
 - [상세설계 > 레거시 Product API 이관 전략](design/legacy-product-api-migration-strategy.md)
 - [상세설계 > 레거시 Product API 이관 원장](design/legacy-product-api-migration-ledger.md)
+- [상세설계 > 첫 웹 read 슬라이스 계약 (워크스페이스 조회)](design/web-workspace-read-slice-contract.md)
 - [상세설계 > MOM-0689 Signal push 데모](design/signal-push-demo-design.md)
 - [상세설계 > MOM-0803 Signal Minsu task draft](design/minsu-signal-task-draft-design.md)
 - [상세설계 > MOM-0810 Minsu 비동기 task draft 생성](design/minsu-async-task-draft-design.md)
