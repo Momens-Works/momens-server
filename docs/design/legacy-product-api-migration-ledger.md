@@ -34,7 +34,7 @@ HTTP 행은 `H001`부터, 비-HTTP 행은 `N001`부터 식별한다. 각 행의 
 | --- | --- |
 | legacy baseline | `71bbd07614fd2aef4dec726bafdf86c1bd097ba6` |
 | trace task | `MOM-0848` |
-| implementation task/PR | 미생성. 후보 선정·계약 잠금 뒤 별도 작업으로 연결 |
+| implementation task/PR | 별도 표기가 없으면 미생성. H020·H022는 `MOM-0851` |
 | legacy entry point traffic owner | `momens-api` |
 
 ## 기준선과 전수성 검증
@@ -203,9 +203,9 @@ schema·routing·실제 client traffic을 확인하고, legacy REST·MCP·Slack 
 | H017 | Product auth | `GET /auth/me` | `auth.Me` | `USR` | R | `implemented`: target `GET /api/me`; cutover 전 |
 | H018 | Product auth | `PATCH /auth/me` | `auth.UpdateMe` | `USR` | W | `implemented`: target `PATCH /api/me`; cutover 전 |
 | H019 | Product JSON | `POST /workspaces` | `workspace.Create` | `WSP` | W | `traced` |
-| H020 | Product JSON | `GET /workspaces` | `workspace.List` | `WSP` | R | `traced` |
+| H020 | Product JSON | `GET /workspaces` | `workspace.List` | `WSP` | R | `contract_locked`: target `GET /api/workspaces`, [첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md) (`MOM-0850`) |
 | H021 | Product JSON | `GET /workspaces/slug-available` | `workspace.SlugAvailable` | `WSP` | R | `traced` |
-| H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `traced` |
+| H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `contract_locked`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md) (`MOM-0850`) |
 | H023 | Product JSON | `GET /workspaces/:id/snapshot` | `snapshot.Get` | `SNP` | R | `traced`; multi-capability 합성 |
 | H024 | Product JSON | `PATCH /workspaces/:id` | `workspace.Update` | `WSP` | W | `traced` |
 | H025 | Product JSON | `GET /workspaces/:id/onboarding` | `workspace.GetOnboarding` | `WSP` | R | `traced` |
@@ -322,20 +322,21 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 
 ## 첫 수직 슬라이스 후보 비교
 
-첫 슬라이스는 아직 확정하지 않는다. 아래는 원장에서 확인한 read-only 후보이며, write 전환과
-projection 공통 기반을 처음부터 묶지 않아도 되는 범위만 비교했다.
+첫 슬라이스는 **워크스페이스 목록·상세(H020, H022)** 로 확정했다(`MOM-0850`). 계약은
+[첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md)이 잠갔다. 아래는 확정 당시
+비교한 read-only 후보이며, write 전환과 projection 공통 기반을 처음부터 묶지 않아도 되는 범위만
+비교했다.
 
 | 후보 | 포함 entry | 장점 | 먼저 잠글 계약·제약 | 판단 |
 | --- | --- | --- | --- | --- |
-| 워크스페이스 목록·상세 | H020, H022 | 사용자 진입 가치가 높고 target `workspace` entity/repository가 이미 있으며 projection 없음 | `MOM-0845`의 모바일 workspace scope, legacy wrapper·403/404·soft-delete characterization | **우선 후보**. MOM-0845 결정 후 가장 작은 read slice로 재평가 |
+| 워크스페이스 목록·상세 | H020, H022 | 사용자 진입 가치가 높고 target `workspace` entity/repository가 이미 있으며 projection 없음 | legacy wrapper·403/404·soft-delete characterization | **확정**. 응답 필드가 target 엔티티와 1:1이고 신규 DDL이 없음. 웹 계약이라 `MOM-0845`와 독립 |
 | 프로젝트 목록·상세 | H038, H047 | target `ProjectReader`와 project backing이 이미 있고 projection 없음 | legacy `health_status`, count, metadata, label, owners와 계산 progress의 응답 정책; `MOM-0845` | 두 번째 후보. legacy field gap이 workspace보다 큼 |
 | 마일스톤 목록·상세 | H051, H056 | read-only이고 외부 provider·projection 없음 | target milestone entity/API가 아직 없고 owner·health·progress 전체 mapping 필요 | 독립성은 높지만 첫 slice의 신규 코드량이 더 큼 |
 | 태스크 목록·상세 | H053, H060 | 사용자 가치가 높고 target task backing·모바일 read가 존재 | `MOM-0773`, legacy milestone/due date·role/default·progress, 웹/모바일 DTO 분리 | 계약 선행 결정 전에는 첫 slice로 선택하지 않음 |
 | 결정·블로커 read | H039, H055, H073 | write를 제외하면 projection 전환 없이 routing rollback 가능 | target entity/API 미구현, legacy 전용 test 없음, 현재 클라이언트 사용 근거 확인 필요 | characterization 근거가 약해 후순위 |
 
-우선 후보는 구현 확정이 아니다. `MOM-0845` 결과와 현재 웹 호출 로그·FE 사용 경로를 확인한 뒤
-별도 Momens 작업에서 `migrate-slice`로 route → handler → service → repository → schema → test를
-다시 고정한다.
+확정한 슬라이스의 route → handler → service → repository → schema → test 재추적 결과와 잠근
+계약은 [첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md)에 있다.
 
 ## 미결정 사항
 
@@ -355,8 +356,8 @@ projection 공통 기반을 처음부터 묶지 않아도 되는 범위만 비�
 
 중복 여부를 Momens에서 다시 확인한 뒤 필요한 것만 만든다.
 
-1. `[Docs] 첫 웹 read 수직 슬라이스 선정과 계약 잠금`
-   - H020/H022와 H038/H047을 실제 FE 사용 경로·MOM-0845 결과로 비교
+1. ~~`[Docs] 첫 웹 read 수직 슬라이스 선정과 계약 잠금`~~ — `MOM-0850`에서 완료.
+   H020·H022로 확정하고 [계약 문서](web-workspace-read-slice-contract.md)로 잠갔다
 2. `[Docs] MCP/OAuth target module·token/grant 전환 ADR`
    - H002~H012, H035~H036, N009~N019 소유
 3. `[Feat] worker outbox 공통 소비 기반`
