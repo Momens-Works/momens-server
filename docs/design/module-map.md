@@ -25,6 +25,7 @@
 | `outbox` | append-only outbox 발행 로그 공용 모듈 (ADR-0008) | 신규 |
 | `notification` | Signal 발생 push notification 소비·발송, push 설치(FID/FCM token) lifecycle | 신규 |
 | `mobile` | 모바일 진입 API. 도메인 public API 조합(얇은 orchestration) | 없음 (신규 표면) |
+| `web` | 웹 Product API. 도메인 public API 조합(얇은 orchestration). `MOM-0851`에서 추가 | 레거시 웹 Product JSON |
 | `memory` | 메모리 후보 검토·confirmed memory lifecycle | `memory` |
 | `source` | 외부 연결 lifecycle·provider OAuth·source-ref verify | `source` |
 | `context` | task-memory/source-ref 연결·context API (얇은 orchestration) | `relation` |
@@ -43,6 +44,10 @@
 - `mobile`은 `user`, `project`, `workspace`, `signal`, `context`, `source`, `notification`, `minsu`의
   public API만 조합한다(bootstrap, 멤버 조회, 브리프, 태스크 관련자료, push 설치 등록·해제, 태스크
   상세의 draft 생성 상태). 도메인 정책을 소유하지 않는다.
+- `web`은 `mobile`과 같은 자리의 표면 모듈이다. 레거시 웹 Product API를 이관한 `/api/*` 컨트롤러를
+  소유하고 도메인 public API만 조합한다. capability 모듈에 웹 presentation을 두지 않는 이유는 의존
+  방향이다. `workspace`처럼 그래프 아래에 있는 모듈이 웹 응답을 위해 `project`를 참조하면 순환이
+  된다([첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md), `MOM-0850`).
 - 태스크 상세의 `draft_status`를 `mobile`이 읽는 이유는 태스크 상세를 소유한 `project`에서
   `minsu`를 부르면 `minsu` → `project`(draft 반영)와 맞물려 순환이 되기 때문이다. 두 원장을 엮는
   조합은 표면이 한다(MOM-0822).
