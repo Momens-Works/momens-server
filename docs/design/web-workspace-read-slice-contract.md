@@ -78,12 +78,22 @@
 
 ### 4.2 인증
 
-신규 서버 기준으로 맞춘다(이관 전략 결정②A). 보호 체인이 Bearer 헤더 또는 `access_token` 쿠키에서
-access token을 읽고, 컨트롤러는 `CurrentUser.id(principal)`로 `users.id`를 받는다. 레거시
-`session_token` 쿠키를 신규 서버가 읽는 fallback은 두지 않는다.
+보호 체인이 access token을 읽고, 컨트롤러는 `CurrentUser.id(principal)`로 `users.id`를 받는다.
+레거시와 신규 토큰 모두 HS256이고 subject가 `users.id`이며 DB를 공유하므로, 사용자 식별은 추가
+매핑 없이 일치한다.
 
-레거시와 신규 토큰 모두 HS256이고 subject가 `users.id`이며 DB를 공유하므로, 사용자 식별은 추가 매핑
-없이 일치한다.
+전환기에는 레거시 `session_token` 쿠키를 함께 수용한다([ADR-0017](../adr/0017-transitional-legacy-session-token-acceptance.md)).
+운영 웹이 레거시 OAuth로 로그인해 `access_token` 쿠키를 갖지 않으므로, 수용하지 않으면 전환 즉시
+`401`이 된다. `BearerTokenResolver`의 조회 순서는 다음과 같다.
+
+1. `Authorization` 헤더
+2. `access_token` 쿠키
+3. `session_token` 쿠키 (전환기 한시)
+
+디코더와 서명 키는 바꾸지 않는다. 웹 로그인이 신규 서버로 전환되면 3번을 제거한다.
+
+레거시 서버가 신규 access token을 읽게 하는 패치(이관 전략 결정②A)는 방향이 반대이고 이
+슬라이스의 선행 조건이 아니다.
 
 ### 4.3 응답 body
 
@@ -172,6 +182,8 @@ modules/workspace/src/main/java/works/momens/server/workspace/
   목록에 함께 추가한다(`verifyDockerModuleBuildScripts`가 누락을 잡는다).
 - `:web`은 `:common`과 `:workspace`만 의존한다. capability가 늘어날 때마다 의존을 추가한다.
 - `WorkspaceReader`는 `Optional`을 반환하고 에러 선택은 `:web`이 한다. `ProjectReader`와 같은 방식.
+- `:auth`의 `BearerTokenResolver`에 `session_token` 쿠키 fallback을 더한다(ADR-0017). 쿠키
+  이름은 설정으로 두지 않고 전환기 상수로 둔다. 제거 조건을 주석에 남긴다.
 - `WorkspaceRepository`에 멤버십 조인 목록 조회와 단건 조회를 추가한다. 정렬은 쿼리에서 고정한다.
 - 권한 판정은 `WorkspaceAccess.isMember`를 재사용한다.
 - 목록은 멤버십 조인이 필터라 별도 권한 검사를 하지 않는다.
