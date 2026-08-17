@@ -22,6 +22,7 @@ def capabilityModules = [
     'signal',
     'source',
     'user',
+    'web',
     'workspace',
 ]
 

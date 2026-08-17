@@ -32,6 +32,7 @@ COPY modules/project/build.gradle ./modules/project/
 COPY modules/signal/build.gradle ./modules/signal/
 COPY modules/source/build.gradle ./modules/source/
 COPY modules/user/build.gradle ./modules/user/
+COPY modules/web/build.gradle ./modules/web/
 COPY modules/workspace/build.gradle ./modules/workspace/
 # gradlew 의 줄바꿈은 .gitattributes 의 `gradlew text eol=lf` 로 보장합니다. 예전에는 여기서
 # sed 로 CR 을 지웠지만, 아래 COPY . . 가 원본으로 다시 덮어써 정작 bootJar 단계에는 적용되지
