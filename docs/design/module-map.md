@@ -137,6 +137,16 @@
 refresh token 저장 모델(서버 저장형 + PostgreSQL 원장)은 [ADR-0005](../adr/0005-refresh-token-storage-model.md)에
 기록한다. 웹 쿠키·CSRF는 MOM-22에서 구현했다. 이 모듈이 공통 기반 Architecture Spike(MOM-8)에 해당한다.
 
+인증을 별도 배포로 분리할 **가능성을 염두에 두되 분리를 예정하지는 않는다.** 검토 자체가 레거시
+이관·전환이 끝난 뒤의 일이고, 그전까지는 하나의 배포를 유지한다([아키텍처](../rules/architecture.md)).
+지금 지킬 것은 seam 둘뿐이며 둘 다 이미 만족한다.
+
+- `auth`는 `user`의 public API만 참조한다(`internal` 참조 금지 규칙과 같은 선). 분리 시 이 호출만
+  원격 어댑터로 바뀐다.
+- 토큰 서명 방식은 `JwtDecoder`·`JwtEncoder` 빈 뒤에 숨긴다. 다른 모듈은 대칭키인지 비대칭키인지
+  알지 않는다. 발급자가 둘 이상이 되면 대칭키 HS256 전제가 깨지는데([ADR-0004](../adr/0004-token-issuance-verification-stack.md)),
+  그 전환은 이 빈 구성만 바꾸면 된다.
+
 ### workspace
 
 워크스페이스, 멤버십, 초대, RBAC, workspace-scoped 라벨 발급의 중심 모듈이다.
