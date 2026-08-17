@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import jakarta.servlet.http.Cookie;
 import java.time.Duration;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
@@ -14,6 +15,7 @@ import works.momens.server.auth.internal.config.AuthProperties;
 class CookieBearerTokenResolverTest {
 
   @Test
+  @DisplayName("Authorization 헤더가 없으면 access_token 쿠키에서 토큰을 읽는다")
   void resolvesFromAccessCookieWhenNoAuthorizationHeader() {
     BearerTokenResolver resolver = new SecurityConfig().bearerTokenResolver(properties());
     MockHttpServletRequest request = new MockHttpServletRequest();
@@ -23,6 +25,7 @@ class CookieBearerTokenResolverTest {
   }
 
   @Test
+  @DisplayName("Authorization 헤더가 access_token 쿠키보다 우선한다")
   void prefersAuthorizationHeaderOverAccessCookie() {
     BearerTokenResolver resolver = new SecurityConfig().bearerTokenResolver(properties());
     MockHttpServletRequest request = new MockHttpServletRequest();
@@ -33,6 +36,7 @@ class CookieBearerTokenResolverTest {
   }
 
   @Test
+  @DisplayName("헤더도 쿠키도 없으면 null을 반환한다")
   void returnsNullWhenNeitherHeaderNorCookiePresent() {
     BearerTokenResolver resolver = new SecurityConfig().bearerTokenResolver(properties());
 
@@ -40,6 +44,7 @@ class CookieBearerTokenResolverTest {
   }
 
   @Test
+  @DisplayName("헤더와 access_token 쿠키가 없으면 레거시 session_token 쿠키에서 토큰을 읽는다")
   void resolvesFromLegacySessionCookieWhenNoHeaderOrAccessCookie() {
     BearerTokenResolver resolver = new SecurityConfig().bearerTokenResolver(properties());
     MockHttpServletRequest request = new MockHttpServletRequest();
@@ -49,6 +54,7 @@ class CookieBearerTokenResolverTest {
   }
 
   @Test
+  @DisplayName("access_token 쿠키가 레거시 session_token 쿠키보다 우선한다")
   void prefersAccessCookieOverLegacySessionCookie() {
     BearerTokenResolver resolver = new SecurityConfig().bearerTokenResolver(properties());
     MockHttpServletRequest request = new MockHttpServletRequest();
@@ -59,6 +65,7 @@ class CookieBearerTokenResolverTest {
   }
 
   @Test
+  @DisplayName("Authorization 헤더가 레거시 session_token 쿠키보다 우선한다")
   void prefersAuthorizationHeaderOverLegacySessionCookie() {
     BearerTokenResolver resolver = new SecurityConfig().bearerTokenResolver(properties());
     MockHttpServletRequest request = new MockHttpServletRequest();
