@@ -208,7 +208,7 @@ schema·routing·실제 client traffic을 확인하고, legacy REST·MCP·Slack 
 | H019 | Product JSON | `POST /workspaces` | `workspace.Create` | `WSP` | W | `traced` |
 | H020 | Product JSON | `GET /workspaces` | `workspace.List` | `WSP` | R | `contract_locked`: target `GET /api/workspaces`, [첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md) (`MOM-0850`) |
 | H021 | Product JSON | `GET /workspaces/slug-available` | `workspace.SlugAvailable` | `WSP` | R | `traced` |
-| H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `contract_locked`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md) (`MOM-0850`) |
+| H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `contract_locked`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md) (`MOM-0850`). 구현은 H020과 함께, 전환은 제외. 웹의 유일한 소비자가 snapshot 폴백이라 H023과 함께 판단 |
 | H023 | Product JSON | `GET /workspaces/:id/snapshot` | `snapshot.Get` | `SNP` | R | `traced`; multi-capability 합성 |
 | H024 | Product JSON | `PATCH /workspaces/:id` | `workspace.Update` | `WSP` | W | `traced` |
 | H025 | Product JSON | `GET /workspaces/:id/onboarding` | `workspace.GetOnboarding` | `WSP` | R | `traced` |
