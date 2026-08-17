@@ -78,8 +78,8 @@ rg --files ../momens-api/cmd
 그 결과 MCP tool 11개, startup migration runner, retrieval backfill·embedding loop, Slack 비동기
 처리, HTTP server lifecycle, 오프라인 CLI 3개를 확인했다. 별도 cron/scheduler 등록은 없었다.
 
-현재 HTTP 상태는 `implemented` 6개(H001, H014~H018), `contract_locked` 2개(H020, H022),
-`traced` 88개다. 비-HTTP·tool 19개는 모두 `traced`다. `cutover_ready` 이상인 항목은 없다.
+현재 HTTP 상태는 `implemented` 8개(H001, H014~H018, H020, H022), `traced` 88개다. 비-HTTP·tool
+19개는 모두 `traced`다. `cutover_ready` 이상인 항목은 없다.
 
 ## 공통 전환 규칙
 
@@ -87,9 +87,9 @@ rg --files ../momens-api/cmd
   만들지 않는다.
 - Product JSON API는 별도 합의 전까지 `Legacy compatible`이다. status와 성공·실패 body shape를
   characterization test로 고정한다.
-  - 예외 후보: H020·H022는 [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) 4.4에서
-    Standard 모드를 **잠정안**으로 두었다. FE 합의 전까지 확정이 아니며, 합의되면 이 규칙의 예외로
-    확정하고 합의되지 않으면 `Legacy compatible`로 되돌린다.
+  - 예외: H020·H022는 [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) 4.4에서
+    제안한 Standard 모드가 FE 합의로 확정됐다(`MOM-0851`). 미존재는 404 `WORKSPACE_NOT_FOUND`,
+    비멤버는 403 `AUTH_FORBIDDEN`이다.
 - 레거시 보호 route는 `session_token` 쿠키 JWT를 사용한다. 신규 웹은
   `access_token`·`refresh_token` HttpOnly 쿠키를 사용한다. 전환기에는 신규 서버가 레거시
   `session_token`을 한시 수용한다([ADR-0017](../adr/0017-transitional-legacy-session-token-acceptance.md)).
@@ -206,9 +206,9 @@ schema·routing·실제 client traffic을 확인하고, legacy REST·MCP·Slack 
 | H017 | Product auth | `GET /auth/me` | `auth.Me` | `USR` | R | `implemented`: target `GET /api/me`; cutover 전 |
 | H018 | Product auth | `PATCH /auth/me` | `auth.UpdateMe` | `USR` | W | `implemented`: target `PATCH /api/me`; cutover 전 |
 | H019 | Product JSON | `POST /workspaces` | `workspace.Create` | `WSP` | W | `traced` |
-| H020 | Product JSON | `GET /workspaces` | `workspace.List` | `WSP` | R | `contract_locked`: target `GET /api/workspaces`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`) |
+| H020 | Product JSON | `GET /workspaces` | `workspace.List` | `WSP` | R | `implemented`: target `GET /api/workspaces`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환도 포함 |
 | H021 | Product JSON | `GET /workspaces/slug-available` | `workspace.SlugAvailable` | `WSP` | R | `traced` |
-| H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `contract_locked`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현은 H020과 함께, 전환은 제외. 웹의 유일한 소비자가 snapshot 폴백이라 H023과 함께 판단 |
+| H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `implemented`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환은 제외. 웹의 유일한 소비자가 snapshot 폴백이라 H023과 함께 판단 |
 | H023 | Product JSON | `GET /workspaces/:id/snapshot` | `snapshot.Get` | `SNP` | R | `traced`; multi-capability 합성 |
 | H024 | Product JSON | `PATCH /workspaces/:id` | `workspace.Update` | `WSP` | W | `traced` |
 | H025 | Product JSON | `GET /workspaces/:id/onboarding` | `workspace.GetOnboarding` | `WSP` | R | `traced` |
