@@ -87,9 +87,12 @@ rg --files ../momens-api/cmd
   만들지 않는다.
 - Product JSON API는 별도 합의 전까지 `Legacy compatible`이다. status와 성공·실패 body shape를
   characterization test로 고정한다.
+  - 예외 후보: H020·H022는 [첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md) 4.4에서
+    Standard 모드를 **잠정안**으로 두었다. FE 합의 전까지 확정이 아니며, 합의되면 이 규칙의 예외로
+    확정하고 합의되지 않으면 `Legacy compatible`로 되돌린다.
 - 레거시 보호 route는 `session_token` 쿠키 JWT를 사용한다. 신규 웹은
-  `access_token`·`refresh_token` HttpOnly 쿠키를 사용한다. 혼합 트래픽을 쓰지 않는 한 세션
-  브리지는 만들지 않는다.
+  `access_token`·`refresh_token` HttpOnly 쿠키를 사용한다. 전환기에는 신규 서버가 레거시
+  `session_token`을 한시 수용한다([ADR-0017](../adr/0017-transitional-legacy-session-token-acceptance.md)).
 - 모든 Product JSON route에는 FE의 path·`API-Version: 1`·세션 전환이 client gate로 걸린다.
 - read-only route의 기본 rollback은 routing rollback이다. write route는 신규 데이터가 레거시
   schema·enum·relation·projection과 호환된다는 증거가 있기 전까지 writer rollback을 보장하지 않는다.
