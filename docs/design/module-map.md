@@ -53,7 +53,7 @@
   - **부채**: `/api/auth`(`auth`)와 `/api/me`(`user`)는 이 원칙보다 먼저 만들어져 capability 모듈에
     남아 있다. 예외로 두지 않고 원칙에 맞춰 정리한다. `auth`의 경우 `WebAuthController`는 웹 전용,
     `AuthController`는 모바일 전용이라 표면별로 갈라야 하며, 정리 뒤 `auth`·`user`는 도메인과 public
-    API만 소유한다. 정리 시점은 웹 표면이 자리 잡은 뒤로 미룬다.
+    API만 소유한다. 정리 시점은 웹 표면이 자리 잡은 뒤로 미룬다(`MOM-0852`).
 - 태스크 상세의 `draft_status`를 `mobile`이 읽는 이유는 태스크 상세를 소유한 `project`에서
   `minsu`를 부르면 `minsu` → `project`(draft 반영)와 맞물려 순환이 되기 때문이다. 두 원장을 엮는
   조합은 표면이 한다(MOM-0822).
