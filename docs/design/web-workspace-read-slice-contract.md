@@ -130,7 +130,7 @@ soft-delete 필터는 두지 않는다. 레거시에 해당 컬럼과 필터가 
 
 **Standard 모드**를 사용한다([API 응답과 에러 코드](../spec/api-response-error-codes.md)).
 
-전환에 클라이언트가 path와 `API-Version` 헤더를 함께 바꾸는 배포가 필요하므로, 레거시 body를
+전환에 클라이언트가 path를 바꾸고 `API-Version` 헤더를 붙이는 배포가 필요하므로, 레거시 body를
 보존해서 얻는 호환 이득이 없다. 또한 레거시 Get은 미존재와 권한 없음을 구분하지 않고 Go의 raw error
 문자열을 그대로 실어 보내, 내부 예외 메시지를 노출하지 않는다는 응답 규격과 충돌한다.
 
@@ -194,11 +194,16 @@ modules/workspace/src/main/java/works/momens/server/workspace/
 
 ## 6. 전환과 롤백
 
-ingress는 `API-Version` 헤더 유무로 신규 서버와 레거시를 분기한다. path rewrite는 하지 않는다.
+ingress는 **요청 경로 접두사**로 분기한다. `api.momens.works`에서 `/api`로 시작하는 요청은
+`momens-server`로, 접두사가 없는 나머지 경로는 레거시 `momens-api`로 간다
+(`k8s/manifests/apps/momens-server/ingress.yaml`, ingress-nginx longest-prefix matching).
+path rewrite는 하지 않는다. `API-Version` 헤더는 버전 선택용이며 라우팅에 관여하지 않는다
+([ADR-0006](../adr/0006-api-path-and-versioning-policy.md)).
 
-이 방식에서 전환 단위는 **클라이언트 배포**다. 웹이 path(`/workspaces` → `/api/workspaces`)와
-`API-Version` 헤더를 함께 바꿔야 신규 서버로 넘어가고, 되돌리는 것도 클라이언트 배포다. 서버는
-두 endpoint를 추가할 뿐이며 레거시 endpoint는 그대로 살아 있다.
+따라서 전환 단위는 **클라이언트 배포**다. 웹이 path를 `/workspaces`에서 `/api/workspaces`로
+바꾸면 그 순간 신규 서버로 넘어가고, 되돌리는 것도 클라이언트 배포다. `/api` 라우팅 규칙은 이미
+서 있으므로 이 슬라이스에 ingress 변경은 없다. 서버는 두 endpoint를 추가할 뿐이며 레거시
+endpoint는 그대로 살아 있다.
 
 쓰기·projection이 없어 데이터 보상 절차는 필요 없다.
 
