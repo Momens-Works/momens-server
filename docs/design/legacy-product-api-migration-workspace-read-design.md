@@ -126,14 +126,13 @@
 
 soft-delete 필터는 두지 않는다. 레거시에 해당 컬럼과 필터가 없어 재현할 동작이 없다.
 
-### 4.4 에러 응답 — 잠정안 (FE 합의 전)
+### 4.4 에러 응답 — 확정 (FE 합의 완료)
 
-> **이 절만 확정이 아니다.** [API 응답과 에러 코드](../spec/api-response-error-codes.md)와 이관
-> 전략은 기존 endpoint를 Standard 모드로 바꿀 때 FE 합의를 요구하고, 이관 원장의 공통 전환 규칙은
-> Product JSON API를 합의 전까지 `Legacy compatible`로 둔다. 아래는 그 합의에 올릴 제안이며,
-> 합의되지 않으면 `Legacy compatible`로 되돌린다. 4.1~4.3은 이 절과 무관하게 확정이다.
+> FE 합의가 완료되어 아래 잠정안이 그대로 확정됐다(`MOM-0851`). [API 응답과 에러 코드](../spec/api-response-error-codes.md)와
+> 이관 전략은 기존 endpoint를 Standard 모드로 바꿀 때 FE 합의를 요구하고, 이관 원장의 공통 전환 규칙은
+> Product JSON API를 합의 전까지 `Legacy compatible`로 두되 H020·H022는 이 합의로 예외가 됐다.
 
-**Standard 모드**를 제안한다.
+**Standard 모드**로 확정한다.
 
 전환에 클라이언트가 path를 바꾸고 `API-Version` 헤더를 붙이는 배포가 필요하므로, 레거시 body를
 보존해서 얻는 호환 이득이 없다. 또한 레거시 Get은 미존재와 권한 없음을 구분하지 않고 Go의 raw error
