@@ -78,8 +78,8 @@ rg --files ../momens-api/cmd
 그 결과 MCP tool 11개, startup migration runner, retrieval backfill·embedding loop, Slack 비동기
 처리, HTTP server lifecycle, 오프라인 CLI 3개를 확인했다. 별도 cron/scheduler 등록은 없었다.
 
-현재 HTTP 상태는 `implemented` 6개(H001, H014~H018), `traced` 90개다. 비-HTTP·tool 19개는
-모두 `traced`다. `cutover_ready` 이상인 항목은 없다.
+현재 HTTP 상태는 `implemented` 6개(H001, H014~H018), `contract_locked` 2개(H020, H022),
+`traced` 88개다. 비-HTTP·tool 19개는 모두 `traced`다. `cutover_ready` 이상인 항목은 없다.
 
 ## 공통 전환 규칙
 
