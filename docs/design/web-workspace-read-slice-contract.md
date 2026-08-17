@@ -126,13 +126,22 @@
 
 soft-delete 필터는 두지 않는다. 레거시에 해당 컬럼과 필터가 없어 재현할 동작이 없다.
 
-### 4.4 에러 응답
+### 4.4 에러 응답 — 잠정안 (FE 합의 전)
 
-**Standard 모드**를 사용한다([API 응답과 에러 코드](../spec/api-response-error-codes.md)).
+> **이 절만 확정이 아니다.** [API 응답과 에러 코드](../spec/api-response-error-codes.md)와 이관
+> 전략은 기존 endpoint를 Standard 모드로 바꿀 때 FE 합의를 요구하고, 이관 원장의 공통 전환 규칙은
+> Product JSON API를 합의 전까지 `Legacy compatible`로 둔다. 아래는 그 합의에 올릴 제안이며,
+> 합의되지 않으면 `Legacy compatible`로 되돌린다. 4.1~4.3은 이 절과 무관하게 확정이다.
+
+**Standard 모드**를 제안한다.
 
 전환에 클라이언트가 path를 바꾸고 `API-Version` 헤더를 붙이는 배포가 필요하므로, 레거시 body를
 보존해서 얻는 호환 이득이 없다. 또한 레거시 Get은 미존재와 권한 없음을 구분하지 않고 Go의 raw error
 문자열을 그대로 실어 보내, 내부 예외 메시지를 노출하지 않는다는 응답 규격과 충돌한다.
+
+401·403은 보호 체인의 `RestAuthenticationEntryPoint`·`RestAccessDeniedHandler`가 이미 Standard
+형식으로 내보낸다. `Legacy compatible`로 되돌릴 경우 이 두 endpoint만 필터 체인 응답을 따로
+처리해야 하므로, 되돌리는 쪽이 구현이 더 크다는 점을 합의 자리에서 함께 다룬다.
 
 | 상황 | 레거시 | 신규 |
 | --- | --- | --- |
@@ -214,9 +223,11 @@ endpoint는 그대로 살아 있다.
 
 구현 중 조용히 정하지 않는다.
 
-1. 레거시 미들웨어의 토큰 추출 fallback(`Authorization` 헤더·`access_token` 쿠키) 반영 시점.
+1. **4.4 에러 응답 모드의 FE 합의.** Standard 확정 또는 `Legacy compatible` 복귀. 합의 결과를
+   이 문서와 이관 원장 공통 전환 규칙에 함께 반영한다.
+2. 레거시 미들웨어의 토큰 추출 fallback(`Authorization` 헤더·`access_token` 쿠키) 반영 시점.
    기준선 SHA 기준으로 아직 반영되지 않았고, 이 슬라이스의 선행 조건은 아니다.
-2. 신규 endpoint로 전환한 뒤 레거시 `GET /workspaces`, `GET /workspaces/:id`를 retire하는 시점.
+3. 신규 endpoint로 전환한 뒤 레거시 `GET /workspaces`, `GET /workspaces/:id`를 retire하는 시점.
 
 ## 8. 후속 작업
 
