@@ -1,6 +1,7 @@
 package works.momens.server.auth.internal.security;
 
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -32,6 +33,15 @@ import works.momens.server.auth.internal.config.AuthProperties;
  */
 @Configuration
 class SecurityConfig {
+
+  /**
+   * 전환기 한시 fallback: 레거시 {@code momens-api}의 {@code session_token} 쿠키(ADR-0017).
+   *
+   * <p>설정으로 두지 않고 상수로 고정합니다(전환기 코드임을 드러내기 위함). <b>제거 조건</b>: 웹 로그인이 신규 서버({@code
+   * /api/auth/google/*})로 전환되어 모든 웹 세션이 {@code access_token} 쿠키를 갖게 되면 이 상수와 {@link
+   * #bearerTokenResolver} 내 fallback 분기를 제거합니다. 제거는 레거시 {@code momens-api} 종료와 묶지 않습니다.
+   */
+  private static final String LEGACY_SESSION_COOKIE_NAME = "session_token";
 
   private static final String[] PUBLIC_PATHS = {
     "/actuator/health/**",
@@ -96,6 +106,9 @@ class SecurityConfig {
   /**
    * Bearer 토큰 추출. 모바일은 Authorization 헤더, 웹은 access HttpOnly 쿠키로 보냅니다. 헤더를 먼저 보고 없으면 access 쿠키에서
    * 읽습니다. 쿠키 이름은 설정({@code momens.auth.web.cookie.access-name})을 따릅니다.
+   *
+   * <p>전환기에는 레거시 {@code session_token} 쿠키도 마지막 fallback으로 수용합니다(ADR-0017). 조회 순서는 {@code
+   * Authorization} 헤더 → {@code access_token} 쿠키 → {@code session_token} 쿠키입니다. 디코더와 서명 키는 바꾸지 않습니다.
    */
   @Bean
   BearerTokenResolver bearerTokenResolver(AuthProperties properties) {
@@ -106,14 +119,23 @@ class SecurityConfig {
       if (fromHeader != null) {
         return fromHeader;
       }
-      if (request.getCookies() != null) {
-        for (Cookie cookie : request.getCookies()) {
-          if (accessCookieName.equals(cookie.getName())) {
-            return cookie.getValue();
-          }
-        }
+      String fromAccessCookie = cookieValue(request, accessCookieName);
+      if (fromAccessCookie != null) {
+        return fromAccessCookie;
       }
-      return null;
+      return cookieValue(request, LEGACY_SESSION_COOKIE_NAME);
     };
+  }
+
+  private static String cookieValue(HttpServletRequest request, String name) {
+    if (request.getCookies() == null) {
+      return null;
+    }
+    for (Cookie cookie : request.getCookies()) {
+      if (name.equals(cookie.getName())) {
+        return cookie.getValue();
+      }
+    }
+    return null;
   }
 }
