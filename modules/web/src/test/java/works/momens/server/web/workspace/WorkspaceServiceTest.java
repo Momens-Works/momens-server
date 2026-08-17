@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -35,6 +36,7 @@ class WorkspaceServiceTest {
   private static final UUID USER_ID = UUID.randomUUID();
 
   @Test
+  @DisplayName("목록은 reader 결과를 그대로 반환한다(별도 권한 검사 없음)")
   void listReturnsReaderResultAsIs() {
     WorkspaceDetail detail = detail();
     when(workspaceReader.listByMemberUserId(USER_ID)).thenReturn(List.of(detail));
@@ -43,6 +45,7 @@ class WorkspaceServiceTest {
   }
 
   @Test
+  @DisplayName("워크스페이스가 없으면 WORKSPACE_NOT_FOUND를 던진다")
   void getThrowsWorkspaceNotFoundWhenMissing() {
     when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.empty());
 
@@ -53,6 +56,7 @@ class WorkspaceServiceTest {
   }
 
   @Test
+  @DisplayName("워크스페이스는 있지만 멤버가 아니면 AUTH_FORBIDDEN을 던진다")
   void getThrowsForbiddenWhenCallerIsNotMember() {
     when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.of(detail()));
     when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(false);
@@ -64,6 +68,7 @@ class WorkspaceServiceTest {
   }
 
   @Test
+  @DisplayName("멤버이면 워크스페이스 상세를 반환한다")
   void getReturnsDetailWhenCallerIsMember() {
     WorkspaceDetail detail = detail();
     when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.of(detail));

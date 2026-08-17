@@ -8,6 +8,7 @@ import jakarta.servlet.http.Cookie;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -37,6 +38,7 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
+  @DisplayName("멤버인 워크스페이스만 생성 시각 내림차순으로 응답한다")
   void returnsMemberWorkspacesSortedByCreatedAtDesc() throws Exception {
     UserProfile caller = userService.findOrCreate("web-it-sorted@momens.works", "홍길동", null);
     UUID older = insertWorkspace("web-it-older", null);
@@ -63,6 +65,7 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("워크스페이스가 없으면 빈 배열로 응답한다")
   void returnsEmptyArrayWhenCallerHasNoWorkspace() throws Exception {
     UserProfile caller = userService.findOrCreate("web-it-empty@momens.works", "홍길동", null);
 
@@ -74,6 +77,7 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("단건 조회는 래퍼 없이 워크스페이스 객체를 응답한다")
   void getReturnsWorkspaceWithoutWrapper() throws Exception {
     UserProfile caller = userService.findOrCreate("web-it-get@momens.works", "홍길동", null);
     UUID workspaceId = insertWorkspace("web-it-get", null);
@@ -88,6 +92,7 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("없는 워크스페이스는 404 WORKSPACE_NOT_FOUND로 응답한다")
   void getReturnsNotFoundForUnknownWorkspace() throws Exception {
     UserProfile caller = userService.findOrCreate("web-it-404@momens.works", "홍길동", null);
 
@@ -98,6 +103,18 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("path id가 UUID가 아니면 400 COMMON_BAD_REQUEST로 응답한다")
+  void getReturnsBadRequestForNonUuidPathId() throws Exception {
+    UserProfile caller = userService.findOrCreate("web-it-400@momens.works", "홍길동", null);
+
+    mockMvc
+        .perform(authorized(get("/api/workspaces/{workspaceId}", "not-a-uuid"), caller.id()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("COMMON_BAD_REQUEST"));
+  }
+
+  @Test
+  @DisplayName("멤버가 아니면 403 AUTH_FORBIDDEN으로 응답한다")
   void getReturnsForbiddenWhenCallerIsNotMember() throws Exception {
     UserProfile owner = userService.findOrCreate("web-it-owner@momens.works", "홍길동", null);
     UserProfile stranger = userService.findOrCreate("web-it-stranger@momens.works", "김철수", null);
@@ -111,6 +128,7 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("토큰이 없으면 401 AUTH_UNAUTHORIZED로 응답한다")
   void returnsUnauthorizedWithoutAnyToken() throws Exception {
     mockMvc
         .perform(get("/api/workspaces").header("API-Version", "1"))
@@ -119,6 +137,7 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("access_token 쿠키만으로 인증을 통과한다")
   void authenticatesViaAccessTokenCookie() throws Exception {
     UserProfile caller = userService.findOrCreate("web-it-access-cookie@momens.works", "홍길동", null);
 
@@ -131,6 +150,7 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("레거시 session_token 쿠키만으로 인증을 통과한다")
   void authenticatesViaLegacySessionTokenCookieWhenNoHeaderOrAccessCookie() throws Exception {
     UserProfile caller =
         userService.findOrCreate("web-it-session-cookie@momens.works", "홍길동", null);

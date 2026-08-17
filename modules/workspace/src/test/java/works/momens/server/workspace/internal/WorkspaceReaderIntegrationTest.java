@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -33,6 +34,7 @@ class WorkspaceReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   @Autowired private TestEntityManager entityManager;
 
   @Test
+  @DisplayName("멤버인 워크스페이스만 생성 시각 내림차순으로 조회한다")
   void listByMemberUserIdReturnsOnlyMemberWorkspacesSortedByCreatedAtDesc() {
     UUID user = WorkspaceSeedSql.insertUser(entityManager, "reader-it-user@momens.works");
     UUID outsider = WorkspaceSeedSql.insertUser(entityManager, "reader-it-outsider@momens.works");
@@ -57,6 +59,7 @@ class WorkspaceReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("멤버십이 없으면 빈 목록을 반환한다")
   void listByMemberUserIdIsEmptyWhenUserHasNoMembership() {
     UUID user = WorkspaceSeedSql.insertUser(entityManager, "reader-it-lonely@momens.works");
 
@@ -64,6 +67,7 @@ class WorkspaceReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("description이 설정돼 있으면 그대로 조회한다")
   void findByIdReturnsDescriptionWhenSet() {
     UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "reader-it-desc");
     entityManager
@@ -82,6 +86,7 @@ class WorkspaceReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("description이 없으면 null로 조회한다")
   void findByIdReturnsNullDescriptionWhenNotSet() {
     UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "reader-it-no-desc");
     entityManager.flush();
@@ -94,6 +99,7 @@ class WorkspaceReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("워크스페이스가 없으면 빈 Optional을 반환한다")
   void findByIdIsEmptyWhenWorkspaceDoesNotExist() {
     assertThat(workspaceReader.findById(UUID.randomUUID())).isEmpty();
   }

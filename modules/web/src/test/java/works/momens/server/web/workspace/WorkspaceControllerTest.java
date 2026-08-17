@@ -10,6 +10,7 @@ import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -41,6 +42,7 @@ class WorkspaceControllerTest {
   private final Principal principal = USER_ID::toString;
 
   @Test
+  @DisplayName("목록은 workspaces 래퍼와 snake_case 필드로 응답한다")
   void listReturnsWrappedWorkspacesInSnakeCase() throws Exception {
     WorkspaceDetail detail =
         new WorkspaceDetail(
@@ -65,6 +67,7 @@ class WorkspaceControllerTest {
   }
 
   @Test
+  @DisplayName("조회 결과가 없으면 null이 아니라 빈 배열로 응답한다")
   void listReturnsEmptyArrayWhenNoWorkspaces() throws Exception {
     when(workspaceService.list(USER_ID)).thenReturn(List.of());
 
@@ -76,6 +79,7 @@ class WorkspaceControllerTest {
   }
 
   @Test
+  @DisplayName("description이 없으면 응답에서 필드를 생략한다")
   void listOmitsDescriptionWhenNull() throws Exception {
     WorkspaceDetail detail =
         new WorkspaceDetail(WORKSPACE_ID, "Momens", "momens", null, Instant.now(), Instant.now());
@@ -88,6 +92,7 @@ class WorkspaceControllerTest {
   }
 
   @Test
+  @DisplayName("단건 조회는 래퍼 없이 워크스페이스 객체를 응답한다")
   void getReturnsWorkspaceWithoutWrapper() throws Exception {
     WorkspaceDetail detail =
         new WorkspaceDetail(
