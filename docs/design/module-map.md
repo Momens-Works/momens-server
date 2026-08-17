@@ -44,10 +44,16 @@
 - `mobile`은 `user`, `project`, `workspace`, `signal`, `context`, `source`, `notification`, `minsu`의
   public API만 조합한다(bootstrap, 멤버 조회, 브리프, 태스크 관련자료, push 설치 등록·해제, 태스크
   상세의 draft 생성 상태). 도메인 정책을 소유하지 않는다.
-- `web`은 `mobile`과 같은 자리의 표면 모듈이다. 레거시 웹 Product API를 이관한 `/api/*` 컨트롤러를
-  소유하고 도메인 public API만 조합한다. capability 모듈에 웹 presentation을 두지 않는 이유는 의존
-  방향이다. `workspace`처럼 그래프 아래에 있는 모듈이 웹 응답을 위해 `project`를 참조하면 순환이
-  된다([첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md), `MOM-0850`).
+- `web`은 `mobile`과 같은 자리의 표면 모듈이고 **같은 소유 원칙**을 따른다. 웹 클라이언트가 호출하는
+  HTTP 표면은 **도메인 스코프가 분명해도** `web`이 소유한다. 여러 capability를 조합하는 endpoint만
+  표면이 갖는 것이 아니다.
+  - 근거는 의존 방향이다. `workspace`처럼 그래프 아래에 있는 모듈이 웹 응답을 위해 `project`를
+    참조하면 순환이 된다([첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md),
+    `MOM-0850`). 조합 여부를 기준으로 삼으면 응답에 필드가 하나 늘 때마다 컨트롤러를 옮겨야 한다.
+  - **부채**: `/api/auth`(`auth`)와 `/api/me`(`user`)는 이 원칙보다 먼저 만들어져 capability 모듈에
+    남아 있다. 예외로 두지 않고 원칙에 맞춰 정리한다. `auth`의 경우 `WebAuthController`는 웹 전용,
+    `AuthController`는 모바일 전용이라 표면별로 갈라야 하며, 정리 뒤 `auth`·`user`는 도메인과 public
+    API만 소유한다. 정리 시점은 웹 표면이 자리 잡은 뒤로 미룬다.
 - 태스크 상세의 `draft_status`를 `mobile`이 읽는 이유는 태스크 상세를 소유한 `project`에서
   `minsu`를 부르면 `minsu` → `project`(draft 반영)와 맞물려 순환이 되기 때문이다. 두 원장을 엮는
   조합은 표면이 한다(MOM-0822).
