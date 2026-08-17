@@ -1,12 +1,12 @@
 # 첫 웹 read 수직 슬라이스 계약 (워크스페이스 조회)
 
-상태: 구현 전 확정 계약
+상태: 구현 완료 (계약 확정)
 
 작성일: 2026-08-17
 
 레거시 기준선: `Momens-Works/momens-api@71bbd07614fd2aef4dec726bafdf86c1bd097ba6`
 
-관련 작업: `MOM-0850`
+관련 작업: `MOM-0850`(계약 확정), `MOM-0851`(구현)
 
 관련 문서: [이관 전략](legacy-product-api-migration-strategy.md),
 [이관 원장](legacy-product-api-migration-ledger.md),

@@ -206,7 +206,7 @@ schema·routing·실제 client traffic을 확인하고, legacy REST·MCP·Slack 
 | H017 | Product auth | `GET /auth/me` | `auth.Me` | `USR` | R | `implemented`: target `GET /api/me`; cutover 전 |
 | H018 | Product auth | `PATCH /auth/me` | `auth.UpdateMe` | `USR` | W | `implemented`: target `PATCH /api/me`; cutover 전 |
 | H019 | Product JSON | `POST /workspaces` | `workspace.Create` | `WSP` | W | `traced` |
-| H020 | Product JSON | `GET /workspaces` | `workspace.List` | `WSP` | R | `implemented`: target `GET /api/workspaces`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환도 포함 |
+| H020 | Product JSON | `GET /workspaces` | `workspace.List` | `WSP` | R | `implemented`: target `GET /api/workspaces`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환 대상; cutover 전 |
 | H021 | Product JSON | `GET /workspaces/slug-available` | `workspace.SlugAvailable` | `WSP` | R | `traced` |
 | H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `implemented`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환은 제외. 웹의 유일한 소비자가 snapshot 폴백이라 H023과 함께 판단 |
 | H023 | Product JSON | `GET /workspaces/:id/snapshot` | `snapshot.Get` | `SNP` | R | `traced`; multi-capability 합성 |
