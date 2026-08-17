@@ -24,6 +24,7 @@ dependencies {
     implementation project(':notification')
     implementation project(':mobile')
     implementation project(':minsu')
+    implementation project(':web')
 
     // Core (Boot BOM 관리, 버전 생략)
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
