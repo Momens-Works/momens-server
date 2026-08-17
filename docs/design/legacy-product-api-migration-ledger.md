@@ -87,7 +87,7 @@ rg --files ../momens-api/cmd
   만들지 않는다.
 - Product JSON API는 별도 합의 전까지 `Legacy compatible`이다. status와 성공·실패 body shape를
   characterization test로 고정한다.
-  - 예외 후보: H020·H022는 [첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md) 4.4에서
+  - 예외 후보: H020·H022는 [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) 4.4에서
     Standard 모드를 **잠정안**으로 두었다. FE 합의 전까지 확정이 아니며, 합의되면 이 규칙의 예외로
     확정하고 합의되지 않으면 `Legacy compatible`로 되돌린다.
 - 레거시 보호 route는 `session_token` 쿠키 JWT를 사용한다. 신규 웹은
@@ -206,9 +206,9 @@ schema·routing·실제 client traffic을 확인하고, legacy REST·MCP·Slack 
 | H017 | Product auth | `GET /auth/me` | `auth.Me` | `USR` | R | `implemented`: target `GET /api/me`; cutover 전 |
 | H018 | Product auth | `PATCH /auth/me` | `auth.UpdateMe` | `USR` | W | `implemented`: target `PATCH /api/me`; cutover 전 |
 | H019 | Product JSON | `POST /workspaces` | `workspace.Create` | `WSP` | W | `traced` |
-| H020 | Product JSON | `GET /workspaces` | `workspace.List` | `WSP` | R | `contract_locked`: target `GET /api/workspaces`, [첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md) (`MOM-0850`) |
+| H020 | Product JSON | `GET /workspaces` | `workspace.List` | `WSP` | R | `contract_locked`: target `GET /api/workspaces`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`) |
 | H021 | Product JSON | `GET /workspaces/slug-available` | `workspace.SlugAvailable` | `WSP` | R | `traced` |
-| H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `contract_locked`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md) (`MOM-0850`). 구현은 H020과 함께, 전환은 제외. 웹의 유일한 소비자가 snapshot 폴백이라 H023과 함께 판단 |
+| H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `contract_locked`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현은 H020과 함께, 전환은 제외. 웹의 유일한 소비자가 snapshot 폴백이라 H023과 함께 판단 |
 | H023 | Product JSON | `GET /workspaces/:id/snapshot` | `snapshot.Get` | `SNP` | R | `traced`; multi-capability 합성 |
 | H024 | Product JSON | `PATCH /workspaces/:id` | `workspace.Update` | `WSP` | W | `traced` |
 | H025 | Product JSON | `GET /workspaces/:id/onboarding` | `workspace.GetOnboarding` | `WSP` | R | `traced` |
@@ -326,7 +326,7 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 ## 첫 수직 슬라이스 후보 비교
 
 첫 슬라이스는 **워크스페이스 목록·상세(H020, H022)** 로 확정했다(`MOM-0850`). 계약은
-[첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md)이 잠갔다. 아래는 확정 당시
+[첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md)이 잠갔다. 아래는 확정 당시
 비교한 read-only 후보이며, write 전환과 projection 공통 기반을 처음부터 묶지 않아도 되는 범위만
 비교했다.
 
@@ -339,7 +339,7 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 | 결정·블로커 read | H039, H055, H073 | write를 제외하면 projection 전환 없이 routing rollback 가능 | target entity/API 미구현, legacy 전용 test 없음, 현재 클라이언트 사용 근거 확인 필요 | characterization 근거가 약해 후순위 |
 
 확정한 슬라이스의 route → handler → service → repository → schema → test 재추적 결과와 잠근
-계약은 [첫 웹 read 슬라이스 계약](web-workspace-read-slice-contract.md)에 있다.
+계약은 [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md)에 있다.
 
 ## 미결정 사항
 
@@ -360,7 +360,7 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 중복 여부를 Momens에서 다시 확인한 뒤 필요한 것만 만든다.
 
 1. ~~`[Docs] 첫 웹 read 수직 슬라이스 선정과 계약 잠금`~~ — `MOM-0850`에서 완료.
-   H020·H022로 확정하고 [계약 문서](web-workspace-read-slice-contract.md)로 잠갔다
+   H020·H022로 확정하고 [계약 문서](legacy-product-api-migration-workspace-read-design.md)로 잠갔다
 2. `[Docs] MCP/OAuth target module·token/grant 전환 ADR`
    - H002~H012, H035~H036, N009~N019 소유
 3. `[Feat] worker outbox 공통 소비 기반`
