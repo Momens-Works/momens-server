@@ -82,11 +82,27 @@ dependencies {
 // 계약 변경이 PR diff에 드러나게 합니다.
 def openApiSnapshotFile = rootProject.file('docs/spec/openapi.json')
 
-tasks.named('test') {
-    systemProperty 'momens.openapi.snapshot.path', openApiSnapshotFile.absolutePath
+// 비교 경로(test)와 생성 경로(updateOpenApiSnapshot)가 같은 런타임 설정으로 돌아야 합니다. 설정이
+// 갈리면 아무리 재생성해도 게이트와 맞지 않는데 원인이 드러나지 않습니다. 이 파일이 소유한 설정은
+// 아래 블록으로 공유합니다.
+//
+// 다만 test 의 설정 전부를 상속하지는 못합니다. useJUnitPlatform() 은 루트 subprojects 블록에,
+// 나머지 기본값은 Spring Boot 플러그인에 있습니다. test 에 systemProperty/environment/jvmArgs 를
+// 추가할 때는 이 블록에 넣어야 생성 경로에도 반영됩니다.
+def configureOpenApiSnapshotTest = { Test task ->
+    task.systemProperty 'momens.openapi.snapshot.path', openApiSnapshotFile.absolutePath
+}
+
+tasks.named('test', Test) {
+    configureOpenApiSnapshotTest(it)
     // 스냅샷 파일은 test 의 입력이므로 명시합니다. 선언하지 않으면 스냅샷만 바뀌었을 때
     // test 가 up-to-date 로 스킵되거나 빌드 캐시에서 복원되어 게이트가 조용히 통과합니다.
-    inputs.file(openApiSnapshotFile)
+    //
+    // file 이 아니라 files 인 이유: inputs.file 은 존재를 검증해, 파일이 없으면 Gradle 이 테스트 실행
+    // 전에 중단합니다. app 테스트 전체가 막히고 "스냅샷이 없습니다" 안내를 띄우는 assertion 이 도달
+    // 불가가 됩니다. optional(true) 로는 풀리지 않습니다(그건 프로퍼티 미설정을 허용할 뿐입니다).
+    // files 는 없는 파일을 빈 입력으로 취급해 up-to-date 정확성을 유지하면서 assertion 을 살립니다.
+    inputs.files(openApiSnapshotFile)
             .withPropertyName('openApiSnapshot')
             .withPathSensitivity(PathSensitivity.NONE)
 }
@@ -102,7 +118,11 @@ tasks.register('updateOpenApiSnapshot', Test) {
     filter {
         includeTestsMatching 'works.momens.server.support.openapi.OpenApiSnapshotTest'
     }
-    systemProperty 'momens.openapi.snapshot.path', openApiSnapshotFile.absolutePath
+    configureOpenApiSnapshotTest(it)
     systemProperty 'momens.openapi.snapshot.write', 'true'
-    outputs.upToDateWhen { false }
+    // 이 task 의 실제 산출물인 스냅샷 파일은 Gradle 에 선언되지 않은 출력입니다. Test 는
+    // @CacheableTask 라서, outputs.upToDateWhen { false } 만 두면 빌드 캐시를 켠 환경에서
+    // FROM-CACHE 로 스킵되며 성공을 보고하고도 파일을 쓰지 않습니다. doNotTrackState 는
+    // up-to-date 검사와 캐싱을 함께 끄므로 항상 다시 생성한다는 의도와 정확히 같습니다.
+    doNotTrackState('스냅샷 파일을 항상 다시 생성합니다.')
 }

@@ -6,6 +6,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +48,9 @@ class OpenApiSnapshotTest extends AbstractPostgresIntegrationTest {
    *
    * <p>springdoc 출력의 path·schema 순서가 실행 간 안정적이라고 가정하지 않는다. 키를 정렬해 직렬화하면 순서가 흔들려도 스냅샷이 달라지지 않아 CI가
    * 플레이키해지지 않는다. 줄바꿈은 {@code System.lineSeparator()} 대신 {@code \n}으로 고정해 OS가 스냅샷을 바꾸지 못하게 한다.
+   *
+   * <p>배열은 일괄 정렬하지 않는다. {@code enum}, {@code required}, {@code parameters}와 예시 값 배열은 순서가 내용의 일부이거나
+   * 선언 순서를 따라 안정적이라, 정렬하면 의미를 바꾸거나 얻는 것 없이 diff만 키운다. 유일한 예외를 {@link #sortRootTags}가 다룬다.
    */
   private static final JsonMapper MAPPER =
       JsonMapper.builder()
@@ -84,7 +90,22 @@ class OpenApiSnapshotTest extends AbstractPostgresIntegrationTest {
   private String normalize(String spec) {
     Map<String, Object> document = MAPPER.readValue(spec, new TypeReference<>() {});
     document.remove("servers");
+    sortRootTags(document);
     return WRITER.writeValueAsString(document) + "\n";
+  }
+
+  /**
+   * 루트 {@code tags}는 springdoc이 set 순회 순서로 내보내 알파벳순도 path 순도 아니다. 같은 classpath에서는 해시 순서가 결정적이라 재현
+   * 실행으로는 드러나지 않지만, tag를 하나 추가하면 rehash로 배열 전체가 재정렬되어 무관한 PR에 churn diff가 생기고, springdoc이나 JDK를 올리면
+   * 계약이 그대로인데 게이트가 실패한다. 이름순으로 고정한다.
+   */
+  private void sortRootTags(Map<String, Object> document) {
+    if (!(document.get("tags") instanceof List<?> tags)) {
+      return;
+    }
+    List<?> sorted = new ArrayList<>(tags);
+    sorted.sort(Comparator.comparing(tag -> String.valueOf(((Map<?, ?>) tag).get("name"))));
+    document.put("tags", sorted);
   }
 
   private Path snapshotPath() {
