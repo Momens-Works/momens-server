@@ -37,4 +37,17 @@ class Workspace extends BaseEntity {
     this.slug = slug;
     this.description = description;
   }
+
+  /** null이 아닌 값만 반영합니다. 기존 값을 유지할 필드는 호출 측에서 null로 전달합니다. */
+  void update(String name, String description, String slug) {
+    if (name != null) {
+      this.name = name;
+    }
+    if (description != null) {
+      this.description = description;
+    }
+    if (slug != null) {
+      this.slug = slug;
+    }
+  }
 }
