@@ -18,11 +18,6 @@ public class ProjectOwnerId implements Serializable {
 
   public ProjectOwnerId() {}
 
-  ProjectOwnerId(UUID projectId, UUID ownerUserId) {
-    this.projectId = projectId;
-    this.ownerUserId = ownerUserId;
-  }
-
   @Override
   public boolean equals(Object o) {
     if (this == o) {
