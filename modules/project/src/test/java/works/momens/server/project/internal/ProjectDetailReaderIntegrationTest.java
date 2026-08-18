@@ -37,7 +37,7 @@ class ProjectDetailReaderIntegrationTest extends AbstractPostgresIntegrationTest
   @Autowired private TestEntityManager entityManager;
 
   @Test
-  void findDetailReturnsStoredWebFields() {
+  void listDetailsReturnsStoredWebFields() {
     UUID ownerId = ProjectSeedSql.insertUser(entityManager, "detail-owner@momens.works");
     UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "detail");
     UUID projectId =
@@ -55,7 +55,7 @@ class ProjectDetailReaderIntegrationTest extends AbstractPostgresIntegrationTest
     setWebFields(projectId, "PRJ-0001", "at_risk", 3, 5, Instant.parse("2026-06-01T09:00:00Z"));
     setMetadata(projectId, "{\"pinned\": true}");
 
-    ProjectDetail detail = projectDetailReader.findDetail(projectId).orElseThrow();
+    ProjectDetail detail = onlyDetailOf(workspaceId);
 
     assertThat(detail.id()).isEqualTo(projectId);
     assertThat(detail.workspaceId()).isEqualTo(workspaceId);
@@ -76,12 +76,12 @@ class ProjectDetailReaderIntegrationTest extends AbstractPostgresIntegrationTest
   }
 
   @Test
-  void findDetailLeavesOptionalFieldsEmptyWhenNotStored() {
+  void listDetailsLeavesOptionalFieldsEmptyWhenNotStored() {
     UUID ownerId = ProjectSeedSql.insertUser(entityManager, "sparse-owner@momens.works");
     UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "sparse");
-    UUID projectId = saveProject(workspaceId, ownerId, "이름만 있는 프로젝트").getId();
+    saveProject(workspaceId, ownerId, "이름만 있는 프로젝트");
 
-    ProjectDetail detail = projectDetailReader.findDetail(projectId).orElseThrow();
+    ProjectDetail detail = onlyDetailOf(workspaceId);
 
     assertThat(detail.label()).isNull();
     assertThat(detail.description()).isNull();
@@ -96,14 +96,13 @@ class ProjectDetailReaderIntegrationTest extends AbstractPostgresIntegrationTest
   }
 
   @Test
-  void findDetailReturnsEmptyForSoftDeletedOrUnknownProject() {
+  void softDeletedProjectIsGoneFromTheList() {
     UUID ownerId = ProjectSeedSql.insertUser(entityManager, "gone-owner@momens.works");
     UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "gone");
     UUID deleted = saveProject(workspaceId, ownerId, "삭제됨").getId();
     softDelete(deleted);
 
-    assertThat(projectDetailReader.findDetail(deleted)).isEmpty();
-    assertThat(projectDetailReader.findDetail(UUID.randomUUID())).isEmpty();
+    assertThat(projectDetailReader.listDetailsByWorkspaceId(workspaceId)).isEmpty();
   }
 
   @Test
@@ -123,18 +122,16 @@ class ProjectDetailReaderIntegrationTest extends AbstractPostgresIntegrationTest
     insertProjectOwner(projectId, tieLow, Instant.parse("2026-06-01T00:00:00Z"));
     insertProjectOwner(projectId, late, Instant.parse("2026-06-02T00:00:00Z"));
 
-    assertThat(projectDetailReader.findDetail(projectId).orElseThrow().ownerUserIds())
-        .containsExactly(tieLow, tieHigh, late);
+    assertThat(onlyDetailOf(workspaceId).ownerUserIds()).containsExactly(tieLow, tieHigh, late);
   }
 
   @Test
   void ownerUserIdsFallBackToOwnerIdWhenNoRows() {
     UUID ownerId = ProjectSeedSql.insertUser(entityManager, "fallback-owner@momens.works");
     UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "fallback");
-    UUID projectId = saveProject(workspaceId, ownerId, "소유자 행 없음").getId();
+    saveProject(workspaceId, ownerId, "소유자 행 없음");
 
-    assertThat(projectDetailReader.findDetail(projectId).orElseThrow().ownerUserIds())
-        .containsExactly(ownerId);
+    assertThat(onlyDetailOf(workspaceId).ownerUserIds()).containsExactly(ownerId);
   }
 
   @Test
@@ -167,6 +164,13 @@ class ProjectDetailReaderIntegrationTest extends AbstractPostgresIntegrationTest
     UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "list-empty");
 
     assertThat(projectDetailReader.listDetailsByWorkspaceId(workspaceId)).isEmpty();
+  }
+
+  /** project가 하나뿐인 workspace의 조회 결과를 꺼냅니다. 단건 조회 API를 두지 않아 목록으로 검증합니다. */
+  private ProjectDetail onlyDetailOf(UUID workspaceId) {
+    List<ProjectDetail> details = projectDetailReader.listDetailsByWorkspaceId(workspaceId);
+    assertThat(details).hasSize(1);
+    return details.getFirst();
   }
 
   private Project saveProject(UUID workspaceId, UUID ownerId, String name) {

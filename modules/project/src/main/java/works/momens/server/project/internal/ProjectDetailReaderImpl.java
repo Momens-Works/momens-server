@@ -2,7 +2,6 @@ package works.momens.server.project.internal;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -17,14 +16,6 @@ class ProjectDetailReaderImpl implements ProjectDetailReader {
 
   private final ProjectRepository projectRepository;
   private final ProjectOwnerRepository projectOwnerRepository;
-
-  @Override
-  @Transactional(readOnly = true)
-  public Optional<ProjectDetail> findDetail(UUID projectId) {
-    return projectRepository
-        .findDetailRow(projectId)
-        .map(row -> withOwners(List.of(row)).getFirst());
-  }
 
   @Override
   @Transactional(readOnly = true)
