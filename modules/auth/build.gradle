@@ -27,6 +27,8 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     // auth 컨트롤러 OpenAPI 문서화 애너테이션만 사용합니다. Swagger UI·공통 설정은 app이 소유합니다.
     implementation libs.swagger.annotations.jakarta
+    // Bearer 토큰 전송 수단 지표(MOM-0872)의 MeterRegistry. minsu 모듈 전례와 같이 starter로 받습니다.
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
     // momens.auth.* 설정 메타데이터 생성.
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
