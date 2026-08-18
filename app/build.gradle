@@ -76,3 +76,33 @@ dependencies {
     // push 기능 활성화를 검증하는 통합 테스트에서 FirebaseMessaging을 mock으로 대체하기 위해 필요합니다.
     testImplementation libs.firebase.admin
 }
+
+// OpenAPI 스냅샷(docs/spec/openapi.json)은 커밋본과 실제 문서를 대조하는 계약 게이트입니다(MOM-0878).
+// test 는 비교만 하고, 파일을 쓰는 것은 아래 갱신 task 뿐입니다. 갱신을 이름 있는 명시적 행위로 두어
+// 계약 변경이 PR diff에 드러나게 합니다.
+def openApiSnapshotFile = rootProject.file('docs/spec/openapi.json')
+
+tasks.named('test') {
+    systemProperty 'momens.openapi.snapshot.path', openApiSnapshotFile.absolutePath
+    // 스냅샷 파일은 test 의 입력이므로 명시합니다. 선언하지 않으면 스냅샷만 바뀌었을 때
+    // test 가 up-to-date 로 스킵되거나 빌드 캐시에서 복원되어 게이트가 조용히 통과합니다.
+    inputs.file(openApiSnapshotFile)
+            .withPropertyName('openApiSnapshot')
+            .withPathSensitivity(PathSensitivity.NONE)
+}
+
+// test 에 write 프로퍼티를 얹어 재사용하면 up-to-date 캐시로 두 번째 실행이 스킵되므로
+// 별도 Test task 로 등록합니다.
+tasks.register('updateOpenApiSnapshot', Test) {
+    group = 'documentation'
+    description = 'OpenAPI 스냅샷(docs/spec/openapi.json)을 현재 API 문서로 갱신합니다.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching 'works.momens.server.support.openapi.OpenApiSnapshotTest'
+    }
+    systemProperty 'momens.openapi.snapshot.path', openApiSnapshotFile.absolutePath
+    systemProperty 'momens.openapi.snapshot.write', 'true'
+    outputs.upToDateWhen { false }
+}

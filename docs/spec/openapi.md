@@ -154,6 +154,37 @@ springdoc이 Spring MVC API versioning 설정과 handler의 `version` mapping을
 자동 생성합니다. `@Operation.parameters`에 `API-Version`을 다시 선언하면 자동 생성된 parameter와 중복되므로
 직접 선언하지 않습니다.
 
+## 스냅샷 고정
+
+`/v3/api-docs` 결과를 `docs/spec/openapi.json`으로 커밋합니다. 소비자(`momens-fe`)는 이 파일에서
+타입을 생성하므로, 계약 변경이 PR diff에 드러나야 합니다.
+
+`OpenApiSnapshotTest`가 커밋본과 실제 문서를 대조하고 다르면 실패합니다. CI는 `test`를 돌리므로
+스냅샷을 갱신하지 않으면 계약 변경이 머지되지 않습니다.
+
+갱신은 명시적인 행위입니다. 테스트는 비교만 하고, 파일을 쓰는 것은 갱신 task 하나뿐입니다.
+
+```bash
+./gradlew updateOpenApiSnapshot
+```
+
+갱신 후에는 `git diff docs/spec/openapi.json`으로 바뀐 계약이 의도한 것인지 확인하고 PR에 포함합니다.
+
+계약을 건드리는 PR이 동시에 열려 있으면 스냅샷에서 충돌이 납니다. JSON을 손으로 풀지 말고 rebase 후
+갱신 task를 다시 돌립니다.
+
+```bash
+git rebase origin/develop
+./gradlew updateOpenApiSnapshot
+```
+
+스냅샷은 정규화해 직렬화합니다. springdoc 출력의 path·schema 순서가 실행 간 안정적이라고 가정하지
+않고 키를 정렬하며, 줄바꿈은 `\n`으로 고정합니다. 생성과 비교가 같은 정규화 함수를 공유해 두 경로가
+어긋나지 않습니다.
+
+환경마다 달라지는 값은 스냅샷에서 제외합니다. `servers`는 `MOMENS_OPENAPI_SERVER_URL`로 주입되므로
+그대로 두면 실행 환경이 스냅샷을 바꿉니다.
+
 ## 구현 체크리스트
 
 - controller docs interface를 둘지 먼저 결정합니다.
@@ -163,3 +194,4 @@ springdoc이 Spring MVC API versioning 설정과 handler의 `version` mapping을
 - 모든 엔드포인트는 `API-Version` header를 문서화합니다.
 - controller docs에 `API-Version` parameter를 직접 중복 선언하지 않습니다.
 - 모든 path를 `/api` prefix 단일 경로로 문서화하고, 레거시 alias path를 두지 않습니다.
+- 계약을 바꿨으면 `./gradlew updateOpenApiSnapshot`으로 스냅샷을 갱신하고 diff를 PR에 포함합니다.
