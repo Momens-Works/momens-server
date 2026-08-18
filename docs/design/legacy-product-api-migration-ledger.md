@@ -85,11 +85,14 @@ rg --files ../momens-api/cmd
 
 - Product JSON API의 target path는 `/api`, handler version은 `1`이며 레거시 root path alias는
   만들지 않는다.
-- Product JSON API는 별도 합의 전까지 `Legacy compatible`이다. status와 성공·실패 body shape를
-  characterization test로 고정한다.
-  - 예외: H020·H022는 [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) 4.4에서
-    제안한 Standard 모드가 FE 합의로 확정됐다(`MOM-0851`). 미존재는 404 `WORKSPACE_NOT_FOUND`,
-    비멤버는 403 `AUTH_FORBIDDEN`이다.
+- Product JSON API의 **성공 응답은 레거시 body shape를 보존하고, 에러 응답은 전면 Standard
+  모드**를 쓴다([API 응답과 에러 코드](../spec/api-response-error-codes.md)의 표준 형식·코드).
+  FE가 서버 기준을 따르기로 합의했다(2026-08-18, `MOM-0856`). 초기 합의는 H020·H022 한정이었으나
+  (`MOM-0851`) 웹 이관 endpoint 전체로 확대됐다. status와 성공 body shape는 characterization
+  test로 고정한다.
+  - 워크스페이스 리소스의 공통 매핑은 미존재 404 `WORKSPACE_NOT_FOUND`, 비멤버 403
+    `AUTH_FORBIDDEN`이다. 레거시가 둘을 구분하지 않고 403으로 뭉개는 동작은 보존하지 않는다.
+    레거시가 서버 오류까지 403으로 매핑하는 경우도 보존하지 않고 500으로 낸다.
 - 레거시 보호 route는 `session_token` 쿠키 JWT를 사용한다. 신규 웹은
   `access_token`·`refresh_token` HttpOnly 쿠키를 사용한다. 전환기에는 신규 서버가 레거시
   `session_token`을 한시 수용한다([ADR-0017](../adr/0017-transitional-legacy-session-token-acceptance.md)).
@@ -100,6 +103,43 @@ rg --files ../momens-api/cmd
   background runtime을 함께 계산한다.
 - prod schema와 설정의 전역 release gate는 [prod 운영 준비 대장](../prod-schema-ledger.md)에서
   확인한다. 이 게이트는 trace·local/dev 구현의 선행 조건이 아니다.
+
+## 웹 FE 사용 실태
+
+기준선: `momens-fe@d76a2d5`. 모든 HTTP 호출이 `src/api/client.ts` 한 곳을 거치며 다른 `fetch`
+호출처는 없다. 아래는 그 파일의 메서드별 호출처를 센 결과다.
+
+`snapshot 폴백 전용`은 `src/api/workspaceSnapshot.ts`의 `loadWorkspaceSnapshotLegacy`에서만
+호출된다는 뜻이다. 이 폴백은 snapshot이 404일 때만 동작하고 "모든 배포 API가 snapshot을 서빙하면
+삭제"라는 주석이 달려 있다. 즉 신규 서버가 H023을 제공하면 이 행들의 웹 소비자는 사라진다.
+
+| 분류 | entry |
+| --- | --- |
+| 실사용 | H009~H011, H014~H021, H023, H024, H027, H029~H032, H034~H037, H041, H046, H050, H052, H060, H061, H062, H063, H064, H065, H067, H068, H069, H071, H072, H082, H084, H085, H086, H088, H093, H096 |
+| snapshot 폴백 전용 | H022, H038, H039, H040, H042, H044, H051, H053 |
+| 웹 미호출 | H025, H026, H028, H033, H043, H045, H047, H048, H049, H054~H059, H066, H070, H073~H081, H083, H087, H089, H090, H091, H092, H094, H095 |
+
+H001~H008·H012·H013은 웹 FE가 직접 호출하는 대상이 아니다(health, OAuth 서버 메타데이터·토큰,
+MCP transport, Slack webhook). 위 표는 나머지 H009~H011과 H014~H096을 전수 분류한 것이며
+86개 entry가 중복 없이 모두 들어 있다.
+
+폴백 전용 중 H040(`GET /workspaces/:id/source-connections`)은 폴백 안에서 호출되지만 결과가
+구조 분해되지 않아 **버려진다**(`workspaceSnapshot.ts`의 `Promise.all`이 promise 6개 중 5개만
+받는다). 사실상 소비자가 없다.
+
+이 결과가 뒤집는 사전 가정:
+
+- **H025·H026(워크스페이스 온보딩 상태 조회·수정)은 웹이 호출하지 않는다.** FE에 해당 클라이언트
+  메서드가 없다. `MOM-0863`이 이 둘을 이관 범위에 포함하고 있으므로 범위 재확인이 필요하다.
+- **H043(`POST /workspaces/:id/memories`)과 H087·H090~H092·H094도 웹 미호출이다.** `MOM-0869`의
+  범위 중 실제로 쓰이는 것은 H084·H085·H086·H088·H093이다.
+- **H027(멤버 목록)과 H072(태스크 컨텍스트)는 폴백 전용이 아니다.** 각각 워크스페이스 설정 화면과
+  태스크 상세에서 직접 호출한다.
+- **H081(sync-states)은 호출처가 하나도 없다.**
+
+blocker·decision write(H054, H055, H059, H066, H073~H075)와 minsu query(H045)는 웹이 호출하지
+않으므로 웹 컷오버 범위에서 제외한다. 후보·메모리 리뷰 액션, source 온보딩(H041·H082·H096),
+MCP grants UI(H035·H036)는 실사용이다.
 
 ## Trace profile
 
@@ -118,7 +158,7 @@ handler/service/repository를 뜻한다.
 | `AUT` | `auth/handler.go` → `auth/service.go` → `auth/repository.go` → `domain.User`, `platform/auth/jwt.go`, `platform/oauth/google.go` | `000001_init.sql`, `000007_user_job_role.sql`, `000018_refresh_tokens.sql`; `auth/service_integration_test.go`, `platform/auth/jwt_test.go` | `auth` 세션과 `user` 신원·프로필 |
 | `USR` | legacy `auth/handler.go`의 `Me`·`UpdateMe` → `auth/service.go` → `auth/repository.go` → `domain.User` | `000001_init.sql`, `000007_user_job_role.sql`; `auth/service_integration_test.go` | `user`; `/api/me` GET/PATCH 구현 완료 |
 | `WSP` | `workspace/handler.go` → `service.go` → `repository.go`, `access/service.go`·`repository.go`, `label/label.go` → workspace 관련 `domain/models.go` | `000001_init.sql`, `000006_fe_contract.sql`, `000009_member_onboarding_state.sql`, `000011_workspace_invitations.sql`; `workspace/*_test.go`, `access/service_integration_test.go` | 도메인 `workspace`, 웹 표면 `web` |
-| `SNP` | `snapshot/handler.go` → workspace/project/milestone/task/blocker/memory/relation service·repository | 위 capability의 모든 schema; `snapshot/handler_integration_test.go` | 표면은 `:web`(`MOM-0850`). 합성 로직의 소유와 응답 계약은 미확정 |
+| `SNP` | `snapshot/handler.go` → workspace/project/milestone/task/blocker/memory/relation service·repository | 위 capability의 모든 schema; `snapshot/handler_integration_test.go` | 표면과 합성 로직 모두 `:web`(`MOM-0850`). 응답 계약은 [웹 snapshot 계약](legacy-product-api-migration-snapshot-design.md)에서 확정(`MOM-0856`) |
 | `PRJ` | `project/handler.go` → `service.go` → `repository.go` → `domain.Project`, `access` | `000001_init.sql`, `000006_fe_contract.sql`, `000008_project_metadata.sql`, `000017_project_label.sql`; `project/handler_test.go`, `service_integration_test.go` | `project` |
 | `MIL` | `milestone/handler.go` → `service.go` → `repository.go` → `domain.Milestone`, `access` | `000001_init.sql`, `000006_fe_contract.sql`; `milestone/service_integration_test.go` | `project` |
 | `TSK` | `task/handler.go` → `service.go` → `repository.go` → `domain.Task`·`TaskUpdate`, `retrieval/projection.go`·`repository.go` | `000001_init.sql`, `000002_retrieval_projection.sql`, `000006_fe_contract.sql`, `000012_task_updates.sql`, `000013_task_workspace_cascade.sql`; `task/service_integration_test.go`, `retrieval/projection_test.go` | `project`의 nested `task`; 웹 계약은 `MOM-0773` 필요 |
@@ -195,9 +235,9 @@ schema·routing·실제 client traffic을 확인하고, legacy REST·MCP·Slack 
 | H006 | OAuth | `GET /oauth/authorize` | `Authorize` | `MOA-P` | W | `traced`; consent interaction 생성·redirect |
 | H007 | OAuth | `POST /oauth/token` | `Token` | `MOA-P` | W | `traced`; code 교환·refresh 회전 |
 | H008 | OAuth | `POST /oauth/revoke` | `Revoke` | `MOA-P` | W | `traced` |
-| H009 | OAuth | `GET /oauth/interactions/:id` | `GetInteraction` | `MOA-I` | R | `traced`; legacy 세션 필요 |
-| H010 | OAuth | `POST /oauth/interactions/:id/approve` | `Approve` | `MOA-I` | W | `traced`; grant/code 생성 |
-| H011 | OAuth | `POST /oauth/interactions/:id/deny` | `Deny` | `MOA-I` | W | `traced` |
+| H009 | OAuth | `GET /oauth/interactions/:id` | `GetInteraction` | `MOA-I` | R | `traced`; legacy 세션 필요. 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
+| H010 | OAuth | `POST /oauth/interactions/:id/approve` | `Approve` | `MOA-I` | W | `traced`; grant/code 생성. 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
+| H011 | OAuth | `POST /oauth/interactions/:id/deny` | `Deny` | `MOA-I` | W | `traced`; 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
 | H012 | MCP | `ANY /mcp` | `mcpserver.Server` | `MCP` | RW | `traced`; 조건부 등록, 선언 하나로 계산 |
 | H013 | webhook | `POST /slack/events` | `slackbot.Events` | `SLK` | RW | `traced`; 조건부 등록, signed webhook |
 | H014 | Product auth | `GET /auth/google/login` | `auth.GoogleLogin` | `AUT` | W | `implemented`: target `/api/auth/google/login`, state+PKCE 계약으로 교체 |
@@ -208,11 +248,11 @@ schema·routing·실제 client traffic을 확인하고, legacy REST·MCP·Slack 
 | H019 | Product JSON | `POST /workspaces` | `workspace.Create` | `WSP` | W | `traced` |
 | H020 | Product JSON | `GET /workspaces` | `workspace.List` | `WSP` | R | `implemented`: target `GET /api/workspaces`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환 대상; cutover 전 |
 | H021 | Product JSON | `GET /workspaces/slug-available` | `workspace.SlugAvailable` | `WSP` | R | `traced` |
-| H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `implemented`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환은 제외. 웹의 유일한 소비자가 snapshot 폴백이라 H023과 함께 판단 |
-| H023 | Product JSON | `GET /workspaces/:id/snapshot` | `snapshot.Get` | `SNP` | R | `traced`; multi-capability 합성 |
+| H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `implemented`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환은 제외. 웹 소비자가 snapshot 폴백뿐임이 FE 기준선에서 확인됐다. H023 제공 시 폴백이 삭제되면 웹 소비자가 사라지므로, 전환 여부는 `MOM-0862` 머지 후 판단한다 |
+| H023 | Product JSON | `GET /workspaces/:id/snapshot` | `snapshot.Get` | `SNP` | R | `traced`; multi-capability 합성. 계약 확정: [웹 snapshot 계약](legacy-product-api-migration-snapshot-design.md) (`MOM-0856`). 구현은 `MOM-0862`. 웹 read의 유일한 실질 경로 |
 | H024 | Product JSON | `PATCH /workspaces/:id` | `workspace.Update` | `WSP` | W | `traced` |
-| H025 | Product JSON | `GET /workspaces/:id/onboarding` | `workspace.GetOnboarding` | `WSP` | R | `traced` |
-| H026 | Product JSON | `PATCH /workspaces/:id/onboarding` | `workspace.PatchOnboarding` | `WSP` | W | `traced` |
+| H025 | Product JSON | `GET /workspaces/:id/onboarding` | `workspace.GetOnboarding` | `WSP` | R | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위 재확인 필요 |
+| H026 | Product JSON | `PATCH /workspaces/:id/onboarding` | `workspace.PatchOnboarding` | `WSP` | W | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위 재확인 필요 |
 | H027 | Product JSON | `GET /workspaces/:id/members` | `workspace.ListMembers` | `WSP` | R | `traced` |
 | H028 | Product JSON | `POST /workspaces/:id/invite` | `workspace.Invite` | `WSP` | W | `traced`; 즉시 멤버 추가 legacy 경로 |
 | H029 | Product JSON | `POST /workspaces/:id/invitations` | `workspace.CreateInvitation` | `WSP` | W | `traced`; invitation email side effect |
@@ -221,15 +261,15 @@ schema·routing·실제 client traffic을 확인하고, legacy REST·MCP·Slack 
 | H032 | Product JSON | `POST /workspaces/:id/invitations/:invitationId/revoke` | `workspace.RevokeInvitation` | `WSP` | W | `traced` |
 | H033 | Product JSON | `PATCH /workspaces/:id/members/:userId` | `workspace.UpdateMember` | `WSP` | W | `traced` |
 | H034 | Product JSON | `DELETE /workspaces/:id/members/:userId` | `workspace.RemoveMember` | `WSP` | W | `traced` |
-| H035 | OAuth | `GET /workspaces/:id/mcp-grants` | `mcpauth.ListGrants` | `MOA-G` | R | `traced`; 조건부 등록 |
-| H036 | OAuth | `DELETE /workspaces/:id/mcp-grants/:grantId` | `mcpauth.RevokeGrant` | `MOA-G` | W | `traced`; 조건부 등록 |
+| H035 | OAuth | `GET /workspaces/:id/mcp-grants` | `mcpauth.ListGrants` | `MOA-G` | R | `traced`; 조건부 등록. 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
+| H036 | OAuth | `DELETE /workspaces/:id/mcp-grants/:grantId` | `mcpauth.RevokeGrant` | `MOA-G` | W | `traced`; 조건부 등록. 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
 | H037 | Product JSON | `POST /workspaces/:id/projects` | `project.Create` | `PRJ` | W | `traced` |
 | H038 | Product JSON | `GET /workspaces/:id/projects` | `project.List` | `PRJ` | R | `traced` |
 | H039 | Product JSON | `GET /workspaces/:id/blockers` | `blocker.List` | `BLK` | R | `traced` |
 | H040 | Product JSON | `GET /workspaces/:id/source-connections` | `source.List` | `SRC` | R | `traced` |
 | H041 | Product JSON | `GET /workspaces/:id/source-connections/install` | `source.Install` | `SRC` | W | `traced`; provider authorize redirect 시작 |
 | H042 | Product JSON | `GET /workspaces/:id/memory-candidates` | `candidate.List` | `MEM` | R | `traced` |
-| H043 | Product JSON | `POST /workspaces/:id/memories` | `memory.Create` | `MEM` | W | `traced`; projection 동반 |
+| H043 | Product JSON | `POST /workspaces/:id/memories` | `memory.Create` | `MEM` | W | `traced`; projection 동반. **웹 미호출**(`MOM-0856`). `MOM-0869` 범위 재확인 필요 |
 | H044 | Product JSON | `GET /workspaces/:id/memories` | `memory.List` | `MEM` | R | `traced` |
 | H045 | Product JSON | `POST /workspaces/:id/minsu/query` | `minsu.Query` | `MIN` | R | `traced`; retrieval·LLM 외부 호출 |
 | H046 | Product JSON | `POST /invitations/accept` | `workspace.AcceptInvitation` | `WSP` | W | `traced` |
@@ -267,7 +307,7 @@ schema·routing·실제 client traffic을 확인하고, legacy REST·MCP·Slack 
 | H078 | Product JSON | `POST /source-connections/:id/disable` | `source.Disable` | `SRC` | W | `traced`; worker ingest 중지 계약 확인 |
 | H079 | Product JSON | `POST /source-connections/:id/resync` | `source.Resync` | `SRC` | W | `traced`; worker가 관측하는 sync state 변경 |
 | H080 | Product JSON | `POST /source-connections/:id/figma/configure` | `source.ConfigureFigma` | `SRC` | W | `traced`; Figma webhook 외부 호출 |
-| H081 | Product JSON | `GET /source-connections/:id/sync-states` | `source.ListSyncStates` | `SRC` | R | `traced` |
+| H081 | Product JSON | `GET /source-connections/:id/sync-states` | `source.ListSyncStates` | `SRC` | R | `traced`; **웹 미호출**(`MOM-0856`) |
 | H082 | provider callback | `GET /source-connections/oauth/callback` | `source.OAuthCallback` | `SRC` | W | `traced`; public callback, signed state·redirect URI 계약 |
 | H083 | Product JSON | `GET /memory-candidates/:id` | `candidate.Get` | `MEM` | R | `traced` |
 | H084 | Product JSON | `POST /memory-candidates/:id/confirm` | `candidate.Confirm` | `MEM` | W | `traced`; confirmed memory·review action·projection |
@@ -333,7 +373,7 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 | 후보 | 포함 entry | 장점 | 먼저 잠글 계약·제약 | 판단 |
 | --- | --- | --- | --- | --- |
 | 워크스페이스 목록·상세 | H020, H022 | 사용자 진입 가치가 높고 target `workspace` entity/repository가 이미 있으며 projection 없음 | legacy wrapper·403/404·soft-delete characterization | **확정**. 응답 필드가 target 엔티티와 1:1이고 신규 DDL이 없음. 웹 계약이라 `MOM-0845`와 독립 |
-| 프로젝트 목록·상세 | H038, H047 | target `ProjectReader`와 project backing이 이미 있고 projection 없음 | legacy `health_status`, count, metadata, label, owners와 계산 progress의 응답 정책; `MOM-0845` | 두 번째 후보. legacy field gap이 workspace보다 큼 |
+| 프로젝트 목록·상세 | H038, H047 | target `ProjectReader`와 project backing이 이미 있고 projection 없음 | legacy `health_status`, count, metadata, label, owners와 계산 progress의 응답 정책; `MOM-0845` | ~~두 번째 후보~~ **무효.** FE 사용 실태 확인 결과 H038은 snapshot 폴백 전용이고 H047은 호출처가 없다(`MOM-0856`). 프로젝트 데이터는 H023을 통해 소비되므로 read 기반만 필요하다(`MOM-0857`) |
 | 마일스톤 목록·상세 | H051, H056 | read-only이고 외부 provider·projection 없음 | target milestone entity/API가 아직 없고 owner·health·progress 전체 mapping 필요 | 독립성은 높지만 첫 slice의 신규 코드량이 더 큼 |
 | 태스크 목록·상세 | H053, H060 | 사용자 가치가 높고 target task backing·모바일 read가 존재 | `MOM-0773`, legacy milestone/due date·role/default·progress, 웹/모바일 DTO 분리 | 계약 선행 결정 전에는 첫 slice로 선택하지 않음 |
 | 결정·블로커 read | H039, H055, H073 | write를 제외하면 projection 전환 없이 routing rollback 가능 | target entity/API 미구현, legacy 전용 test 없음, 현재 클라이언트 사용 근거 확인 필요 | characterization 근거가 약해 후순위 |
@@ -350,10 +390,13 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 3. `momens-worker`의 공통 outbox 소비 기반(offset·멱등·재시도·DLQ)과 task/decision/blocker/memory
    projector 분리
 4. startup retrieval backfill·embedding의 최종 owner와 기존 document 재projection 방식
-5. snapshot 합성 endpoint의 합성 로직 소유와 응답 계약. 표면은 `:web`으로 확정됐다(`MOM-0850`)
+5. ~~snapshot 합성 endpoint의 합성 로직 소유와 응답 계약~~ — 해소. 표면·합성 모두 `:web`이고
+   (`MOM-0850`) 응답 계약은 [웹 snapshot 계약](legacy-product-api-migration-snapshot-design.md)이
+   잠갔다(`MOM-0856`)
 6. offline CLI 3개의 유지·대체·폐기와 소유 저장소
 7. `MOM-0773` task 계약, `MOM-0774` source-ref 관계, `MOM-0845` workspace scope
-8. Product JSON별 실제 웹 사용 여부와 컷오버 관측 기간
+8. ~~Product JSON별 실제 웹 사용 여부~~ — 해소. 위 [웹 FE 사용 실태](#웹-fe-사용-실태)에 기록했다
+   (`MOM-0856`). 컷오버 관측 기간은 여전히 미결정
 
 ## 후속 작업 제안
 
