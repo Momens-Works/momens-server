@@ -171,8 +171,10 @@ capability의 데이터를 합성하는 순간 `:workspace → :project`가 필�
 ```text
 modules/web/src/main/java/works/momens/server/web/
 └── workspace/
+    ├── package-info.java                # 신규. Modulith nested 모듈 선언
     ├── WorkspaceController.java         # 신규. /api/workspaces, version "1"
     ├── WorkspaceControllerDocs.java     # 신규. OpenAPI
+    ├── WorkspaceService.java            # 신규. workspace public API 조합, 에러 선택
     └── dto/response/
         ├── WorkspaceResponse.java       # 신규
         └── WorkspaceListResponse.java   # 신규
@@ -183,7 +185,7 @@ modules/workspace/src/main/java/works/momens/server/workspace/
 ├── WorkspaceDetail.java                 # 신규. public API. 조회 결과 record
 └── internal/
     ├── WorkspaceReaderImpl.java         # 신규
-    └── WorkspaceRepository.java         # 변경. 조회 메서드 2개 추가
+    └── WorkspaceRepository.java         # 변경. 멤버십 조인 목록 조회 1개 추가
 ```
 
 - `:web` 모듈을 `settings.gradle`, `app/build.gradle` 의존성, `Dockerfile`의 build script COPY
@@ -192,7 +194,8 @@ modules/workspace/src/main/java/works/momens/server/workspace/
 - `WorkspaceReader`는 `Optional`을 반환하고 에러 선택은 `:web`이 한다. `ProjectReader`와 같은 방식.
 - `:auth`의 `BearerTokenResolver`에 `session_token` 쿠키 fallback을 더한다(ADR-0017). 쿠키
   이름은 설정으로 두지 않고 전환기 상수로 둔다. 제거 조건을 주석에 남긴다.
-- `WorkspaceRepository`에 멤버십 조인 목록 조회와 단건 조회를 추가한다. 정렬은 쿼리에서 고정한다.
+- `WorkspaceRepository`에 멤버십 조인 목록 조회를 추가한다. 정렬은 쿼리에서 고정한다. 단건 조회는
+  `JpaRepository.findById`를 그대로 쓰므로 추가할 메서드가 없다.
 - 권한 판정은 `WorkspaceAccess.isMember`를 재사용한다.
 - 목록은 멤버십 조인이 필터라 별도 권한 검사를 하지 않는다.
 - 쓰기가 없어 트랜잭션 경계와 outbox는 이 슬라이스의 범위 밖이다.
