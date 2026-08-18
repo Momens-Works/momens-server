@@ -78,8 +78,7 @@ rg --files ../momens-api/cmd
 그 결과 MCP tool 11개, startup migration runner, retrieval backfill·embedding loop, Slack 비동기
 처리, HTTP server lifecycle, 오프라인 CLI 3개를 확인했다. 별도 cron/scheduler 등록은 없었다.
 
-현재 HTTP 상태는 `implemented` 8개(H001, H014~H018, H020, H022), `traced` 88개다. 비-HTTP·tool
-19개는 모두 `traced`다. `cutover_ready` 이상인 항목은 없다.
+현재 HTTP 항목은 `implemented` 10개(H001, H014~H018, H020~H022, H024), `traced` 86개다. 비-HTTP·tool 항목 19개는 모두 `traced` 상태다. `cutover_ready` 이상인 항목은 아직 없다.
 
 ## 공통 전환 규칙
 
@@ -270,10 +269,10 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H018 | Product auth | `PATCH /auth/me` | `auth.UpdateMe` | `USR` | W | `implemented`: target `PATCH /api/me`; cutover 전 |
 | H019 | Product JSON | `POST /workspaces` | `workspace.Create` | `WSP` | W | `traced`. 구현 `MOM-0863` |
 | H020 | Product JSON | `GET /workspaces` | `workspace.List` | `WSP` | R | `implemented`: target `GET /api/workspaces`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환 대상; cutover 전 |
-| H021 | Product JSON | `GET /workspaces/slug-available` | `workspace.SlugAvailable` | `WSP` | R | `traced`. 구현 `MOM-0863` |
+| H021 | Product JSON | `GET /workspaces/slug-available` | `workspace.SlugAvailable` | `WSP` | R | `implemented`: target `GET /api/workspaces/slug-available`. 구현 완료(`MOM-0863`), 전환 전 |
 | H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `implemented`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환은 제외. 웹 소비자가 snapshot 폴백뿐임이 FE 기준선에서 확인됐다. H023 제공 시 폴백이 삭제되면 웹 소비자가 사라지므로, 전환 여부는 `MOM-0862` 머지 후 판단한다 |
 | H023 | Product JSON | `GET /workspaces/:id/snapshot` | `snapshot.Get` | `SNP` | R | `traced`; multi-capability 합성. 계약 확정: [웹 snapshot 계약](legacy-product-api-migration-snapshot-design.md) (`MOM-0856`). 구현은 `MOM-0862`. 웹 read의 유일한 실질 경로 |
-| H024 | Product JSON | `PATCH /workspaces/:id` | `workspace.Update` | `WSP` | W | `traced`. 구현 `MOM-0863` |
+| H024 | Product JSON | `PATCH /workspaces/:id` | `workspace.Update` | `WSP` | W | `implemented`: target `PATCH /api/workspaces/{workspaceId}`. 구현 완료(`MOM-0863`), 전환 전. 레거시에서는 미존재와 권한 부족을 모두 403으로 응답했으나, 신규 서버에서는 미존재는 404, 권한 부족은 403으로 구분한다 |
 | H025 | Product JSON | `GET /workspaces/:id/onboarding` | `workspace.GetOnboarding` | `WSP` | R | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위에서 **제외 확정**(PR #156). 이관 대상이 아니라 retire 후보 |
 | H026 | Product JSON | `PATCH /workspaces/:id/onboarding` | `workspace.PatchOnboarding` | `WSP` | W | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위에서 **제외 확정**(PR #156). 이관 대상이 아니라 retire 후보 |
 | H027 | Product JSON | `GET /workspaces/:id/members` | `workspace.ListMembers` | `WSP` | R | `traced`. 구현 `MOM-0864` |
