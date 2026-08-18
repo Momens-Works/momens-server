@@ -185,9 +185,15 @@ Momens 작업 본문에 남긴다.
 - soft-delete 데이터 처리
 - pagination, filter, sort, default 값
 
-가능하면 같은 fixture와 요청을 두 구현에 적용해 결과를 비교한다. 시간·무작위 ID·외부 provider처럼
-그대로 비교할 수 없는 값은 의미 단위로 정규화한다. 레거시 테스트가 없으면 handler/service/repository
-추적 결과를 characterization test의 근거로 남긴다.
+같은 fixture와 요청을 두 구현에 적용해 결과를 비교한다. 이 비교는
+[차등 비교 하네스](../local-development.md#레거시-차등-비교)(`scripts/legacy-diff/`)로 실행한다.
+하네스는 고정 id·시각 픽스처를 양쪽 DB에 같은 내용으로 심어 값까지 그대로 비교하므로, 로컬
+비교에서는 정규화가 JSON 키 정렬 하나뿐이다. dev 실서버처럼 값을 고정할 수 없는 대상에는
+`--normalize`로 UUID·타임스탬프를 자리표시자로 바꾸고 shape만 비교한다.
+
+diff 출력은 해당 슬라이스의 계약 문서에 근거로 남긴다. 계약 문서가 확정한 차이 외의 diff가
+남아 있으면 `contract_locked`로 올리지 않는다. 레거시 테스트가 없으면
+handler/service/repository 추적 결과를 characterization test의 근거로 함께 남긴다.
 
 ## 확정된 웹 인증 계약과 트래픽 전환
 
