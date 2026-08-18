@@ -2,6 +2,7 @@ package works.momens.server.web.workspace;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -16,10 +17,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.workspace.UpdateWorkspaceCommand;
 import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceDetail;
+import works.momens.server.workspace.WorkspaceEditor;
 import works.momens.server.workspace.WorkspaceErrorCode;
 import works.momens.server.workspace.WorkspaceReader;
+import works.momens.server.workspace.WorkspaceRole;
+import works.momens.server.workspace.WorkspaceRoleReader;
+import works.momens.server.workspace.WorkspaceSlugReader;
 
 /**
  * 워크스페이스 조회 조합 규칙 검증. workspace public API는 각자 통합 테스트에서 검증하므로 여기서는 모두 mock으로 두고 에러 선택 규칙(404 vs 403
@@ -30,6 +36,9 @@ class WorkspaceServiceTest {
 
   @Mock private WorkspaceReader workspaceReader;
   @Mock private WorkspaceAccess workspaceAccess;
+  @Mock private WorkspaceSlugReader workspaceSlugReader;
+  @Mock private WorkspaceRoleReader workspaceRoleReader;
+  @Mock private WorkspaceEditor workspaceEditor;
   @InjectMocks private WorkspaceService workspaceService;
 
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
@@ -75,6 +84,59 @@ class WorkspaceServiceTest {
     when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
 
     assertThat(workspaceService.get(WORKSPACE_ID, USER_ID)).isEqualTo(detail);
+  }
+
+  @Test
+  @DisplayName("워크스페이스가 없으면 역할을 확인하지 않고 WORKSPACE_NOT_FOUND를 던진다")
+  void updateThrowsWorkspaceNotFoundBeforeCheckingRole() {
+    when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> workspaceService.update(WORKSPACE_ID, USER_ID, "새 이름", null, null))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).getErrorCode())
+        .isEqualTo(WorkspaceErrorCode.WORKSPACE_NOT_FOUND);
+    verifyNoInteractions(workspaceRoleReader, workspaceEditor);
+  }
+
+  @Test
+  @DisplayName("멤버가 아니면 AUTH_FORBIDDEN을 던지고 수정을 시도하지 않는다")
+  void updateThrowsForbiddenWhenCallerIsNotMember() {
+    when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.of(detail()));
+    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> workspaceService.update(WORKSPACE_ID, USER_ID, "새 이름", null, null))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).getErrorCode())
+        .isEqualTo(CommonErrorCode.AUTH_FORBIDDEN);
+    verifyNoInteractions(workspaceEditor);
+  }
+
+  @Test
+  @DisplayName("멤버의 역할이 admin 미만이면 AUTH_FORBIDDEN을 던지고 수정을 시도하지 않는다")
+  void updateThrowsForbiddenWhenCallerIsMemberWithoutAdminRole() {
+    when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.of(detail()));
+    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID))
+        .thenReturn(Optional.of(WorkspaceRole.MEMBER));
+
+    assertThatThrownBy(() -> workspaceService.update(WORKSPACE_ID, USER_ID, "새 이름", null, null))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).getErrorCode())
+        .isEqualTo(CommonErrorCode.AUTH_FORBIDDEN);
+    verifyNoInteractions(workspaceEditor);
+  }
+
+  @Test
+  @DisplayName("admin 이상의 역할이면 수정 요청을 editor에 전달한다")
+  void updateDelegatesToEditorForAdminAndOwner() {
+    WorkspaceDetail updated = detail();
+    when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.of(detail()));
+    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID))
+        .thenReturn(Optional.of(WorkspaceRole.ADMIN));
+    when(workspaceEditor.update(new UpdateWorkspaceCommand(WORKSPACE_ID, "새 이름", null, "momens-2")))
+        .thenReturn(updated);
+
+    assertThat(workspaceService.update(WORKSPACE_ID, USER_ID, "새 이름", null, "momens-2"))
+        .isEqualTo(updated);
   }
 
   private static WorkspaceDetail detail() {

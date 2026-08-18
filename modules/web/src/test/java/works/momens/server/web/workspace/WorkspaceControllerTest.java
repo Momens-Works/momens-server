@@ -3,6 +3,7 @@ package works.momens.server.web.workspace;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -17,6 +18,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
@@ -166,6 +168,54 @@ class WorkspaceControllerTest {
         .andExpect(jsonPath("$.slug").value(""))
         .andExpect(jsonPath("$.available").value(false))
         .andExpect(jsonPath("$.reason").value("invalid"));
+  }
+
+  @Test
+  @DisplayName("수정 결과를 래퍼 없이 워크스페이스 객체로 응답한다")
+  void updateReturnsUpdatedWorkspaceWithoutWrapper() throws Exception {
+    WorkspaceDetail detail =
+        new WorkspaceDetail(
+            WORKSPACE_ID,
+            "새 이름",
+            "momens-2",
+            null,
+            Instant.parse("2026-06-27T09:00:00Z"),
+            Instant.parse("2026-08-19T09:00:00Z"));
+    when(workspaceService.update(WORKSPACE_ID, USER_ID, "새 이름", null, "momens-2"))
+        .thenReturn(detail);
+
+    mockMvc
+        .perform(
+            patch("/api/workspaces/{workspaceId}", WORKSPACE_ID)
+                .principal(principal)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"새 이름\",\"slug\":\"momens-2\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(WORKSPACE_ID.toString()))
+        .andExpect(jsonPath("$.name").value("새 이름"))
+        .andExpect(jsonPath("$.slug").value("momens-2"))
+        .andExpect(jsonPath("$.description").doesNotExist())
+        .andExpect(jsonPath("$.updated_at").value("2026-08-19T09:00:00Z"));
+  }
+
+  @Test
+  @DisplayName("요청 본문이 비어 있어도 200으로 응답한다")
+  void updateAcceptsEmptyBody() throws Exception {
+    when(workspaceService.update(WORKSPACE_ID, USER_ID, null, null, null))
+        .thenReturn(
+            new WorkspaceDetail(
+                WORKSPACE_ID, "Momens", "momens", null, Instant.now(), Instant.now()));
+
+    mockMvc
+        .perform(
+            patch("/api/workspaces/{workspaceId}", WORKSPACE_ID)
+                .principal(principal)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.slug").value("momens"));
   }
 
   @TestConfiguration
