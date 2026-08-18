@@ -136,7 +136,21 @@ MCP transport, Slack webhook). 위 표는 나머지 H009~H011과 H014~H096을 �
 이 결과가 뒤집는 사전 가정:
 
 - **H025·H026(워크스페이스 온보딩 상태 조회·수정)은 웹이 호출하지 않는다.** FE에 해당 클라이언트
-  메서드가 없다. `MOM-0863`이 이 둘을 이관 범위에 포함하고 있으므로 범위 재확인이 필요하다.
+  메서드가 없다. 안드로이드도 호출하지 않는다 — 코치마크 완료 여부를 기기 로컬 DataStore의 불리언
+  하나로만 저장한다(`momens-android@fe8494f`의
+  `core/local/onboarding/OnboardingManagerImpl.kt`). **`MOM-0863` 범위에서 제외하기로 확정했다**
+  (PR #156 논의).
+
+  이관 대상이 아니라 retire 후보로 둔다. 근거는 계약이 일반적이지 않다는 점이다.
+  `PatchOnboarding`의 요청 body는 `welcome_dismissed`·`setup_dismissed` 두 불리언으로 하드코딩돼
+  있고(`workspace/handler.go:464`) 서비스도 `welcome_dismissed_at`·`setup_dismissed_at` 고정 키에
+  시각을 박는다(`workspace/service.go:557`). 키-값 저장소가 아니라 이미 사라진 웹 배너 2종 전용
+  계약이다. 일반적인 것은 `workspace_members.onboarding_state` JSONB 컬럼뿐이고, 그 컬럼은
+  endpoint 없이 Flyway 한 줄로 언제든 추가할 수 있다.
+
+  계정 단위 온보딩 요구가 실제로 나오면 저장 단위(워크스페이스 멤버 → 사용자)와 요청 계약을 모두
+  새로 설계해야 하므로 미리 이관해 두는 이득이 없다. 레거시 컬럼과 기존 dismiss 기록은 prod에
+  남으므로 되살릴 길은 닫히지 않는다.
 - **H043(`POST /workspaces/:id/memories`)과 H087·H090~H092·H094도 웹 미호출이다.** `MOM-0869`의
   범위 중 실제로 쓰이는 것은 H084·H085·H086·H088·H093이다.
 - **H027(멤버 목록)과 H072(태스크 컨텍스트)는 폴백 전용이 아니다.** 각각 워크스페이스 설정 화면과
@@ -260,8 +274,8 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `implemented`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환은 제외. 웹 소비자가 snapshot 폴백뿐임이 FE 기준선에서 확인됐다. H023 제공 시 폴백이 삭제되면 웹 소비자가 사라지므로, 전환 여부는 `MOM-0862` 머지 후 판단한다 |
 | H023 | Product JSON | `GET /workspaces/:id/snapshot` | `snapshot.Get` | `SNP` | R | `traced`; multi-capability 합성. 계약 확정: [웹 snapshot 계약](legacy-product-api-migration-snapshot-design.md) (`MOM-0856`). 구현은 `MOM-0862`. 웹 read의 유일한 실질 경로 |
 | H024 | Product JSON | `PATCH /workspaces/:id` | `workspace.Update` | `WSP` | W | `traced`. 구현 `MOM-0863` |
-| H025 | Product JSON | `GET /workspaces/:id/onboarding` | `workspace.GetOnboarding` | `WSP` | R | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위 재확인 필요 |
-| H026 | Product JSON | `PATCH /workspaces/:id/onboarding` | `workspace.PatchOnboarding` | `WSP` | W | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위 재확인 필요 |
+| H025 | Product JSON | `GET /workspaces/:id/onboarding` | `workspace.GetOnboarding` | `WSP` | R | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위에서 **제외 확정**(PR #156). 이관 대상이 아니라 retire 후보 |
+| H026 | Product JSON | `PATCH /workspaces/:id/onboarding` | `workspace.PatchOnboarding` | `WSP` | W | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위에서 **제외 확정**(PR #156). 이관 대상이 아니라 retire 후보 |
 | H027 | Product JSON | `GET /workspaces/:id/members` | `workspace.ListMembers` | `WSP` | R | `traced`. 구현 `MOM-0864` |
 | H028 | Product JSON | `POST /workspaces/:id/invite` | `workspace.Invite` | `WSP` | W | `traced`; 즉시 멤버 추가 legacy 경로. 구현 `MOM-0865` |
 | H029 | Product JSON | `POST /workspaces/:id/invitations` | `workspace.CreateInvitation` | `WSP` | W | `traced`; invitation email side effect. 구현 `MOM-0865` |
