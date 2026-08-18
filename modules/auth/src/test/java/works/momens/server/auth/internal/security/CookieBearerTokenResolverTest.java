@@ -83,15 +83,21 @@ class CookieBearerTokenResolverTest {
     access.setCookies(new Cookie("access_token", "cookie-jwt"));
     MockHttpServletRequest header = new MockHttpServletRequest();
     header.addHeader("Authorization", "Bearer header-jwt");
+    // 두 쿠키를 함께 가진 브라우저. 이 지표의 의미가 "레거시 쿠키 보유"가 아니라 "fallback에 실제로
+    // 의존한 요청"이라는 것이 여기서 갈린다. access가 있으면 legacy 분기에 도달하지 않는다.
+    MockHttpServletRequest both = new MockHttpServletRequest();
+    both.setCookies(
+        new Cookie("access_token", "cookie-jwt"), new Cookie("session_token", "legacy-jwt"));
 
     resolver.resolve(header);
     resolver.resolve(access);
+    resolver.resolve(both);
     resolver.resolve(legacy);
     resolver.resolve(legacy);
     resolver.resolve(new MockHttpServletRequest());
 
     assertThat(count("header")).isEqualTo(1);
-    assertThat(count("access_cookie")).isEqualTo(1);
+    assertThat(count("access_cookie")).isEqualTo(2);
     assertThat(count("legacy_session_cookie")).isEqualTo(2);
     assertThat(count("none")).isEqualTo(1);
   }
