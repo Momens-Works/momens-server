@@ -39,7 +39,8 @@ class SecurityConfig {
    *
    * <p>설정으로 두지 않고 상수로 고정합니다(전환기 코드임을 드러내기 위함). <b>제거 조건</b>: 웹 로그인이 신규 서버({@code
    * /api/auth/google/*})로 전환되어 모든 웹 세션이 {@code access_token} 쿠키를 갖게 되면 이 상수와 {@link
-   * #bearerTokenResolver} 내 fallback 분기를 제거합니다. 제거는 레거시 {@code momens-api} 종료와 묶지 않습니다.
+   * #bearerTokenResolver} 내 fallback 분기를 제거합니다. 조건 충족은 {@link BearerTokenResolutionMetrics}의 {@code
+   * legacy_session_cookie} 계열이 0으로 수렴하는 것으로 확인합니다. 제거는 레거시 {@code momens-api} 종료와 묶지 않습니다.
    */
   private static final String LEGACY_SESSION_COOKIE_NAME = "session_token";
 
@@ -109,21 +110,31 @@ class SecurityConfig {
    *
    * <p>전환기에는 레거시 {@code session_token} 쿠키도 마지막 fallback으로 수용합니다(ADR-0017). 조회 순서는 {@code
    * Authorization} 헤더 → {@code access_token} 쿠키 → {@code session_token} 쿠키입니다. 디코더와 서명 키는 바꾸지 않습니다.
+   *
+   * <p>어느 단계에서 해석됐는지는 {@link BearerTokenResolutionMetrics}가 셉니다. fallback 제거 조건을 판단할 신호가 그것뿐입니다.
    */
   @Bean
-  BearerTokenResolver bearerTokenResolver(AuthProperties properties) {
+  BearerTokenResolver bearerTokenResolver(
+      AuthProperties properties, BearerTokenResolutionMetrics metrics) {
     String accessCookieName = properties.web().cookie().accessName();
     DefaultBearerTokenResolver headerResolver = new DefaultBearerTokenResolver();
     return request -> {
       String fromHeader = headerResolver.resolve(request);
       if (fromHeader != null) {
+        metrics.record(BearerTokenResolutionMetrics.Mode.HEADER);
         return fromHeader;
       }
       String fromAccessCookie = cookieValue(request, accessCookieName);
       if (fromAccessCookie != null) {
+        metrics.record(BearerTokenResolutionMetrics.Mode.ACCESS_COOKIE);
         return fromAccessCookie;
       }
-      return cookieValue(request, LEGACY_SESSION_COOKIE_NAME);
+      String fromLegacyCookie = cookieValue(request, LEGACY_SESSION_COOKIE_NAME);
+      metrics.record(
+          fromLegacyCookie != null
+              ? BearerTokenResolutionMetrics.Mode.LEGACY_SESSION_COOKIE
+              : BearerTokenResolutionMetrics.Mode.NONE);
+      return fromLegacyCookie;
     };
   }
 
