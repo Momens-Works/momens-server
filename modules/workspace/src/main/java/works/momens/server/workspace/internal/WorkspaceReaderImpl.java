@@ -18,24 +18,14 @@ class WorkspaceReaderImpl implements WorkspaceReader {
   @Override
   @Transactional(readOnly = true)
   public Optional<WorkspaceDetail> findById(UUID workspaceId) {
-    return workspaceRepository.findById(workspaceId).map(WorkspaceReaderImpl::toDetail);
+    return workspaceRepository.findById(workspaceId).map(WorkspaceDetailMapper::toDetail);
   }
 
   @Override
   @Transactional(readOnly = true)
   public List<WorkspaceDetail> listByMemberUserId(UUID userId) {
     return workspaceRepository.findByMemberUserId(userId).stream()
-        .map(WorkspaceReaderImpl::toDetail)
+        .map(WorkspaceDetailMapper::toDetail)
         .toList();
-  }
-
-  private static WorkspaceDetail toDetail(Workspace workspace) {
-    return new WorkspaceDetail(
-        workspace.getId(),
-        workspace.getName(),
-        workspace.getSlug(),
-        workspace.getDescription(),
-        workspace.getCreatedAt(),
-        workspace.getUpdatedAt());
   }
 }

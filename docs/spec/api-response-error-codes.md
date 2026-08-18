@@ -144,6 +144,7 @@ Standard 모드의 에러 응답은 아래 형태를 사용합니다.
 | HTTP status | Code | 사용 기준 |
 | --- | --- | --- |
 | 400 | `WORKSPACE_INVALID_SLUG` | workspace slug 형식이 유효하지 않음 |
+| 400 | `WORKSPACE_RESERVED_SLUG` | 예약어로 지정되어 사용할 수 없는 workspace slug |
 | 409 | `WORKSPACE_SLUG_ALREADY_EXISTS` | workspace slug 중복 |
 | 404 | `WORKSPACE_NOT_FOUND` | workspace를 찾을 수 없음 |
 | 400 | `INVITATION_INVALID_TOKEN` | 초대 토큰 형식이 유효하지 않음 |
