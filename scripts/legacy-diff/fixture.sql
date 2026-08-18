@@ -5,6 +5,11 @@
 --
 -- id 와 시각을 고정하는 이유: 값까지 문자 그대로 같아야 diff 가 곧 계약 차이가 됩니다. 고정하지
 -- 않으면 매 실행마다 UUID·타임스탬프가 달라 정규화가 필요하고, 정규화는 진짜 차이를 함께 지웁니다.
+--
+-- ⚠️  파괴적입니다. 아래 TRUNCATE 는 CASCADE 로 projects, tasks, user_identities 등 users 를
+--     참조하는 모든 테이블까지 비웁니다. run.sh 는 이 파일을 compose 가 띄운 일회용 컨테이너에만
+--     적용하므로 안전하지만, psql 명령을 그대로 복사해 로컬 개발 DB(docker-compose.yml 의
+--     momens-postgres-data 볼륨)에 돌리면 그 데이터가 사라집니다. 대상 DB 를 반드시 확인하세요.
 
 BEGIN;
 
