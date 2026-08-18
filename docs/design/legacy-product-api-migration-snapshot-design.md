@@ -202,6 +202,27 @@ milestone에는 `owner_id` 컬럼 자체가 없어 폴백할 대상이 없다. �
 
 필드별 소유 capability는 5절에 정리한다.
 
+#### `projects[].progress` — 키를 내보내지 않는다
+
+레거시 `domain.Project.Progress`에는 `omitempty`가 없어 값이 `0`이어도 항상 실린다. 그럼에도
+**신규는 이 키를 내보내지 않는다.** 위의 "필드 집합은 레거시와 동일하다"에 대한 유일한 예외다.
+
+근거는 둘이다.
+
+- **웹이 이 값을 읽지 않는다.** `momens-fe`의 `mapProject`(`src/api/mappers.ts`)가 이 필드만
+  매핑에서 빼고 있고, 도메인 `Project` 타입에도 `progress`가 없다. 화면의 프로젝트 진행률은
+  `taskCompletionRatio`(`src/domain/selectors.ts`)가 태스크에서 직접 계산한다. API 타입
+  `ApiProject.progress`가 optional이라 키가 없어도 타입 검사와 런타임 모두 영향이 없다.
+- **이 서버는 저장값을 쓰지 않는다.** 진행률은 태스크 기준 계산이고 `projects.progress`는 읽지도
+  쓰지도 않는 레거시 컬럼으로 유지한다([ADR-0013](../adr/0013-project-progress-derivation.md)).
+  ADR이 "웹 이관 시 진행률 정책과 함께 다시 판단한다"로 유예한 지점을 여기서 정한다.
+
+계산값을 채우는 선택지도 있었으나, 아무도 읽지 않는 값을 위해 project별 태스크 집계를 4.7의 쿼리
+예산에 얹게 되므로 택하지 않았다. 소비자가 생기면 `ProjectReader.progressOf`가 이미 있으므로
+계산값 노출로 올라갈 수 있다.
+
+`../e2e` 대조 스위트에서는 이 키를 의도적 diff로 등록한다.
+
 ### 4.4 정렬과 필터 — 확정
 
 | 컬렉션 | 확정 정렬 | 확정 필터 |
@@ -318,7 +339,7 @@ read 기반과 담당 작업은 다음과 같다.
 | --- | --- | --- | --- |
 | `workspace` | `:workspace` | 완료 (`MOM-0851`) | `WorkspaceReader.findById` 재사용 |
 | `members` | `:workspace` | `MOM-0864` 선행 또는 `MOM-0862`에서 추가 | `users` 조인 필요. 4.4 정렬 고정 |
-| `projects` | `:project` | `MOM-0857` | 웹 컬럼·`project_owners` 매핑 |
+| `projects` | `:project` | `MOM-0857` | 웹 컬럼·`project_owners` 매핑. `progress`는 4.3의 예외대로 제외 |
 | `milestones` | `:project` | `MOM-0858` | **`owner_user_ids` 폴백이 project와 다름**(2.3). `[]`가 아니라 **키 생략**으로 폴백한다 |
 | `tasks` | `:project`의 nested `task` | `MOM-0861` | |
 | `blockers` | `:project` | `MOM-0859` | soft-delete 컬럼 없음 |
