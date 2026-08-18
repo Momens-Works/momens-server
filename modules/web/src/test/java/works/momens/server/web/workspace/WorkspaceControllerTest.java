@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import works.momens.server.workspace.WorkspaceDetail;
+import works.momens.server.workspace.WorkspaceSlugAvailability;
 
 /**
  * 컨트롤러가 Principal을 조합 서비스에 그대로 전달하고
@@ -112,6 +113,59 @@ class WorkspaceControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(WORKSPACE_ID.toString()))
         .andExpect(jsonPath("$.workspaces").doesNotExist());
+  }
+
+  @Test
+  @DisplayName("이미 사용 중인 slug는 사유와 대체 slug를 함께 반환한다")
+  void slugAvailableReturnsReasonAndSuggestionWhenTaken() throws Exception {
+    when(workspaceService.slugAvailability("momens"))
+        .thenReturn(WorkspaceSlugAvailability.taken("momens", "momens-2"));
+
+    mockMvc
+        .perform(
+            get("/api/workspaces/slug-available")
+                .param("slug", "momens")
+                .principal(principal)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.slug").value("momens"))
+        .andExpect(jsonPath("$.available").value(false))
+        .andExpect(jsonPath("$.reason").value("taken"))
+        .andExpect(jsonPath("$.suggestion").value("momens-2"));
+  }
+
+  @Test
+  @DisplayName("사용할 수 있는 slug는 사유와 대체 slug를 응답에서 생략한다")
+  void slugAvailableOmitsReasonAndSuggestionWhenAvailable() throws Exception {
+    when(workspaceService.slugAvailability("momens"))
+        .thenReturn(WorkspaceSlugAvailability.available("momens"));
+
+    mockMvc
+        .perform(
+            get("/api/workspaces/slug-available")
+                .param("slug", "momens")
+                .principal(principal)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.available").value(true))
+        .andExpect(jsonPath("$.reason").doesNotExist())
+        .andExpect(jsonPath("$.suggestion").doesNotExist());
+  }
+
+  @Test
+  @DisplayName("slug-available 경로는 워크스페이스 식별자 경로보다 우선하며 slug 파라미터가 없어도 200을 반환한다")
+  void slugAvailablePathWinsOverWorkspaceIdPathAndAcceptsMissingParameter() throws Exception {
+    when(workspaceService.slugAvailability(null))
+        .thenReturn(
+            WorkspaceSlugAvailability.rejected("", WorkspaceSlugAvailability.Reason.INVALID));
+
+    mockMvc
+        .perform(
+            get("/api/workspaces/slug-available").principal(principal).header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.slug").value(""))
+        .andExpect(jsonPath("$.available").value(false))
+        .andExpect(jsonPath("$.reason").value("invalid"));
   }
 
   @TestConfiguration

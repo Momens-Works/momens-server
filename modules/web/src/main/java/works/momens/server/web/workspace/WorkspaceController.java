@@ -6,10 +6,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.CurrentUser;
 import works.momens.server.web.workspace.dto.response.WorkspaceListResponse;
 import works.momens.server.web.workspace.dto.response.WorkspaceResponse;
+import works.momens.server.web.workspace.dto.response.WorkspaceSlugAvailabilityResponse;
 
 /**
  * 웹 워크스페이스 조회 엔드포인트.
@@ -28,6 +30,13 @@ class WorkspaceController implements WorkspaceControllerDocs {
   @GetMapping(version = "1")
   public WorkspaceListResponse list(Principal principal) {
     return WorkspaceListResponse.from(workspaceService.list(CurrentUser.id(principal)));
+  }
+
+  @Override
+  @GetMapping(path = "/slug-available", version = "1")
+  public WorkspaceSlugAvailabilityResponse slugAvailable(
+      @RequestParam(name = "slug", required = false) String slug) {
+    return WorkspaceSlugAvailabilityResponse.from(workspaceService.slugAvailability(slug));
   }
 
   @Override
