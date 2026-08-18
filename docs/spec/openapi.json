@@ -8066,16 +8066,20 @@
   ],
   "tags" : [
     {
-      "description" : "모바일 앱 진입 API",
-      "name" : "Mobile"
+      "description" : "인증 API",
+      "name" : "Auth"
     },
     {
       "description" : "dev 전용 인증 도구",
       "name" : "Auth (dev)"
     },
     {
-      "description" : "웹 진입 API",
-      "name" : "Web"
+      "description" : "dev 데모용 Signal 생성 API. local/dev/test 프로필에서만 존재합니다.",
+      "name" : "DevSignal"
+    },
+    {
+      "description" : "모바일 앱 진입 API",
+      "name" : "Mobile"
     },
     {
       "description" : "push 설치(FID/FCM token) 등록·해제 API",
@@ -8086,16 +8090,12 @@
       "name" : "Signal"
     },
     {
-      "description" : "dev 데모용 Signal 생성 API. local/dev/test 프로필에서만 존재합니다.",
-      "name" : "DevSignal"
-    },
-    {
-      "description" : "인증 API",
-      "name" : "Auth"
-    },
-    {
       "description" : "사용자 프로필 API",
       "name" : "User"
+    },
+    {
+      "description" : "웹 진입 API",
+      "name" : "Web"
     }
   ]
 }
