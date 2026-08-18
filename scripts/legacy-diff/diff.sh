@@ -68,11 +68,16 @@ canonicalize() {
 }
 
 # status 와 body 를 한 번의 curl 로 받습니다.
+#
+# curl 의 종료 상태를 그대로 넘깁니다. 연결 실패에도 -w 는 status 000 을 출력하므로, 실패를
+# 삼키면 두 서버가 모두 죽었을 때 000 과 빈 body 가 일치해 전 케이스가 "동일"로 집계됩니다.
+# 이 도구는 잘못된 확신을 없애려고 존재하므로 그 결과가 가장 나쁩니다.
 call() {
   local base="$1" path="$2" token="$3"
-  local args=(-sS -o - -w '\n%{http_code}' -X GET "${base}${path}" -H 'API-Version: 1')
+  local args=(-sS --connect-timeout 5 --max-time 30 -o - -w '\n%{http_code}'
+              -X GET "${base}${path}" -H 'API-Version: 1')
   [[ -n "$token" ]] && args+=(-H "Cookie: session_token=${token}")
-  curl "${args[@]}" 2>/dev/null
+  curl "${args[@]}"
 }
 
 pass=0
@@ -100,8 +105,15 @@ while IFS=$'\t' read -r id as method legacy_path server_path; do
     token="$("${here}/mint-token.sh" "$uuid")"
   fi
 
-  legacy_raw="$(call "$legacy_base" "$legacy_path" "$token")"
-  server_raw="$(call "$server_base" "$server_path" "$token")"
+  # 전송 실패는 케이스 실패가 아니라 비교 자체가 성립하지 않는 상태이므로 즉시 멈춥니다.
+  if ! legacy_raw="$(call "$legacy_base" "$legacy_path" "$token")"; then
+    echo "레거시 요청 실패: ${method} ${legacy_base}${legacy_path}" >&2
+    exit 1
+  fi
+  if ! server_raw="$(call "$server_base" "$server_path" "$token")"; then
+    echo "신규 서버 요청 실패: ${method} ${server_base}${server_path}" >&2
+    exit 1
+  fi
 
   legacy_status="${legacy_raw##*$'\n'}"
   server_status="${server_raw##*$'\n'}"

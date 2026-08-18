@@ -44,13 +44,24 @@ if [[ ! -d "$api_dir" ]]; then
 fi
 
 log "1/6 레거시 이미지 준비"
-if [[ -z "$(docker images -q momens-api:legacy-diff)" || "${REBUILD:-0}" == "1" ]]; then
+# 이미지 태그에 레거시 체크아웃의 revision 을 박습니다. 이름만 보고 재사용하면 다른 baseline 에서
+# 만든 이미지로 비교하게 되는데, 그 오염은 결과에 드러나지 않습니다. 태그가 다르면 자동으로
+# 다시 빌드되므로 "레거시는 동결이라 괜찮다"는 가정에 의존하지 않습니다.
+legacy_rev="$(git -C "$api_dir" rev-parse --short HEAD)"
+legacy_tag="momens-api:legacy-diff-${legacy_rev}"
+legacy_dirty=0
+git -C "$api_dir" diff --quiet || legacy_dirty=1
+
+if [[ "$legacy_dirty" -eq 1 || -z "$(docker images -q "$legacy_tag")" || "${REBUILD:-0}" == "1" ]]; then
+  [[ "$legacy_dirty" -eq 1 ]] && echo "레거시 작업 트리가 깨끗하지 않아 다시 빌드합니다."
   # momens-api 는 momens-proto 를 서브모듈로 vendoring 합니다. 비어 있으면 빌드가 실패합니다.
   git -C "$api_dir" submodule update --init third_party/momens-proto
-  docker build -t momens-api:legacy-diff -f "${api_dir}/Dockerfile" "$api_dir"
+  docker build -t "$legacy_tag" -f "${api_dir}/Dockerfile" "$api_dir"
 else
-  echo "momens-api:legacy-diff 재사용 (다시 빌드하려면 REBUILD=1)"
+  echo "${legacy_tag} 재사용 (다시 빌드하려면 REBUILD=1)"
 fi
+# compose 는 고정 이름을 참조하므로 이번 revision 의 이미지를 그 이름에 붙입니다.
+docker tag "$legacy_tag" momens-api:legacy-diff
 
 log "2/6 컨테이너 기동"
 docker compose -f "${here}/compose.yml" up -d
@@ -64,11 +75,11 @@ curl -fsS "http://localhost:${MOMENS_DIFF_LEGACY_PORT}/health" >/dev/null \
   || { echo "레거시가 뜨지 않았습니다."; docker compose -f "${here}/compose.yml" logs legacy-api | tail -30; exit 1; }
 
 log "4/6 신규 서버 기동 (Flyway 로 스키마 생성)"
-jar="$(ls "${repo_root}"/app/build/libs/*.jar 2>/dev/null | grep -v plain | head -1 || true)"
-if [[ -z "$jar" || "${REBUILD_SERVER:-0}" == "1" ]]; then
-  (cd "$repo_root" && ./gradlew --quiet bootJar)
-  jar="$(ls "${repo_root}"/app/build/libs/*.jar | grep -v plain | head -1)"
-fi
+# 항상 다시 만듭니다. 이 하네스의 주 사용처가 "방금 고친 내 구현을 레거시와 대조하는 것"이라,
+# 기존 JAR 을 재사용하면 정확히 그 상황에서 이전 코드의 결과를 보게 됩니다. Gradle 증분 빌드라
+# 변경이 없으면 몇 초입니다.
+(cd "$repo_root" && ./gradlew --quiet bootJar)
+jar="$(ls "${repo_root}"/app/build/libs/*.jar | grep -v plain | head -1)"
 java -jar "$jar" --spring.profiles.active=local > "${here}/.server.log" 2>&1 &
 server_pid=$!
 for _ in $(seq 90); do
