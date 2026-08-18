@@ -193,8 +193,11 @@ milestone에는 `owner_id` 컬럼 자체가 없어 폴백할 대상이 없다. �
 - `workspace`는 래퍼 없는 단일 객체다. 200 응답에서 `null`이 되는 경우는 없다.
 - 각 원소의 필드 집합은 대응하는 레거시 목록 endpoint와 동일하다. 값이 없는 nullable 필드는
   레거시 `omitempty` 동작을 따라 필드를 생략한다.
-- **원소 내부의 빈 컬렉션 필드는 `[]`가 아니라 키를 생략한다.** Go의 `omitempty`가 빈 슬라이스도
-  생략하기 때문이다. `owner_user_ids`, `source_ref_ids`, `related_entity_ids`가 여기 해당한다.
+- **원소 내부의 빈 컬렉션 필드는 `[]`·`{}`가 아니라 키를 생략한다.** Go의 `omitempty`가 빈
+  슬라이스와 빈 맵을 모두 생략하기 때문이다. 해당 필드는 다음과 같다.
+  - 배열: `owner_user_ids`(project·milestone), `source_ref_ids`·`related_entity_ids`(memory·candidate)
+  - 맵: `metadata`(project, memory_candidate, memory, source_ref 4개 타입)
+
   위 두 항목(최상위 8개 리스트, 번들의 두 배열)만 예외로 `[]`를 보장한다.
 
 필드별 소유 capability는 5절에 정리한다.
@@ -211,6 +214,7 @@ milestone에는 `owner_id` 컬럼 자체가 없어 폴백할 대상이 없다. �
 | `memory_candidates` | `importance DESC NULLS LAST, created_at DESC` | 없음 |
 | `memories` | `created_at DESC` | `deleted_at IS NULL` |
 | `task_contexts` | **대응 task의 `created_at DESC`** | edge·task·번들 내부 원소 **모두 soft-delete 제외** |
+| `task_contexts[].memories`·`[].source_refs` | **각 `created_at DESC`** | soft-delete 제외 |
 
 `memory_candidates`의 `importance DESC NULLS LAST`는 유일한 비-`created_at` 정렬이다. 보드가
 중요도 순으로 후보를 보여주는 동작이므로 그대로 보존한다.
@@ -283,15 +287,27 @@ UUID라 열거 위험이 없다는 판단도 선례를 따른다.
 `SELECT EXISTS`(`access/repository.go:36`)라 멤버십만 9회, 여기에 목록 9회와 하이드레이션 2회가
 더해진다. project·milestone의 `owner_user_ids`는 행당 상관 서브쿼리로 별도 실행된다.
 
-신규 구현의 예산은 레거시 대비가 아니라 **절대 상한 12 쿼리**로 못 박는다(존재 확인 1, 멤버십 1,
-목록 7, edge 1, 하이드레이션 2). 4.2가 멤버십 판정을 한 번으로 줄이고 `members`에 `users` 조인이
-붙는 구성을 전제한 값이다. 회귀 테스트는 이 숫자를 임계값으로 쓴다.
+신규 구현의 예산은 레거시 대비가 아니라 **절대 상한 14 쿼리**로 못 박는다. 회귀 테스트는 이
+숫자를 임계값으로 쓴다.
+
+| 구간 | 쿼리 수 |
+| --- | --- |
+| 워크스페이스 존재 확인 | 1 |
+| 멤버십 판정 (`WorkspaceAccess.isMember`) | 1 |
+| 목록 7종 (members·projects·milestones·tasks·blockers·candidates·memories) | 7 |
+| `task_contexts` edge 스캔 | 1 |
+| 번들 하이드레이션 (memory·source_ref) | 2 |
+| `owner_user_ids` 배치 조회 (`project_owners`·`milestone_owners`) | 2 |
+
+마지막 2회는 **허용한다.** 레거시는 상관 서브쿼리로 목록 쿼리 안에서 해결하지만, JPA에서 같은
+모양을 재현하려 들면 구현이 뒤틀린다. 워크스페이스당 1회씩 배치로 모아 읽는 편이 낫고 N+1도
+아니다. 인라인 집계로 구현해 12에 맞추는 것도 계약 위반이 아니다.
 
 특히 다음을 금지한다.
 
 - task별 context 조회 (레거시가 이미 제거한 N+1)
 - project별 마일스톤·태스크 조회 (FE 폴백이 하던 fan-out)
-- `owner_user_ids`를 위한 project·milestone별 추가 조회
+- `owner_user_ids`를 위한 project·milestone **행별** 추가 조회 (배치 2회는 위 표에서 허용)
 
 ## 5. capability read 기반 요구사항
 
