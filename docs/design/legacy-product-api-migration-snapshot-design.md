@@ -34,7 +34,7 @@ FE 기준선: `momens-fe@d76a2d5`
 | --- | --- | --- |
 | route | `bootstrap/router.go:100` | `r.Group("/workspaces")` + `Use(requireAuth)`. `GET "/:id/snapshot"` → `snapshot.Get` |
 | handler | `snapshot/handler.go:71` | 9개 도메인 서비스를 순차 호출해 한 응답으로 합침 |
-| handler | `snapshot/handler.go:88` | 워크스페이스 조회가 선두. 비멤버를 목록 쿼리 전에 차단 |
+| handler | `snapshot/handler.go:93` | 워크스페이스 조회가 선두. 비멤버를 목록 쿼리 전에 차단 |
 | handler | `snapshot/handler.go:150` | `orEmpty()`로 모든 리스트를 `[]`로 정규화 |
 | test | `snapshot/handler_integration_test.go` | edge 있는 task만 번들 생성(`:101`), 비멤버 403(`:150`) |
 
@@ -66,7 +66,7 @@ FE 기준선: `momens-fe@d76a2d5`
 | `blockers` | `blocker/repository.go:51` | `created_at DESC` | **컬럼 없음** |
 | `memory_candidates` | `memory/repository.go:57` | `importance DESC NULLS LAST, created_at DESC` | **컬럼 없음** |
 | `memories` | `memory/repository.go:156` | `created_at DESC` | `deleted_at IS NULL` |
-| `task_contexts` | `relation/repository.go:121` | **없음** | `entity_relations.deleted_at` |
+| `task_contexts` | `relation/repository.go:121` | **없음** | edge는 `entity_relations.deleted_at`, 번들 내부는 `confirmed_memories`·`source_refs`의 `deleted_at` |
 
 후보·메모리는 `status=""`로 호출되어 **상태 필터가 없다.** `REJECTED`·`EXPIRED` 후보와
 `INVALIDATED`·`ARCHIVED` 메모리까지 모두 포함된다.
@@ -77,12 +77,16 @@ project와 milestone의 폴백이 다르다.
 
 | 대상 | 위치 | 집계 | 비었을 때 |
 | --- | --- | --- | --- |
-| project | `project/repository.go:36` | `project_owners`를 `created_at, owner_user_id` 정렬로 집계 | `ARRAY[p.owner_id]` |
+| project | `project/repository.go:37` | `project_owners`를 `created_at, owner_user_id` 정렬로 집계 | `ARRAY[p.owner_id]` |
 | milestone | `milestone/repository.go:30` | `milestone_owners`를 `created_at, owner_user_id` 정렬로 집계 | `ARRAY[]::uuid[]` |
 
 milestone에는 `owner_id` 컬럼 자체가 없어 폴백할 대상이 없다. 또 `milestone/service.go:72`의 생성
 경로가 owner 미지정 시 소속 project owner를 `milestone_owners`에 실제로 시드하므로, 빈 배열은 그
 로직 이전에 만들어진 행에서만 나타난다.
+
+**JSON에서는 빈 배열이 `[]`로 나가지 않는다.** `domain.Milestone.OwnerUserIDs`가
+`json:"owner_user_ids,omitempty"`이고 Go의 `omitempty`는 빈 슬라이스도 생략하므로, 이 경우
+**키 자체가 사라진다.** project는 폴백이 `ARRAY[p.owner_id]`라 절대 비지 않아 항상 키가 있다.
 
 ### 2.4 `task_contexts` 합성
 
@@ -92,12 +96,15 @@ milestone에는 `owner_id` 컬럼 자체가 없어 폴백할 대상이 없다. �
   `deleted_at IS NULL`인 edge를 한 번에 스캔한다.
 - `to_entity_type`이 `MEMORY`면 `memories`, `SOURCE_OBJECT`면 `source_refs`로 모으고 나머지는
   버린다.
-- 번들은 **edge가 있는 task에 대해서만** 생성된다. edge 없는 task는 빈 번들이 아니라 항목 자체가
-  없다(레거시 테스트가 고정한 동작).
+- 번들은 **`MEMORY`·`SOURCE_OBJECT` edge가 있는 task에 대해서만** 생성된다. `default: continue`가
+  `seenTask` 등록보다 앞이라, 다른 종류의 edge만 가진 task는 번들을 받지 못한다. 번들이 없는 task는
+  빈 번들이 아니라 항목 자체가 없다(레거시 테스트가 고정한 동작).
 - **`tasks` 테이블과 join하지 않는다.** soft-delete된 task의 번들이 남을 수 있다.
 - 번들 순서는 edge 발견 순서이고, edge 쿼리에 `ORDER BY`가 없어 비결정적이다.
-- 하이드레이션은 배치 2회(`MemoriesByIDs`, `SourceRefsByIDs`)이며 각각 `created_at DESC`다.
-  번들 내부 순서는 이 전역 정렬을 따르며 edge 순서가 아니다.
+- 하이드레이션은 배치 2회(`MemoriesByIDs`, `SourceRefsByIDs`)이며 각각 `created_at DESC`이고
+  **둘 다 `deleted_at IS NULL`로 거른다.** 번들 내부 순서는 이 전역 정렬을 따르며 edge 순서가 아니다.
+- `taskOrder`는 하이드레이션 **이전에** edge로 확정된다. 따라서 링크 대상이 전부 soft-delete된
+  task는 `{"task_id": ..., "memories": [], "source_refs": []}` 빈 번들로 남는다.
 
 하이드레이션 쿼리는 **부분 투영**이다. Go 타입은 top-level과 같은 `domain.ConfirmedMemory`·
 `domain.SourceRef`이지만 컬럼을 좁게 SELECT 하고, 나머지 필드는 zero value로 남아 `omitempty`에
@@ -180,10 +187,15 @@ milestone에는 `owner_id` 컬럼 자체가 없어 폴백할 대상이 없다. �
 }
 ```
 
-- 8개 리스트는 비어도 `null`이 아니라 `[]`다.
+- 8개 리스트는 비어도 `null`이 아니라 `[]`다. `task_contexts[].memories`와
+  `task_contexts[].source_refs`도 마찬가지다. 레거시 `TaskContext`에는 `omitempty`가 없고 두 필드가
+  항상 빈 슬라이스로 초기화되기 때문이다. Java에서는 명시하지 않으면 `null`이 나가므로 주의한다.
 - `workspace`는 래퍼 없는 단일 객체다. 200 응답에서 `null`이 되는 경우는 없다.
 - 각 원소의 필드 집합은 대응하는 레거시 목록 endpoint와 동일하다. 값이 없는 nullable 필드는
   레거시 `omitempty` 동작을 따라 필드를 생략한다.
+- **원소 내부의 빈 컬렉션 필드는 `[]`가 아니라 키를 생략한다.** Go의 `omitempty`가 빈 슬라이스도
+  생략하기 때문이다. `owner_user_ids`, `source_ref_ids`, `related_entity_ids`가 여기 해당한다.
+  위 두 항목(최상위 8개 리스트, 번들의 두 배열)만 예외로 `[]`를 보장한다.
 
 필드별 소유 capability는 5절에 정리한다.
 
@@ -198,7 +210,7 @@ milestone에는 `owner_id` 컬럼 자체가 없어 폴백할 대상이 없다. �
 | `blockers` | `created_at DESC` | 없음 |
 | `memory_candidates` | `importance DESC NULLS LAST, created_at DESC` | 없음 |
 | `memories` | `created_at DESC` | `deleted_at IS NULL` |
-| `task_contexts` | **대응 task의 `created_at DESC`** | edge + **task soft-delete** |
+| `task_contexts` | **대응 task의 `created_at DESC`** | edge·task·번들 내부 원소 **모두 soft-delete 제외** |
 
 `memory_candidates`의 `importance DESC NULLS LAST`는 유일한 비-`created_at` 정렬이다. 보드가
 중요도 순으로 후보를 보여주는 동작이므로 그대로 보존한다.
@@ -208,22 +220,24 @@ milestone에는 `owner_id` 컬럼 자체가 없어 폴백할 대상이 없다. �
 `members`와 `task_contexts`는 레거시에 `ORDER BY`가 없다. 이는 보존할 계약이 아니라 재현할 수 없는
 비결정성이므로 신규에서 정렬을 고정한다.
 
-- `members`: 가입 시각 오름차순. 워크스페이스 생성자가 첫 멤버로 등록되므로 owner가 앞에 온다.
-  `user_id`는 tie-break다.
-- `task_contexts`: 4.5에서 `tasks` join을 추가하므로 `tasks` 배열과 같은 순서로 고정한다.
-  클라이언트가 두 배열을 나란히 읽을 수 있다.
+- `members`: 가입 시각 오름차순으로 고정한다. `user_id`는 tie-break다. owner가 앞에 오는 것은
+  생성자가 첫 멤버로 등록되는 데서 오는 부수 효과일 뿐이고 소유권 이양·생성자 탈퇴로 깨지므로
+  계약이 아니다. owner 우선 노출이 필요하면 클라이언트가 `role`로 정렬한다.
+- `task_contexts`: 4.5의 task 필터를 거친 뒤 `tasks` 배열과 같은 순서로 고정한다. 클라이언트가 두
+  배열을 나란히 읽을 수 있다.
 
 ### 4.5 `task_contexts` — 확정
 
 **`tasks` 배열에 없는 task의 번들은 내보내지 않는다.** 레거시는 edge만 스캔해 soft-delete된
 task의 번들이 남고, 클라이언트는 그 task를 `tasks` 배열에서 찾지 못해 고아 번들이 된다.
 
-이 동작은 계약이고 구현 방법은 고정하지 않는다. `:web`이 같은 응답의 `tasks` 목록을 이미 갖고
-있으므로 그 id 집합과 교집합을 취하면 추가 쿼리도, `:context` → `:project` 모듈 의존도 필요 없다.
-`:context` 안에서 `tasks`를 조인하는 방식은 새 모듈 의존을 만들므로 택하지 않는다. 어느 쪽이든
-4.4의 정렬 고정이 함께 성립한다.
+결과 동작만 고정하되, 모듈 의존을 만드는 `:context` 안의 `tasks` 조인은 배제한다. `:web`이 같은
+응답의 `tasks` 목록을 이미 갖고 있으므로 그 id 집합과 교집합을 취하면 추가 쿼리도 모듈 의존도
+없고, 4.4의 정렬 고정이 함께 성립한다.
 
-edge 없는 task는 항목 자체가 없다(빈 번들이 아니다). 레거시 테스트가 고정한 동작이므로 보존한다.
+`MEMORY`·`SOURCE_OBJECT` edge가 없는 task는 항목 자체가 없다(빈 번들이 아니다). 레거시 테스트가
+고정한 동작이므로 보존한다. 반대로 edge는 있지만 링크 대상이 전부 soft-delete된 task는 두 배열이
+빈 번들로 남는다(2.4). 두 경우를 구분해 구현한다.
 
 번들 내부 원소의 필드 폭은 **memory와 source_ref가 서로 다르다.**
 
@@ -236,7 +250,8 @@ edge 없는 task는 항목 자체가 없다(빈 번들이 아니다). 레거시 
 중복 출처라 좁으면 원본을 덮어쓴다.
 
 memory를 넓히는 것은 필드 추가이므로 하위호환이다. FE 수정 없이 `MOM-0876`의 증상이 사라진다.
-`task_contexts`에서 memory를 id 참조로 축소하는 정리는 FE 폴백 코드 삭제 시점의 별도 과제로 둔다.
+**대가는 페이로드 중복이다.** 태스크에 링크된 메모리가 top-level과 번들에 전체 필드로 두 번
+실린다. FE 폴백 코드가 삭제되면 `task_contexts`의 memory를 id 참조로 축소해 중복을 없앤다(별도 과제).
 
 Java에는 `omitempty`가 없으므로 이 폭 차이는 명시적으로 선언해야 한다. `source_refs`용 좁은 응답
 타입을 따로 두고, 넓은 타입을 부분만 채워 `null`로 내보내는 방식은 쓰지 않는다. 클라이언트가 "값이
@@ -245,7 +260,8 @@ Java에는 `omitempty`가 없으므로 이 폭 차이는 명시적으로 선언�
 ### 4.6 에러 응답 — Standard 모드
 
 [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) 4.4에서 FE와
-합의한 규칙을 그대로 승계한다. 같은 워크스페이스 리소스에 다른 규칙을 둘 이유가 없다.
+합의한 규칙을 승계하고, 거기에 없던 서버 오류 한 행을 더한다. 같은 워크스페이스 리소스에 다른
+규칙을 둘 이유가 없다.
 
 | 상황 | 레거시 | 신규 |
 | --- | --- | --- |
@@ -263,10 +279,15 @@ UUID라 열거 위험이 없다는 판단도 선례를 따른다.
 
 ### 4.7 쿼리 예산
 
-레거시는 9개 서비스 호출로 9~11 쿼리를 낸다(project·milestone의 `owner_user_ids`는 행당 상관
-서브쿼리로 실행된다). `task_contexts`는 이미 edge 1스캔 + 배치 2회로 N+1이 제거돼 있다.
+레거시는 약 **20 쿼리**를 낸다. 9개 서비스가 각각 `RequireMember`를 부르고 이것이 독립된
+`SELECT EXISTS`(`access/repository.go:36`)라 멤버십만 9회, 여기에 목록 9회와 하이드레이션 2회가
+더해진다. project·milestone의 `owner_user_ids`는 행당 상관 서브쿼리로 별도 실행된다.
 
-신규 구현은 이 예산을 넘지 않는다. 특히 다음을 금지한다.
+신규 구현의 예산은 레거시 대비가 아니라 **절대 상한 12 쿼리**로 못 박는다(존재 확인 1, 멤버십 1,
+목록 7, edge 1, 하이드레이션 2). 4.2가 멤버십 판정을 한 번으로 줄이고 `members`에 `users` 조인이
+붙는 구성을 전제한 값이다. 회귀 테스트는 이 숫자를 임계값으로 쓴다.
+
+특히 다음을 금지한다.
 
 - task별 context 조회 (레거시가 이미 제거한 N+1)
 - project별 마일스톤·태스크 조회 (FE 폴백이 하던 fan-out)
@@ -282,7 +303,7 @@ read 기반과 담당 작업은 다음과 같다.
 | `workspace` | `:workspace` | 완료 (`MOM-0851`) | `WorkspaceReader.findById` 재사용 |
 | `members` | `:workspace` | `MOM-0864` 선행 또는 `MOM-0862`에서 추가 | `users` 조인 필요. 4.4 정렬 고정 |
 | `projects` | `:project` | `MOM-0857` | 웹 컬럼·`project_owners` 매핑 |
-| `milestones` | `:project` | `MOM-0858` | **`owner_user_ids` 폴백이 project와 다름**(2.3). 빈 배열로 폴백한다 |
+| `milestones` | `:project` | `MOM-0858` | **`owner_user_ids` 폴백이 project와 다름**(2.3). `[]`가 아니라 **키 생략**으로 폴백한다 |
 | `tasks` | `:project`의 nested `task` | `MOM-0861` | |
 | `blockers` | `:project` | `MOM-0859` | soft-delete 컬럼 없음 |
 | `memory_candidates` | `:memory` | `MOM-0860` | `importance` 정렬, soft-delete 컬럼 없음 |
