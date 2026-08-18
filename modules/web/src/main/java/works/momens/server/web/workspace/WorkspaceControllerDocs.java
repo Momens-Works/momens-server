@@ -10,6 +10,7 @@ import java.security.Principal;
 import java.util.UUID;
 import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.web.workspace.dto.request.UpdateWorkspaceRequest;
 import works.momens.server.web.workspace.dto.response.WorkspaceListResponse;
 import works.momens.server.web.workspace.dto.response.WorkspaceResponse;
 import works.momens.server.web.workspace.dto.response.WorkspaceSlugAvailabilityResponse;
@@ -53,4 +54,17 @@ interface WorkspaceControllerDocs {
   @ApiExceptions({WorkspaceErrorCode.class, CommonErrorCode.class})
   WorkspaceResponse get(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
+
+  @Operation(
+      summary = "워크스페이스 수정",
+      description = "워크스페이스의 이름, 설명, slug를 수정합니다. admin 또는 owner 권한이 필요합니다.")
+  @ApiResponse(
+      responseCode = "200",
+      description = "수정 성공. 변경된 워크스페이스를 반환합니다.",
+      content = @Content(schema = @Schema(implementation = WorkspaceResponse.class)))
+  @ApiExceptions({WorkspaceErrorCode.class, CommonErrorCode.class})
+  WorkspaceResponse update(
+      @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
+      UpdateWorkspaceRequest request,
+      Principal principal);
 }

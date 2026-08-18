@@ -1,6 +1,7 @@
 package works.momens.server.web.workspace;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -161,6 +163,134 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
                 .cookie(new Cookie("session_token", accessTokens.issueAccessToken(caller.id())))
                 .header("API-Version", "1"))
         .andExpect(status().isOk());
+  }
+
+  @Test
+  @DisplayName("이미 사용 중인 slug는 사유와 대체 slug를 함께 응답한다")
+  void slugAvailableReportsTakenSlugWithSuggestion() throws Exception {
+    UserProfile caller = userService.findOrCreate("web-it-slug-taken@momens.works", "홍길동", null);
+    insertWorkspace("web-it-taken", null);
+
+    mockMvc
+        .perform(
+            authorized(get("/api/workspaces/slug-available"), caller.id())
+                .param("slug", "web-it-taken"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.slug").value("web-it-taken"))
+        .andExpect(jsonPath("$.available").value(false))
+        .andExpect(jsonPath("$.reason").value("taken"))
+        .andExpect(jsonPath("$.suggestion").value("web-it-taken-2"));
+  }
+
+  @Test
+  @DisplayName("사용할 수 있는 slug는 사유 없이 available로 응답한다")
+  void slugAvailableReportsFreeSlugWithoutReason() throws Exception {
+    UserProfile caller = userService.findOrCreate("web-it-slug-free@momens.works", "홍길동", null);
+
+    mockMvc
+        .perform(
+            authorized(get("/api/workspaces/slug-available"), caller.id())
+                .param("slug", "web-it-free"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.available").value(true))
+        .andExpect(jsonPath("$.reason").doesNotExist())
+        .andExpect(jsonPath("$.suggestion").doesNotExist());
+  }
+
+  @Test
+  @DisplayName("예약어로 지정된 slug는 reserved 사유로 응답한다")
+  void slugAvailableRejectsReservedSlug() throws Exception {
+    UserProfile caller = userService.findOrCreate("web-it-slug-reserved@momens.works", "홍길동", null);
+
+    mockMvc
+        .perform(
+            authorized(get("/api/workspaces/slug-available"), caller.id())
+                .param("slug", "settings"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.available").value(false))
+        .andExpect(jsonPath("$.reason").value("reserved"));
+  }
+
+  @Test
+  @DisplayName("admin은 이름과 slug를 수정할 수 있다")
+  void updateAppliesNameAndSlugForAdmin() throws Exception {
+    UserProfile caller = userService.findOrCreate("web-it-update-admin@momens.works", "홍길동", null);
+    UUID workspaceId = insertWorkspace("web-it-update", "기존 설명");
+    addMember(workspaceId, caller.id(), "admin");
+
+    mockMvc
+        .perform(
+            authorized(patch("/api/workspaces/{workspaceId}", workspaceId), caller.id())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"새 이름\",\"slug\":\"web-it-updated\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("새 이름"))
+        .andExpect(jsonPath("$.slug").value("web-it-updated"))
+        .andExpect(jsonPath("$.description").value("기존 설명"));
+  }
+
+  @Test
+  @DisplayName("admin 미만인 멤버의 수정 요청은 403 AUTH_FORBIDDEN으로 응답한다")
+  void updateRejectsMemberWithoutAdminRole() throws Exception {
+    UserProfile caller = userService.findOrCreate("web-it-update-member@momens.works", "홍길동", null);
+    UUID workspaceId = insertWorkspace("web-it-update-member", null);
+    addMember(workspaceId, caller.id(), "member");
+
+    mockMvc
+        .perform(
+            authorized(patch("/api/workspaces/{workspaceId}", workspaceId), caller.id())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"새 이름\"}"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.error.code").value("AUTH_FORBIDDEN"));
+  }
+
+  @Test
+  @DisplayName("존재하지 않는 워크스페이스의 수정 요청은 404 WORKSPACE_NOT_FOUND로 응답한다")
+  void updateReturnsNotFoundForUnknownWorkspace() throws Exception {
+    UserProfile caller = userService.findOrCreate("web-it-update-404@momens.works", "홍길동", null);
+
+    mockMvc
+        .perform(
+            authorized(patch("/api/workspaces/{workspaceId}", UUID.randomUUID()), caller.id())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"새 이름\"}"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.error.code").value("WORKSPACE_NOT_FOUND"));
+  }
+
+  @Test
+  @DisplayName("다른 워크스페이스에서 사용 중인 slug로 수정하면 409 WORKSPACE_SLUG_ALREADY_EXISTS로 응답한다")
+  void updateRejectsSlugTakenByAnotherWorkspace() throws Exception {
+    UserProfile caller = userService.findOrCreate("web-it-update-dup@momens.works", "홍길동", null);
+    UUID workspaceId = insertWorkspace("web-it-update-mine", null);
+    insertWorkspace("web-it-update-theirs", null);
+    addMember(workspaceId, caller.id(), "owner");
+
+    mockMvc
+        .perform(
+            authorized(patch("/api/workspaces/{workspaceId}", workspaceId), caller.id())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"slug\":\"web-it-update-theirs\"}"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.error.code").value("WORKSPACE_SLUG_ALREADY_EXISTS"));
+  }
+
+  @Test
+  @DisplayName("예약어로 지정된 slug로 수정하면 400 WORKSPACE_RESERVED_SLUG로 응답한다")
+  void updateRejectsReservedSlug() throws Exception {
+    UserProfile caller =
+        userService.findOrCreate("web-it-update-reserved@momens.works", "홍길동", null);
+    UUID workspaceId = insertWorkspace("web-it-update-reserved", null);
+    addMember(workspaceId, caller.id(), "owner");
+
+    mockMvc
+        .perform(
+            authorized(patch("/api/workspaces/{workspaceId}", workspaceId), caller.id())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"slug\":\"settings\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("WORKSPACE_RESERVED_SLUG"));
   }
 
   private MockHttpServletRequestBuilder authorized(

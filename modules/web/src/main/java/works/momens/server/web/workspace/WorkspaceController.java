@@ -4,11 +4,14 @@ import java.security.Principal;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.CurrentUser;
+import works.momens.server.web.workspace.dto.request.UpdateWorkspaceRequest;
 import works.momens.server.web.workspace.dto.response.WorkspaceListResponse;
 import works.momens.server.web.workspace.dto.response.WorkspaceResponse;
 import works.momens.server.web.workspace.dto.response.WorkspaceSlugAvailabilityResponse;
@@ -43,5 +46,20 @@ class WorkspaceController implements WorkspaceControllerDocs {
   @GetMapping(path = "/{workspaceId}", version = "1")
   public WorkspaceResponse get(@PathVariable UUID workspaceId, Principal principal) {
     return WorkspaceResponse.from(workspaceService.get(workspaceId, CurrentUser.id(principal)));
+  }
+
+  @Override
+  @PatchMapping(path = "/{workspaceId}", version = "1")
+  public WorkspaceResponse update(
+      @PathVariable UUID workspaceId,
+      @RequestBody UpdateWorkspaceRequest request,
+      Principal principal) {
+    return WorkspaceResponse.from(
+        workspaceService.update(
+            workspaceId,
+            CurrentUser.id(principal),
+            request.name(),
+            request.description(),
+            request.slug()));
   }
 }
