@@ -11,6 +11,8 @@ interface WorkspaceRepository extends JpaRepository<Workspace, UUID> {
 
   Optional<Workspace> findBySlug(String slug);
 
+  boolean existsBySlug(String slug);
+
   /**
    * userId가 멤버인 워크스페이스를 {@code workspace_members} 조인으로 조회합니다. 정렬은 레거시와 같은 생성 시각 내림차순으로 쿼리에서
    * 고정합니다(docs/design/legacy-product-api-migration-workspace-read-design.md 4.3).
