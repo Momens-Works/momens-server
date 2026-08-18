@@ -1190,6 +1190,23 @@
           "title"
         ]
       },
+      "UpdateWorkspaceRequest" : {
+        "description" : "워크스페이스 수정 요청",
+        "properties" : {
+          "description" : {
+            "description" : "워크스페이스 설명. 값이 없으면 기존 설명을 유지합니다.",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "워크스페이스 이름. 값이 없으면 기존 이름을 유지합니다.",
+            "type" : "string"
+          },
+          "slug" : {
+            "description" : "워크스페이스 slug. 값이 없으면 기존 slug를 유지합니다.",
+            "type" : "string"
+          }
+        }
+      },
       "UserResponse" : {
         "description" : "사용자 프로필",
         "properties" : {
@@ -1289,6 +1306,33 @@
             "example" : "2026-06-27T09:00:00Z",
             "format" : "date-time",
             "type" : "string"
+          }
+        }
+      },
+      "WorkspaceSlugAvailabilityResponse" : {
+        "description" : "slug 사용 가능 여부",
+        "properties" : {
+          "available" : {
+            "description" : "slug를 사용할 수 있는지 여부",
+            "type" : "boolean"
+          },
+          "reason" : {
+            "description" : "사용할 수 없는 사유. invalid, reserved, taken 중 하나이며, 사용할 수 있으면 생략됩니다.",
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "slug" : {
+            "description" : "앞뒤 공백을 제거한 slug",
+            "type" : "string"
+          },
+          "suggestion" : {
+            "description" : "이미 사용 중인 경우 제안하는 대체 slug. 그 밖의 경우에는 생략됩니다.",
+            "type" : [
+              "string",
+              "null"
+            ]
           }
         }
       }
@@ -7812,6 +7856,241 @@
         ]
       }
     },
+    "/api/workspaces/slug-available" : {
+      "get" : {
+        "description" : "입력한 값을 워크스페이스 slug로 사용할 수 있는지 확인합니다. 사용할 수 없는 경우에도 200으로 응답하며 판정 사유를 함께 반환합니다.",
+        "operationId" : "slugAvailable",
+        "parameters" : [
+          {
+            "description" : "사용 가능 여부를 확인할 slug. 값이 없으면 형식 오류로 판정합니다.",
+            "in" : "query",
+            "name" : "slug",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1.0.0",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceSlugAvailabilityResponse"
+                }
+              }
+            },
+            "description" : "판정 성공. 사용할 수 없으면 reason을 반환하고, 이미 사용 중이면 suggestion으로 대안을 제공합니다."
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
+          }
+        },
+        "summary" : "slug 사용 가능 여부 조회",
+        "tags" : [
+          "Web"
+        ]
+      }
+    },
     "/api/workspaces/{workspaceId}" : {
       "get" : {
         "description" : "워크스페이스 한 건을 조회합니다.",
@@ -7871,6 +8150,26 @@
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
                         "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_INVALID_SLUG" : {
+                    "description" : "사용할 수 없는 slug 형식입니다.",
+                    "summary" : "WORKSPACE_INVALID_SLUG",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_INVALID_SLUG",
+                        "message" : "사용할 수 없는 slug 형식입니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_RESERVED_SLUG" : {
+                    "description" : "예약어로 지정된 slug입니다.",
+                    "summary" : "WORKSPACE_RESERVED_SLUG",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_RESERVED_SLUG",
+                        "message" : "예약어로 지정된 slug입니다."
                       }
                     }
                   }
@@ -7988,6 +8287,16 @@
                         "message" : "요청이 현재 상태와 충돌합니다."
                       }
                     }
+                  },
+                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
+                    "description" : "이미 사용 중인 slug입니다.",
+                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
+                        "message" : "이미 사용 중인 slug입니다."
+                      }
+                    }
                   }
                 }
               }
@@ -8053,6 +8362,290 @@
           }
         },
         "summary" : "워크스페이스 상세 조회",
+        "tags" : [
+          "Web"
+        ]
+      },
+      "patch" : {
+        "description" : "워크스페이스의 이름, 설명, slug를 수정합니다. admin 또는 owner 권한이 필요합니다.",
+        "operationId" : "update",
+        "parameters" : [
+          {
+            "description" : "워크스페이스 식별자",
+            "in" : "path",
+            "name" : "workspaceId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1.0.0",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateWorkspaceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            },
+            "description" : "수정 성공. 변경된 워크스페이스를 반환합니다."
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_INVALID_SLUG" : {
+                    "description" : "사용할 수 없는 slug 형식입니다.",
+                    "summary" : "WORKSPACE_INVALID_SLUG",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_INVALID_SLUG",
+                        "message" : "사용할 수 없는 slug 형식입니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_RESERVED_SLUG" : {
+                    "description" : "예약어로 지정된 slug입니다.",
+                    "summary" : "WORKSPACE_RESERVED_SLUG",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_RESERVED_SLUG",
+                        "message" : "예약어로 지정된 slug입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_NOT_FOUND" : {
+                    "description" : "워크스페이스를 찾을 수 없습니다.",
+                    "summary" : "WORKSPACE_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_NOT_FOUND",
+                        "message" : "워크스페이스를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
+                    "description" : "이미 사용 중인 slug입니다.",
+                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
+                        "message" : "이미 사용 중인 slug입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
+          }
+        },
+        "summary" : "워크스페이스 수정",
         "tags" : [
           "Web"
         ]
