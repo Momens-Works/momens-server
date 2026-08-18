@@ -12,6 +12,7 @@ import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.web.workspace.dto.response.WorkspaceListResponse;
 import works.momens.server.web.workspace.dto.response.WorkspaceResponse;
+import works.momens.server.web.workspace.dto.response.WorkspaceSlugAvailabilityResponse;
 import works.momens.server.workspace.WorkspaceErrorCode;
 
 /**
@@ -30,6 +31,19 @@ interface WorkspaceControllerDocs {
       content = @Content(schema = @Schema(implementation = WorkspaceListResponse.class)))
   @ApiExceptions({CommonErrorCode.class})
   WorkspaceListResponse list(Principal principal);
+
+  @Operation(
+      summary = "slug 사용 가능 여부 조회",
+      description =
+          "입력한 값을 워크스페이스 slug로 사용할 수 있는지 확인합니다. 사용할 수 없는 경우에도 200으로 응답하며 판정 사유를 함께 반환합니다.")
+  @ApiResponse(
+      responseCode = "200",
+      description = "판정 성공. 사용할 수 없으면 reason을 반환하고, 이미 사용 중이면 suggestion으로 대안을 제공합니다.",
+      content =
+          @Content(schema = @Schema(implementation = WorkspaceSlugAvailabilityResponse.class)))
+  @ApiExceptions({CommonErrorCode.class})
+  WorkspaceSlugAvailabilityResponse slugAvailable(
+      @Parameter(description = "사용 가능 여부를 확인할 slug. 값이 없으면 형식 오류로 판정합니다.") String slug);
 
   @Operation(summary = "워크스페이스 상세 조회", description = "워크스페이스 한 건을 조회합니다.")
   @ApiResponse(

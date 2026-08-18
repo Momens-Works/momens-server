@@ -12,6 +12,8 @@ import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceDetail;
 import works.momens.server.workspace.WorkspaceErrorCode;
 import works.momens.server.workspace.WorkspaceReader;
+import works.momens.server.workspace.WorkspaceSlugAvailability;
+import works.momens.server.workspace.WorkspaceSlugReader;
 
 /**
  * 워크스페이스 조회 조합 서비스. workspace public API 2개(WorkspaceReader, WorkspaceAccess)만 조합하고 도메인 정책을 소유하지
@@ -26,10 +28,16 @@ class WorkspaceService {
 
   private final WorkspaceReader workspaceReader;
   private final WorkspaceAccess workspaceAccess;
+  private final WorkspaceSlugReader workspaceSlugReader;
 
   @Transactional(readOnly = true)
   public List<WorkspaceDetail> list(UUID userId) {
     return workspaceReader.listByMemberUserId(userId);
+  }
+
+  @Transactional(readOnly = true)
+  public WorkspaceSlugAvailability slugAvailability(String rawSlug) {
+    return workspaceSlugReader.availabilityOf(rawSlug);
   }
 
   @Transactional(readOnly = true)
