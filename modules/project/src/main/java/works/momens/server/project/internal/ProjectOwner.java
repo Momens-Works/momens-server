@@ -10,6 +10,7 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Immutable;
 
 /**
  * 프로젝트 소유자.
@@ -24,6 +25,7 @@ import lombok.NoArgsConstructor;
  */
 @Getter
 @Entity
+@Immutable
 @Table(name = "project_owners")
 @IdClass(ProjectOwnerId.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

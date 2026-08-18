@@ -23,7 +23,10 @@ import works.momens.server.common.persistence.BaseEntity;
  * <p>{@code label}, {@code healthStatus}, {@code unresolvedCount}, {@code vocSignalCount}, {@code
  * lastContextAt}, {@code metadata}는 웹 이관(MOM-0857)이 추가한 레거시 read 전용 컬럼입니다. 이 서버는 이 값들을 계산하지도 쓰지도
  * 않고, 조회도 이 엔티티가 아니라 {@link works.momens.server.project.ProjectDetailReader}의 DTO projection이
- * 담당합니다. 그래도 매핑해 두는 것은 prod에서 {@code ddl-auto=validate}가 공유 스키마와의 어긋남을 기동 시점에 잡게 하기 위해서입니다.
+ * 담당합니다. 그래도 매핑해 두는 것은 prod에서 {@code ddl-auto=validate}가 공유 스키마와의 어긋남을 기동 시점에 잡게 하기 위해서입니다. 스키마 검증은
+ * 컬럼 존재와 타입만 보므로 읽기 전용 매핑이어도 검증력은 같습니다({@code Task.nextAction}과 같은 방식).
+ *
+ * <p>읽기 전용이라 INSERT 직후 메모리의 {@code healthStatus}는 {@code null}입니다. DB DEFAULT가 채운 값은 다시 읽어야 보입니다.
  *
  * <p>{@code progress} 컬럼은 매핑하지 않습니다.
  *
@@ -61,22 +64,23 @@ class Project extends BaseEntity {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
-  @Column private String label;
+  @Column(insertable = false, updatable = false)
+  private String label;
 
-  @Column(name = "health_status", nullable = false)
+  @Column(name = "health_status", nullable = false, insertable = false, updatable = false)
   private String healthStatus;
 
-  @Column(name = "unresolved_count", nullable = false)
+  @Column(name = "unresolved_count", nullable = false, insertable = false, updatable = false)
   private int unresolvedCount;
 
-  @Column(name = "voc_signal_count", nullable = false)
+  @Column(name = "voc_signal_count", nullable = false, insertable = false, updatable = false)
   private int vocSignalCount;
 
-  @Column(name = "last_context_at")
+  @Column(name = "last_context_at", insertable = false, updatable = false)
   private Instant lastContextAt;
 
   @JdbcTypeCode(SqlTypes.JSON)
-  @Column(columnDefinition = "jsonb")
+  @Column(columnDefinition = "jsonb", insertable = false, updatable = false)
   private Map<String, Object> metadata;
 
   @Builder
@@ -96,7 +100,5 @@ class Project extends BaseEntity {
     this.ownerId = ownerId;
     this.targetDate = targetDate;
     this.summary = summary;
-    // status와 같은 이유로, NOT NULL DEFAULT를 가진 레거시 컬럼의 기본값을 앱 생성에서도 보장한다.
-    this.healthStatus = "open";
   }
 }
