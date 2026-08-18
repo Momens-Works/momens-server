@@ -146,6 +146,9 @@ class ProjectDetailReaderIntegrationTest extends AbstractPostgresIntegrationTest
 
     UUID older = saveProject(workspaceId, ownerId, "먼저").getId();
     UUID newer = saveProject(workspaceId, ownerId, "나중").getId();
+    // 감사 필드는 연속 저장에서 같은 값이 될 수 있고 정렬에 tie-break가 없으므로 명시적으로 벌린다.
+    setCreatedAt(older, Instant.parse("2026-06-01T00:00:00Z"));
+    setCreatedAt(newer, Instant.parse("2026-06-02T00:00:00Z"));
     UUID deleted = saveProject(workspaceId, ownerId, "삭제됨").getId();
     softDelete(deleted);
     saveProject(otherWorkspace, ownerId, "다른 워크스페이스");
@@ -190,6 +193,17 @@ class ProjectDetailReaderIntegrationTest extends AbstractPostgresIntegrationTest
         .setParameter(1, projectId)
         .setParameter(2, ownerUserId)
         .setParameter(3, createdAt)
+        .executeUpdate();
+    entityManager.clear();
+  }
+
+  /** 목록 정렬을 결정적으로 만들기 위해 생성 시각을 지정합니다. 감사 필드라 앱에서 정할 수 없습니다. */
+  private void setCreatedAt(UUID projectId, Instant createdAt) {
+    entityManager
+        .getEntityManager()
+        .createNativeQuery("UPDATE projects SET created_at = ?1 WHERE id = ?2")
+        .setParameter(1, createdAt)
+        .setParameter(2, projectId)
         .executeUpdate();
     entityManager.clear();
   }
