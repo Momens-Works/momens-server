@@ -5,18 +5,25 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import works.momens.server.common.persistence.BaseEntity;
 
 /**
  * 프로젝트.
  *
- * <p>레거시 {@code momens-api}의 {@code projects} 테이블과 호환됩니다. 모바일 read 기반(MOM-59)이 읽는 컬럼만 매핑하고, 나머지 레거시
- * 컬럼(health_status, label 등)은 웹 이관에서 추가합니다.
+ * <p>레거시 {@code momens-api}의 {@code projects} 테이블과 호환됩니다.
+ *
+ * <p>{@code label}, {@code healthStatus}, {@code unresolvedCount}, {@code vocSignalCount}, {@code
+ * lastContextAt}, {@code metadata}는 웹 이관(MOM-0857)이 추가한 레거시 read 전용 컬럼입니다. 이 서버는 이 값들을 계산하지도 쓰지도
+ * 않고, 조회도 이 엔티티가 아니라 {@link works.momens.server.project.ProjectDetailReader}의 DTO projection이
+ * 담당합니다. 그래도 매핑해 두는 것은 prod에서 {@code ddl-auto=validate}가 공유 스키마와의 어긋남을 기동 시점에 잡게 하기 위해서입니다.
  *
  * <p>{@code progress} 컬럼은 매핑하지 않습니다.
  *
@@ -54,6 +61,24 @@ class Project extends BaseEntity {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
+  @Column private String label;
+
+  @Column(name = "health_status", nullable = false)
+  private String healthStatus;
+
+  @Column(name = "unresolved_count", nullable = false)
+  private int unresolvedCount;
+
+  @Column(name = "voc_signal_count", nullable = false)
+  private int vocSignalCount;
+
+  @Column(name = "last_context_at")
+  private Instant lastContextAt;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  private Map<String, Object> metadata;
+
   @Builder
   private Project(
       UUID workspaceId,
@@ -71,5 +96,7 @@ class Project extends BaseEntity {
     this.ownerId = ownerId;
     this.targetDate = targetDate;
     this.summary = summary;
+    // status와 같은 이유로, NOT NULL DEFAULT를 가진 레거시 컬럼의 기본값을 앱 생성에서도 보장한다.
+    this.healthStatus = "open";
   }
 }
