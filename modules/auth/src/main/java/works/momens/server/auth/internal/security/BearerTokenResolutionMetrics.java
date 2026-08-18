@@ -11,7 +11,8 @@ import org.springframework.stereotype.Component;
  *
  * <p><b>인증 성공이 아니라 해석 경로에 도달한 사실을 셉니다.</b> 계측 자리가 resolver라 JWT 디코딩과 만료 검증보다 앞입니다. 따라서 만료된 레거시 쿠키만
  * 붙여 보내 401을 받는 요청도 {@code legacy_session_cookie}로 잡히고, 공개 경로가 아닌 모든 요청(존재하지 않는 경로 포함)이 {@code
- * none}으로 잡힙니다. 제거 조건 판단에는 안전한 방향입니다. 실제보다 늦게 0에 수렴할 뿐 먼저 수렴하지 않습니다.
+ * none}으로 잡힙니다. 제거 조건 판단에는 안전한 방향입니다. {@code legacy_session_cookie}의 increase가 실제보다 늦게 0이 될 뿐 먼저 0이
+ * 되지는 않습니다.
  *
  * <p>존재 이유는 전환기 fallback의 <b>제거 조건</b>입니다(ADR-0017). 레거시 {@code session_token}과 신규 {@code
  * access_token}은 같은 서명 키와 같은 claim을 쓰므로 토큰만으로는 구분할 수 없고, 구분할 수 있는 신호는 "어느 쿠키 이름으로 왔는가"뿐입니다. 이 지표가

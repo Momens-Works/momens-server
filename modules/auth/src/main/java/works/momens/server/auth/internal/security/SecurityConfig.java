@@ -40,7 +40,9 @@ class SecurityConfig {
    * <p>설정으로 두지 않고 상수로 고정합니다(전환기 코드임을 드러내기 위함). <b>제거 조건</b>: 웹 로그인이 신규 서버({@code
    * /api/auth/google/*})로 전환되어 모든 웹 세션이 {@code access_token} 쿠키를 갖게 되면 이 상수와 {@link
    * #bearerTokenResolver} 내 fallback 분기를 제거합니다. 조건 충족은 {@link BearerTokenResolutionMetrics}의 {@code
-   * legacy_session_cookie} 계열이 0으로 수렴하는 것으로 확인합니다. 제거는 레거시 {@code momens-api} 종료와 묶지 않습니다.
+   * legacy_session_cookie} 원시 값이 아니라 <b>모든 인스턴스를 sum한 뒤 정한 관찰 기간의 increase가 0인 것</b>으로 확인합니다.
+   * counter는 단조 증가라 원시 값이 0인 것은 재시작 직후에도 성립해 근거가 되지 못합니다. 관찰 기간과 집계 쿼리는 수집 백엔드를 배선할 때
+   * 정합니다(MOM-0834, MOM-0875). 제거는 레거시 {@code momens-api} 종료와 묶지 않습니다.
    */
   private static final String LEGACY_SESSION_COOKIE_NAME = "session_token";
 
