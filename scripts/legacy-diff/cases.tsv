@@ -1,0 +1,16 @@
+# 비교 대상 목록(MOM-0877). 슬라이스마다 행을 추가합니다.
+#
+# yaml 대신 TSV 인 이유: yq 의존 없이 순수 bash 로 읽습니다.
+# 열: id  as  method  legacy_path  server_path
+# as: fixture.sql 의 사용자 키(owner|member|stranger|nobody|none)
+# none 은 토큰 없이 호출합니다(401 계약 비교).
+#
+# id	as	method	legacy_path	server_path
+H020-member	owner	GET	/workspaces	/api/workspaces
+H020-empty	nobody	GET	/workspaces	/api/workspaces
+H020-noauth	none	GET	/workspaces	/api/workspaces
+H022-ok	owner	GET	/workspaces/00000000-0000-4000-8000-000000000012	/api/workspaces/00000000-0000-4000-8000-000000000012
+H022-no-description	owner	GET	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011
+H022-forbidden	owner	GET	/workspaces/00000000-0000-4000-8000-000000000013	/api/workspaces/00000000-0000-4000-8000-000000000013
+H022-not-found	owner	GET	/workspaces/00000000-0000-4000-8000-0000000000ff	/api/workspaces/00000000-0000-4000-8000-0000000000ff
+H022-bad-uuid	owner	GET	/workspaces/not-a-uuid	/api/workspaces/not-a-uuid

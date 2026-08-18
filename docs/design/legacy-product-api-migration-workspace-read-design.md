@@ -154,6 +154,27 @@ soft-delete 필터는 두지 않는다. 레거시에 해당 컬럼과 필터가 
 미존재와 권한 없음을 나누면 워크스페이스 존재 여부가 드러나지만, 식별자가 추측 불가능한 UUID라
 열거 위험이 없다고 판단한다.
 
+### 4.5 차등 비교 결과
+
+[차등 비교 하네스](../local-development.md#레거시-차등-비교)로 두 서버에 같은 요청을 보내 확인한
+결과다(`MOM-0877`, 케이스 `H020-*`, `H022-*`).
+
+성공 응답 4건(목록, 빈 목록, 단건, `description` 없는 단건)은 **완전히 동일하다**. 래퍼 유무,
+배열 정렬, `description` 생략, 타임스탬프 직렬화까지 차이가 없다.
+
+차이는 4건이고 모두 4.4가 확정한 Standard 모드 에러다.
+
+| 케이스 | 레거시 | 신규 |
+| --- | --- | --- |
+| 인증 없음 | 401 `{"error":"unauthorized"}` | 401 `AUTH_UNAUTHORIZED` |
+| path id가 UUID 아님 | 400 `{"error":"invalid workspace id"}` | 400 `COMMON_BAD_REQUEST` |
+| 멤버가 아님 | 403 `{"error":"access denied"}` | 403 `AUTH_FORBIDDEN` |
+| 워크스페이스 없음 | 403 `{"error":"access denied"}` | 404 `WORKSPACE_NOT_FOUND` |
+
+의도하지 않은 차이는 없다. 다만 신규 403·404 body는 4.4 표에 없던 `details.workspace_id`를
+함께 싣는다. 표준 에러 형식이 허용하는 필드이고 요청 path에 이미 드러난 값이라 계약 변경으로
+보지 않되, 여기 기록해 둔다.
+
 ## 5. Target 설계
 
 웹 HTTP 표면은 신규 orchestration module `:web`이 소유한다. `:mobile`과 같은 자리이며,
