@@ -13,6 +13,10 @@
 
 BEGIN;
 
+-- TRUNCATE ... CASCADE 는 딸려 비워지는 테이블마다 NOTICE 를 냅니다. write 케이스마다 이 파일을
+-- 다시 적용하므로(MOM-0882) 그대로 두면 NOTICE 가 차등 비교 출력을 덮습니다.
+SET LOCAL client_min_messages TO WARNING;
+
 TRUNCATE workspace_members, workspaces, users CASCADE;
 
 INSERT INTO users (id, email, name, avatar_url, created_at, updated_at) VALUES

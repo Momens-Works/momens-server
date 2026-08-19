@@ -23,13 +23,17 @@ server_pid=""
 
 log() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 
+# KEEP=1 은 신규 서버까지 남깁니다. write 케이스는 반복 실행이 잦은데 서버를 죽이면 --only 한 번마다
+# Gradle 빌드와 부팅을 다시 기다리게 됩니다(MOM-0882).
 cleanup() {
-  [[ -n "$server_pid" ]] && kill "$server_pid" 2>/dev/null || true
-  if [[ "$keep" != "1" ]]; then
-    docker compose -f "${here}/compose.yml" down -v >/dev/null 2>&1 || true
-  else
-    echo "KEEP=1 이라 스택을 남깁니다. 정리: docker compose -f ${here}/compose.yml down -v"
+  if [[ "$keep" == "1" ]]; then
+    echo "KEEP=1 이라 스택과 신규 서버를 남깁니다."
+    echo "  반복 실행: ${here}/diff.sh --local-stack --only <케이스>"
+    echo "  정리: kill ${server_pid:-<pid>} && docker compose -f ${here}/compose.yml down -v"
+    return
   fi
+  [[ -n "$server_pid" ]] && kill "$server_pid" 2>/dev/null || true
+  docker compose -f "${here}/compose.yml" down -v >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -96,7 +100,11 @@ docker compose -f "${here}/compose.yml" exec -T server-db \
   psql -q -v ON_ERROR_STOP=1 -U momens -d momens_server < "${here}/fixture.sql"
 
 log "6/6 차등 비교"
+# --local-stack 은 이 스크립트가 띄운 일회용 compose 스택을 대상으로 한다는 선언입니다. write 케이스의
+# 픽스처 되돌리기와 DB 기록 비교가 이 플래그에서만 동작합니다. dev 실서버를 가리킬 때는 diff.sh 를
+# 직접 호출하며, 그 경로에서는 write 케이스가 실데이터를 건드리지 않도록 건너뜁니다.
 "${here}/diff.sh" \
+  --local-stack \
   --legacy-base "http://localhost:${MOMENS_DIFF_LEGACY_PORT}" \
   --server-base "http://localhost:${MOMENS_DIFF_SERVER_PORT}" \
   "$@"
