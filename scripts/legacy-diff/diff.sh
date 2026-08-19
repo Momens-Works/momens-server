@@ -46,6 +46,25 @@ done
 
 : "${MOMENS_DIFF_JWT_SECRET:?MOMENS_DIFF_JWT_SECRET 가 필요합니다 (harness.conf 참고)}"
 
+# --local-stack 은 픽스처 되돌리기와 DB 비교를 compose 스택의 DB 에 직접 실행합니다. 그래서 base URL
+# 까지 로컬이어야 전제가 성립합니다. 플래그만 보면 --local-stack 에 원격 base 를 함께 줄 수 있는데,
+# 그러면 write 는 원격에 나가고 검증은 로컬 DB 를 보게 됩니다. 실데이터를 바꾸면서 비교 결과까지
+# 무의미해지는 조합이라 여기서 막습니다.
+#
+# 포트가 아니라 host 만 봅니다. 포트는 harness.conf 가 소유해 바뀔 수 있지만, compose 가 127.0.0.1
+# 에만 바인딩하므로 "로컬인가"는 host 로 판별됩니다.
+if [[ "$local_stack" -eq 1 ]]; then
+  for base in "$legacy_base" "$server_base"; do
+    host="${base#*://}"
+    host="${host%%/*}"
+    host="${host%%:*}"
+    if [[ "$host" != "localhost" && "$host" != "127.0.0.1" ]]; then
+      echo "--local-stack 은 로컬 compose 스택 전용입니다. 로컬이 아닌 base URL: ${base}" >&2
+      exit 2
+    fi
+  done
+fi
+
 # fixture.sql 의 사용자 키 -> UUID
 user_uuid() {
   case "$1" in
