@@ -14,6 +14,7 @@ include 'common'
 def capabilityModules = [
     'auth',
     'context',
+    'memory',
     'minsu',
     'mobile',
     'notification',
