@@ -44,9 +44,15 @@ final class WorkspaceSlugPolicy {
 
   private WorkspaceSlugPolicy() {}
 
-  /** 앞뒤 공백만 제거합니다. 대문자를 소문자로 변환하지 않는 것이 레거시 동작입니다. */
+  /**
+   * 앞뒤 공백만 제거합니다. 대문자를 소문자로 변환하지 않는 것이 레거시 동작입니다.
+   *
+   * <p>제거 대상은 {@code Character.isWhitespace}가 {@code true}인 문자입니다. 한글 입력기에서 입력되는 넓은 공백({@code
+   * U+3000})은 제거되지만, {@code U+00A0} 공백은 이 기준에 해당하지 않아 유지됩니다. 레거시 Go의 {@code strings.TrimSpace} 구현을
+   * 그대로 재현하는 것이 아니라 이 기준을 공백 제거 규칙으로 사용합니다.
+   */
   static String normalize(String rawSlug) {
-    return rawSlug == null ? "" : rawSlug.trim();
+    return rawSlug == null ? "" : rawSlug.strip();
   }
 
   /** 길이가 2자 이상 63자 이하인지, 소문자와 숫자와 하이픈만 사용하는지, 하이픈이 처음이나 끝에 오거나 연속되지 않는지 검증합니다. */
