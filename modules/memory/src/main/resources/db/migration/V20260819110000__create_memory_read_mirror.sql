@@ -24,6 +24,9 @@
 -- 클래스패스로 끌어오게 되기 때문입니다. prod 의 ddl-auto=validate 는 컬럼과 타입만 검증하고 FK 는
 -- 보지 않으므로 재현해도 얻는 것이 없습니다(source·context 읽기 미러와 같은 판단). 모듈 안에서 닫히는
 -- created_from_candidate_id 만 FK 로 남깁니다.
+--
+-- memory_candidates 에는 소프트 삭제 컬럼이 없습니다. 레거시가 후보를 지우지 않고 상태(REJECTED,
+-- EXPIRED)로만 다루기 때문이며, 그래서 목록 조회에도 삭제 필터가 없습니다(웹 snapshot 계약 4.4).
 CREATE TABLE memory_candidates (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     workspace_id UUID NOT NULL,
@@ -48,8 +51,6 @@ CREATE TABLE memory_candidates (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 소프트 삭제 컬럼이 없습니다. 레거시가 후보를 지우지 않고 상태(REJECTED, EXPIRED)로만 다루기
--- 때문이며, 그래서 목록 조회에도 삭제 필터가 없습니다(웹 snapshot 계약 4.4).
 CREATE TABLE confirmed_memories (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     workspace_id UUID NOT NULL,
@@ -76,7 +77,10 @@ CREATE TABLE confirmed_memories (
     deleted_at TIMESTAMPTZ
 );
 
--- 이 모듈의 조회가 쓰는 인덱스만 둡니다. 레거시의 label unique 인덱스와
--- idx_confirmed_memories_candidate 는 쓰기 경로를 지키는 제약이라 write 이관(MOM-0869)에 맡깁니다.
+-- 조회에 관계있는 두 인덱스는 레거시의 이름과 정의를 문자 그대로 맞춥니다. 미러의 값은 prod 를 얼마나
+-- 그대로 재현하느냐에 있고, 정의가 갈리면 실행 계획을 local 에서 확인하는 의미가 없어집니다.
+-- (workspace_id, status) 의 status 는 이 모듈의 조회가 쓰지 않지만 선두 컬럼으로 필터에 쓰입니다.
+-- 레거시의 label unique 인덱스와 idx_confirmed_memories_candidate 는 쓰기 경로를 지키는 제약이라
+-- write 이관(MOM-0869)에 맡깁니다.
 CREATE INDEX idx_memory_candidates_workspace_status ON memory_candidates(workspace_id, status);
 CREATE INDEX idx_confirmed_memories_workspace_id ON confirmed_memories(workspace_id) WHERE deleted_at IS NULL;
