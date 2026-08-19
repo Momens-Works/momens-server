@@ -29,7 +29,12 @@ cleanup() {
   if [[ "$keep" == "1" ]]; then
     echo "KEEP=1 이라 스택과 신규 서버를 남깁니다."
     echo "  반복 실행: ${here}/diff.sh --local-stack --only <케이스>"
-    echo "  정리: kill ${server_pid:-<pid>} && docker compose -f ${here}/compose.yml down -v"
+    if [[ -n "$server_pid" ]]; then
+      echo "  정리: kill ${server_pid} && docker compose -f ${here}/compose.yml down -v"
+      echo "  남은 서버를 정리하지 않으면 다음 run.sh 가 포트 충돌로 멈춥니다."
+    else
+      echo "  정리: docker compose -f ${here}/compose.yml down -v"
+    fi
     return
   fi
   [[ -n "$server_pid" ]] && kill "$server_pid" 2>/dev/null || true
@@ -82,11 +87,30 @@ log "4/6 신규 서버 기동 (Flyway 로 스키마 생성)"
 # 항상 다시 만듭니다. 이 하네스의 주 사용처가 "방금 고친 내 구현을 레거시와 대조하는 것"이라,
 # 기존 JAR 을 재사용하면 정확히 그 상황에서 이전 코드의 결과를 보게 됩니다. Gradle 증분 빌드라
 # 변경이 없으면 몇 초입니다.
+# 이미 떠 있는 서버가 포트를 쥐고 있으면 여기서 멈춥니다. 그대로 진행하면 방금 띄운 서버는 바인딩에
+# 실패해 죽고 헬스 체크는 옛 서버가 응답해 통과합니다. 아래 기동 대기 루프의 생존 확인만으로는 이
+# 경우를 못 잡습니다. 옛 서버가 즉시 응답해 루프가 첫 회차에 빠져나가기 때문입니다.
+if curl -fsS "http://localhost:${MOMENS_DIFF_SERVER_PORT}/actuator/health" >/dev/null 2>&1; then
+  echo "포트 ${MOMENS_DIFF_SERVER_PORT} 에 이미 서버가 떠 있습니다. KEEP=1 로 남긴 서버일 수 있습니다." >&2
+  echo "정리 후 다시 실행하세요: kill \$(lsof -ti :${MOMENS_DIFF_SERVER_PORT})" >&2
+  exit 1
+fi
+
 (cd "$repo_root" && ./gradlew --quiet bootJar)
 jar="$(ls "${repo_root}"/app/build/libs/*.jar | grep -v plain | head -1)"
 java -jar "$jar" --spring.profiles.active=local > "${here}/.server.log" 2>&1 &
 server_pid=$!
+# 프로세스 생존을 함께 확인합니다. KEEP=1 으로 남은 이전 서버가 포트를 쥐고 있으면 방금 띄운
+# 서버는 바인딩에 실패해 즉시 죽는데, 헬스 체크는 살아있는 옛 서버가 응답해 통과합니다. 그러면
+# 바로 위 주석이 경계한 "이전 코드의 결과를 보는" 상황이 JAR 이 아니라 프로세스 층에서 되살아나고,
+# 출력에는 아무 이상 신호가 없습니다.
 for _ in $(seq 90); do
+  if ! kill -0 "$server_pid" 2>/dev/null; then
+    echo "신규 서버 프로세스가 죽었습니다. 포트 ${MOMENS_DIFF_SERVER_PORT} 를 이전 실행이 쥐고 있을 수 있습니다."
+    echo "로그: ${here}/.server.log"
+    tail -30 "${here}/.server.log"
+    exit 1
+  fi
   curl -fsS "http://localhost:${MOMENS_DIFF_SERVER_PORT}/actuator/health" >/dev/null 2>&1 && break
   sleep 1
 done

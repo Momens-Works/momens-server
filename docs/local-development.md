@@ -150,6 +150,10 @@ KEEP=1 ./scripts/legacy-diff/run.sh
 ./scripts/legacy-diff/diff.sh --local-stack --only H024-noop   # 반복 검증
 ```
 
+남긴 서버는 다음 `run.sh` 전에 정리해야 합니다. 포트를 쥐고 있으면 새로 띄운 서버가 바인딩에
+실패하고, 헬스 체크는 살아있는 옛 서버가 응답해 통과해버립니다. `run.sh`가 프로세스 생존을 함께
+확인해 이 경우 멈추지만, 종료 안내에 나오는 `kill` 명령을 먼저 실행하는 편이 빠릅니다.
+
 한 토큰으로 양쪽을 호출할 수 있는 것은 [ADR-0017](adr/0017-transitional-legacy-session-token-acceptance.md)이
 정한 `session_token` 수용과 두 서버의 동일한 HS256 서명 키 덕분입니다. 이 전제가 깨지면
 하네스도 함께 깨집니다.
@@ -160,7 +164,9 @@ KEEP=1 ./scripts/legacy-diff/run.sh
 레거시 path, 신규 path, `ignore`입니다. 필요한 데이터가 없으면 `fixture.sql`에 고정 id로
 추가합니다. 픽스처는 그 데이터를 필요로 하는 슬라이스가 채웁니다.
 
-`ignore`는 응답 body에서 빼고 볼 필드를 쉼표로 나열합니다. 없으면 `-`입니다.
+`ignore`는 응답 body에서 빼고 볼 필드를 쉼표로 나열합니다. 없으면 `-`입니다. **중첩 객체와 배열
+안까지 모든 깊이에서 같은 이름의 키를 제거하므로**, `name`처럼 흔한 키를 적으면 의도보다 넓게
+지워집니다.
 
 ### write 케이스 추가
 
