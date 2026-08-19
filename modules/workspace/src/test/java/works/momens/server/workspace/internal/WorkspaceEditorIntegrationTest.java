@@ -148,6 +148,45 @@ class WorkspaceEditorIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("변경할 값이 없으면 updated_at을 갱신하지 않는다")
+  void noOpUpdateDoesNotTouchUpdatedAt() {
+    UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "editor-it-noop");
+    entityManager.flush();
+    entityManager.clear();
+    String before = readUpdatedAt(workspaceId);
+
+    workspaceEditor.update(new UpdateWorkspaceCommand(workspaceId, null, null, null));
+    entityManager.flush();
+    entityManager.clear();
+
+    assertThat(readUpdatedAt(workspaceId)).isEqualTo(before);
+  }
+
+  @Test
+  @DisplayName("값이 실제로 변경되면 updated_at을 갱신한다")
+  void realChangeTouchesUpdatedAt() {
+    UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "editor-it-touch");
+    entityManager.flush();
+    entityManager.clear();
+    String before = readUpdatedAt(workspaceId);
+
+    workspaceEditor.update(new UpdateWorkspaceCommand(workspaceId, "새 이름", null, null));
+    entityManager.flush();
+    entityManager.clear();
+
+    assertThat(readUpdatedAt(workspaceId)).isNotEqualTo(before);
+  }
+
+  private String readUpdatedAt(UUID workspaceId) {
+    return (String)
+        entityManager
+            .getEntityManager()
+            .createNativeQuery("SELECT updated_at::text FROM workspaces WHERE id = ?1")
+            .setParameter(1, workspaceId)
+            .getSingleResult();
+  }
+
+  @Test
   @DisplayName("존재하지 않는 워크스페이스는 WORKSPACE_NOT_FOUND를 던진다")
   void throwsWorkspaceNotFoundWhenMissing() {
     assertThatThrownBy(

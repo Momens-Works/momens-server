@@ -17,6 +17,13 @@ class WorkspaceSlugPolicyTest {
   }
 
   @Test
+  @DisplayName("앞뒤의 U+3000 공백은 제거하고 U+00A0 공백은 유지한다")
+  void normalizeRemovesIdeographicSpaceButKeepsNonBreakingSpace() {
+    assertThat(WorkspaceSlugPolicy.normalize("\u3000momens\u3000")).isEqualTo("momens");
+    assertThat(WorkspaceSlugPolicy.normalize("\u00A0momens")).isEqualTo("\u00A0momens");
+  }
+
+  @Test
   @DisplayName("대문자를 소문자로 변환하지 않으므로 대문자가 포함된 slug는 형식 오류로 판정한다")
   void uppercaseSlugIsInvalidBecauseNormalizeDoesNotLowercase() {
     assertThat(WorkspaceSlugPolicy.isValid("Momens")).isFalse();
