@@ -24,6 +24,7 @@ COPY app/build.gradle ./app/
 COPY common/build.gradle ./common/
 COPY modules/auth/build.gradle ./modules/auth/
 COPY modules/context/build.gradle ./modules/context/
+COPY modules/memory/build.gradle ./modules/memory/
 COPY modules/minsu/build.gradle ./modules/minsu/
 COPY modules/mobile/build.gradle ./modules/mobile/
 COPY modules/notification/build.gradle ./modules/notification/
