@@ -11,6 +11,10 @@
 # 빼고 본다"를 선언합니다. 무엇을 검증하지 않기로 했는지가 케이스 목록 한 줄에 보여야 리뷰에서
 # 걸립니다.
 #
+# write 케이스는 --local-stack 에서만 실행합니다. 픽스처 되돌리기와 DB 기록 비교가 이 스크립트가
+# 아는 로컬 compose 스택을 전제하고, dev 실서버를 가리킨 채로 돌면 실데이터를 바꾸기 때문입니다.
+# run.sh 가 이 플래그를 넘깁니다.
+#
 # dev 실서버를 대상으로 할 때만 --normalize 로 UUID·타임스탬프를 자리표시자로 바꿉니다. 이 모드는
 # 값 비교를 포기하는 대신 shape 비교만 남깁니다.
 set -uo pipefail
@@ -34,7 +38,7 @@ while [[ $# -gt 0 ]]; do
     --normalize) normalize=1; shift ;;
     --local-stack) local_stack=1; shift ;;
     -h|--help)
-      sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     *) echo "알 수 없는 옵션: $1" >&2; exit 2 ;;
   esac
