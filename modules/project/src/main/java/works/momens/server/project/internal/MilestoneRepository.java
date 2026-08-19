@@ -23,9 +23,9 @@ interface MilestoneRepository extends JpaRepository<Milestone, UUID> {
       select new works.momens.server.project.internal.MilestoneDetailRow(
           m.id, m.projectId, m.name, m.description, m.targetDate, m.status,
           m.healthStatus, m.progress, m.summary, m.lastContextAt, m.createdAt, m.updatedAt)
-      from Milestone m, Project p
-      where p.id = m.projectId
-        and p.workspaceId = :workspaceId
+      from Milestone m
+      join Project p on p.id = m.projectId
+      where p.workspaceId = :workspaceId
         and m.deletedAt is null
         and p.deletedAt is null
       order by m.createdAt desc
