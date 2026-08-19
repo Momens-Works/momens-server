@@ -136,8 +136,8 @@ class MilestoneReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
-  @DisplayName("워크스페이스의 여러 project에 걸친 마일스톤을 생성 시각 내림차순으로 합친다")
-  void listDetailsSpansProjectsOfTheWorkspaceNewestFirst() {
+  @DisplayName("워크스페이스의 여러 project에 걸친 마일스톤을 생성 시각 내림차순으로 합치고 각자의 소유자를 붙인다")
+  void listDetailsSpansProjectsOfTheWorkspaceNewestFirstWithOwnOwners() {
     Fixture fixture = new Fixture("list");
     UUID otherProject =
         ProjectSeedSql.insertProject(entityManager, fixture.workspaceId, fixture.ownerId);
@@ -147,10 +147,23 @@ class MilestoneReaderIntegrationTest extends AbstractPostgresIntegrationTest {
 
     UUID older = fixture.insertMilestone("먼저", Instant.parse("2026-06-01T00:00:00Z"));
     UUID newer = insertMilestone(otherProject, "나중", Instant.parse("2026-06-02T00:00:00Z"));
-    insertMilestone(outsideProject, "다른 워크스페이스", Instant.parse("2026-06-03T00:00:00Z"));
+    UUID outside =
+        insertMilestone(outsideProject, "다른 워크스페이스", Instant.parse("2026-06-03T00:00:00Z"));
+
+    UUID olderOwner = ProjectSeedSql.insertUser(entityManager, "list-older@momens.works");
+    UUID newerOwner = ProjectSeedSql.insertUser(entityManager, "list-newer@momens.works");
+    UUID outsideOwner = ProjectSeedSql.insertUser(entityManager, "list-outside@momens.works");
+    insertMilestoneOwner(older, olderOwner, Instant.parse("2026-06-01T00:00:00Z"));
+    insertMilestoneOwner(newer, newerOwner, Instant.parse("2026-06-01T00:00:00Z"));
+    insertMilestoneOwner(outside, outsideOwner, Instant.parse("2026-06-01T00:00:00Z"));
+
+    List<MilestoneDetail> details = fixture.details();
 
     // 워크스페이스 안의 여러 project에 걸친 마일스톤이 한 목록으로 합쳐지고, 정렬은 project와 무관하게 생성 시각을 따른다.
-    assertThat(fixture.details()).extracting(MilestoneDetail::id).containsExactly(newer, older);
+    assertThat(details).extracting(MilestoneDetail::id).containsExactly(newer, older);
+    // 소유자를 배치로 한 번 읽어 붙이므로, 각 마일스톤이 자기 소유자만 갖는지가 그룹핑의 유일한 방어선이다.
+    assertThat(details.get(0).ownerUserIds()).containsExactly(newerOwner);
+    assertThat(details.get(1).ownerUserIds()).containsExactly(olderOwner);
   }
 
   @Test
