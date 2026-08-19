@@ -12,7 +12,11 @@ import java.util.UUID;
  */
 public interface WorkspaceAccess {
 
-  /** userId가 workspaceId의 멤버인지 확인합니다. 권한이 없을 때 반환할 에러는 호출하는 쪽에서 결정합니다. */
+  /**
+   * userId가 workspaceId의 멤버인지 확인합니다. 권한이 없을 때 반환할 에러는 호출하는 쪽에서 결정합니다.
+   *
+   * <p>멤버 여부만 확인할 때 사용합니다. 역할까지 조회해야 한다면 {@link WorkspaceRoleReader#roleOf}를 사용합니다.
+   */
   boolean isMember(UUID workspaceId, UUID userId);
 
   /** workspaceId에 속한 멤버십을 모두 조회합니다. 프로젝트 멤버 목록 조회에 사용합니다(MOM-61). */
