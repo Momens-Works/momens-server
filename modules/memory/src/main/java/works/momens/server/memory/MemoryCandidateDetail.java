@@ -43,7 +43,10 @@ public record MemoryCandidateDetail(
     Instant updatedAt) {
 
   public MemoryCandidateDetail {
-    sourceRefIds = sourceRefIds == null ? List.of() : List.copyOf(sourceRefIds);
-    relatedEntityIds = relatedEntityIds == null ? List.of() : List.copyOf(relatedEntityIds);
+    // 정규화만 하고 방어적 복사는 하지 않습니다. List.copyOf 는 원소가 null 이면 NPE 를 던지는데,
+    // uuid[] 는 원소 null 을 허용하므로 값 하나 때문에 snapshot 응답 전체가 죽을 수 있습니다.
+    // ProjectDetail 이 metadata 를 복사 없이 노출하는 것과도 같은 결입니다.
+    sourceRefIds = sourceRefIds == null ? List.of() : sourceRefIds;
+    relatedEntityIds = relatedEntityIds == null ? List.of() : relatedEntityIds;
   }
 }
