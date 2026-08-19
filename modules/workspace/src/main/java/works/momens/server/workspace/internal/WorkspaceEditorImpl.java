@@ -31,6 +31,10 @@ class WorkspaceEditorImpl implements WorkspaceEditor {
         keepWhenEmpty(command.name()),
         keepWhenEmpty(command.description()),
         resolveSlug(workspace.getSlug(), command.slug()));
+    // updated_at을 채우는 @LastModifiedDate는 flush 시점에 적용됩니다. 여기서 flush하지 않으면 아래
+    // 매핑이 변경 전 updated_at을 읽어, DB에는 갱신된 값이 들어가는데 응답만 한 박자 밀립니다(MOM-0891).
+    // 변경이 없으면 UPDATE 자체가 나가지 않으므로 no-op 요청의 기존 동작은 그대로입니다.
+    workspaceRepository.flush();
     return WorkspaceDetailMapper.toDetail(workspace);
   }
 
