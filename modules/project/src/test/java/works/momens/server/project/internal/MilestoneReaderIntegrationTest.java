@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -29,12 +30,14 @@ import works.momens.server.project.ProjectSeedSql;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({JpaAuditingConfig.class, MilestoneReaderImpl.class})
+@DisplayName("MilestoneReader 통합 테스트")
 class MilestoneReaderIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Autowired private MilestoneReader milestoneReader;
   @Autowired private TestEntityManager entityManager;
 
   @Test
+  @DisplayName("레거시가 저장한 필드를 그대로 반환한다")
   void listDetailsReturnsStoredFields() {
     Fixture fixture = new Fixture("stored");
     UUID milestoneId = fixture.insertMilestone("6월 릴리스");
@@ -65,6 +68,7 @@ class MilestoneReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("선택 필드가 없으면 비우고, 나머지는 레거시 DEFAULT를 따른다")
   void listDetailsLeavesOptionalFieldsEmptyWhenNotStored() {
     Fixture fixture = new Fixture("sparse");
     fixture.insertMilestone("이름만 있는 마일스톤");
@@ -82,6 +86,7 @@ class MilestoneReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("소프트 삭제된 마일스톤은 목록에서 제외한다")
   void softDeletedMilestoneIsGoneFromTheList() {
     Fixture fixture = new Fixture("gone");
     UUID milestoneId = fixture.insertMilestone("삭제됨");
@@ -91,6 +96,7 @@ class MilestoneReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("소속 project가 소프트 삭제되면 그 마일스톤도 제외한다")
   void milestoneOfSoftDeletedProjectIsGoneFromTheList() {
     Fixture fixture = new Fixture("gone-project");
     fixture.insertMilestone("살아있는 마일스톤");
@@ -100,6 +106,7 @@ class MilestoneReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("owner_user_ids를 created_at, owner_user_id 순으로 반환한다")
   void ownerUserIdsFollowCreatedAtThenOwnerUserId() {
     Fixture fixture = new Fixture("owners");
     UUID milestoneId = fixture.insertMilestone("소유자 여럿");
@@ -119,6 +126,7 @@ class MilestoneReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("소유자 행이 없으면 owner_user_ids를 빈 목록으로 둔다")
   void ownerUserIdsAreEmptyWhenNoRows() {
     Fixture fixture = new Fixture("no-owners");
     fixture.insertMilestone("소유자 행 없음");
@@ -128,6 +136,7 @@ class MilestoneReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("워크스페이스의 여러 project에 걸친 마일스톤을 생성 시각 내림차순으로 합친다")
   void listDetailsSpansProjectsOfTheWorkspaceNewestFirst() {
     Fixture fixture = new Fixture("list");
     UUID otherProject =
@@ -145,6 +154,7 @@ class MilestoneReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("마일스톤이 없는 워크스페이스는 빈 목록을 반환한다")
   void listDetailsIsEmptyForWorkspaceWithoutMilestones() {
     UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "list-milestone-empty");
 
