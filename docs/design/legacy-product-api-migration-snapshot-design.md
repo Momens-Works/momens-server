@@ -350,6 +350,33 @@ read 기반과 담당 작업은 다음과 같다.
 `MOM-0858`의 티켓 본문에는 milestone 폴백 차이가 적혀 있지 않다. 구현 시 이 문서 2.3을 기준으로
 한다.
 
+#### milestone read 기반의 public API는 워크스페이스 목록 하나다
+
+`MOM-0858` 티켓 본문은 "프로젝트별 목록·단건 조회"를 적고 있으나, **워크스페이스 단위 목록만
+둔다.** `MilestoneReader.listDetailsByWorkspaceId` 하나다.
+
+FE 기준선에서 확인한 소비 실태가 근거다.
+
+| 레거시 endpoint | FE 클라이언트 | 호출자 |
+| --- | --- | --- |
+| H051 `GET /projects/:projectId/milestones` | `client.listMilestones`(`src/api/client.ts:276`) | `loadWorkspaceSnapshotLegacy`(`src/api/workspaceSnapshot.ts:130`) **하나뿐** |
+| H056 `GET /milestones/:milestoneId` | **없음** | 없음 |
+
+H051의 유일한 호출자는 snapshot이 없을 때만 타는 폴백이고, FE가 스스로
+`Delete once every deployed API serves /snapshot`으로 표시해 둔 코드다
+(`src/api/workspaceSnapshot.ts:101`). H056은 클라이언트에 메서드조차 없다. 실사용 경로는
+`snapshot.milestones` 하나다.
+
+`ProjectDetailReader`가 같은 근거(H047 미호출)로 단건 조회를 두지 않은 것과 같은 기준이다.
+소비자가 생기면 그때 올린다.
+
+#### `milestones[].progress`는 내보낸다
+
+4.3이 `projects[].progress`를 제외한 것과 다르다. 마일스톤 진행률은 레거시 write 경로가 실제로
+유지하는 저장값이고(`milestone/service.go`의 `normalizeProgress`), `momens-fe`의
+`mapMilestone`(`src/api/mappers.ts:75`)이 이 값을 읽는다. 저장값을 쓰지 않기로 한 결정
+([ADR-0013](../adr/0013-project-progress-derivation.md))은 `projects.progress`에만 해당한다.
+
 ## 6. 테스트
 
 - 컨트롤러 테스트: 9개 키의 존재, 빈 컬렉션 `[]`, 4.6의 에러 매핑
