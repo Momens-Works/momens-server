@@ -138,7 +138,11 @@ fail=0
 skipped=0
 # 직전 케이스가 DB 를 건드렸는지. write 뒤에 오는 read 케이스도 오염되므로 케이스 위치와 무관하게
 # 되돌립니다. cases.tsv 의 행 순서에 의존하지 않기 위해서입니다.
-dirty=0
+#
+# 1 로 시작하는 것은 오염이 프로세스 경계를 넘기 때문입니다. 마지막 케이스가 write 면 되돌리기
+# 없이 끝나므로, --only 로 write 를 돌린 뒤 --only 로 read 를 돌리면 두 번째 실행이 첫 번째의
+# 잔재 위에서 시작합니다. KEEP=1 이 권하는 반복 실행이 정확히 그 경로입니다.
+dirty=1
 
 while IFS=$'\t' read -r id as method legacy_path server_path ignore; do
   [[ -z "${id// }" || "${id:0:1}" == "#" ]] && continue
