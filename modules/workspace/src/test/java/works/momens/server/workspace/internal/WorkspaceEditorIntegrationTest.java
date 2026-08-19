@@ -3,6 +3,8 @@ package works.momens.server.workspace.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -175,6 +177,47 @@ class WorkspaceEditorIntegrationTest extends AbstractPostgresIntegrationTest {
     entityManager.clear();
 
     assertThat(readUpdatedAt(workspaceId)).isNotEqualTo(before);
+  }
+
+  @Test
+  @DisplayName("값이 변경되면 반환값의 updated_at이 DB에 기록된 값과 같다")
+  void returnedUpdatedAtMatchesStoredValue() {
+    UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "editor-it-returned");
+    entityManager.flush();
+    entityManager.clear();
+    String before = readUpdatedAt(workspaceId);
+
+    WorkspaceDetail detail =
+        workspaceEditor.update(new UpdateWorkspaceCommand(workspaceId, "새 이름", null, null));
+
+    // 반환값을 먼저 붙잡습니다. DB만 검증하면 매핑이 변경 전 값을 읽어도 통과합니다(MOM-0891).
+    assertThat(detail.updatedAt()).isNotNull();
+    assertThat(readUpdatedAt(workspaceId)).isNotEqualTo(before);
+    assertThat(storedUpdatedAt(workspaceId)).isEqualTo(truncate(detail.updatedAt()));
+  }
+
+  @Test
+  @DisplayName("변경할 값이 없으면 반환값의 updated_at도 기존 값을 유지한다")
+  void returnedUpdatedAtKeepsStoredValueOnNoOp() {
+    UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "editor-it-returned-noop");
+    entityManager.flush();
+    entityManager.clear();
+
+    WorkspaceDetail detail =
+        workspaceEditor.update(new UpdateWorkspaceCommand(workspaceId, null, null, null));
+
+    assertThat(storedUpdatedAt(workspaceId)).isEqualTo(truncate(detail.updatedAt()));
+  }
+
+  /** DB에 실제로 저장된 updated_at을 엔티티로 다시 읽습니다. timestamptz는 마이크로초까지만 남습니다. */
+  private Instant storedUpdatedAt(UUID workspaceId) {
+    entityManager.flush();
+    entityManager.clear();
+    return truncate(entityManager.find(Workspace.class, workspaceId).getUpdatedAt());
+  }
+
+  private Instant truncate(Instant value) {
+    return value.truncatedTo(ChronoUnit.MILLIS);
   }
 
   private String readUpdatedAt(UUID workspaceId) {
