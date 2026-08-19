@@ -1,0 +1,22 @@
+package works.momens.server.memory.internal;
+
+import java.util.List;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import works.momens.server.memory.ConfirmedMemoryDetail;
+import works.momens.server.memory.ConfirmedMemoryReader;
+
+@Service
+@RequiredArgsConstructor
+class ConfirmedMemoryReaderImpl implements ConfirmedMemoryReader {
+
+  private final ConfirmedMemoryRepository confirmedMemoryRepository;
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<ConfirmedMemoryDetail> listDetailsByWorkspaceId(UUID workspaceId) {
+    return confirmedMemoryRepository.findDetailsByWorkspaceId(workspaceId);
+  }
+}
