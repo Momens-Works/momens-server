@@ -229,6 +229,14 @@ handler/service/repository를 뜻한다.
 - 이 기간의 writer rollback은 레거시가 신규 identity를 이해하지 못하므로 단순 DB rollback이 아니다.
   신규 로그인 트래픽을 중단하고 레거시 세션 경로로 되돌릴 수 있는지 별도 runbook에서 확인한다.
 
+### `workspace_members` 전환 단위
+
+레거시에서 `workspace_members`에 데이터를 쓰는 경로는 다섯 개이다. 워크스페이스 생성 시 owner
+등록(H019), 즉시 멤버 추가(H028), 역할 변경(H033), 멤버 제거(H034), 초대 수락(H046)이다.
+aggregate별 writer를 한 시점에 하나만 두는 원칙에 따라 다섯 경로를 같은 시점에 전환한다. H033과
+H034의 구현이 완료되더라도 두 endpoint만 단독으로 전환하지 않는다. H019를 포함하는 `MOM-0866`과
+H028, H046을 포함하는 `MOM-0865`까지 모두 준비된 이후 함께 전환한다.
+
 ### `tasks` target writer 구현과 운영 활성화
 
 `momens-server`에는 모바일 수동 생성·수정·체크리스트 변경, Signal의 convert-to-task, Minsu
@@ -275,14 +283,14 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H024 | Product JSON | `PATCH /workspaces/:id` | `workspace.Update` | `WSP` | W | `implemented`: target `PATCH /api/workspaces/{workspaceId}`. 구현 완료(`MOM-0863`), 전환 전. 레거시에서는 미존재와 권한 부족을 모두 403으로 응답했으나, 신규 서버에서는 미존재는 404, 권한 부족은 403으로 구분한다. 레거시는 변경할 값이 없는 요청에도 `updated_at`을 갱신했지만, 신규 서버는 값이 실제로 변경된 경우에만 갱신한다. 웹이 이 endpoint를 신규 서버로 호출하기 시작하면 신규 서버가 `workspaces` 행을 수정하는 반면, 레거시는 H019를 통해 같은 테이블에 행을 생성하므로 H019와 같은 시점에 전환한다 |
 | H025 | Product JSON | `GET /workspaces/:id/onboarding` | `workspace.GetOnboarding` | `WSP` | R | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위에서 **제외 확정**(PR #156). 이관 대상이 아니라 retire 후보 |
 | H026 | Product JSON | `PATCH /workspaces/:id/onboarding` | `workspace.PatchOnboarding` | `WSP` | W | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위에서 **제외 확정**(PR #156). 이관 대상이 아니라 retire 후보 |
-| H027 | Product JSON | `GET /workspaces/:id/members` | `workspace.ListMembers` | `WSP` | R | `traced`. 구현 `MOM-0864` |
+| H027 | Product JSON | `GET /workspaces/:id/members` | `workspace.ListMembers` | `WSP` | R | `implemented`: target `GET /api/workspaces/{workspaceId}/members`. 구현 완료(`MOM-0864`), 전환 전. 레거시는 쿼리에 정렬 조건이 없어 응답 순서가 보장되지 않았지만, 신규 서버는 이름을 기준으로 오름차순 정렬하고 이름이 같으면 사용자 ID를 기준으로 보조 정렬한다(모바일 프로젝트 멤버 목록과 동일한 계약). 정렬 순서가 고정되지 않으면 golden 대조 결과가 실행마다 달라져 하네스에 등록할 수 없다. 레거시에서 워크스페이스 미존재와 비멤버를 모두 403으로 응답하던 동작은 공통 전환 규칙에 따라 각각 404와 403으로 구분한다 |
 | H028 | Product JSON | `POST /workspaces/:id/invite` | `workspace.Invite` | `WSP` | W | `traced`; 즉시 멤버 추가 legacy 경로. 구현 `MOM-0865` |
 | H029 | Product JSON | `POST /workspaces/:id/invitations` | `workspace.CreateInvitation` | `WSP` | W | `traced`; invitation email side effect. 구현 `MOM-0865` |
 | H030 | Product JSON | `GET /workspaces/:id/invitations` | `workspace.ListInvitations` | `WSP` | R | `traced`. 구현 `MOM-0865` |
 | H031 | Product JSON | `POST /workspaces/:id/invitations/:invitationId/resend` | `workspace.ResendInvitation` | `WSP` | W | `traced`; email side effect. 구현 `MOM-0865` |
 | H032 | Product JSON | `POST /workspaces/:id/invitations/:invitationId/revoke` | `workspace.RevokeInvitation` | `WSP` | W | `traced`. 구현 `MOM-0865` |
-| H033 | Product JSON | `PATCH /workspaces/:id/members/:userId` | `workspace.UpdateMember` | `WSP` | W | `traced`. 구현 `MOM-0864` |
-| H034 | Product JSON | `DELETE /workspaces/:id/members/:userId` | `workspace.RemoveMember` | `WSP` | W | `traced`. 구현 `MOM-0864` |
+| H033 | Product JSON | `PATCH /workspaces/:id/members/:userId` | `workspace.UpdateMember` | `WSP` | W | `implemented`: target `PATCH /api/workspaces/{workspaceId}/members/{userId}`. 구현 완료(`MOM-0864`), 전환 전. 레거시에서 403 하나로 처리하던 실패 상황을 네 가지로 구분한다. 워크스페이스가 없으면 404 `WORKSPACE_NOT_FOUND`, 요청자의 권한이 부족하면 403 `AUTH_FORBIDDEN`, 대상 사용자가 멤버가 아니면 404 `WORKSPACE_MEMBER_NOT_FOUND`, 대상이 owner이면 409 `WORKSPACE_OWNER_PROTECTED`를 반환한다. 앞의 두 경우는 공통 전환 규칙에 따른 것이며, 뒤의 두 경우는 이 작업에서 결정했다. `role`이 `admin`이나 `member`가 아니면 레거시와 동일하게 400으로 응답하며, 에러 코드는 `WORKSPACE_INVALID_ROLE`이다 |
+| H034 | Product JSON | `DELETE /workspaces/:id/members/:userId` | `workspace.RemoveMember` | `WSP` | W | `implemented`: target `DELETE /api/workspaces/{workspaceId}/members/{userId}`. 구현 완료(`MOM-0864`), 전환 전. 실패 상황은 H033과 같은 기준으로 구분하며, 요청자가 자기 자신을 제거하려는 경우에는 409 `WORKSPACE_SELF_REMOVAL_NOT_ALLOWED`를 반환한다. 레거시와 동일하게 자기 자신인지 먼저 확인한 뒤 대상 멤버를 조회한다. 따라서 존재하지 않는 사용자 ID라도 요청자 자신의 ID를 전달하면 두 서버 모두 자기 자신을 제거하려는 요청으로 판정한다 |
 | H035 | OAuth | `GET /workspaces/:id/mcp-grants` | `mcpauth.ListGrants` | `MOA-G` | R | `traced`; 조건부 등록. 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
 | H036 | OAuth | `DELETE /workspaces/:id/mcp-grants/:grantId` | `mcpauth.RevokeGrant` | `MOA-G` | W | `traced`; 조건부 등록. 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
 | H037 | Product JSON | `POST /workspaces/:id/projects` | `project.Create` | `PRJ` | W | `traced`. 구현 `MOM-0866` |
