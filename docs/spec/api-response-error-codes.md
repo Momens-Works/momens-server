@@ -165,6 +165,10 @@ Standard 모드의 에러 응답은 아래 형태를 사용합니다.
 | 404 | `USER_NOT_FOUND` | 사용자를 찾을 수 없음 (`GET/PATCH /api/me` 등) |
 | 409 | `USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY` | 이메일로 조회한 사용자에게 이미 다른 로그인 수단이 연결되어 있어 Google 계정을 연결할 수 없음 |
 | 409 | `SIGNAL_INVALID_STATE` | 이미 다른 action으로 처리된 Signal에 다른 action을 요청함(같은 action 재요청은 200 멱등 응답) |
+| 404 | `WORKSPACE_MEMBER_NOT_FOUND` | 대상 사용자가 해당 workspace의 멤버가 아님 |
+| 400 | `WORKSPACE_INVALID_ROLE` | 부여할 수 없는 역할. `admin`과 `member`만 허용하며, `owner`와 정의되지 않은 값이 해당함 |
+| 409 | `WORKSPACE_OWNER_PROTECTED` | 대상 사용자가 owner이므로 역할을 변경하거나 멤버십을 제거할 수 없음 |
+| 409 | `WORKSPACE_SELF_REMOVAL_NOT_ALLOWED` | 요청자가 자기 자신을 workspace에서 제거하려 함 |
 
 ### 모바일 MVP 예정 도메인 코드
 
