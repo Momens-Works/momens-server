@@ -296,8 +296,8 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H037 | Product JSON | `POST /workspaces/:id/projects` | `project.Create` | `PRJ` | W | `traced`. 구현 `MOM-0866` |
 | H038 | Product JSON | `GET /workspaces/:id/projects` | `project.List` | `PRJ` | R | `traced`. 구현 `MOM-0857` |
 | H039 | Product JSON | `GET /workspaces/:id/blockers` | `blocker.List` | `BLK` | R | `traced`. blocker read 기반만 구현(`MOM-0859`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백뿐이며 blocker 데이터는 H023으로 소비된다 |
-| H040 | Product JSON | `GET /workspaces/:id/source-connections` | `source.List` | `SRC` | R | `traced`. 구현 `MOM-0870` |
-| H041 | Product JSON | `GET /workspaces/:id/source-connections/install` | `source.Install` | `SRC` | W | `traced`; provider authorize redirect 시작. 구현 `MOM-0870` |
+| H040 | Product JSON | `GET /workspaces/:id/source-connections` | `source.List` | `SRC` | R | `implemented`: target `GET /api/workspaces/{workspaceId}/source-connections`. 구현 완료(`MOM-0870`), 전환 전. 레거시는 워크스페이스가 없는 경우와 요청자가 멤버가 아닌 경우를 모두 403으로 응답하지만, 신규 서버는 공통 전환 규칙에 따라 워크스페이스 미존재는 404, 권한 부족은 403으로 구분한다. 정렬 기준은 레거시 쿼리와 동일한 생성 시각 내림차순이다 |
+| H041 | Product JSON | `GET /workspaces/:id/source-connections/install` | `source.Install` | `SRC` | W | `implemented`: target `GET /api/workspaces/{workspaceId}/source-connections/install`. provider 승인 화면으로 redirect하는 흐름을 시작한다. 구현 완료(`MOM-0870`), 전환 전. 승인 URL의 쿼리 파라미터 이름과 순서, scope 조합 방식은 레거시 실행 결과와 문자 단위로 대조해 확정했다. provider 설정이 없으면 레거시는 501로 응답하지만, 신규 서버의 status 목록에는 501이 없어 500 `SOURCE_PROVIDER_UNCONFIGURED`로 응답한다 |
 | H042 | Product JSON | `GET /workspaces/:id/memory-candidates` | `candidate.List` | `MEM` | R | `traced`. read 기반만 구현(`MOM-0860`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백(`workspaceSnapshot.ts:120`)뿐임이 FE 기준선에서 확인됐다. 후보 데이터는 H023으로 소비된다 |
 | H043 | Product JSON | `POST /workspaces/:id/memories` | `memory.Create` | `MEM` | W | `traced`; projection 동반. **웹 미호출**(`MOM-0856`). `MOM-0869` 범위 재확인 필요 |
 | H044 | Product JSON | `GET /workspaces/:id/memories` | `memory.List` | `MEM` | R | `traced`. read 기반만 구현(`MOM-0860`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백(`workspaceSnapshot.ts:121`)뿐임이 FE 기준선에서 확인됐다. 메모리 데이터는 H023으로 소비된다 |
@@ -338,7 +338,7 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H079 | Product JSON | `POST /source-connections/:id/resync` | `source.Resync` | `SRC` | W | `traced`; worker가 관측하는 sync state 변경 |
 | H080 | Product JSON | `POST /source-connections/:id/figma/configure` | `source.ConfigureFigma` | `SRC` | W | `traced`; Figma webhook 외부 호출 |
 | H081 | Product JSON | `GET /source-connections/:id/sync-states` | `source.ListSyncStates` | `SRC` | R | `traced`; **웹 미호출**(`MOM-0856`) |
-| H082 | provider callback | `GET /source-connections/oauth/callback` | `source.OAuthCallback` | `SRC` | W | `traced`; public callback, signed state·redirect URI 계약. 구현 `MOM-0870` |
+| H082 | provider callback | `GET /source-connections/oauth/callback` | `source.OAuthCallback` | `SRC` | W | `implemented`: target `GET /api/source-connections/oauth/callback`. 구현 완료(`MOM-0870`), 전환 전. provider가 호출하는 공개 경로이며, 요청자의 신원과 연결 대상은 서명된 state만으로 판정한다. 서명 비밀, 발급자, 대상, claim 이름을 레거시와 동일하게 유지해 전환 기간에도 한쪽 서버가 발급한 state를 다른 서버가 검증할 수 있도록 했다. 저장하는 토큰의 암호화 형식도 레거시 및 `momens-worker`와 동일하다. **신규 경로에는 레거시와 달리 `/api` 접두사가 있으므로, 이관 시점에 provider 관리 화면에 등록된 redirect URI도 함께 변경해야 한다** |
 | H083 | Product JSON | `GET /memory-candidates/:id` | `candidate.Get` | `MEM` | R | `traced`. 전환 대상이 아니다. 웹 클라이언트에 호출 코드가 없다(FE 기준선 `src/api/client.ts`에 대응 메서드 없음). `MOM-0860`은 단건 조회 public API를 두지 않았다 |
 | H084 | Product JSON | `POST /memory-candidates/:id/confirm` | `candidate.Confirm` | `MEM` | W | `traced`; confirmed memory·review action·projection. 구현 `MOM-0869` |
 | H085 | Product JSON | `POST /memory-candidates/:id/reject` | `candidate.Reject` | `MEM` | W | `traced`; review action. 구현 `MOM-0869` |
@@ -352,7 +352,7 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H093 | Product JSON | `POST /memories/:id/resolve` | `memory.Resolve` | `MEM` | W | `traced`; projection 동반. 구현 `MOM-0869` |
 | H094 | Product JSON | `DELETE /memories/:id` | `memory.Delete` | `MEM` | W | `traced`; soft delete·projection 동반. 구현 `MOM-0869` |
 | H095 | Product JSON | `GET /memories/:id/linked-tasks` | `relation.LinkedTasks` | `CTX` | R | `traced`; **웹 미호출**(`MOM-0856`). MOM-0861 범위에서 제외 확정; 소비자가 생기면 별도 이관 작업을 만든다 |
-| H096 | Product JSON | `POST /source-refs/:id/verify` | `source.VerifySourceRef` | `SRC` | W | `traced`. 구현 `MOM-0870` |
+| H096 | Product JSON | `POST /source-refs/:id/verify` | `source.VerifySourceRef` | `SRC` | W | `implemented`: target `POST /api/source-refs/{sourceRefId}/verify`. 구현 완료(`MOM-0870`), 전환 전. 레거시와 동일하게 source-ref의 전체 필드를 반환한다. source-ref가 없거나 소프트 삭제된 경우에는 404 `SOURCE_REF_NOT_FOUND`로 응답한다 |
 
 ## 비-HTTP·도구 진입점 원장
 

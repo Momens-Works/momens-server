@@ -123,4 +123,7 @@ CI가 실제 Secret·ConfigMap의 존재나 값을 조회해 증명하지는 않
 | 모바일·웹 client ID와 audiences 일치 | `확인 필요` | 실제 secret 값과 Google OAuth client ID 목록을 배포 전에 대조합니다 |
 | FCM 프로젝트·ADC 자격증명 | `비활성` | push 기본값은 꺼져 있습니다. 활성화할 때 `MOMENS_NOTIFICATION_PUSH_FIREBASE_PROJECT_ID`와 ADC를 확인합니다 |
 | Minsu GCP 프로젝트·리전·ADC | `비활성` | task draft와 비동기 enroll/drain 기본값은 꺼져 있습니다. 활성화 조건은 관련 설계 문서가 소유합니다 |
+| source provider redirect URI 등록 | `확인 필요` | GitHub, Slack, Notion, Figma의 관리 화면에 `https://api.momens.works/api/source-connections/oauth/callback`을 등록해야 합니다. 신규 경로에는 레거시 경로에 없는 `/api` 접두사가 포함되어 있어 서로 다른 주소입니다. 기존 주소를 삭제하지 않고 신규 주소를 추가하면 redirect URI 설정만 변경해 레거시 경로로 되돌릴 수 있습니다. 등록 여부는 레포지토리에서 확인할 수 없습니다. |
+| source provider 자격 증명과 토큰 키 주입 | `비활성` | 관련 설정의 기본값이 모두 비어 있어 현재는 어떤 provider도 설정되지 않은 상태입니다. 이 상태에서는 source 연결을 시작할 수 없지만 서버 기동에는 영향을 주지 않습니다. 활성화하려면 provider 네 곳의 Client ID와 secret, `MOMENS_SOURCE_OAUTH_REDIRECT_URI`, `MOMENS_SOURCE_OAUTH_TOKEN_KEY`를 주입해야 합니다. 토큰 키는 base64로 디코딩했을 때 32바이트여야 하며, `momens-worker`에서 사용하는 값과 같아야 합니다. |
+| source OAuth state 서명 비밀 | `비활성` | 전환이 완료될 때까지 레거시의 인증 JWT 시크릿과 같은 값을 `MOMENS_SOURCE_OAUTH_STATE_SECRET`에 주입해야 합니다. 값이 다르면 한쪽 서버가 발급한 state를 다른 서버가 검증하지 못해 전환 중 source 연결이 실패합니다. 전환이 끝난 뒤에는 이 값을 독립적으로 교체할 수 있습니다. |
 | DNS·ingress·TLS 인증서 | `응답 확인` | 2026-08-13에 `https://api.momens.works/api/health`의 TLS 응답(HTTP 401)을 확인했습니다. 애플리케이션 readiness를 뜻하지는 않습니다 |
