@@ -2,6 +2,7 @@ package works.momens.server.project.task;
 
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -203,7 +204,7 @@ class WebTaskWriterImpl implements WebTaskWriter {
   }
 
   private static String normalizeStatus(String value, boolean allowDefault) {
-    String normalized = value == null ? "" : value.trim().toLowerCase();
+    String normalized = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     if (normalized.isEmpty() && allowDefault) {
       return "backlog";
     }
@@ -215,7 +216,7 @@ class WebTaskWriterImpl implements WebTaskWriter {
   }
 
   private static String normalizePriority(String value, boolean allowDefault) {
-    String normalized = value == null ? "" : value.trim().toLowerCase();
+    String normalized = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     if (normalized.isEmpty() && allowDefault) {
       return "medium";
     }

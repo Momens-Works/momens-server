@@ -2,6 +2,8 @@ package works.momens.server.web.task;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -13,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.security.Principal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +28,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import works.momens.server.project.TaskUpdateDetail;
 import works.momens.server.project.WebTaskDetail;
 
 @WebMvcTest(TaskWriteController.class)
@@ -34,6 +38,7 @@ class TaskWriteControllerTest {
   private static final UUID USER_ID = UUID.randomUUID();
   private static final UUID PROJECT_ID = UUID.randomUUID();
   private static final UUID TASK_ID = UUID.randomUUID();
+  private static final UUID UPDATE_ID = UUID.randomUUID();
   private final Principal principal = USER_ID::toString;
 
   @Autowired private MockMvc mockMvc;
@@ -86,12 +91,60 @@ class TaskWriteControllerTest {
                 .content("{\"assignee_id\":null}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.assignee_id").doesNotExist());
+    verify(taskWriteService)
+        .update(
+            eq(TASK_ID),
+            eq(USER_ID),
+            isNull(),
+            eq(false),
+            isNull(),
+            eq(false),
+            isNull(),
+            eq(false),
+            isNull(),
+            eq(false),
+            isNull(),
+            eq(false),
+            isNull(),
+            eq(true),
+            isNull(),
+            eq(false));
     mockMvc
         .perform(
             delete("/api/tasks/{taskId}", TASK_ID).principal(principal).header("API-Version", "1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value("deleted"));
     verify(taskWriteService).delete(TASK_ID, USER_ID);
+  }
+
+  @Test
+  void createsAndDeletesTaskUpdates() throws Exception {
+    when(taskWriteService.createUpdate(
+            eq(TASK_ID), eq(USER_ID), eq("첫 댓글"), eq("comment"), eq(Map.of("source", "web"))))
+        .thenReturn(update());
+
+    mockMvc
+        .perform(
+            post("/api/tasks/{taskId}/updates", TASK_ID)
+                .principal(principal)
+                .header("API-Version", "1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"body\":\"첫 댓글\",\"kind\":\"comment\",\"metadata\":{\"source\":\"web\"}}"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.id").value(UPDATE_ID.toString()))
+        .andExpect(jsonPath("$.body").value("첫 댓글"));
+    verify(taskWriteService)
+        .createUpdate(TASK_ID, USER_ID, "첫 댓글", "comment", Map.of("source", "web"));
+
+    mockMvc
+        .perform(
+            delete("/api/tasks/{taskId}/updates/{updateId}", TASK_ID, UPDATE_ID)
+                .principal(principal)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.message").value("deleted"));
+    verify(taskWriteService).deleteUpdate(TASK_ID, UPDATE_ID, USER_ID);
   }
 
   private static WebTaskDetail task() {
@@ -107,6 +160,20 @@ class TaskWriteControllerTest {
         "medium",
         null,
         LocalDate.parse("2026-08-31"),
+        Instant.parse("2026-08-21T00:00:00Z"),
+        Instant.parse("2026-08-21T00:00:00Z"));
+  }
+
+  private static TaskUpdateDetail update() {
+    return new TaskUpdateDetail(
+        UPDATE_ID,
+        UUID.randomUUID(),
+        PROJECT_ID,
+        TASK_ID,
+        USER_ID,
+        "첫 댓글",
+        "comment",
+        Map.of("source", "web"),
         Instant.parse("2026-08-21T00:00:00Z"),
         Instant.parse("2026-08-21T00:00:00Z"));
   }
