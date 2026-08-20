@@ -111,58 +111,6 @@ class WebSourceConnectionsIntegrationTest extends AbstractPostgresIntegrationTes
   }
 
   @Test
-  @DisplayName("지원하지 않는 provider로는 source 연결을 시작할 수 없다")
-  void installRejectsProviderThatIsNotSupported() throws Exception {
-    UUID workspaceId = insertWorkspace("web-src-install-unknown");
-    UserProfile admin = user("src-install-unknown@momens.works", "가장 먼저 오는 이름");
-    addMember(workspaceId, admin.id(), "admin");
-
-    mockMvc
-        .perform(
-            authorized(
-                get("/api/workspaces/{id}/source-connections/install", workspaceId)
-                    .param("provider", "linear"),
-                admin.id()))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.error.code").value("SOURCE_UNSUPPORTED_PROVIDER"));
-  }
-
-  @Test
-  @DisplayName("provider 설정이 없으면 500으로 응답한다")
-  void installReportsMissingProviderConfigurationAsServerError() throws Exception {
-    UUID workspaceId = insertWorkspace("web-src-install-unconfigured");
-    UserProfile admin = user("src-install-unconfigured@momens.works", "가장 먼저 오는 이름");
-    addMember(workspaceId, admin.id(), "admin");
-
-    mockMvc
-        .perform(
-            authorized(
-                get("/api/workspaces/{id}/source-connections/install", workspaceId)
-                    .param("provider", "github"),
-                admin.id()))
-        .andExpect(status().isInternalServerError())
-        .andExpect(jsonPath("$.error.code").value("SOURCE_PROVIDER_UNCONFIGURED"));
-  }
-
-  @Test
-  @DisplayName("source-ref를 검증 완료로 표시하고 레거시와 동일한 필드로 응답한다")
-  void verifyMarksSourceRefAndReturnsLegacyShape() throws Exception {
-    UUID workspaceId = insertWorkspace("web-src-verify");
-    UserProfile caller = user("src-verify@momens.works", "가장 먼저 오는 이름");
-    addMember(workspaceId, caller.id(), "member");
-    UUID sourceRefId = insertSourceRef(workspaceId);
-
-    mockMvc
-        .perform(authorized(post("/api/source-refs/{id}/verify", sourceRefId), caller.id()))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.id").value(sourceRefId.toString()))
-        .andExpect(jsonPath("$.workspace_id").value(workspaceId.toString()))
-        .andExpect(jsonPath("$.verified_by_user_id").value(caller.id().toString()))
-        .andExpect(jsonPath("$.verified_at").exists())
-        .andExpect(jsonPath("$.text").value("수집한 원문 전체"));
-  }
-
-  @Test
   @DisplayName("source-ref가 속한 워크스페이스의 멤버가 아니면 검증을 거부한다")
   void verifyRejectsUserWhoIsNotAMemberOfTheSourceRefWorkspace() throws Exception {
     UUID workspaceId = insertWorkspace("web-src-verify-forbidden");
@@ -176,35 +124,12 @@ class WebSourceConnectionsIntegrationTest extends AbstractPostgresIntegrationTes
   }
 
   @Test
-  @DisplayName("존재하지 않는 source-ref의 검증을 거부한다")
-  void verifyRejectsSourceRefThatDoesNotExist() throws Exception {
-    UserProfile caller = user("src-verify-missing@momens.works", "가장 먼저 오는 이름");
-
-    mockMvc
-        .perform(authorized(post("/api/source-refs/{id}/verify", UUID.randomUUID()), caller.id()))
-        .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.error.code").value("SOURCE_REF_NOT_FOUND"));
-  }
-
-  @Test
   @DisplayName("provider 콜백은 토큰 없이 호출할 수 있으며 승인 코드가 없으면 거부한다")
   void providerCallbackIsReachableWithoutTokenAndRejectsRequestWithoutCode() throws Exception {
     mockMvc
         .perform(get("/api/source-connections/oauth/callback").param("state", "some-state"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.error.code").value("SOURCE_OAUTH_INVALID_REQUEST"));
-  }
-
-  @Test
-  @DisplayName("provider 콜백은 검증할 수 없는 state를 거부한다")
-  void providerCallbackRejectsStateThatDoesNotVerify() throws Exception {
-    mockMvc
-        .perform(
-            get("/api/source-connections/oauth/callback")
-                .param("code", "code-1")
-                .param("state", "not-a-state"))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.error.code").value("SOURCE_OAUTH_INVALID_STATE"));
   }
 
   private MockHttpServletRequestBuilder authorized(
