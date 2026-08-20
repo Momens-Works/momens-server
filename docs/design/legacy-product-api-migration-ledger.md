@@ -159,7 +159,7 @@ MCP transport, Slack webhook). 위 표는 나머지 H009~H011과 H014~H096을 �
 원장 표의 행 메모에는 **이관 티켓 범위와 어긋나는 것만** `웹 미호출`을 표기했다(H025·H026·H043·
 H081). 나머지 미호출 entry는 위 분류표가 단일 출처다.
 
-blocker·decision write(H054, H055, H059, H066, H073~H075)와 minsu query(H045)는 웹이 호출하지
+blocker·decision 관련 endpoint(H054, H055, H059, H066, H073~H075)와 minsu query(H045)는 웹이 호출하지
 않으므로 웹 컷오버 범위에서 제외한다. 후보·메모리 리뷰 액션, source 온보딩(H041·H082·H096),
 MCP grants UI(H035·H036)는 실사용이다.
 
