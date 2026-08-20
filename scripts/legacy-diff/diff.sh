@@ -15,8 +15,15 @@
 # 아는 로컬 compose 스택을 전제하고, dev 실서버를 가리킨 채로 돌면 실데이터를 바꾸기 때문입니다.
 # run.sh 가 이 플래그를 넘깁니다.
 #
+# 판정 기준은 golden 입니다(MOM-0881). "레거시와 다르면 차이"가 아니라 "golden 과 다르면 실패"라서,
+# 계약이 확정한 의도된 차이는 golden 안에 이미 들어 있고 새로 생긴 차이만 실패로 드러납니다.
+# golden 갱신은 --update-golden 을 명시해야 일어납니다. 실패를 갱신으로 조용히 덮지 않기 위해서입니다.
+#
+# 값이 벽시계나 무작위 UUID 라 golden 에 담을 수 없을 때는 cases.tsv 의 scrub 열을 씁니다. 값은
+# 지우되 같은 값은 같은 토큰이 되어 동일성 구조가 남습니다.
+#
 # dev 실서버를 대상으로 할 때만 --normalize 로 UUID·타임스탬프를 자리표시자로 바꿉니다. 이 모드는
-# 값 비교를 포기하는 대신 shape 비교만 남깁니다.
+# 값 비교를 포기하는 대신 shape 비교만 남깁니다. golden 판정도 함께 꺼집니다.
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,6 +35,7 @@ cases_dir="${here}/cases"
 only=""
 normalize=0
 local_stack=0
+update_golden=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -37,8 +45,9 @@ while [[ $# -gt 0 ]]; do
     --only) only="$2"; shift 2 ;;
     --normalize) normalize=1; shift ;;
     --local-stack) local_stack=1; shift ;;
+    --update-golden) update_golden=1; shift ;;
     -h|--help)
-      sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,26p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     *) echo "알 수 없는 옵션: $1" >&2; exit 2 ;;
   esac
@@ -183,9 +192,20 @@ call() {
   curl "${args[@]}"
 }
 
+# golden 판정은 픽스처가 값을 고정하는 로컬 스택에서만 성립합니다. dev 실서버를 가리키거나
+# --normalize 로 값 비교를 포기한 모드에서는 예전처럼 레거시 대 신규 diff 만 출력합니다.
+use_golden=0
+[[ "$local_stack" -eq 1 && "$normalize" -eq 0 ]] && use_golden=1
+
+if [[ "$update_golden" -eq 1 && "$use_golden" -eq 0 ]]; then
+  echo "--update-golden 은 --local-stack 에서만 씁니다. golden 은 픽스처가 값을 고정한 상태를 전제합니다." >&2
+  exit 2
+fi
+
 pass=0
 fail=0
 skipped=0
+updated=0
 # 직전 케이스가 DB 를 건드렸는지. write 뒤에 오는 read 케이스도 오염되므로 케이스 위치와 무관하게
 # 되돌립니다. cases.tsv 의 행 순서에 의존하지 않기 위해서입니다.
 #
@@ -289,24 +309,69 @@ while IFS=$'\t' read -r id as method legacy_path server_path ignore scrub; do
     fi
   fi
 
-  if [[ "$legacy_status" == "$server_status" && -z "$body_diff" && -z "$db_diff" ]]; then
-    [[ "$db_checked" -eq 1 ]] && echo "   ✓ 동일 (응답·DB)" || echo "   ✓ 동일"
-    pass=$((pass + 1))
-  else
-    [[ "$legacy_status" != "$server_status" ]] && echo "   ✗ status 차이: ${legacy_status} → ${server_status}"
-    if [[ -n "$body_diff" ]]; then
-      echo "   ✗ body 차이 (- 레거시 / + 신규)"
-      printf '%s\n' "$body_diff" | sed 's/^/     /'
+  # 케이스의 관찰 결과를 한 덩어리로 조립합니다. 이것이 golden 과 대조하는 단위입니다.
+  # 레거시와 신규가 다르다는 사실 자체가 아니라, 그 차이의 모양이 계약이 확정한 것과 같은지를
+  # 봐야 하기 때문에 diff 를 결과에 그대로 담습니다.
+  actual="legacy_status: ${legacy_status}"$'\n'"server_status: ${server_status}"$'\n'"--- body ---"$'\n'
+  if [[ -n "$body_diff" ]]; then actual+="$body_diff"; else actual+="동일"; fi
+  if [[ "$db_checked" -eq 1 ]]; then
+    actual+=$'\n'"--- db ---"$'\n'
+    if [[ -n "$db_diff" ]]; then actual+="$db_diff"; else actual+="동일"; fi
+  fi
+
+  if [[ "$use_golden" -eq 0 ]]; then
+    # dev 실서버 모드. 값이 고정되지 않아 golden 이 성립하지 않으므로 예전처럼 diff 만 출력합니다.
+    if [[ "$legacy_status" == "$server_status" && -z "$body_diff" && -z "$db_diff" ]]; then
+      echo "   ✓ 동일"
+      pass=$((pass + 1))
+    else
+      [[ "$legacy_status" != "$server_status" ]] && echo "   ✗ status 차이: ${legacy_status} → ${server_status}"
+      if [[ -n "$body_diff" ]]; then
+        echo "   ✗ body 차이 (- 레거시 / + 신규)"
+        printf '%s\n' "$body_diff" | sed 's/^/     /'
+      fi
+      fail=$((fail + 1))
     fi
-    if [[ -n "$db_diff" ]]; then
-      echo "   ✗ DB 기록 차이 (- 레거시 / + 신규)"
-      printf '%s\n' "$db_diff" | sed 's/^/     /'
-    fi
+    echo
+    continue
+  fi
+
+  golden_file="${case_dir}/golden.txt"
+  if [[ "$update_golden" -eq 1 ]]; then
+    mkdir -p "$case_dir"
+    printf '%s\n' "$actual" > "$golden_file"
+    echo "   ✎ golden 갱신"
+    updated=$((updated + 1))
+  elif [[ ! -f "$golden_file" ]]; then
+    echo "   ✗ golden 이 없습니다: --update-golden 으로 만드세요"
+    printf '%s\n' "$actual" | sed 's/^/     /'
     fail=$((fail + 1))
+  else
+    golden_diff="$(diff -u "$golden_file" <(printf '%s\n' "$actual") | tail -n +3)"
+    if [[ -z "$golden_diff" ]]; then
+      echo "   ✓ golden 일치"
+      pass=$((pass + 1))
+    else
+      echo "   ✗ golden 불일치 (- golden / + 이번 실행)"
+      printf '%s\n' "$golden_diff" | sed 's/^/     /'
+      fail=$((fail + 1))
+    fi
   fi
   echo
 done < "$cases_file"
 
-echo "동일 ${pass} · 차이 ${fail} · 건너뜀 ${skipped}"
-echo
-echo "차이가 났다는 것 자체는 실패가 아닙니다. 계약 문서가 확정한 의도된 차이인지 대조하세요."
+if [[ "$update_golden" -eq 1 ]]; then
+  echo "golden 갱신 ${updated} · 건너뜀 ${skipped}"
+  echo
+  echo "갱신된 golden 이 계약 문서가 확정한 내용과 맞는지 PR diff 로 확인하세요."
+elif [[ "$use_golden" -eq 1 ]]; then
+  echo "golden 일치 ${pass} · 불일치 ${fail} · 건너뜀 ${skipped}"
+  [[ "$fail" -gt 0 ]] && echo && echo "불일치는 계약 문서나 구현 중 하나가 바뀌었다는 뜻입니다. 의도한 변경이면 --update-golden 으로 갱신하세요."
+else
+  echo "동일 ${pass} · 차이 ${fail} · 건너뜀 ${skipped}"
+  echo
+  echo "차이가 났다는 것 자체는 실패가 아닙니다. 계약 문서가 확정한 의도된 차이인지 대조하세요."
+fi
+
+[[ "$fail" -gt 0 ]] && exit 1
+exit 0
