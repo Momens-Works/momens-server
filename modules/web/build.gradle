@@ -19,6 +19,7 @@ dependencies {
     implementation project(':context')
     implementation project(':memory')
     implementation project(':source')
+    implementation project(':user')
 
     // 워크스페이스 컨트롤러(presentation).
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
