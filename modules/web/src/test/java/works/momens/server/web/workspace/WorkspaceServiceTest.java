@@ -9,14 +9,15 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.web.WorkspaceAccessChecker;
 import works.momens.server.workspace.UpdateWorkspaceCommand;
 import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceDetail;
@@ -39,7 +40,19 @@ class WorkspaceServiceTest {
   @Mock private WorkspaceSlugReader workspaceSlugReader;
   @Mock private WorkspaceRoleReader workspaceRoleReader;
   @Mock private WorkspaceEditor workspaceEditor;
-  @InjectMocks private WorkspaceService workspaceService;
+  private WorkspaceService workspaceService;
+
+  @BeforeEach
+  void setUp() {
+    workspaceService =
+        new WorkspaceService(
+            workspaceReader,
+            workspaceAccess,
+            workspaceSlugReader,
+            workspaceRoleReader,
+            workspaceEditor,
+            new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader));
+  }
 
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID USER_ID = UUID.randomUUID();

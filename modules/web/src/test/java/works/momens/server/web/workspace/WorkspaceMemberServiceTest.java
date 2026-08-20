@@ -11,17 +11,18 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
+import works.momens.server.web.WorkspaceAccessChecker;
 import works.momens.server.workspace.ChangeMembershipRoleCommand;
 import works.momens.server.workspace.RemoveMembershipCommand;
 import works.momens.server.workspace.WorkspaceDetail;
@@ -47,7 +48,17 @@ class WorkspaceMemberServiceTest {
   @Mock private WorkspaceMembershipReader workspaceMembershipReader;
   @Mock private WorkspaceMembershipEditor workspaceMembershipEditor;
   @Mock private UserService userService;
-  @InjectMocks private WorkspaceMemberService workspaceMemberService;
+  private WorkspaceMemberService workspaceMemberService;
+
+  @BeforeEach
+  void setUp() {
+    workspaceMemberService =
+        new WorkspaceMemberService(
+            new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader),
+            workspaceMembershipReader,
+            workspaceMembershipEditor,
+            userService);
+  }
 
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID CALLER_ID = UUID.randomUUID();
