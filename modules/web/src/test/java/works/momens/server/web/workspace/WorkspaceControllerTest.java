@@ -23,6 +23,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import works.momens.server.web.workspace.dto.response.WorkspaceResponse;
+import works.momens.server.web.workspace.dto.response.WorkspaceSnapshotResponse;
 import works.momens.server.workspace.WorkspaceDetail;
 import works.momens.server.workspace.WorkspaceSlugAvailability;
 
@@ -116,6 +118,40 @@ class WorkspaceControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(WORKSPACE_ID.toString()))
         .andExpect(jsonPath("$.workspaces").doesNotExist());
+  }
+
+  @Test
+  @DisplayName("snapshot은 9개 구획과 빈 컬렉션을 그대로 응답한다")
+  void snapshotReturnsAllSectionsWithEmptyCollections() throws Exception {
+    WorkspaceSnapshotResponse response =
+        new WorkspaceSnapshotResponse(
+            new WorkspaceResponse(
+                WORKSPACE_ID, "Momens", "momens", null, Instant.now(), Instant.now()),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of());
+    when(workspaceSnapshotService.get(eq(WORKSPACE_ID), eq(USER_ID))).thenReturn(response);
+
+    mockMvc
+        .perform(
+            get("/api/workspaces/{workspaceId}/snapshot", WORKSPACE_ID)
+                .principal(principal)
+                .header("API-Version", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.workspace.id").value(WORKSPACE_ID.toString()))
+        .andExpect(jsonPath("$.members").isArray())
+        .andExpect(jsonPath("$.projects").isArray())
+        .andExpect(jsonPath("$.milestones").isArray())
+        .andExpect(jsonPath("$.tasks").isArray())
+        .andExpect(jsonPath("$.blockers").isArray())
+        .andExpect(jsonPath("$.memory_candidates").isArray())
+        .andExpect(jsonPath("$.memories").isArray())
+        .andExpect(jsonPath("$.task_contexts").isArray());
   }
 
   @Test

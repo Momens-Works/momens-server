@@ -45,4 +45,8 @@ INSERT INTO workspace_members (workspace_id, user_id, role, created_at, updated_
 INSERT INTO projects (id, workspace_id, label, name, owner_id, target_date, progress, created_at, updated_at) VALUES
   ('00000000-0000-4000-8000-000000000021', '00000000-0000-4000-8000-000000000012', 'PRJ-0001', 'Beta 프로젝트', '00000000-0000-4000-8000-000000000002', '2026-07-31', 40, '2026-02-02T00:00:00Z', '2026-02-02T00:00:00Z');
 
+-- milestone은 owner 행을 두지 않아 snapshot의 빈 owner_user_ids 직렬화 차이를 함께 대조합니다.
+INSERT INTO milestones (id, project_id, name, progress, created_at, updated_at) VALUES
+  ('00000000-0000-4000-8000-000000000022', '00000000-0000-4000-8000-000000000021', 'Beta 마일스톤', 40, '2026-02-03T00:00:00Z', '2026-02-03T00:00:00Z');
+
 COMMIT;
