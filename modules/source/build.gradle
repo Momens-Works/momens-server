@@ -21,4 +21,7 @@ dependencies {
 
     // common testFixtures의 Testcontainers 통합테스트 베이스를 재사용합니다.
     testImplementation testFixtures(project(':common'))
+
+    testImplementation project(':workspace')
+    testImplementation project(':user')
 }
