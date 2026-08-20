@@ -926,6 +926,470 @@
           }
         }
       },
+      "SnapshotBlockerResponse" : {
+        "properties" : {
+          "blocked_entity_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "blocked_entity_type" : {
+            "type" : "string"
+          },
+          "created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "resolved_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "updated_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "workspace_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }
+      },
+      "SnapshotMemoryCandidateResponse" : {
+        "properties" : {
+          "body" : {
+            "type" : "string"
+          },
+          "candidate_type" : {
+            "type" : "string"
+          },
+          "confidence" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "expires_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "importance" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "metadata" : {
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "type" : "object"
+          },
+          "proposed_by" : {
+            "type" : "string"
+          },
+          "rejection_reason" : {
+            "type" : "string"
+          },
+          "related_entity_ids" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "reviewed_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "reviewed_by_user_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "source_ref_ids" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "summary" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "updated_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "workspace_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }
+      },
+      "SnapshotMemoryResponse" : {
+        "properties" : {
+          "body" : {
+            "type" : "string"
+          },
+          "confirmed_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "confirmed_by_user_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "created_from_candidate_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "invalidated_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "invalidated_by_user_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "invalidation_reason" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "memory_type" : {
+            "type" : "string"
+          },
+          "metadata" : {
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "type" : "object"
+          },
+          "related_entity_ids" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "source_ref_ids" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "summary" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "updated_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "valid_from" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "valid_until" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "workspace_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }
+      },
+      "SnapshotMilestoneResponse" : {
+        "properties" : {
+          "created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "health_status" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "last_context_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "owner_user_ids" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "progress" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "project_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "summary" : {
+            "type" : "string"
+          },
+          "target_date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "updated_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        }
+      },
+      "SnapshotProjectResponse" : {
+        "properties" : {
+          "created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "health_status" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "last_context_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "metadata" : {
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "type" : "object"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "owner_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "owner_user_ids" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "summary" : {
+            "type" : "string"
+          },
+          "target_date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "unresolved_count" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updated_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "voc_signal_count" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "workspace_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }
+      },
+      "SnapshotSourceRefResponse" : {
+        "properties" : {
+          "author_email" : {
+            "type" : "string"
+          },
+          "author_name" : {
+            "type" : "string"
+          },
+          "created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "permission_key" : {
+            "type" : "string"
+          },
+          "snippet" : {
+            "type" : "string"
+          },
+          "source_created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "source_object_id" : {
+            "type" : "string"
+          },
+          "source_object_type" : {
+            "type" : "string"
+          },
+          "source_type" : {
+            "type" : "string"
+          },
+          "source_url" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "updated_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "verified_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "verified_by_user_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "visibility" : {
+            "type" : "string"
+          },
+          "workspace_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }
+      },
+      "SnapshotTaskContextResponse" : {
+        "properties" : {
+          "memories" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SnapshotMemoryResponse"
+            },
+            "type" : "array"
+          },
+          "source_refs" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SnapshotSourceRefResponse"
+            },
+            "type" : "array"
+          },
+          "task_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }
+      },
+      "SnapshotTaskResponse" : {
+        "properties" : {
+          "assignee_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "due_date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "milestone_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "priority" : {
+            "type" : "string"
+          },
+          "project_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "updated_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        }
+      },
       "SourceRefResponse" : {
         "description" : "source ref",
         "properties" : {
@@ -1724,6 +2188,61 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "WorkspaceSnapshotResponse" : {
+        "properties" : {
+          "blockers" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SnapshotBlockerResponse"
+            },
+            "type" : "array"
+          },
+          "members" : {
+            "items" : {
+              "$ref" : "#/components/schemas/WorkspaceMemberResponse"
+            },
+            "type" : "array"
+          },
+          "memories" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SnapshotMemoryResponse"
+            },
+            "type" : "array"
+          },
+          "memory_candidates" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SnapshotMemoryCandidateResponse"
+            },
+            "type" : "array"
+          },
+          "milestones" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SnapshotMilestoneResponse"
+            },
+            "type" : "array"
+          },
+          "projects" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SnapshotProjectResponse"
+            },
+            "type" : "array"
+          },
+          "task_contexts" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SnapshotTaskContextResponse"
+            },
+            "type" : "array"
+          },
+          "tasks" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SnapshotTaskResponse"
+            },
+            "type" : "array"
+          },
+          "workspace" : {
+            "$ref" : "#/components/schemas/WorkspaceResponse"
           }
         }
       }
@@ -11157,6 +11676,322 @@
           }
         },
         "summary" : "워크스페이스 멤버 역할 수정",
+        "tags" : [
+          "Web"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/snapshot" : {
+      "get" : {
+        "description" : "워크스페이스 보드에 필요한 read 모델을 한 응답으로 반환합니다.",
+        "operationId" : "snapshot",
+        "parameters" : [
+          {
+            "description" : "워크스페이스 식별자",
+            "in" : "path",
+            "name" : "workspaceId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1.0.0",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceSnapshotResponse"
+                }
+              }
+            },
+            "description" : "snapshot 조회 성공. 모든 목록은 비어 있으면 빈 배열입니다."
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_INVALID_ROLE" : {
+                    "description" : "부여할 수 없는 역할입니다.",
+                    "summary" : "WORKSPACE_INVALID_ROLE",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_INVALID_ROLE",
+                        "message" : "부여할 수 없는 역할입니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_INVALID_SLUG" : {
+                    "description" : "사용할 수 없는 slug 형식입니다.",
+                    "summary" : "WORKSPACE_INVALID_SLUG",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_INVALID_SLUG",
+                        "message" : "사용할 수 없는 slug 형식입니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_RESERVED_SLUG" : {
+                    "description" : "예약어로 지정된 slug입니다.",
+                    "summary" : "WORKSPACE_RESERVED_SLUG",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_RESERVED_SLUG",
+                        "message" : "예약어로 지정된 slug입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_MEMBER_NOT_FOUND" : {
+                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
+                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
+                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_NOT_FOUND" : {
+                    "description" : "워크스페이스를 찾을 수 없습니다.",
+                    "summary" : "WORKSPACE_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_NOT_FOUND",
+                        "message" : "워크스페이스를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_OWNER_PROTECTED" : {
+                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
+                    "summary" : "WORKSPACE_OWNER_PROTECTED",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_OWNER_PROTECTED",
+                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
+                    "description" : "자기 자신은 제거할 수 없습니다.",
+                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
+                        "message" : "자기 자신은 제거할 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
+                    "description" : "이미 사용 중인 slug입니다.",
+                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
+                        "message" : "이미 사용 중인 slug입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
+          }
+        },
+        "summary" : "웹 보드 snapshot 조회",
         "tags" : [
           "Web"
         ]
