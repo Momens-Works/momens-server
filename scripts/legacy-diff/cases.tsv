@@ -52,3 +52,15 @@ H034-ok	member	DELETE	/workspaces/00000000-0000-4000-8000-000000000012/members/0
 H034-self	member	DELETE	/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000002	/api/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000002	-	-
 H034-owner-target	stranger	DELETE	/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000002	/api/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000002	-	-
 H034-member-not-found	member	DELETE	/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000004	/api/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000004	-	-
+H040-member	owner	GET	/workspaces/00000000-0000-4000-8000-000000000012/source-connections	/api/workspaces/00000000-0000-4000-8000-000000000012/source-connections	-	-
+H040-forbidden	owner	GET	/workspaces/00000000-0000-4000-8000-000000000013/source-connections	/api/workspaces/00000000-0000-4000-8000-000000000013/source-connections	-	-
+H040-not-found	owner	GET	/workspaces/00000000-0000-4000-8000-0000000000ff/source-connections	/api/workspaces/00000000-0000-4000-8000-0000000000ff/source-connections	-	-
+H040-noauth	none	GET	/workspaces/00000000-0000-4000-8000-000000000012/source-connections	/api/workspaces/00000000-0000-4000-8000-000000000012/source-connections	-	-
+H041-forbidden	owner	GET	/workspaces/00000000-0000-4000-8000-000000000012/source-connections/install?provider=github	/api/workspaces/00000000-0000-4000-8000-000000000012/source-connections/install?provider=github	-	-
+H041-unsupported	owner	GET	/workspaces/00000000-0000-4000-8000-000000000011/source-connections/install?provider=linear	/api/workspaces/00000000-0000-4000-8000-000000000011/source-connections/install?provider=linear	-	-
+H041-unconfigured	owner	GET	/workspaces/00000000-0000-4000-8000-000000000011/source-connections/install?provider=github	/api/workspaces/00000000-0000-4000-8000-000000000011/source-connections/install?provider=github	-	-
+H082-no-code	none	GET	/source-connections/oauth/callback?state=some-state	/api/source-connections/oauth/callback?state=some-state	-	-
+H082-bad-state	none	GET	/source-connections/oauth/callback?code=code-1&state=not-a-state	/api/source-connections/oauth/callback?code=code-1&state=not-a-state	-	-
+H096-forbidden	owner	POST	/source-refs/00000000-0000-4000-8000-000000000042/verify	/api/source-refs/00000000-0000-4000-8000-000000000042/verify	-	-
+H096-not-found	owner	POST	/source-refs/00000000-0000-4000-8000-0000000000ff/verify	/api/source-refs/00000000-0000-4000-8000-0000000000ff/verify	-	-
+H096-member	owner	POST	/source-refs/00000000-0000-4000-8000-000000000041/verify	/api/source-refs/00000000-0000-4000-8000-000000000041/verify	-	time
