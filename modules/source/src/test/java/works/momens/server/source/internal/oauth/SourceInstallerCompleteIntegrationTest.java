@@ -138,8 +138,8 @@ class SourceInstallerCompleteIntegrationTest extends AbstractPostgresIntegration
     return new SourceInstallerImpl(
         registry,
         signer(),
-        new ProviderTokenExchanger(RestClient.builder().build()),
-        new TokenCipher(TOKEN_KEY),
+        new ProviderOAuthClient(RestClient.builder().build()),
+        new TokenEncryptor(TOKEN_KEY),
         connectionRepository,
         credentialRepository,
         properties);
@@ -169,9 +169,9 @@ class SourceInstallerCompleteIntegrationTest extends AbstractPostgresIntegration
     assertThat(completed.connection().connectedByUserId()).isEqualTo(userId);
 
     var credential = credentialRepository.findById(completed.connection().id()).orElseThrow();
-    assertThat(new TokenCipher(TOKEN_KEY).decrypt(credential.getAccessTokenEnc()))
+    assertThat(new TokenEncryptor(TOKEN_KEY).decrypt(credential.getAccessTokenEnc()))
         .isEqualTo("tok-1");
-    assertThat(new TokenCipher(TOKEN_KEY).decrypt(credential.getRefreshTokenEnc()))
+    assertThat(new TokenEncryptor(TOKEN_KEY).decrypt(credential.getRefreshTokenEnc()))
         .isEqualTo("ref-1");
     assertThat(credential.getTokenType()).isEqualTo("bearer");
   }
@@ -195,7 +195,7 @@ class SourceInstallerCompleteIntegrationTest extends AbstractPostgresIntegration
     assertThat(second.connection().connectedByUserId()).isEqualTo(secondUser);
     assertThat(connectionRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId)).hasSize(1);
     assertThat(
-            new TokenCipher(TOKEN_KEY)
+            new TokenEncryptor(TOKEN_KEY)
                 .decrypt(credentialRepository.findById(firstId).orElseThrow().getAccessTokenEnc()))
         .isEqualTo("tok-2");
   }

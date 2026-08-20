@@ -19,13 +19,13 @@ import works.momens.server.source.internal.oauth.ProviderDefinition.TokenBodyFor
  * <p>요청 형식과 자격 증명 전달 방식은 {@link ProviderDefinition}에 정의된 값을 사용하므로 이 클래스에는 provider별 분기가 없습니다. 사용자
  * 정보를 별도로 조회하지 않는 provider는 빈 응답을 반환하며, 이 경우 토큰 응답에서 외부 계정 정보를 추출합니다.
  */
-class ProviderTokenExchanger {
+class ProviderOAuthClient {
 
   private static final Class<Map<String, Object>> BODY_TYPE = castBodyType();
 
   private final RestClient restClient;
 
-  ProviderTokenExchanger(RestClient restClient) {
+  ProviderOAuthClient(RestClient restClient) {
     this.restClient = restClient;
   }
 

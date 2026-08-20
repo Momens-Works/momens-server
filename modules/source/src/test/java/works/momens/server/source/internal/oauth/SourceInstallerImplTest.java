@@ -43,7 +43,7 @@ class SourceInstallerImplTest {
         new OAuthStateSigner(
             properties.stateSecret(), properties.stateTtl(), Clock.fixed(NOW, ZoneOffset.UTC)),
         null,
-        TokenCipher.unavailable(),
+        TokenEncryptor.unavailable(),
         null,
         null,
         properties);

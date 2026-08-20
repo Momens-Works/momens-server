@@ -20,11 +20,11 @@ import javax.crypto.spec.SecretKeySpec;
  * 서버에서 생성한 값을 복호화할 수 없습니다.
  *
  * <p>호환성은 실제 실행을 통해 양방향으로 확인했습니다. 레거시에서 암호화한 값을 이 클래스에서 복호화하고, 이 클래스에서 암호화한 값을 레거시에서 복호화했습니다. 레거시가
- * 생성한 실제 바이트 배열도 {@code TokenCipherTest}에 고정해 회귀 테스트로 검증합니다.
+ * 생성한 실제 바이트 배열도 {@code TokenEncryptorTest}에 고정해 회귀 테스트로 검증합니다.
  *
  * <p>키는 base64로 인코딩된 32바이트 값이어야 합니다. 조건을 충족하지 않으면 객체 생성 시점에 실패시켜 잘못된 키로 암호화한 값이 저장되지 않도록 합니다.
  */
-class TokenCipher {
+class TokenEncryptor {
 
   private static final String TRANSFORMATION = "AES/GCM/NoPadding";
   private static final String ALGORITHM = "AES";
@@ -35,7 +35,7 @@ class TokenCipher {
   private final SecretKeySpec key;
   private final SecureRandom random = new SecureRandom();
 
-  TokenCipher(String base64Key) {
+  TokenEncryptor(String base64Key) {
     byte[] decoded;
     try {
       decoded = Base64.getDecoder().decode(base64Key);
@@ -48,12 +48,12 @@ class TokenCipher {
     this.key = new SecretKeySpec(decoded, ALGORITHM);
   }
 
-  private TokenCipher() {
+  private TokenEncryptor() {
     this.key = null;
   }
 
-  static TokenCipher unavailable() {
-    return new TokenCipher();
+  static TokenEncryptor unavailable() {
+    return new TokenEncryptor();
   }
 
   /**
