@@ -1,5 +1,6 @@
 package works.momens.server.memory.internal;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -18,5 +19,13 @@ class ConfirmedMemoryReaderImpl implements ConfirmedMemoryReader {
   @Transactional(readOnly = true)
   public List<ConfirmedMemoryDetail> listDetailsByWorkspaceId(UUID workspaceId) {
     return confirmedMemoryRepository.findDetailsByWorkspaceId(workspaceId);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<ConfirmedMemoryDetail> findDetailsByIds(UUID workspaceId, Collection<UUID> ids) {
+    return ids.isEmpty()
+        ? List.of()
+        : confirmedMemoryRepository.findDetailsByWorkspaceIdAndIdIn(workspaceId, ids);
   }
 }

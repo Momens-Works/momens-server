@@ -1,5 +1,6 @@
 package works.momens.server.memory;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,4 +23,6 @@ public interface ConfirmedMemoryReader {
    * <p>소프트 삭제된 메모리는 없는 것으로 취급합니다. 상태로는 거르지 않아 {@code INVALIDATED}·{@code ARCHIVED} 메모리도 함께 담깁니다.
    */
   List<ConfirmedMemoryDetail> listDetailsByWorkspaceId(UUID workspaceId);
+
+  List<ConfirmedMemoryDetail> findDetailsByIds(UUID workspaceId, Collection<UUID> ids);
 }

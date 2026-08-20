@@ -7,6 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface SourceRefRepository extends JpaRepository<SourceRef, UUID> {
 
-  List<SourceRef> findByWorkspaceIdAndIdInAndDeletedAtIsNull(
+  List<SourceRef> findByWorkspaceIdAndIdInAndDeletedAtIsNullOrderByCreatedAtDesc(
       UUID workspaceId, Collection<UUID> ids);
 }

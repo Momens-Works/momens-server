@@ -8,6 +8,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +64,12 @@ class Task extends BaseEntity {
 
   @Column(name = "assignee_id", columnDefinition = "uuid")
   private UUID assigneeId;
+
+  @Column(name = "milestone_id", columnDefinition = "uuid")
+  private UUID milestoneId;
+
+  @Column(name = "due_date")
+  private LocalDate dueDate;
 
   @Column private String role;
 

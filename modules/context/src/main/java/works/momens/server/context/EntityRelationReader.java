@@ -32,4 +32,6 @@ public interface EntityRelationReader {
    * 않습니다.
    */
   Map<UUID, List<UUID>> findLinkedSourceRefIds(UUID workspaceId, Collection<UUID> taskIds);
+
+  TaskContextLinks findTaskContextLinks(UUID workspaceId, UUID taskId);
 }

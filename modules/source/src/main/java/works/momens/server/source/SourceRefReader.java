@@ -21,4 +21,7 @@ public interface SourceRefReader {
 
   /** workspaceId에 속하고 ids에 해당하는, 소프트 삭제되지 않은 source_ref를 조회합니다. 없거나 다른 워크스페이스의 id는 결과에서 빠집니다. */
   List<SourceRefView> findByIds(UUID workspaceId, Collection<UUID> ids);
+
+  /** 웹 Product API 호환 응답에 필요한 source_ref 전체 투영입니다. */
+  List<LegacySourceRefDetail> findLegacyDetailsByIds(UUID workspaceId, Collection<UUID> ids);
 }

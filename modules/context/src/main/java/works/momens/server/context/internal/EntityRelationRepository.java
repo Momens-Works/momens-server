@@ -35,4 +35,14 @@ interface EntityRelationRepository extends JpaRepository<EntityRelation, UUID> {
       """)
   List<Object[]> findLinkedSourceRefIdsByTaskIds(
       @Param("workspaceId") UUID workspaceId, @Param("taskIds") Collection<UUID> taskIds);
+
+  @Query(
+      """
+      select r.toEntityType, r.toEntityId from EntityRelation r
+      where r.workspaceId = :workspaceId and r.fromEntityType = 'TASK' and r.fromEntityId = :taskId
+        and r.relationType = 'LINKED_TO' and r.toEntityType in ('MEMORY', 'SOURCE_OBJECT')
+        and r.deletedAt is null
+      """)
+  List<Object[]> findContextLinks(
+      @Param("workspaceId") UUID workspaceId, @Param("taskId") UUID taskId);
 }
