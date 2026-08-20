@@ -16,6 +16,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import works.momens.server.workspace.WorkspaceRole;
 
 /**
  * 워크스페이스 멤버십.
@@ -62,6 +63,11 @@ class WorkspaceMember implements Persistable<WorkspaceMemberId> {
     this.workspaceId = workspaceId;
     this.userId = userId;
     this.role = role;
+  }
+
+  /** 역할을 변경합니다. DB에는 문자열로 저장하므로 enum이 정의한 저장 값으로 변환해 반영합니다. */
+  void changeRole(WorkspaceRole role) {
+    this.role = role.value();
   }
 
   @Override
