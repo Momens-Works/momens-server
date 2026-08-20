@@ -209,7 +209,12 @@ class WorkspaceEditorIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(storedUpdatedAt(workspaceId)).isEqualTo(truncate(detail.updatedAt()));
   }
 
-  /** DB에 실제로 저장된 updated_at을 엔티티로 다시 읽습니다. timestamptz는 마이크로초까지만 남습니다. */
+  /**
+   * DB에 실제로 저장된 updated_at을 엔티티로 다시 읽습니다.
+   *
+   * <p>timestamptz는 마이크로초까지만 남지만 밀리초로 절삭해 비교합니다. 이 테스트가 가리는 것은 한 박자 밀린 값(변경 전 updated_at)이라 밀리초
+   * 해상도로 충분하고, 플랫폼별 시각 정밀도 차이에 흔들리지 않습니다.
+   */
   private Instant storedUpdatedAt(UUID workspaceId) {
     entityManager.flush();
     entityManager.clear();

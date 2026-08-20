@@ -322,13 +322,20 @@ while IFS=$'\t' read -r id as method legacy_path server_path ignore scrub; do
   if [[ "$use_golden" -eq 0 ]]; then
     # dev 실서버 모드. 값이 고정되지 않아 golden 이 성립하지 않으므로 예전처럼 diff 만 출력합니다.
     if [[ "$legacy_status" == "$server_status" && -z "$body_diff" && -z "$db_diff" ]]; then
-      echo "   ✓ 동일"
+      [[ "$db_checked" -eq 1 ]] && echo "   ✓ 동일 (응답·DB)" || echo "   ✓ 동일"
       pass=$((pass + 1))
     else
       [[ "$legacy_status" != "$server_status" ]] && echo "   ✗ status 차이: ${legacy_status} → ${server_status}"
       if [[ -n "$body_diff" ]]; then
         echo "   ✗ body 차이 (- 레거시 / + 신규)"
         printf '%s\n' "$body_diff" | sed 's/^/     /'
+      fi
+      # db_diff 는 판정에 들어가므로 출력도 함께 있어야 합니다. 빠뜨리면 --local-stack --normalize
+      # 조합에서 DB 기록만 갈릴 때 이유 없이 실패합니다. 설명 없는 실패는 이 도구가 없애려는 것과
+      # 같은 종류의 문제입니다.
+      if [[ -n "$db_diff" ]]; then
+        echo "   ✗ DB 기록 차이 (- 레거시 / + 신규)"
+        printf '%s\n' "$db_diff" | sed 's/^/     /'
       fi
       fail=$((fail + 1))
     fi
