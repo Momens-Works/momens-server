@@ -2,6 +2,7 @@ package works.momens.server.source.internal;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -73,5 +74,11 @@ class SourceRefReaderImpl implements SourceRefReader {
         sourceRef.getVerifiedAt(),
         sourceRef.getCreatedAt(),
         sourceRef.getUpdatedAt());
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<UUID> findWorkspaceId(UUID sourceRefId) {
+    return sourceRefRepository.findWorkspaceId(sourceRefId);
   }
 }
