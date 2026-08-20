@@ -12,15 +12,14 @@ import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
+import works.momens.server.web.WorkspaceAccessChecker;
 import works.momens.server.workspace.ChangeMembershipRoleCommand;
 import works.momens.server.workspace.RemoveMembershipCommand;
 import works.momens.server.workspace.WorkspaceErrorCode;
 import works.momens.server.workspace.WorkspaceMembershipDetail;
 import works.momens.server.workspace.WorkspaceMembershipEditor;
 import works.momens.server.workspace.WorkspaceMembershipReader;
-import works.momens.server.workspace.WorkspaceReader;
 import works.momens.server.workspace.WorkspaceRole;
-import works.momens.server.workspace.WorkspaceRoleReader;
 
 /**
  * 워크스페이스 멤버 조회와 변경을 조합하는 서비스. workspace와 user 모듈의 public API만 조합하며 도메인 정책은 소유하지 않습니다.
@@ -35,8 +34,7 @@ import works.momens.server.workspace.WorkspaceRoleReader;
 @RequiredArgsConstructor
 class WorkspaceMemberService {
 
-  private final WorkspaceReader workspaceReader;
-  private final WorkspaceRoleReader workspaceRoleReader;
+  private final WorkspaceAccessChecker workspaceAccessChecker;
   private final WorkspaceMembershipReader workspaceMembershipReader;
   private final WorkspaceMembershipEditor workspaceMembershipEditor;
   private final UserService userService;
@@ -52,7 +50,7 @@ class WorkspaceMemberService {
    */
   @Transactional(readOnly = true)
   public List<WorkspaceMemberView> list(UUID workspaceId, UUID userId) {
-    requireWorkspaceExists(workspaceId);
+    workspaceAccessChecker.requireWorkspaceExists(workspaceId);
     List<WorkspaceMembershipDetail> memberships =
         workspaceMembershipReader.listDetailsByWorkspaceId(workspaceId);
     boolean callerIsMember =
@@ -88,8 +86,8 @@ class WorkspaceMemberService {
   /** 멤버의 역할을 변경합니다. 부여할 수 있는 역할인지는 enum이 판정하며, 판정 결과가 없으면 {@code WORKSPACE_INVALID_ROLE}을 던집니다. */
   @Transactional
   public void changeRole(UUID workspaceId, UUID userId, UUID targetUserId, String rawRole) {
-    requireWorkspaceExists(workspaceId);
-    requireRoleAtLeast(workspaceId, userId, WorkspaceRole.ADMIN);
+    workspaceAccessChecker.requireWorkspaceExists(workspaceId);
+    workspaceAccessChecker.requireRoleAtLeast(workspaceId, userId, WorkspaceRole.ADMIN);
     WorkspaceRole role =
         WorkspaceRole.assignableFrom(rawRole)
             .orElseThrow(
@@ -104,29 +102,9 @@ class WorkspaceMemberService {
   /** 멤버를 제거합니다. 요청자 ID를 그대로 전달해 workspace 모듈에서 자기 제거 요청인지 판정하도록 합니다. */
   @Transactional
   public void remove(UUID workspaceId, UUID userId, UUID targetUserId) {
-    requireWorkspaceExists(workspaceId);
-    requireRoleAtLeast(workspaceId, userId, WorkspaceRole.ADMIN);
+    workspaceAccessChecker.requireWorkspaceExists(workspaceId);
+    workspaceAccessChecker.requireRoleAtLeast(workspaceId, userId, WorkspaceRole.ADMIN);
     workspaceMembershipEditor.remove(
         new RemoveMembershipCommand(workspaceId, userId, targetUserId));
-  }
-
-  private void requireWorkspaceExists(UUID workspaceId) {
-    if (workspaceReader.findById(workspaceId).isEmpty()) {
-      throw new BusinessException(
-          WorkspaceErrorCode.WORKSPACE_NOT_FOUND, Map.of("workspace_id", workspaceId.toString()));
-    }
-  }
-
-  private void requireRoleAtLeast(UUID workspaceId, UUID userId, WorkspaceRole required) {
-    boolean allowed =
-        workspaceRoleReader
-            .roleOf(workspaceId, userId)
-            .filter(role -> role.isAtLeast(required))
-            .isPresent();
-    if (!allowed) {
-      throw new BusinessException(
-          CommonErrorCode.AUTH_FORBIDDEN,
-          Map.of("workspace_id", workspaceId.toString(), "required_role", required.value()));
-    }
   }
 }
