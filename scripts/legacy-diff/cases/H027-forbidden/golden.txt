@@ -1,0 +1,14 @@
+legacy_status: 403
+server_status: 403
+--- body ---
+@@ -1,3 +1,9 @@
+ {
+-  "error": "access denied"
++  "error": {
++    "code": "AUTH_FORBIDDEN",
++    "details": {
++      "workspace_id": "00000000-0000-4000-8000-000000000013"
++    },
++    "message": "권한이 없습니다."
++  }
+ }
