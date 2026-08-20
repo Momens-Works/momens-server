@@ -36,8 +36,8 @@ class SourceInstallerImpl implements SourceInstaller {
 
   private final OAuthProviderRegistry providerRegistry;
   private final OAuthStateSigner stateSigner;
-  private final ProviderTokenExchanger tokenExchanger;
-  private final TokenCipher tokenCipher;
+  private final ProviderOAuthClient providerOAuthClient;
+  private final TokenEncryptor tokenEncryptor;
   private final SourceConnectionRepository sourceConnectionRepository;
   private final SourceCredentialRepository sourceCredentialRepository;
   private final SourceOAuthProperties properties;
@@ -93,7 +93,7 @@ class SourceInstallerImpl implements SourceInstaller {
 
   private Map<String, Object> exchange(OAuthProvider provider, String code) {
     try {
-      return tokenExchanger.exchange(provider, code);
+      return providerOAuthClient.exchange(provider, code);
     } catch (RestClientException e) {
       throw exchangeFailed(provider, "token exchange");
     }
@@ -106,7 +106,7 @@ class SourceInstallerImpl implements SourceInstaller {
           provider
               .definition()
               .identityMapper()
-              .map(tokenResponse, tokenExchanger.fetchIdentity(provider, tokenResponse));
+              .map(tokenResponse, providerOAuthClient.fetchIdentity(provider, tokenResponse));
     } catch (RestClientException | IllegalStateException e) {
       throw exchangeFailed(provider, "identity fetch");
     }
@@ -147,8 +147,8 @@ class SourceInstallerImpl implements SourceInstaller {
 
   private void upsertCredential(
       UUID connectionId, Map<String, Object> tokenResponse, String accessToken) {
-    byte[] accessTokenEnc = tokenCipher.encrypt(accessToken);
-    byte[] refreshTokenEnc = tokenCipher.encrypt(stringOrNull(tokenResponse, "refresh_token"));
+    byte[] accessTokenEnc = tokenEncryptor.encrypt(accessToken);
+    byte[] refreshTokenEnc = tokenEncryptor.encrypt(stringOrNull(tokenResponse, "refresh_token"));
     String tokenType = stringOrNull(tokenResponse, "token_type");
     String scope = stringOrNull(tokenResponse, "scope");
     Instant expiresAt = expiresAt(tokenResponse);

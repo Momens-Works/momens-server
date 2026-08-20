@@ -33,14 +33,14 @@ class SourceOAuthConfig {
   }
 
   @Bean
-  TokenCipher sourceTokenCipher(SourceOAuthProperties properties) {
+  TokenEncryptor sourceTokenEncryptor(SourceOAuthProperties properties) {
     return properties.hasAnyConfiguredProvider()
-        ? new TokenCipher(properties.tokenKey())
-        : TokenCipher.unavailable();
+        ? new TokenEncryptor(properties.tokenKey())
+        : TokenEncryptor.unavailable();
   }
 
   @Bean
-  ProviderTokenExchanger providerTokenExchanger() {
-    return new ProviderTokenExchanger(RestClient.builder().build());
+  ProviderOAuthClient providerOAuthClient() {
+    return new ProviderOAuthClient(RestClient.builder().build());
   }
 }

@@ -23,7 +23,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  * 키이므로 자체 UUID 기본 키를 전제로 하는 {@code BaseEntity}를 상속할 수 없습니다. 같은 구조인 {@code :workspace} 모듈의 {@code
  * WorkspaceMember}처럼 감사 필드를 직접 선언하고 {@link Persistable}을 구현합니다. 감사 필드가 비어 있으면 새 엔티티로 판정합니다.
  *
- * <p>토큰은 {@code TokenCipher}가 암호화한 바이트 배열을 저장합니다. 이 엔티티는 평문 토큰을 다루지 않습니다.
+ * <p>토큰은 {@code TokenEncryptor}가 암호화한 바이트 배열을 저장합니다. 이 엔티티는 평문 토큰을 다루지 않습니다.
  */
 @Getter
 @Entity

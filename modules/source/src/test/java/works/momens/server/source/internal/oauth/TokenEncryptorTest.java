@@ -13,13 +13,13 @@ import org.junit.jupiter.api.Test;
  *
  * <p>첫 번째 테스트의 입력값은 레거시 코드를 실제로 실행해 얻은 바이트 배열입니다. 저장 형식이 달라지면 해당 테스트가 먼저 실패합니다.
  */
-class TokenCipherTest {
+class TokenEncryptorTest {
 
   private static final String KEY =
       Base64.getEncoder()
           .encodeToString("0123456789abcdef0123456789abcdef".getBytes(StandardCharsets.UTF_8));
 
-  private final TokenCipher cipher = new TokenCipher(KEY);
+  private final TokenEncryptor cipher = new TokenEncryptor(KEY);
 
   @Test
   @DisplayName("레거시에서 암호화한 값을 복호화한다")
@@ -71,7 +71,7 @@ class TokenCipherTest {
     String shortKey =
         Base64.getEncoder().encodeToString("too-short".getBytes(StandardCharsets.UTF_8));
 
-    assertThatThrownBy(() -> new TokenCipher(shortKey))
+    assertThatThrownBy(() -> new TokenEncryptor(shortKey))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("32 bytes");
   }

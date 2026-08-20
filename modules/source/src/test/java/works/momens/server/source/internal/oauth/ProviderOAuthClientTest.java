@@ -24,15 +24,15 @@ import works.momens.server.source.internal.oauth.ProviderDefinition.TokenBodyFor
  *
  * <p>로컬 HTTP 서버를 provider 대신 실행하고 실제 요청을 전송해 본문과 헤더를 확인합니다.
  */
-class ProviderTokenExchangerTest {
+class ProviderOAuthClientTest {
 
   private HttpServer server;
   private final Map<String, String> bodies = new ConcurrentHashMap<>();
   private final Map<String, String> authorizations = new ConcurrentHashMap<>();
   private final Map<String, String> contentTypes = new ConcurrentHashMap<>();
   private final Map<String, String> methods = new ConcurrentHashMap<>();
-  private final ProviderTokenExchanger exchanger =
-      new ProviderTokenExchanger(RestClient.builder().build());
+  private final ProviderOAuthClient exchanger =
+      new ProviderOAuthClient(RestClient.builder().build());
 
   @BeforeEach
   void startServer() throws IOException {
