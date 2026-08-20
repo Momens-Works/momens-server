@@ -11,6 +11,16 @@ import org.springframework.data.jpa.repository.Query;
 
 interface TaskRepository extends JpaRepository<Task, UUID> {
 
+  @Query("select p.workspaceId from Project p where p.id = :projectId and p.deletedAt is null")
+  Optional<UUID> findWorkspaceIdByProjectId(UUID projectId);
+
+  @Query(
+      """
+      select count(m) > 0 from Milestone m
+      where m.id = :milestoneId and m.projectId = :projectId and m.deletedAt is null
+      """)
+  boolean existsLiveMilestoneInProject(UUID milestoneId, UUID projectId);
+
   /** 상세용 단건 조회. 소프트 삭제된 태스크는 제외합니다. */
   Optional<Task> findByIdAndDeletedAtIsNull(UUID taskId);
 

@@ -28,7 +28,7 @@ public record TaskUpdateListResponse(
       @JsonInclude(JsonInclude.Include.NON_EMPTY) Map<String, Object> metadata,
       Instant createdAt,
       Instant updatedAt) {
-    static UpdateResponse from(TaskUpdateDetail update) {
+    public static UpdateResponse from(TaskUpdateDetail update) {
       return new UpdateResponse(
           update.id(),
           update.workspaceId(),

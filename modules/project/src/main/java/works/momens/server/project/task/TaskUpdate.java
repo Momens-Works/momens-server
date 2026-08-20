@@ -2,7 +2,6 @@ package works.momens.server.project.task;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.Map;
@@ -10,21 +9,17 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import works.momens.server.common.persistence.BaseEntity;
+import works.momens.server.project.TaskUpdateDetail;
 
-/** 레거시 소유 task_updates 읽기 전용 매핑입니다. */
+/** 레거시 task_updates 매핑입니다. */
 @Getter
 @Entity
-@Immutable
 @Table(name = "task_updates")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-class TaskUpdate {
-
-  @Id
-  @Column(columnDefinition = "uuid")
-  private UUID id;
+class TaskUpdate extends BaseEntity {
 
   @Column(name = "workspace_id", nullable = false, columnDefinition = "uuid")
   private UUID workspaceId;
@@ -48,12 +43,52 @@ class TaskUpdate {
   @Column(columnDefinition = "jsonb")
   private Map<String, Object> metadata;
 
-  @Column(name = "created_at", nullable = false)
-  private Instant createdAt;
-
-  @Column(name = "updated_at", nullable = false)
-  private Instant updatedAt;
-
   @Column(name = "deleted_at")
   private Instant deletedAt;
+
+  private TaskUpdate(
+      UUID workspaceId,
+      UUID projectId,
+      UUID taskId,
+      UUID authorId,
+      String body,
+      String kind,
+      Map<String, Object> metadata) {
+    this.workspaceId = workspaceId;
+    this.projectId = projectId;
+    this.taskId = taskId;
+    this.authorId = authorId;
+    this.body = body;
+    this.kind = kind == null || kind.isBlank() ? "comment" : kind;
+    this.metadata = metadata;
+  }
+
+  static TaskUpdate create(
+      UUID workspaceId,
+      UUID projectId,
+      UUID taskId,
+      UUID authorId,
+      String body,
+      String kind,
+      Map<String, Object> metadata) {
+    return new TaskUpdate(workspaceId, projectId, taskId, authorId, body, kind, metadata);
+  }
+
+  void delete() {
+    this.deletedAt = Instant.now();
+  }
+
+  TaskUpdateDetail toDetail() {
+    return new TaskUpdateDetail(
+        getId(),
+        workspaceId,
+        projectId,
+        taskId,
+        authorId,
+        body,
+        kind,
+        metadata,
+        getCreatedAt(),
+        getUpdatedAt());
+  }
 }

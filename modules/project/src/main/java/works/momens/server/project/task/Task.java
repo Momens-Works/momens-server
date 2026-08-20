@@ -139,6 +139,77 @@ class Task extends BaseEntity {
     this.originSignalId = originSignalId;
   }
 
+  static Task web(
+      UUID workspaceId,
+      UUID projectId,
+      String label,
+      String title,
+      String description,
+      String status,
+      String priority,
+      UUID milestoneId,
+      UUID assigneeId,
+      LocalDate dueDate) {
+    Task task =
+        Task.builder()
+            .workspaceId(workspaceId)
+            .projectId(projectId)
+            .label(label)
+            .title(title)
+            .status(status == null || status.isBlank() ? "backlog" : status)
+            .priority(priority == null || priority.isBlank() ? "medium" : priority)
+            .role(null)
+            .origin(TaskOrigin.MANUAL)
+            .build();
+    task.description = description == null || description.isEmpty() ? null : description;
+    task.milestoneId = milestoneId;
+    task.assigneeId = assigneeId;
+    task.dueDate = dueDate;
+    return task;
+  }
+
+  void patch(
+      String title,
+      boolean titleSet,
+      String description,
+      boolean descriptionSet,
+      String status,
+      boolean statusSet,
+      String priority,
+      boolean prioritySet,
+      UUID milestoneId,
+      boolean milestoneSet,
+      UUID assigneeId,
+      boolean assigneeSet,
+      LocalDate dueDate,
+      boolean dueDateSet) {
+    if (titleSet) {
+      this.title = title;
+    }
+    if (descriptionSet) {
+      this.description = description;
+    }
+    if (statusSet) {
+      this.status = status;
+    }
+    if (prioritySet) {
+      this.priority = priority;
+    }
+    if (milestoneSet) {
+      this.milestoneId = milestoneId;
+    }
+    if (assigneeSet) {
+      this.assigneeId = assigneeId;
+    }
+    if (dueDateSet) {
+      this.dueDate = dueDate;
+    }
+  }
+
+  void delete() {
+    this.deletedAt = Instant.now();
+  }
+
   /**
    * 수정 화면이 저장한 편집 상태 전체로 태스크를 갱신합니다. title, role, priority, status는 mobile이 검증한 값이라 항상 채워집니다.
    * description은 목적을 비운 경우 빈 문자열이나 null로 들어옵니다. assigneeId는 담당자를 지정하면 값이, 비우면 null이 들어옵니다.

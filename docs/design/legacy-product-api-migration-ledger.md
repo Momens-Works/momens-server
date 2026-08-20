@@ -308,7 +308,7 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H049 | Product JSON | `DELETE /projects/:projectId` | `project.Delete` | `PRJ` | W | `traced`; soft delete. 구현 `MOM-0866` |
 | H050 | Product JSON | `POST /projects/:projectId/milestones` | `milestone.Create` | `MIL` | W | `traced`. 구현 `MOM-0866` |
 | H051 | Product JSON | `GET /projects/:projectId/milestones` | `milestone.List` | `MIL` | R | `traced`. read 기반만 구현(`MOM-0858`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백(`workspaceSnapshot.ts:130`)뿐임이 FE 기준선에서 확인됐다. 마일스톤 데이터는 H023으로 소비된다 |
-| H052 | Product JSON | `POST /projects/:projectId/tasks` | `task.Create` | `TSK` | W | `traced`; 모바일·Signal 생성 계약과 별도이며 legacy MCP·Slack을 포함한 모든 task writer와 함께 전환. 구현 `MOM-0867` |
+| H052 | Product JSON | `POST /projects/:projectId/tasks` | `task.Create` | `TSK` | W | `implemented` (`MOM-0867`); `task.created` outbox 계약을 따른다. worker task projector·legacy MCP·Slack을 포함한 aggregate writer 단일화가 cutover gate |
 | H053 | Product JSON | `GET /projects/:projectId/tasks` | `task.List` | `TSK` | R | `implemented` (`MOM-0861`); 모바일 보드 계약과 별도 |
 | H054 | Product JSON | `POST /projects/:projectId/decisions` | `decision.Create` | `DEC` | W | `traced`; projection 동반 |
 | H055 | Product JSON | `GET /projects/:projectId/decisions` | `decision.List` | `DEC` | R | `traced`; 웹 미호출. 구현 작업 미생성 |
@@ -317,11 +317,11 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H058 | Product JSON | `DELETE /milestones/:milestoneId` | `milestone.Delete` | `MIL` | W | `traced`; soft delete. 구현 `MOM-0866` |
 | H059 | Product JSON | `POST /milestones/:milestoneId/blockers` | `blocker.CreateForMilestone` | `BLK` | W | `traced`; projection 동반 |
 | H060 | Product JSON | `GET /tasks/:taskId` | `task.Get` | `TSK` | R | `implemented` (`MOM-0861`); 모바일 상세 계약과 별도 |
-| H061 | Product JSON | `PATCH /tasks/:taskId` | `task.Update` | `TSK` | W | `traced`; projection 동반. 모바일 수정·체크리스트 계약과 별도이며 같은 task writer 전환 단위. 구현 `MOM-0867` |
-| H062 | Product JSON | `DELETE /tasks/:taskId` | `task.Delete` | `TSK` | W | `traced`; soft delete·projection 동반. 구현 `MOM-0867` |
+| H061 | Product JSON | `PATCH /tasks/:taskId` | `task.Update` | `TSK` | W | `implemented` (`MOM-0867`); 모바일 수정·체크리스트 계약과 별도. worker task projector와 aggregate writer 단일화가 cutover gate |
+| H062 | Product JSON | `DELETE /tasks/:taskId` | `task.Delete` | `TSK` | W | `implemented` (`MOM-0867`); soft delete. worker task projector와 aggregate writer 단일화가 cutover gate |
 | H063 | Product JSON | `GET /tasks/:taskId/updates` | `task.ListUpdates` | `TSK` | R | `implemented` (`MOM-0861`) |
-| H064 | Product JSON | `POST /tasks/:taskId/updates` | `task.CreateUpdate` | `TSK` | W | `traced`. 구현 `MOM-0867` |
-| H065 | Product JSON | `DELETE /tasks/:taskId/updates/:updateId` | `task.DeleteUpdate` | `TSK` | W | `traced`; soft delete. 구현 `MOM-0867` |
+| H064 | Product JSON | `POST /tasks/:taskId/updates` | `task.CreateUpdate` | `TSK` | W | `implemented` (`MOM-0867`); worker task projector와 aggregate writer 단일화가 cutover gate |
+| H065 | Product JSON | `DELETE /tasks/:taskId/updates/:updateId` | `task.DeleteUpdate` | `TSK` | W | `implemented` (`MOM-0867`); soft delete. worker task projector와 aggregate writer 단일화가 cutover gate |
 | H066 | Product JSON | `POST /tasks/:taskId/blockers` | `blocker.CreateForTask` | `BLK` | W | `traced`; projection 동반 |
 | H067 | Product JSON | `POST /tasks/:taskId/memories/:memoryId` | `relation.LinkTaskMemory` | `CTX` | W | `traced`. 구현 `MOM-0868` |
 | H068 | Product JSON | `DELETE /tasks/:taskId/memories/:memoryId` | `relation.UnlinkTaskMemory` | `CTX` | W | `traced`; soft delete relation. 구현 `MOM-0868` |

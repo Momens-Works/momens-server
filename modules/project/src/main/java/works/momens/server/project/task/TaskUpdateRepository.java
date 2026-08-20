@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 interface TaskUpdateRepository extends JpaRepository<TaskUpdate, UUID> {
 
   List<TaskUpdate> findByTaskIdAndDeletedAtIsNullOrderByCreatedAtAscIdAsc(UUID taskId);
+
+  java.util.Optional<TaskUpdate> findByIdAndTaskIdAndDeletedAtIsNull(UUID id, UUID taskId);
 }

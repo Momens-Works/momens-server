@@ -313,6 +313,50 @@
           "title"
         ]
       },
+      "CreateTaskUpdateRequest" : {
+        "properties" : {
+          "body" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "metadata" : {
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "type" : "object"
+          }
+        }
+      },
+      "CreateWebTaskRequest" : {
+        "properties" : {
+          "assignee_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "due_date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "milestone_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "priority" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        }
+      },
       "Details" : {
         "description" : "근거의 대상·변화·영향. signal_evidence가 소유하며 각 값은 공백 포함 30자 이하입니다.",
         "properties" : {
@@ -1885,6 +1929,41 @@
           "status",
           "title"
         ]
+      },
+      "UpdateWebTaskRequest" : {
+        "properties" : {
+          "assignee_id" : {
+            "format" : "uuid",
+            "type" : "string",
+            "writeOnly" : true
+          },
+          "description" : {
+            "type" : "string",
+            "writeOnly" : true
+          },
+          "due_date" : {
+            "format" : "date",
+            "type" : "string",
+            "writeOnly" : true
+          },
+          "milestone_id" : {
+            "format" : "uuid",
+            "type" : "string",
+            "writeOnly" : true
+          },
+          "priority" : {
+            "type" : "string",
+            "writeOnly" : true
+          },
+          "status" : {
+            "type" : "string",
+            "writeOnly" : true
+          },
+          "title" : {
+            "type" : "string",
+            "writeOnly" : true
+          }
+        }
       },
       "UpdateWorkspaceMemberRequest" : {
         "description" : "워크스페이스 멤버 수정 요청",
@@ -8804,9 +8883,99 @@
         "tags" : [
           "Web"
         ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "projectId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1.0.0",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateWebTaskRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WebTaskResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [
+          "task-write-controller"
+        ]
       }
     },
     "/api/tasks/{taskId}" : {
+      "delete" : {
+        "operationId" : "delete",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "taskId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1.0.0",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WebMessageResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "task-write-controller"
+        ]
+      },
       "get" : {
         "description" : "소프트 삭제되지 않은 태스크와 소속 프로젝트의 상세를 조회합니다.",
         "operationId" : "getTask",
@@ -9069,6 +9238,56 @@
         "summary" : "태스크 상세 조회",
         "tags" : [
           "Web"
+        ]
+      },
+      "patch" : {
+        "operationId" : "update_2",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "taskId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1.0.0",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateWebTaskRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WebTaskResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "task-write-controller"
         ]
       }
     },
@@ -9601,6 +9820,107 @@
         "summary" : "태스크 업데이트 목록 조회",
         "tags" : [
           "Web"
+        ]
+      },
+      "post" : {
+        "operationId" : "createUpdate",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "taskId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1.0.0",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateTaskUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UpdateResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [
+          "task-write-controller"
+        ]
+      }
+    },
+    "/api/tasks/{taskId}/updates/{updateId}" : {
+      "delete" : {
+        "operationId" : "deleteUpdate",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "taskId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "updateId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1.0.0",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WebMessageResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "task-write-controller"
         ]
       }
     },
