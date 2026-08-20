@@ -20,13 +20,13 @@ import works.momens.server.workspace.WorkspaceDetail;
 public record WorkspaceSnapshotResponse(
     WorkspaceResponse workspace,
     List<WorkspaceMemberResponse> members,
-    List<ProjectResponse> projects,
-    List<MilestoneResponse> milestones,
-    List<TaskResponse> tasks,
-    List<BlockerResponse> blockers,
-    List<MemoryCandidateResponse> memoryCandidates,
-    List<MemoryResponse> memories,
-    List<TaskContextResponse> taskContexts) {
+    List<SnapshotProjectResponse> projects,
+    List<SnapshotMilestoneResponse> milestones,
+    List<SnapshotTaskResponse> tasks,
+    List<SnapshotBlockerResponse> blockers,
+    List<SnapshotMemoryCandidateResponse> memoryCandidates,
+    List<SnapshotMemoryResponse> memories,
+    List<SnapshotTaskContextResponse> taskContexts) {
 
   public static WorkspaceSnapshotResponse from(
       WorkspaceDetail workspace,
@@ -37,21 +37,21 @@ public record WorkspaceSnapshotResponse(
       List<BlockerDetail> blockers,
       List<MemoryCandidateDetail> candidates,
       List<ConfirmedMemoryDetail> memories,
-      List<TaskContextResponse> taskContexts) {
+      List<SnapshotTaskContextResponse> taskContexts) {
     return new WorkspaceSnapshotResponse(
         WorkspaceResponse.from(workspace),
         members.stream().map(WorkspaceMemberResponse::from).toList(),
-        projects.stream().map(ProjectResponse::from).toList(),
-        milestones.stream().map(MilestoneResponse::from).toList(),
-        tasks.stream().map(TaskResponse::from).toList(),
-        blockers.stream().map(BlockerResponse::from).toList(),
-        candidates.stream().map(MemoryCandidateResponse::from).toList(),
-        memories.stream().map(MemoryResponse::from).toList(),
+        projects.stream().map(SnapshotProjectResponse::from).toList(),
+        milestones.stream().map(SnapshotMilestoneResponse::from).toList(),
+        tasks.stream().map(SnapshotTaskResponse::from).toList(),
+        blockers.stream().map(SnapshotBlockerResponse::from).toList(),
+        candidates.stream().map(SnapshotMemoryCandidateResponse::from).toList(),
+        memories.stream().map(SnapshotMemoryResponse::from).toList(),
         taskContexts);
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public record ProjectResponse(
+  public record SnapshotProjectResponse(
       UUID id,
       UUID workspaceId,
       String label,
@@ -69,8 +69,8 @@ public record WorkspaceSnapshotResponse(
       @JsonInclude(JsonInclude.Include.NON_EMPTY) Map<String, Object> metadata,
       Instant createdAt,
       Instant updatedAt) {
-    static ProjectResponse from(ProjectDetail project) {
-      return new ProjectResponse(
+    static SnapshotProjectResponse from(ProjectDetail project) {
+      return new SnapshotProjectResponse(
           project.id(),
           project.workspaceId(),
           project.label(),
@@ -92,7 +92,7 @@ public record WorkspaceSnapshotResponse(
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public record MilestoneResponse(
+  public record SnapshotMilestoneResponse(
       UUID id,
       UUID projectId,
       String name,
@@ -106,8 +106,8 @@ public record WorkspaceSnapshotResponse(
       Instant lastContextAt,
       Instant createdAt,
       Instant updatedAt) {
-    static MilestoneResponse from(MilestoneDetail milestone) {
-      return new MilestoneResponse(
+    static SnapshotMilestoneResponse from(MilestoneDetail milestone) {
+      return new SnapshotMilestoneResponse(
           milestone.id(),
           milestone.projectId(),
           milestone.name(),
@@ -125,7 +125,7 @@ public record WorkspaceSnapshotResponse(
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public record TaskResponse(
+  public record SnapshotTaskResponse(
       UUID id,
       UUID projectId,
       UUID milestoneId,
@@ -138,8 +138,8 @@ public record WorkspaceSnapshotResponse(
       LocalDate dueDate,
       Instant createdAt,
       Instant updatedAt) {
-    static TaskResponse from(WebTaskDetail task) {
-      return new TaskResponse(
+    static SnapshotTaskResponse from(WebTaskDetail task) {
+      return new SnapshotTaskResponse(
           task.id(),
           task.projectId(),
           task.milestoneId(),
@@ -156,7 +156,7 @@ public record WorkspaceSnapshotResponse(
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public record BlockerResponse(
+  public record SnapshotBlockerResponse(
       UUID id,
       UUID workspaceId,
       String description,
@@ -166,8 +166,8 @@ public record WorkspaceSnapshotResponse(
       Instant createdAt,
       Instant updatedAt,
       Instant resolvedAt) {
-    static BlockerResponse from(BlockerDetail blocker) {
-      return new BlockerResponse(
+    static SnapshotBlockerResponse from(BlockerDetail blocker) {
+      return new SnapshotBlockerResponse(
           blocker.id(),
           blocker.workspaceId(),
           blocker.description(),
@@ -181,7 +181,7 @@ public record WorkspaceSnapshotResponse(
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public record MemoryCandidateResponse(
+  public record SnapshotMemoryCandidateResponse(
       UUID id,
       UUID workspaceId,
       String label,
@@ -202,8 +202,8 @@ public record WorkspaceSnapshotResponse(
       @JsonInclude(JsonInclude.Include.NON_EMPTY) Map<String, Object> metadata,
       Instant createdAt,
       Instant updatedAt) {
-    static MemoryCandidateResponse from(MemoryCandidateDetail candidate) {
-      return new MemoryCandidateResponse(
+    static SnapshotMemoryCandidateResponse from(MemoryCandidateDetail candidate) {
+      return new SnapshotMemoryCandidateResponse(
           candidate.id(),
           candidate.workspaceId(),
           candidate.label(),
@@ -228,7 +228,7 @@ public record WorkspaceSnapshotResponse(
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public record MemoryResponse(
+  public record SnapshotMemoryResponse(
       UUID id,
       UUID workspaceId,
       String label,
@@ -250,8 +250,8 @@ public record WorkspaceSnapshotResponse(
       @JsonInclude(JsonInclude.Include.NON_EMPTY) Map<String, Object> metadata,
       Instant createdAt,
       Instant updatedAt) {
-    public static MemoryResponse from(ConfirmedMemoryDetail memory) {
-      return new MemoryResponse(
+    public static SnapshotMemoryResponse from(ConfirmedMemoryDetail memory) {
+      return new SnapshotMemoryResponse(
           memory.id(),
           memory.workspaceId(),
           memory.label(),
@@ -277,7 +277,7 @@ public record WorkspaceSnapshotResponse(
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public record SourceRefResponse(
+  public record SnapshotSourceRefResponse(
       UUID id,
       UUID workspaceId,
       String sourceType,
@@ -295,8 +295,8 @@ public record WorkspaceSnapshotResponse(
       Instant verifiedAt,
       Instant createdAt,
       Instant updatedAt) {
-    public static SourceRefResponse from(LegacySourceRefDetail source) {
-      return new SourceRefResponse(
+    public static SnapshotSourceRefResponse from(LegacySourceRefDetail source) {
+      return new SnapshotSourceRefResponse(
           source.id(),
           source.workspaceId(),
           source.sourceType(),
@@ -317,6 +317,8 @@ public record WorkspaceSnapshotResponse(
     }
   }
 
-  public record TaskContextResponse(
-      UUID taskId, List<MemoryResponse> memories, List<SourceRefResponse> sourceRefs) {}
+  public record SnapshotTaskContextResponse(
+      UUID taskId,
+      List<SnapshotMemoryResponse> memories,
+      List<SnapshotSourceRefResponse> sourceRefs) {}
 }

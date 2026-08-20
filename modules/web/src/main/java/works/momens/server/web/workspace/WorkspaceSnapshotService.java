@@ -136,15 +136,15 @@ class WorkspaceSnapshotService {
             .map(
                 task -> {
                   TaskContextLinks links = linksByTaskId.get(task.id());
-                  return new WorkspaceSnapshotResponse.TaskContextResponse(
+                  return new WorkspaceSnapshotResponse.SnapshotTaskContextResponse(
                       task.id(),
                       linkedMemories.stream()
                           .filter(memory -> links.memoryIds().contains(memory.id()))
-                          .map(WorkspaceSnapshotResponse.MemoryResponse::from)
+                          .map(WorkspaceSnapshotResponse.SnapshotMemoryResponse::from)
                           .toList(),
                       linkedSourceRefs.stream()
                           .filter(sourceRef -> links.sourceRefIds().contains(sourceRef.id()))
-                          .map(WorkspaceSnapshotResponse.SourceRefResponse::from)
+                          .map(WorkspaceSnapshotResponse.SnapshotSourceRefResponse::from)
                           .toList());
                 })
             .toList());
