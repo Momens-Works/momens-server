@@ -22,6 +22,10 @@
 # 값이 벽시계나 무작위 UUID 라 golden 에 담을 수 없을 때는 cases.tsv 의 scrub 열을 씁니다. 값은
 # 지우되 같은 값은 같은 토큰이 되어 동일성 구조가 남습니다.
 #
+# 종료 코드가 판정이므로 "아무것도 검증하지 않았는데 0" 을 막습니다. --only 가 아무 행에도 매칭되지
+# 않으면 exit 2 입니다. cases.tsv 에 없는 케이스 디렉터리는 경고로 알리되 종료 코드는 건드리지
+# 않습니다. 판정을 망치는 것이 아니라 정리가 안 된 상태이기 때문입니다.
+#
 # dev 실서버를 대상으로 할 때만 --normalize 로 UUID·타임스탬프를 자리표시자로 바꿉니다. 이 모드는
 # 값 비교를 포기하는 대신 shape 비교만 남깁니다. golden 판정도 함께 꺼집니다.
 set -uo pipefail
@@ -47,7 +51,9 @@ while [[ $# -gt 0 ]]; do
     --local-stack) local_stack=1; shift ;;
     --update-golden) update_golden=1; shift ;;
     -h|--help)
-      sed -n '2,26p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      # 줄 번호 대신 "첫 줄 다음의 연속된 주석"으로 헤더를 잡습니다. 번호를 박아두면 주석을 늘릴
+      # 때마다 밀려서 set -uo pipefail 같은 코드가 도움말에 섞입니다(실제로 두 번 났습니다).
+      awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "${BASH_SOURCE[0]}"
       exit 0 ;;
     *) echo "알 수 없는 옵션: $1" >&2; exit 2 ;;
   esac
@@ -206,6 +212,8 @@ pass=0
 fail=0
 skipped=0
 updated=0
+# --only 필터를 통과한 행 수. 0 이면 오타이므로 초록으로 끝내지 않습니다.
+seen=0
 # 직전 케이스가 DB 를 건드렸는지. write 뒤에 오는 read 케이스도 오염되므로 케이스 위치와 무관하게
 # 되돌립니다. cases.tsv 의 행 순서에 의존하지 않기 위해서입니다.
 #
@@ -217,6 +225,7 @@ dirty=1
 while IFS=$'\t' read -r id as method legacy_path server_path ignore scrub; do
   [[ -z "${id// }" || "${id:0:1}" == "#" ]] && continue
   [[ -n "$only" && "$id" != "$only" ]] && continue
+  seen=$((seen + 1))
 
   ignore="${ignore:-}"
   [[ "$ignore" == "-" ]] && ignore=""
@@ -366,6 +375,32 @@ while IFS=$'\t' read -r id as method legacy_path server_path ignore scrub; do
   fi
   echo
 done < "$cases_file"
+
+# 아무 행에도 매칭되지 않은 --only 는 오타입니다. 그대로 두면 0 건을 돌고 exit 0 으로 끝나
+# "검증했다"로 읽힙니다. 종료 코드가 판정인 이상 가장 나쁜 실패 방식입니다.
+if [[ -n "$only" && "$seen" -eq 0 ]]; then
+  echo "--only '${only}' 에 해당하는 케이스가 없습니다. cases.tsv 의 id 를 확인하세요." >&2
+  exit 2
+fi
+
+# cases.tsv 에서 행을 지우거나 id 를 바꾸면 cases/<id>/ 가 남습니다. 판정을 망치지는 않지만 아무도
+# 모른 채 쌓이므로 알리기만 합니다. --only 와 무관하게 cases.tsv 소속 여부로만 판단합니다.
+orphans=""
+orphan_count=0
+if [[ -d "$cases_dir" ]]; then
+  while IFS= read -r dir; do
+    dir_id="$(basename "$dir")"
+    if ! awk -F'\t' -v want="$dir_id" '!/^#/ && NF && $1 == want { found = 1 } END { exit !found }' "$cases_file"; then
+      orphans+="${dir_id} "
+      orphan_count=$((orphan_count + 1))
+    fi
+  done < <(find "$cases_dir" -mindepth 1 -maxdepth 1 -type d | sort)
+fi
+if [[ "$orphan_count" -gt 0 ]]; then
+  echo "⚠ cases.tsv 에 없는 케이스 디렉터리 ${orphan_count}개: ${orphans% }"
+  echo "  행을 지웠거나 id 를 바꾼 흔적입니다. 판정에는 영향이 없습니다."
+  echo
+fi
 
 if [[ "$update_golden" -eq 1 ]]; then
   echo "golden 갱신 ${updated} · 건너뜀 ${skipped}"
