@@ -27,8 +27,10 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.persistence.JpaAuditingConfig;
@@ -62,6 +64,7 @@ class SourceInstallerCompleteIntegrationTest extends AbstractPostgresIntegration
   @Autowired private SourceConnectionRepository connectionRepository;
   @Autowired private SourceCredentialRepository credentialRepository;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private PlatformTransactionManager transactionManager;
 
   private HttpServer server;
   private final AtomicReference<String> tokenBody = new AtomicReference<>();
@@ -142,7 +145,8 @@ class SourceInstallerCompleteIntegrationTest extends AbstractPostgresIntegration
         new TokenEncryptor(TOKEN_KEY),
         connectionRepository,
         credentialRepository,
-        properties);
+        properties,
+        new TransactionTemplate(transactionManager));
   }
 
   private OAuthStateSigner signer() {
@@ -198,6 +202,26 @@ class SourceInstallerCompleteIntegrationTest extends AbstractPostgresIntegration
             new TokenEncryptor(TOKEN_KEY)
                 .decrypt(credentialRepository.findById(firstId).orElseThrow().getAccessTokenEnc()))
         .isEqualTo("tok-2");
+  }
+
+  @Test
+  @DisplayName("같은 외부 계정의 연결이 두 건이어도 재승인이 실패하지 않는다")
+  void updatesEveryDuplicateConnectionWhenTheSameAccountApprovesAgain() {
+    UUID firstUser = insertUser();
+    installer().completeInstall(new CompleteInstallCommand("code-1", state(firstUser)));
+    jdbcTemplate.update(
+        "INSERT INTO source_connections (id, workspace_id, source_type, status,"
+            + " external_workspace_id, created_at, updated_at)"
+            + " VALUES (?, ?, 'GITHUB', 'ACTIVE', 'jsshin', NOW(), NOW())",
+        UUID.randomUUID(),
+        workspaceId);
+
+    tokenBody.set("{\"access_token\":\"tok-3\",\"token_type\":\"bearer\"}");
+    CompletedInstall again =
+        installer().completeInstall(new CompleteInstallCommand("code-3", state(insertUser())));
+
+    assertThat(connectionRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId)).hasSize(2);
+    assertThat(again.connection().status()).isEqualTo("ACTIVE");
   }
 
   @Test

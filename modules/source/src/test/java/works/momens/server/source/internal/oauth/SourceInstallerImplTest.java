@@ -46,7 +46,8 @@ class SourceInstallerImplTest {
         TokenEncryptor.unavailable(),
         null,
         null,
-        properties);
+        properties,
+        null);
   }
 
   private static SourceInstallerImpl configuredInstaller() {

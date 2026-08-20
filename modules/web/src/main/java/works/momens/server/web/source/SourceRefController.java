@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.CurrentUser;
-import works.momens.server.web.source.dto.response.SourceRefResponse;
+import works.momens.server.web.source.dto.response.WebSourceRefResponse;
 
 /**
  * 웹 source-ref endpoint입니다.
@@ -24,7 +24,8 @@ class SourceRefController implements SourceRefControllerDocs {
 
   @Override
   @PostMapping(path = "/{sourceRefId}/verify", version = "1")
-  public SourceRefResponse verify(@PathVariable UUID sourceRefId, Principal principal) {
-    return SourceRefResponse.from(sourceRefService.verify(sourceRefId, CurrentUser.id(principal)));
+  public WebSourceRefResponse verify(@PathVariable UUID sourceRefId, Principal principal) {
+    return WebSourceRefResponse.from(
+        sourceRefService.verify(sourceRefId, CurrentUser.id(principal)));
   }
 }

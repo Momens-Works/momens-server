@@ -16,7 +16,6 @@ import works.momens.server.workspace.WorkspaceEditor;
 import works.momens.server.workspace.WorkspaceErrorCode;
 import works.momens.server.workspace.WorkspaceReader;
 import works.momens.server.workspace.WorkspaceRole;
-import works.momens.server.workspace.WorkspaceRoleReader;
 import works.momens.server.workspace.WorkspaceSlugAvailability;
 import works.momens.server.workspace.WorkspaceSlugReader;
 
@@ -34,7 +33,6 @@ class WorkspaceService {
   private final WorkspaceReader workspaceReader;
   private final WorkspaceAccess workspaceAccess;
   private final WorkspaceSlugReader workspaceSlugReader;
-  private final WorkspaceRoleReader workspaceRoleReader;
   private final WorkspaceEditor workspaceEditor;
   private final WorkspaceAccessChecker workspaceAccessChecker;
 

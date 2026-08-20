@@ -7,7 +7,7 @@ import java.util.UUID;
 import works.momens.server.source.SourceRefDetail;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record SourceRefResponse(
+public record WebSourceRefResponse(
     UUID id,
     UUID workspaceId,
     String sourceType,
@@ -30,8 +30,8 @@ public record SourceRefResponse(
     Instant createdAt,
     Instant updatedAt) {
 
-  public static SourceRefResponse from(SourceRefDetail detail) {
-    return new SourceRefResponse(
+  public static WebSourceRefResponse from(SourceRefDetail detail) {
+    return new WebSourceRefResponse(
         detail.id(),
         detail.workspaceId(),
         detail.sourceType(),
