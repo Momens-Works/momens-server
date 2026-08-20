@@ -49,7 +49,6 @@ class WorkspaceServiceTest {
             workspaceReader,
             workspaceAccess,
             workspaceSlugReader,
-            workspaceRoleReader,
             workspaceEditor,
             new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader));
   }

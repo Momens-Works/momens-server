@@ -11,7 +11,7 @@ import java.util.UUID;
 import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.source.SourceErrorCode;
-import works.momens.server.web.source.dto.response.SourceRefResponse;
+import works.momens.server.web.source.dto.response.WebSourceRefResponse;
 
 /**
  * {@code /api/source-refs} endpoint의 OpenAPI 문서입니다. Swagger 애너테이션은 컨트롤러 구현과 분리합니다({@code
@@ -29,8 +29,8 @@ interface SourceRefControllerDocs {
   @ApiResponse(
       responseCode = "200",
       description = "source-ref 검증 완료 표시 성공",
-      content = @Content(schema = @Schema(implementation = SourceRefResponse.class)))
+      content = @Content(schema = @Schema(implementation = WebSourceRefResponse.class)))
   @ApiExceptions({SourceErrorCode.class, CommonErrorCode.class})
-  SourceRefResponse verify(
+  WebSourceRefResponse verify(
       @Parameter(description = "source-ref 식별자") UUID sourceRefId, Principal principal);
 }

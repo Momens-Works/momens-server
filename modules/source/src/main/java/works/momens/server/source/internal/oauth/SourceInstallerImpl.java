@@ -1,11 +1,12 @@
 package works.momens.server.source.internal.oauth;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClientException;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.source.BeginInstallCommand;
@@ -41,6 +42,7 @@ class SourceInstallerImpl implements SourceInstaller {
   private final SourceConnectionRepository sourceConnectionRepository;
   private final SourceCredentialRepository sourceCredentialRepository;
   private final SourceOAuthProperties properties;
+  private final TransactionTemplate transactionTemplate;
 
   @Override
   public String beginInstall(BeginInstallCommand command) {
@@ -52,7 +54,6 @@ class SourceInstallerImpl implements SourceInstaller {
   }
 
   @Override
-  @Transactional
   public CompletedInstall completeInstall(CompleteInstallCommand command) {
     if (isBlank(command.code()) || isBlank(command.state())) {
       throw new BusinessException(SourceErrorCode.SOURCE_OAUTH_INVALID_REQUEST, Map.of());
@@ -70,9 +71,14 @@ class SourceInstallerImpl implements SourceInstaller {
     }
     ProviderIdentity identity = readIdentity(provider, tokenResponse);
 
-    SourceConnection connection = upsertConnection(state, provider, identity);
-    upsertCredential(connection.getId(), tokenResponse, accessToken);
-    return new CompletedInstall(toDetail(connection), properties.successRedirectUri());
+    SourceConnectionDetail saved =
+        transactionTemplate.execute(
+            status -> {
+              SourceConnection connection = upsertConnection(state, provider, identity);
+              upsertCredential(connection.getId(), tokenResponse, accessToken);
+              return toDetail(connection);
+            });
+    return new CompletedInstall(saved, properties.successRedirectUri());
   }
 
   private OAuthProvider configuredProvider(String sourceType) {
@@ -121,27 +127,28 @@ class SourceInstallerImpl implements SourceInstaller {
     String status =
         OAuthProviderRegistry.FIGMA.equals(provider.sourceType()) ? STATUS_PENDING : STATUS_ACTIVE;
     Instant now = Instant.now();
-    SourceConnection connection =
+    List<SourceConnection> existing =
         sourceConnectionRepository
-            .findByWorkspaceIdAndSourceTypeAndExternalWorkspaceId(
-                state.workspaceId(), provider.sourceType(), identity.externalId())
-            .orElse(null);
-    if (connection == null) {
-      connection =
-          SourceConnection.builder()
-              .workspaceId(state.workspaceId())
-              .sourceType(provider.sourceType())
-              .status(status)
-              .externalWorkspaceId(identity.externalId())
-              .externalWorkspaceName(identity.externalName())
-              .connectedByUserId(state.userId())
-              .connectedAt(now)
-              .metadata(identity.metadata())
-              .build();
-    } else {
-      connection.reconnect(
-          status, identity.externalName(), state.userId(), now, identity.metadata());
+            .findByWorkspaceIdAndSourceTypeAndExternalWorkspaceIdOrderByCreatedAtAsc(
+                state.workspaceId(), provider.sourceType(), identity.externalId());
+    if (!existing.isEmpty()) {
+      existing.forEach(
+          connection ->
+              connection.reconnect(
+                  status, identity.externalName(), state.userId(), now, identity.metadata()));
+      return sourceConnectionRepository.saveAllAndFlush(existing).getFirst();
     }
+    SourceConnection connection =
+        SourceConnection.builder()
+            .workspaceId(state.workspaceId())
+            .sourceType(provider.sourceType())
+            .status(status)
+            .externalWorkspaceId(identity.externalId())
+            .externalWorkspaceName(identity.externalName())
+            .connectedByUserId(state.userId())
+            .connectedAt(now)
+            .metadata(identity.metadata())
+            .build();
     return sourceConnectionRepository.saveAndFlush(connection);
   }
 

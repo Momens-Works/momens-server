@@ -2,6 +2,7 @@ package works.momens.server.source.internal.oauth;
 
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -34,7 +35,8 @@ public record SourceOAuthProperties(
   }
 
   public ProviderCredentials credentialsOf(String sourceType) {
-    return providers.getOrDefault(sourceType.toLowerCase(), new ProviderCredentials(null, null));
+    return providers.getOrDefault(
+        sourceType.toLowerCase(Locale.ROOT), new ProviderCredentials(null, null));
   }
 
   public boolean hasAnyConfiguredProvider() {

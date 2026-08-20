@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -133,7 +134,7 @@ class OAuthStateSigner {
   }
 
   static String normalize(String provider) {
-    return provider == null ? "" : provider.trim().toUpperCase();
+    return provider == null ? "" : provider.trim().toUpperCase(Locale.ROOT);
   }
 
   private static UUID parseUuid(String value) {

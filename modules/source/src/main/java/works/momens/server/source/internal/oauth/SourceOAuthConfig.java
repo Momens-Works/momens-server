@@ -1,9 +1,11 @@
 package works.momens.server.source.internal.oauth;
 
 import java.time.Clock;
+import java.time.Duration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -19,6 +21,9 @@ import org.springframework.web.client.RestClient;
 @Configuration
 @EnableConfigurationProperties(SourceOAuthProperties.class)
 class SourceOAuthConfig {
+
+  private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+  private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
 
   @Bean
   OAuthProviderRegistry oauthProviderRegistry(SourceOAuthProperties properties) {
@@ -39,8 +44,15 @@ class SourceOAuthConfig {
         : TokenEncryptor.unavailable();
   }
 
+  /**
+   * provider 호출에는 유한한 timeout을 명시합니다. 승인 결과를 받는 경로가 이 호출을 동기로 기다리므로, provider가 응답하지 않으면 요청 스레드가 무기한
+   * 묶입니다. 레거시는 timeout 없는 기본 클라이언트를 쓰지만 그대로 따르지 않습니다.
+   */
   @Bean
   ProviderOAuthClient providerOAuthClient() {
-    return new ProviderOAuthClient(RestClient.builder().build());
+    SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+    requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
+    requestFactory.setReadTimeout(READ_TIMEOUT);
+    return new ProviderOAuthClient(RestClient.builder().requestFactory(requestFactory).build());
   }
 }

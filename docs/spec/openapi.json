@@ -2228,6 +2228,85 @@
           }
         }
       },
+      "WebSourceRefResponse" : {
+        "properties" : {
+          "author_email" : {
+            "type" : "string"
+          },
+          "author_name" : {
+            "type" : "string"
+          },
+          "created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "metadata" : {
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "type" : "object"
+          },
+          "permission_key" : {
+            "type" : "string"
+          },
+          "snippet" : {
+            "type" : "string"
+          },
+          "source_connection_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "source_created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "source_object_id" : {
+            "type" : "string"
+          },
+          "source_object_type" : {
+            "type" : "string"
+          },
+          "source_type" : {
+            "type" : "string"
+          },
+          "source_updated_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "source_url" : {
+            "type" : "string"
+          },
+          "text" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "updated_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "verified_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "verified_by_user_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "visibility" : {
+            "type" : "string"
+          },
+          "workspace_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }
+      },
       "WebTaskListResponse" : {
         "description" : "프로젝트 태스크 목록 응답",
         "properties" : {
@@ -9383,13 +9462,6 @@
             "description" : "이동할 URL이 설정되지 않은 경우 연결 정보 반환"
           },
           "302" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/SourceOAuthCallbackResponse"
-                }
-              }
-            },
             "description" : "승인 성공 후 설정된 URL로 이동"
           },
           "400" : {
@@ -9489,6 +9561,7 @@
             "description" : "Bad Gateway"
           }
         },
+        "security" : [ ],
         "summary" : "provider 승인 결과 수신",
         "tags" : [
           "Source"
@@ -9527,7 +9600,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/SourceRefResponse"
+                  "$ref" : "#/components/schemas/WebSourceRefResponse"
                 }
               }
             },

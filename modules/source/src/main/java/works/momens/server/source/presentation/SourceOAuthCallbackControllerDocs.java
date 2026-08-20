@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import works.momens.server.common.api.ApiExceptions;
@@ -20,6 +21,7 @@ import works.momens.server.source.presentation.dto.response.SourceOAuthCallbackR
  * 워크스페이스, provider는 서명된 state만으로 판정합니다. 승인 성공 후 이동할 URL이 설정되어 있으면 302로 응답하고, 설정되어 있지 않으면 연결 정보를
  * 200으로 반환합니다.
  */
+@SecurityRequirements
 @Tag(name = "Source", description = "source 연동 API")
 interface SourceOAuthCallbackControllerDocs {
 
@@ -27,7 +29,7 @@ interface SourceOAuthCallbackControllerDocs {
       summary = "provider 승인 결과 수신",
       description = "provider가 승인 결과와 함께 호출하는 경로입니다. state를 검증하고 토큰을 교환한 뒤 연결 정보를 저장합니다.")
   @ApiResponses({
-    @ApiResponse(responseCode = "302", description = "승인 성공 후 설정된 URL로 이동"),
+    @ApiResponse(responseCode = "302", description = "승인 성공 후 설정된 URL로 이동", content = @Content),
     @ApiResponse(
         responseCode = "200",
         description = "이동할 URL이 설정되지 않은 경우 연결 정보 반환",

@@ -1,7 +1,6 @@
 package works.momens.server.source.internal;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -17,6 +16,6 @@ public interface SourceConnectionRepository extends JpaRepository<SourceConnecti
 
   List<SourceConnection> findByWorkspaceIdOrderByCreatedAtDesc(UUID workspaceId);
 
-  Optional<SourceConnection> findByWorkspaceIdAndSourceTypeAndExternalWorkspaceId(
+  List<SourceConnection> findByWorkspaceIdAndSourceTypeAndExternalWorkspaceIdOrderByCreatedAtAsc(
       UUID workspaceId, String sourceType, String externalWorkspaceId);
 }
