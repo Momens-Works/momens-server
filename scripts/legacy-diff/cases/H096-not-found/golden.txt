@@ -1,0 +1,14 @@
+legacy_status: 404
+server_status: 404
+--- body ---
+@@ -1,3 +1,9 @@
+ {
+-  "error": "resource not found"
++  "error": {
++    "code": "SOURCE_REF_NOT_FOUND",
++    "details": {
++      "source_ref_id": "00000000-0000-4000-8000-0000000000ff"
++    },
++    "message": "source-ref를 찾을 수 없습니다."
++  }
+ }

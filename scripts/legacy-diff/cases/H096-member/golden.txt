@@ -1,0 +1,4 @@
+legacy_status: 200
+server_status: 200
+--- body ---
+동일

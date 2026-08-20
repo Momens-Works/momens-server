@@ -18,6 +18,7 @@ BEGIN;
 SET LOCAL client_min_messages TO WARNING;
 
 TRUNCATE workspace_members, workspaces, users CASCADE;
+TRUNCATE source_refs CASCADE;
 
 INSERT INTO users (id, email, name, avatar_url, created_at, updated_at) VALUES
   ('00000000-0000-4000-8000-000000000001', 'owner@momens.works',    '홍길동', 'https://cdn.momens.works/avatars/owner.png', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
@@ -48,5 +49,15 @@ INSERT INTO projects (id, workspace_id, label, name, owner_id, target_date, prog
 -- milestone은 owner 행을 두지 않아 snapshot의 빈 owner_user_ids 직렬화 차이를 함께 대조합니다.
 INSERT INTO milestones (id, project_id, name, progress, created_at, updated_at) VALUES
   ('00000000-0000-4000-8000-000000000022', '00000000-0000-4000-8000-000000000021', 'Beta 마일스톤', 40, '2026-02-03T00:00:00Z', '2026-02-03T00:00:00Z');
+
+-- H040은 워크스페이스별 연결 목록과 생성 시각 내림차순 정렬을 대조합니다.
+INSERT INTO source_connections (id, workspace_id, source_type, status, external_workspace_id, external_workspace_name, connected_by_user_id, connected_at, created_at, updated_at) VALUES
+  ('00000000-0000-4000-8000-000000000031', '00000000-0000-4000-8000-000000000012', 'GITHUB', 'ACTIVE', 'momens-org', 'Momens', '00000000-0000-4000-8000-000000000001', '2026-04-01T00:00:00Z', '2026-04-01T00:00:00Z', '2026-04-01T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000000032', '00000000-0000-4000-8000-000000000012', 'SLACK',  'ACTIVE', 'T-momens',   'momens',  '00000000-0000-4000-8000-000000000001', '2026-04-02T00:00:00Z', '2026-04-02T00:00:00Z', '2026-04-02T00:00:00Z');
+
+-- H096은 검증 후 응답 필드 구성과 verified_* 갱신을 대조합니다.
+INSERT INTO source_refs (id, workspace_id, source_type, source_object_type, source_object_id, source_url, title, snippet, text, visibility, created_at, updated_at) VALUES
+  ('00000000-0000-4000-8000-000000000041', '00000000-0000-4000-8000-000000000012', 'figma', 'FILE_COMMENT', 'obj-1', 'https://figma.com/file/abc', '권한 요청 화면 v2', '설명 문구 변경', '수집한 원문 전체', 'WORKSPACE', '2026-04-03T00:00:00Z', '2026-04-03T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000000042', '00000000-0000-4000-8000-000000000013', 'figma', 'FILE_COMMENT', 'obj-2', 'https://figma.com/file/def', '다른 워크스페이스 화면', '다른 워크스페이스 설명', '다른 워크스페이스 원문', 'WORKSPACE', '2026-04-04T00:00:00Z', '2026-04-04T00:00:00Z');
 
 COMMIT;
