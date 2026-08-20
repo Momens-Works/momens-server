@@ -287,7 +287,7 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H036 | OAuth | `DELETE /workspaces/:id/mcp-grants/:grantId` | `mcpauth.RevokeGrant` | `MOA-G` | W | `traced`; 조건부 등록. 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
 | H037 | Product JSON | `POST /workspaces/:id/projects` | `project.Create` | `PRJ` | W | `traced`. 구현 `MOM-0866` |
 | H038 | Product JSON | `GET /workspaces/:id/projects` | `project.List` | `PRJ` | R | `traced`. 구현 `MOM-0857` |
-| H039 | Product JSON | `GET /workspaces/:id/blockers` | `blocker.List` | `BLK` | R | `traced`. 구현 `MOM-0859` |
+| H039 | Product JSON | `GET /workspaces/:id/blockers` | `blocker.List` | `BLK` | R | `traced`. blocker read 기반만 구현(`MOM-0859`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백뿐이며 blocker 데이터는 H023으로 소비된다 |
 | H040 | Product JSON | `GET /workspaces/:id/source-connections` | `source.List` | `SRC` | R | `traced`. 구현 `MOM-0870` |
 | H041 | Product JSON | `GET /workspaces/:id/source-connections/install` | `source.Install` | `SRC` | W | `traced`; provider authorize redirect 시작. 구현 `MOM-0870` |
 | H042 | Product JSON | `GET /workspaces/:id/memory-candidates` | `candidate.List` | `MEM` | R | `traced`. read 기반만 구현(`MOM-0860`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백(`workspaceSnapshot.ts:120`)뿐임이 FE 기준선에서 확인됐다. 후보 데이터는 H023으로 소비된다 |
@@ -303,7 +303,7 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H052 | Product JSON | `POST /projects/:projectId/tasks` | `task.Create` | `TSK` | W | `traced`; 모바일·Signal 생성 계약과 별도이며 legacy MCP·Slack을 포함한 모든 task writer와 함께 전환. 구현 `MOM-0867` |
 | H053 | Product JSON | `GET /projects/:projectId/tasks` | `task.List` | `TSK` | R | `traced`; 모바일 보드 계약과 별도. 구현 `MOM-0861` |
 | H054 | Product JSON | `POST /projects/:projectId/decisions` | `decision.Create` | `DEC` | W | `traced`; projection 동반 |
-| H055 | Product JSON | `GET /projects/:projectId/decisions` | `decision.List` | `DEC` | R | `traced`. 구현 `MOM-0859` |
+| H055 | Product JSON | `GET /projects/:projectId/decisions` | `decision.List` | `DEC` | R | `traced`; 웹 미호출. 구현 작업 미생성 |
 | H056 | Product JSON | `GET /milestones/:milestoneId` | `milestone.Get` | `MIL` | R | `traced`. 전환 대상이 아니다. 웹 클라이언트에 호출 코드가 없다(FE 기준선 `src/api/client.ts`에 대응 메서드 없음). `MOM-0858`은 단건 조회 public API를 두지 않았다 |
 | H057 | Product JSON | `PATCH /milestones/:milestoneId` | `milestone.Update` | `MIL` | W | `traced`. 구현 `MOM-0866` |
 | H058 | Product JSON | `DELETE /milestones/:milestoneId` | `milestone.Delete` | `MIL` | W | `traced`; soft delete. 구현 `MOM-0866` |
@@ -321,7 +321,7 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H070 | Product JSON | `POST /tasks/:taskId/source-refs/:sourceRefId` | `relation.LinkTaskSourceRef` | `CTX` | W | `traced`. 구현 `MOM-0868` |
 | H071 | Product JSON | `DELETE /tasks/:taskId/source-refs/:sourceRefId` | `relation.UnlinkTaskSourceRef` | `CTX` | W | `traced`; soft delete relation. 구현 `MOM-0868` |
 | H072 | Product JSON | `GET /tasks/:taskId/context` | `relation.TaskContext` | `CTX` | R | `traced`; memory·source-ref hydrate. 구현 `MOM-0861` |
-| H073 | Product JSON | `GET /decisions/:decisionId` | `decision.Get` | `DEC` | R | `traced`. 구현 `MOM-0859` |
+| H073 | Product JSON | `GET /decisions/:decisionId` | `decision.Get` | `DEC` | R | `traced`; 웹 미호출. 구현 작업 미생성 |
 | H074 | Product JSON | `PATCH /blockers/:blockerId/resolve` | `blocker.Resolve` | `BLK` | W | `traced`; projection 동반 |
 | H075 | Product JSON | `DELETE /blockers/:blockerId` | `blocker.Delete` | `BLK` | W | `traced`; admin/owner, blocker 물리 삭제 + retrieval document soft-delete |
 | H076 | Product JSON | `GET /source-connections/:id` | `source.Get` | `SRC` | R | `traced` |
@@ -398,7 +398,7 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 | 프로젝트 목록·상세 | H038, H047 | target `ProjectReader`와 project backing이 이미 있고 projection 없음 | legacy `health_status`, count, metadata, label, owners와 계산 progress의 응답 정책; `MOM-0845` | ~~두 번째 후보~~ **무효.** FE 사용 실태 확인 결과 H038은 snapshot 폴백 전용이고 H047은 호출처가 없다(`MOM-0856`). 프로젝트 데이터는 H023을 통해 소비되므로 read 기반만 필요하다(`MOM-0857`) |
 | 마일스톤 목록·상세 | H051, H056 | read-only이고 외부 provider·projection 없음 | target milestone entity/API가 아직 없고 owner·health·progress 전체 mapping 필요 | ~~독립성은 높지만 첫 slice의 신규 코드량이 더 큼~~ **무효.** H051은 snapshot 폴백 전용, H056은 호출처 없음. read 기반만 필요하다(`MOM-0858`) |
 | 태스크 목록·상세 | H053, H060 | 사용자 가치가 높고 target task backing·모바일 read가 존재 | `MOM-0773`, legacy milestone/due date·role/default·progress, 웹/모바일 DTO 분리 | 절반 무효. H053은 snapshot 폴백 전용이고 H060만 실사용이다(`MOM-0861`) |
-| 결정·블로커 read | H039, H055, H073 | write를 제외하면 projection 전환 없이 routing rollback 가능 | target entity/API 미구현, legacy 전용 test 없음, 현재 클라이언트 사용 근거 확인 필요 | ~~characterization 근거가 약해 후순위~~ **무효.** H039는 snapshot 폴백 전용, H055·H073은 호출처 없음. read 기반만 필요하다(`MOM-0859`) |
+| 결정·블로커 read | H039, H055, H073 | write를 제외하면 projection 전환 없이 routing rollback 가능 | target entity/API 미구현, legacy 전용 test 없음, 현재 클라이언트 사용 근거 확인 필요 | ~~characterization 근거가 약해 후순위~~ **무효.** H039는 snapshot 폴백 전용이라 H023 합성용 blocker read 기반만 구현했다(`MOM-0859`). H055·H073은 호출처가 없어 decision read 기반도 만들지 않는다 |
 
 확정한 슬라이스의 route → handler → service → repository → schema → test 재추적 결과와 잠근
 계약은 [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md)에 있다.
