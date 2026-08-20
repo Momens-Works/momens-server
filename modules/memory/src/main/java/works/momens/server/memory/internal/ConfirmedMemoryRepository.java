@@ -1,5 +1,6 @@
 package works.momens.server.memory.internal;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -30,4 +31,18 @@ interface ConfirmedMemoryRepository extends JpaRepository<ConfirmedMemory, UUID>
       order by m.createdAt desc
       """)
   List<ConfirmedMemoryDetail> findDetailsByWorkspaceId(@Param("workspaceId") UUID workspaceId);
+
+  @Query(
+      """
+      select new works.momens.server.memory.ConfirmedMemoryDetail(
+          m.id, m.workspaceId, m.label, m.memoryType, m.title, m.summary, m.body, m.status,
+          m.sourceRefIds, m.relatedEntityIds, m.createdFromCandidateId, m.confirmedByUserId,
+          m.confirmedAt, m.validFrom, m.validUntil, m.invalidatedAt, m.invalidatedByUserId,
+          m.invalidationReason, m.metadata, m.createdAt, m.updatedAt)
+      from ConfirmedMemory m
+      where m.workspaceId = :workspaceId and m.id in :ids and m.deletedAt is null
+      order by m.createdAt desc
+      """)
+  List<ConfirmedMemoryDetail> findDetailsByWorkspaceIdAndIdIn(
+      @Param("workspaceId") UUID workspaceId, @Param("ids") Collection<UUID> ids);
 }

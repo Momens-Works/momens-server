@@ -1,5 +1,6 @@
 package works.momens.server.context.internal;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.context.EntityRelationReader;
+import works.momens.server.context.TaskContextLinks;
 
 @Service
 @RequiredArgsConstructor
@@ -30,5 +32,23 @@ class EntityRelationReaderImpl implements EntityRelationReader {
                 row -> (UUID) row[0],
                 LinkedHashMap::new,
                 Collectors.mapping(row -> (UUID) row[1], Collectors.toList())));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public TaskContextLinks findTaskContextLinks(UUID workspaceId, UUID taskId) {
+    List<UUID> memoryIds = new ArrayList<>();
+    List<UUID> sourceRefIds = new ArrayList<>();
+    entityRelationRepository
+        .findContextLinks(workspaceId, taskId)
+        .forEach(
+            row -> {
+              if ("MEMORY".equals(row[0])) {
+                memoryIds.add((UUID) row[1]);
+              } else if ("SOURCE_OBJECT".equals(row[0])) {
+                sourceRefIds.add((UUID) row[1]);
+              }
+            });
+    return new TaskContextLinks(memoryIds, sourceRefIds);
   }
 }

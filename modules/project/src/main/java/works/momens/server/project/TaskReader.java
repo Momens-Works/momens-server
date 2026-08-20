@@ -37,4 +37,10 @@ public interface TaskReader {
    * 소프트 삭제된 태스크는 빈 값으로 취급합니다.
    */
   Optional<UUID> workspaceIdOf(UUID taskId);
+
+  /** 웹 레거시 응답 폭의 태스크 한 건을 조회합니다. */
+  Optional<WebTaskDetail> findWebDetail(UUID taskId);
+
+  /** 프로젝트에 속한 웹 레거시 응답 폭의 태스크를 생성 시각 내림차순으로 조회합니다. */
+  List<WebTaskDetail> listWebDetailsByProjectId(UUID projectId);
 }

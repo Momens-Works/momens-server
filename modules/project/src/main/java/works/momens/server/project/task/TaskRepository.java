@@ -14,6 +14,22 @@ interface TaskRepository extends JpaRepository<Task, UUID> {
   /** 상세용 단건 조회. 소프트 삭제된 태스크는 제외합니다. */
   Optional<Task> findByIdAndDeletedAtIsNull(UUID taskId);
 
+  /** 웹 상세용 조회. 소프트 삭제된 태스크와 프로젝트는 제외합니다. */
+  @Query(
+      """
+      select t from Task t join Project p on p.id = t.projectId
+      where t.id = :taskId and t.deletedAt is null and p.deletedAt is null
+      """)
+  Optional<Task> findWebDetailById(UUID taskId);
+
+  /** 웹 상세·인가용 소속 workspace 조회. task가 아닌 소속 프로젝트의 workspace를 기준으로 합니다. */
+  @Query(
+      """
+      select p.workspaceId from Task t join Project p on p.id = t.projectId
+      where t.id = :taskId and t.deletedAt is null and p.deletedAt is null
+      """)
+  Optional<UUID> findWebProjectWorkspaceIdByTaskId(UUID taskId);
+
   /**
    * draft 반영용 단건 조회. 조회한 행을 잠가 조건 검사와 갱신 사이에 다른 트랜잭션의 수정이 끼어들지 않게 합니다.
    *
@@ -34,6 +50,8 @@ interface TaskRepository extends JpaRepository<Task, UUID> {
    */
   List<Task> findByProjectIdAndStatusInAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(
       UUID projectId, Collection<String> statuses);
+
+  List<Task> findByProjectIdAndDeletedAtIsNullOrderByCreatedAtDesc(UUID projectId);
 
   /**
    * 진행률 계산용 조회. 주어진 상태의 소프트 삭제되지 않은 태스크 수를 상태별로 조회합니다.

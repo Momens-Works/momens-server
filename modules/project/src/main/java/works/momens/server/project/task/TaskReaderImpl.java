@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.project.BoardTask;
 import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
+import works.momens.server.project.WebTaskDetail;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +50,26 @@ class TaskReaderImpl implements TaskReader {
     return taskRepository.findWorkspaceIdById(taskId);
   }
 
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<WebTaskDetail> findWebDetail(UUID taskId) {
+    return taskRepository
+        .findWebDetailById(taskId)
+        .flatMap(
+            task ->
+                taskRepository
+                    .findWebProjectWorkspaceIdByTaskId(taskId)
+                    .map(workspaceId -> toWebTaskDetail(task, workspaceId)));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<WebTaskDetail> listWebDetailsByProjectId(UUID projectId) {
+    return taskRepository.findByProjectIdAndDeletedAtIsNullOrderByCreatedAtDesc(projectId).stream()
+        .map(TaskReaderImpl::toWebTaskDetail)
+        .toList();
+  }
+
   private static BoardTask toBoardTask(Task task) {
     return new BoardTask(
         task.getId(),
@@ -57,5 +78,26 @@ class TaskReaderImpl implements TaskReader {
         task.getPriority(),
         task.getRole(),
         task.getCreatedAt());
+  }
+
+  private static WebTaskDetail toWebTaskDetail(Task task) {
+    return toWebTaskDetail(task, task.getWorkspaceId());
+  }
+
+  private static WebTaskDetail toWebTaskDetail(Task task, UUID workspaceId) {
+    return new WebTaskDetail(
+        task.getId(),
+        workspaceId,
+        task.getProjectId(),
+        task.getMilestoneId(),
+        task.getLabel(),
+        task.getTitle(),
+        task.getDescription(),
+        task.getStatus(),
+        task.getPriority(),
+        task.getAssigneeId(),
+        task.getDueDate(),
+        task.getCreatedAt(),
+        task.getUpdatedAt());
   }
 }

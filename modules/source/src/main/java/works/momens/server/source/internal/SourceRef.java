@@ -39,6 +39,12 @@ class SourceRef {
   @Column(name = "source_type", nullable = false)
   private String sourceType;
 
+  @Column(name = "source_object_type", nullable = false)
+  private String sourceObjectType;
+
+  @Column(name = "source_object_id", nullable = false)
+  private String sourceObjectId;
+
   @Column private String title;
 
   @Column private String snippet;
@@ -51,6 +57,30 @@ class SourceRef {
 
   @Column(name = "source_created_at")
   private Instant sourceCreatedAt;
+
+  @Column(name = "author_name")
+  private String authorName;
+
+  @Column(name = "author_email")
+  private String authorEmail;
+
+  @Column(nullable = false)
+  private String visibility;
+
+  @Column(name = "permission_key")
+  private String permissionKey;
+
+  @Column(name = "verified_by_user_id", columnDefinition = "uuid")
+  private UUID verifiedByUserId;
+
+  @Column(name = "verified_at")
+  private Instant verifiedAt;
+
+  @Column(name = "created_at", nullable = false)
+  private Instant createdAt;
+
+  @Column(name = "updated_at", nullable = false)
+  private Instant updatedAt;
 
   @Column(name = "deleted_at")
   private Instant deletedAt;

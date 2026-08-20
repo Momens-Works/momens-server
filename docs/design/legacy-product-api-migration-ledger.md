@@ -301,17 +301,17 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H050 | Product JSON | `POST /projects/:projectId/milestones` | `milestone.Create` | `MIL` | W | `traced`. 구현 `MOM-0866` |
 | H051 | Product JSON | `GET /projects/:projectId/milestones` | `milestone.List` | `MIL` | R | `traced`. read 기반만 구현(`MOM-0858`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백(`workspaceSnapshot.ts:130`)뿐임이 FE 기준선에서 확인됐다. 마일스톤 데이터는 H023으로 소비된다 |
 | H052 | Product JSON | `POST /projects/:projectId/tasks` | `task.Create` | `TSK` | W | `traced`; 모바일·Signal 생성 계약과 별도이며 legacy MCP·Slack을 포함한 모든 task writer와 함께 전환. 구현 `MOM-0867` |
-| H053 | Product JSON | `GET /projects/:projectId/tasks` | `task.List` | `TSK` | R | `traced`; 모바일 보드 계약과 별도. 구현 `MOM-0861` |
+| H053 | Product JSON | `GET /projects/:projectId/tasks` | `task.List` | `TSK` | R | `implemented` (`MOM-0861`); 모바일 보드 계약과 별도 |
 | H054 | Product JSON | `POST /projects/:projectId/decisions` | `decision.Create` | `DEC` | W | `traced`; projection 동반 |
 | H055 | Product JSON | `GET /projects/:projectId/decisions` | `decision.List` | `DEC` | R | `traced`; 웹 미호출. 구현 작업 미생성 |
 | H056 | Product JSON | `GET /milestones/:milestoneId` | `milestone.Get` | `MIL` | R | `traced`. 전환 대상이 아니다. 웹 클라이언트에 호출 코드가 없다(FE 기준선 `src/api/client.ts`에 대응 메서드 없음). `MOM-0858`은 단건 조회 public API를 두지 않았다 |
 | H057 | Product JSON | `PATCH /milestones/:milestoneId` | `milestone.Update` | `MIL` | W | `traced`. 구현 `MOM-0866` |
 | H058 | Product JSON | `DELETE /milestones/:milestoneId` | `milestone.Delete` | `MIL` | W | `traced`; soft delete. 구현 `MOM-0866` |
 | H059 | Product JSON | `POST /milestones/:milestoneId/blockers` | `blocker.CreateForMilestone` | `BLK` | W | `traced`; projection 동반 |
-| H060 | Product JSON | `GET /tasks/:taskId` | `task.Get` | `TSK` | R | `traced`; 모바일 상세 계약과 별도. 구현 `MOM-0861` |
+| H060 | Product JSON | `GET /tasks/:taskId` | `task.Get` | `TSK` | R | `implemented` (`MOM-0861`); 모바일 상세 계약과 별도 |
 | H061 | Product JSON | `PATCH /tasks/:taskId` | `task.Update` | `TSK` | W | `traced`; projection 동반. 모바일 수정·체크리스트 계약과 별도이며 같은 task writer 전환 단위. 구현 `MOM-0867` |
 | H062 | Product JSON | `DELETE /tasks/:taskId` | `task.Delete` | `TSK` | W | `traced`; soft delete·projection 동반. 구현 `MOM-0867` |
-| H063 | Product JSON | `GET /tasks/:taskId/updates` | `task.ListUpdates` | `TSK` | R | `traced`. 구현 `MOM-0861` |
+| H063 | Product JSON | `GET /tasks/:taskId/updates` | `task.ListUpdates` | `TSK` | R | `implemented` (`MOM-0861`) |
 | H064 | Product JSON | `POST /tasks/:taskId/updates` | `task.CreateUpdate` | `TSK` | W | `traced`. 구현 `MOM-0867` |
 | H065 | Product JSON | `DELETE /tasks/:taskId/updates/:updateId` | `task.DeleteUpdate` | `TSK` | W | `traced`; soft delete. 구현 `MOM-0867` |
 | H066 | Product JSON | `POST /tasks/:taskId/blockers` | `blocker.CreateForTask` | `BLK` | W | `traced`; projection 동반 |
@@ -320,7 +320,7 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H069 | Product JSON | `POST /tasks/:taskId/source-refs` | `relation.CreateTaskSourceRef` | `CTX` | W | `traced`; source-ref 생성과 relation 연결. 구현 `MOM-0868` |
 | H070 | Product JSON | `POST /tasks/:taskId/source-refs/:sourceRefId` | `relation.LinkTaskSourceRef` | `CTX` | W | `traced`. 구현 `MOM-0868` |
 | H071 | Product JSON | `DELETE /tasks/:taskId/source-refs/:sourceRefId` | `relation.UnlinkTaskSourceRef` | `CTX` | W | `traced`; soft delete relation. 구현 `MOM-0868` |
-| H072 | Product JSON | `GET /tasks/:taskId/context` | `relation.TaskContext` | `CTX` | R | `traced`; memory·source-ref hydrate. 구현 `MOM-0861` |
+| H072 | Product JSON | `GET /tasks/:taskId/context` | `relation.TaskContext` | `CTX` | R | `implemented` (`MOM-0861`); memory·source-ref hydrate. 링크가 없을 때는 레거시 단건 응답의 `null` 대신 빈 배열로 정규화. hydrate는 대상 memory/source-ref의 workspace가 relation workspace와 같은지도 확인한다(레거시보다 방어적) |
 | H073 | Product JSON | `GET /decisions/:decisionId` | `decision.Get` | `DEC` | R | `traced`; 웹 미호출. 구현 작업 미생성 |
 | H074 | Product JSON | `PATCH /blockers/:blockerId/resolve` | `blocker.Resolve` | `BLK` | W | `traced`; projection 동반 |
 | H075 | Product JSON | `DELETE /blockers/:blockerId` | `blocker.Delete` | `BLK` | W | `traced`; admin/owner, blocker 물리 삭제 + retrieval document soft-delete |
@@ -343,7 +343,7 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H092 | Product JSON | `POST /memories/:id/archive` | `memory.Archive` | `MEM` | W | `traced`; projection 동반. 구현 `MOM-0869` |
 | H093 | Product JSON | `POST /memories/:id/resolve` | `memory.Resolve` | `MEM` | W | `traced`; projection 동반. 구현 `MOM-0869` |
 | H094 | Product JSON | `DELETE /memories/:id` | `memory.Delete` | `MEM` | W | `traced`; soft delete·projection 동반. 구현 `MOM-0869` |
-| H095 | Product JSON | `GET /memories/:id/linked-tasks` | `relation.LinkedTasks` | `CTX` | R | `traced`. 구현 `MOM-0861` |
+| H095 | Product JSON | `GET /memories/:id/linked-tasks` | `relation.LinkedTasks` | `CTX` | R | `traced`; **웹 미호출**(`MOM-0856`). MOM-0861 범위에서 제외 확정; 소비자가 생기면 별도 이관 작업을 만든다 |
 | H096 | Product JSON | `POST /source-refs/:id/verify` | `source.VerifySourceRef` | `SRC` | W | `traced`. 구현 `MOM-0870` |
 
 ## 비-HTTP·도구 진입점 원장
