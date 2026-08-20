@@ -53,6 +53,8 @@ interface TaskRepository extends JpaRepository<Task, UUID> {
 
   List<Task> findByProjectIdAndDeletedAtIsNullOrderByCreatedAtDesc(UUID projectId);
 
+  List<Task> findByWorkspaceIdAndDeletedAtIsNullOrderByCreatedAtDesc(UUID workspaceId);
+
   /**
    * 진행률 계산용 조회. 주어진 상태의 소프트 삭제되지 않은 태스크 수를 상태별로 조회합니다.
    *

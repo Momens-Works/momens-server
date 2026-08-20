@@ -15,6 +15,7 @@ import works.momens.server.web.workspace.dto.request.UpdateWorkspaceRequest;
 import works.momens.server.web.workspace.dto.response.WorkspaceListResponse;
 import works.momens.server.web.workspace.dto.response.WorkspaceResponse;
 import works.momens.server.web.workspace.dto.response.WorkspaceSlugAvailabilityResponse;
+import works.momens.server.web.workspace.dto.response.WorkspaceSnapshotResponse;
 
 /**
  * 웹 워크스페이스 조회 엔드포인트.
@@ -28,6 +29,7 @@ import works.momens.server.web.workspace.dto.response.WorkspaceSlugAvailabilityR
 class WorkspaceController implements WorkspaceControllerDocs {
 
   private final WorkspaceService workspaceService;
+  private final WorkspaceSnapshotService workspaceSnapshotService;
 
   @Override
   @GetMapping(version = "1")
@@ -46,6 +48,12 @@ class WorkspaceController implements WorkspaceControllerDocs {
   @GetMapping(path = "/{workspaceId}", version = "1")
   public WorkspaceResponse get(@PathVariable UUID workspaceId, Principal principal) {
     return WorkspaceResponse.from(workspaceService.get(workspaceId, CurrentUser.id(principal)));
+  }
+
+  @Override
+  @GetMapping(path = "/{workspaceId}/snapshot", version = "1")
+  public WorkspaceSnapshotResponse snapshot(@PathVariable UUID workspaceId, Principal principal) {
+    return workspaceSnapshotService.get(workspaceId, CurrentUser.id(principal));
   }
 
   @Override

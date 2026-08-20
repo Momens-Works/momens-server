@@ -70,6 +70,16 @@ class TaskReaderImpl implements TaskReader {
         .toList();
   }
 
+  @Override
+  @Transactional(readOnly = true)
+  public List<WebTaskDetail> listWebDetailsByWorkspaceId(UUID workspaceId) {
+    return taskRepository
+        .findByWorkspaceIdAndDeletedAtIsNullOrderByCreatedAtDesc(workspaceId)
+        .stream()
+        .map(TaskReaderImpl::toWebTaskDetail)
+        .toList();
+  }
+
   private static BoardTask toBoardTask(Task task) {
     return new BoardTask(
         task.getId(),

@@ -43,4 +43,7 @@ public interface TaskReader {
 
   /** 프로젝트에 속한 웹 레거시 응답 폭의 태스크를 생성 시각 내림차순으로 조회합니다. */
   List<WebTaskDetail> listWebDetailsByProjectId(UUID projectId);
+
+  /** 워크스페이스에 속한 웹 레거시 응답 폭의 태스크를 생성 시각 내림차순으로 조회합니다. */
+  List<WebTaskDetail> listWebDetailsByWorkspaceId(UUID workspaceId);
 }
