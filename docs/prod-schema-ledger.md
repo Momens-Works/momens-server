@@ -60,7 +60,7 @@ prod에 반영해야 하고 아직 반영 PR이 없는 항목입니다. 릴리�
 | --- | --- | --- |
 | `V20260626023000__create_refresh_token.sql` | `auth` | momens-api#10 |
 
-## 레거시 소유 미러 — 16건
+## 레거시 소유 미러 — 19건
 
 레거시가 이미 소유한 스키마라 prod 반영 의무가 없습니다. 이 서버는 local/test용 미러만 만듭니다.
 
@@ -82,6 +82,9 @@ prod에 반영해야 하고 아직 반영 PR이 없는 항목입니다. 릴리�
 | `V20260821090000__add_task_web_read_columns.sql` | `project` | - |
 | `V20260821090100__create_task_updates_read_mirror.sql` | `project` | - |
 | `V20260821090200__add_source_ref_web_read_columns.sql` | `source` | - |
+| `V20260821100000__create_source_connections_mirror.sql` | `source` | - |
+| `V20260821100100__create_source_credentials_mirror.sql` | `source` | - |
+| `V20260821100200__add_source_ref_full_read_columns.sql` | `source` | - |
 <!-- END GENERATED: prod-schema -->
 
 ## prod 필수 설정 선언
