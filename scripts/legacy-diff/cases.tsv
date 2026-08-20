@@ -24,6 +24,8 @@ H022-forbidden	owner	GET	/workspaces/00000000-0000-4000-8000-000000000013	/api/w
 H022-not-found	owner	GET	/workspaces/00000000-0000-4000-8000-0000000000ff	/api/workspaces/00000000-0000-4000-8000-0000000000ff	-	-
 H022-bad-uuid	owner	GET	/workspaces/not-a-uuid	/api/workspaces/not-a-uuid	-	-
 H023-owner	owner	GET	/workspaces/00000000-0000-4000-8000-000000000012/snapshot	/api/workspaces/00000000-0000-4000-8000-000000000012/snapshot	-	-
+H023-forbidden	owner	GET	/workspaces/00000000-0000-4000-8000-000000000013/snapshot	/api/workspaces/00000000-0000-4000-8000-000000000013/snapshot	-	-
+H023-not-found	owner	GET	/workspaces/00000000-0000-4000-8000-0000000000ff/snapshot	/api/workspaces/00000000-0000-4000-8000-0000000000ff/snapshot	-	-
 H021-available	owner	GET	/workspaces/slug-available?slug=ws-free	/api/workspaces/slug-available?slug=ws-free	-	-
 H021-taken	owner	GET	/workspaces/slug-available?slug=ws-alpha	/api/workspaces/slug-available?slug=ws-alpha	-	-
 H021-reserved	owner	GET	/workspaces/slug-available?slug=settings	/api/workspaces/slug-available?slug=settings	-	-

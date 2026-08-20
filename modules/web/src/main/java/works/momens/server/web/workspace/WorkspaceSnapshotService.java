@@ -1,9 +1,12 @@
 package works.momens.server.web.workspace;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -31,7 +34,6 @@ import works.momens.server.source.SourceRefReader;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 import works.momens.server.web.workspace.dto.response.WorkspaceSnapshotResponse;
-import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceDetail;
 import works.momens.server.workspace.WorkspaceErrorCode;
 import works.momens.server.workspace.WorkspaceMembershipDetail;
@@ -44,7 +46,6 @@ import works.momens.server.workspace.WorkspaceReader;
 class WorkspaceSnapshotService {
 
   private final WorkspaceReader workspaceReader;
-  private final WorkspaceAccess workspaceAccess;
   private final WorkspaceMembershipReader workspaceMembershipReader;
   private final UserService userService;
   private final ProjectDetailReader projectDetailReader;
@@ -66,13 +67,12 @@ class WorkspaceSnapshotService {
                     new BusinessException(
                         WorkspaceErrorCode.WORKSPACE_NOT_FOUND,
                         Map.of("workspace_id", workspaceId.toString())));
-    if (!workspaceAccess.isMember(workspaceId, userId)) {
+    List<WorkspaceMembershipDetail> memberships =
+        workspaceMembershipReader.listDetailsByWorkspaceId(workspaceId);
+    if (memberships.stream().noneMatch(membership -> membership.userId().equals(userId))) {
       throw new BusinessException(
           CommonErrorCode.AUTH_FORBIDDEN, Map.of("workspace_id", workspaceId.toString()));
     }
-
-    List<WorkspaceMembershipDetail> memberships =
-        workspaceMembershipReader.listDetailsByWorkspaceId(workspaceId);
     Map<UUID, UserProfile> profiles =
         userService
             .getProfiles(memberships.stream().map(WorkspaceMembershipDetail::userId).toList())
@@ -122,6 +122,48 @@ class WorkspaceSnapshotService {
     List<LegacySourceRefDetail> linkedSourceRefs =
         sourceRefReader.findLegacyDetailsByIds(workspaceId, sourceRefIds);
 
+    Map<UUID, List<WorkspaceSnapshotResponse.SnapshotMemoryResponse>> memoriesByTaskId =
+        new HashMap<>();
+    Map<UUID, List<WorkspaceSnapshotResponse.SnapshotSourceRefResponse>> sourceRefsByTaskId =
+        new HashMap<>();
+    Map<UUID, Set<UUID>> taskIdsByMemoryId = new HashMap<>();
+    Map<UUID, Set<UUID>> taskIdsBySourceRefId = new HashMap<>();
+    linksByTaskId.forEach(
+        (taskId, links) -> {
+          memoriesByTaskId.put(taskId, new ArrayList<>());
+          sourceRefsByTaskId.put(taskId, new ArrayList<>());
+          links
+              .memoryIds()
+              .forEach(
+                  memoryId ->
+                      taskIdsByMemoryId
+                          .computeIfAbsent(memoryId, ignored -> new LinkedHashSet<>())
+                          .add(taskId));
+          links
+              .sourceRefIds()
+              .forEach(
+                  sourceRefId ->
+                      taskIdsBySourceRefId
+                          .computeIfAbsent(sourceRefId, ignored -> new LinkedHashSet<>())
+                          .add(taskId));
+        });
+    linkedMemories.forEach(
+        memory -> {
+          WorkspaceSnapshotResponse.SnapshotMemoryResponse response =
+              WorkspaceSnapshotResponse.SnapshotMemoryResponse.from(memory);
+          taskIdsByMemoryId
+              .getOrDefault(memory.id(), Set.of())
+              .forEach(taskId -> memoriesByTaskId.get(taskId).add(response));
+        });
+    linkedSourceRefs.forEach(
+        sourceRef -> {
+          WorkspaceSnapshotResponse.SnapshotSourceRefResponse response =
+              WorkspaceSnapshotResponse.SnapshotSourceRefResponse.from(sourceRef);
+          taskIdsBySourceRefId
+              .getOrDefault(sourceRef.id(), Set.of())
+              .forEach(taskId -> sourceRefsByTaskId.get(taskId).add(response));
+        });
+
     return WorkspaceSnapshotResponse.from(
         workspace,
         members,
@@ -135,17 +177,10 @@ class WorkspaceSnapshotService {
             .filter(task -> linksByTaskId.containsKey(task.id()))
             .map(
                 task -> {
-                  TaskContextLinks links = linksByTaskId.get(task.id());
                   return new WorkspaceSnapshotResponse.SnapshotTaskContextResponse(
                       task.id(),
-                      linkedMemories.stream()
-                          .filter(memory -> links.memoryIds().contains(memory.id()))
-                          .map(WorkspaceSnapshotResponse.SnapshotMemoryResponse::from)
-                          .toList(),
-                      linkedSourceRefs.stream()
-                          .filter(sourceRef -> links.sourceRefIds().contains(sourceRef.id()))
-                          .map(WorkspaceSnapshotResponse.SnapshotSourceRefResponse::from)
-                          .toList());
+                      memoriesByTaskId.get(task.id()),
+                      sourceRefsByTaskId.get(task.id()));
                 })
             .toList());
   }

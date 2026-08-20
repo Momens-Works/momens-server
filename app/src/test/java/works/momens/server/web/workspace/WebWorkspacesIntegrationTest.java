@@ -1,14 +1,18 @@
 package works.momens.server.web.workspace;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import jakarta.persistence.EntityManagerFactory;
 import jakarta.servlet.http.Cookie;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +42,8 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
   @Autowired private AccessTokenTestFactory accessTokens;
   @Autowired private UserService userService;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private EntityManagerFactory entityManagerFactory;
+  @Autowired private WorkspaceSnapshotService workspaceSnapshotService;
 
   @Test
   @DisplayName("멤버인 워크스페이스만 생성 시각 내림차순으로 응답한다")
@@ -143,6 +149,109 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
             authorized(get("/api/workspaces/{workspaceId}/snapshot", workspaceId), stranger.id()))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.error.code").value("AUTH_FORBIDDEN"));
+  }
+
+  @Test
+  @DisplayName("snapshot members는 가입 시각과 사용자 ID 오름차순으로 정렬한다")
+  void snapshotSortsMembersByCreatedAtThenUserId() throws Exception {
+    UserProfile caller =
+        userService.findOrCreate("web-it-snapshot-sort-owner@momens.works", "소유자", null);
+    UserProfile first =
+        userService.findOrCreate("web-it-snapshot-sort-first@momens.works", "첫째", null);
+    UserProfile second =
+        userService.findOrCreate("web-it-snapshot-sort-second@momens.works", "둘째", null);
+    UUID workspaceId = insertWorkspace("web-it-snapshot-member-order", null);
+    addMember(workspaceId, caller.id(), "owner");
+    addMember(workspaceId, first.id(), "member");
+    addMember(workspaceId, second.id(), "member");
+    Instant joinedAt = Instant.parse("2026-08-20T00:00:00Z");
+    updateMemberCreatedAt(workspaceId, caller.id(), joinedAt.plusSeconds(1));
+    updateMemberCreatedAt(workspaceId, first.id(), joinedAt);
+    updateMemberCreatedAt(workspaceId, second.id(), joinedAt);
+    UUID firstAtSameTime = first.id().compareTo(second.id()) < 0 ? first.id() : second.id();
+    UUID secondAtSameTime = first.id().compareTo(second.id()) < 0 ? second.id() : first.id();
+
+    mockMvc
+        .perform(
+            authorized(get("/api/workspaces/{workspaceId}/snapshot", workspaceId), caller.id()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.members[0].id").value(firstAtSameTime.toString()))
+        .andExpect(jsonPath("$.members[1].id").value(secondAtSameTime.toString()))
+        .andExpect(jsonPath("$.members[2].id").value(caller.id().toString()));
+  }
+
+  @Test
+  @DisplayName("snapshot은 edge 없는 task와 soft-delete된 task를 context에서 제외하고 빈 번들은 유지한다")
+  void snapshotFiltersDeletedContextTargetsAndTasks() throws Exception {
+    UserProfile caller =
+        userService.findOrCreate("web-it-snapshot-soft-delete@momens.works", "홍길동", null);
+    UUID workspaceId = insertWorkspace("web-it-snapshot-soft-delete", null);
+    addMember(workspaceId, caller.id(), "owner");
+    UUID projectId = insertProject(workspaceId, caller.id());
+    UUID noEdgeTaskId = insertTask(workspaceId, projectId, "MOM-862-1");
+    UUID emptyBundleTaskId = insertTask(workspaceId, projectId, "MOM-862-2");
+    UUID deletedTaskId = insertTask(workspaceId, projectId, "MOM-862-3");
+    UUID memoryId = UUID.randomUUID();
+    UUID sourceRefId = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO confirmed_memories (id, workspace_id, memory_type, title, deleted_at) VALUES (?, ?, 'DECISION', '삭제된 메모리', CURRENT_TIMESTAMP)",
+        memoryId,
+        workspaceId);
+    jdbcTemplate.update(
+        "INSERT INTO source_refs (id, workspace_id, source_type, source_object_type, source_object_id, title, deleted_at) VALUES (?, ?, 'NOTION', 'PAGE', 'deleted-page', '삭제된 근거', CURRENT_TIMESTAMP)",
+        sourceRefId,
+        workspaceId);
+    link(workspaceId, emptyBundleTaskId, "MEMORY", memoryId);
+    link(workspaceId, emptyBundleTaskId, "SOURCE_OBJECT", sourceRefId);
+    link(workspaceId, deletedTaskId, "MEMORY", memoryId);
+    jdbcTemplate.update(
+        "UPDATE tasks SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", deletedTaskId);
+
+    mockMvc
+        .perform(
+            authorized(get("/api/workspaces/{workspaceId}/snapshot", workspaceId), caller.id()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.tasks.length()").value(2))
+        .andExpect(jsonPath("$.task_contexts.length()").value(1))
+        .andExpect(jsonPath("$.task_contexts[0].task_id").value(emptyBundleTaskId.toString()))
+        .andExpect(jsonPath("$.task_contexts[0].memories").isEmpty())
+        .andExpect(jsonPath("$.task_contexts[0].source_refs").isEmpty());
+  }
+
+  @Test
+  @DisplayName("snapshot은 최악 조건에서도 쿼리 예산 14회를 넘지 않는다")
+  void snapshotStaysWithinQueryBudget() {
+    UserProfile caller =
+        userService.findOrCreate("web-it-snapshot-query-budget@momens.works", "홍길동", null);
+    UUID workspaceId = insertWorkspace("web-it-snapshot-query-budget", null);
+    addMember(workspaceId, caller.id(), "owner");
+    UUID projectId = insertProject(workspaceId, caller.id());
+    UUID milestoneId = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO milestones (id, project_id, name, progress) VALUES (?, ?, '마일스톤', 45)",
+        milestoneId,
+        projectId);
+    UUID taskId = insertTask(workspaceId, projectId, "MOM-862-query-budget");
+    UUID memoryId = UUID.randomUUID();
+    UUID sourceRefId = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO confirmed_memories (id, workspace_id, memory_type, title) VALUES (?, ?, 'DECISION', '결정')",
+        memoryId,
+        workspaceId);
+    jdbcTemplate.update(
+        "INSERT INTO source_refs (id, workspace_id, source_type, source_object_type, source_object_id, title) VALUES (?, ?, 'NOTION', 'PAGE', 'query-budget-page', '근거')",
+        sourceRefId,
+        workspaceId);
+    link(workspaceId, taskId, "MEMORY", memoryId);
+    link(workspaceId, taskId, "SOURCE_OBJECT", sourceRefId);
+
+    Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+    statistics.setStatisticsEnabled(true);
+    statistics.clear();
+
+    workspaceSnapshotService.get(workspaceId, caller.id());
+
+    assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(14);
   }
 
   @Test
@@ -436,6 +545,25 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
         "UPDATE workspaces SET created_at = ? WHERE id = ?",
         Timestamp.from(createdAt),
         workspaceId);
+  }
+
+  private UUID insertTask(UUID workspaceId, UUID projectId, String label) {
+    UUID taskId = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO tasks (id, workspace_id, project_id, label, title, status, priority, origin_type) VALUES (?, ?, ?, ?, '태스크', 'todo', 'medium', 'manual')",
+        taskId,
+        workspaceId,
+        projectId,
+        label);
+    return taskId;
+  }
+
+  private void updateMemberCreatedAt(UUID workspaceId, UUID userId, Instant createdAt) {
+    jdbcTemplate.update(
+        "UPDATE workspace_members SET created_at = ? WHERE workspace_id = ? AND user_id = ?",
+        Timestamp.from(createdAt),
+        workspaceId,
+        userId);
   }
 
   private void addMember(UUID workspaceId, UUID userId, String role) {
