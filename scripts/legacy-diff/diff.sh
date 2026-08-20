@@ -119,6 +119,56 @@ canonicalize() {
     | (if $norm == 1 then scrub else . end)'
 }
 
+# 비결정적 값을 등장 순서 자리표시자로 바꿉니다(MOM-0881).
+#
+# 값을 지우되 같은 값은 같은 토큰, 다른 값은 다른 토큰이 되어 동일성 구조가 남습니다. 모든
+# 타임스탬프를 <timestamp> 하나로 뭉개면 안 됩니다. created_at 까지 함께 치환돼 "레거시는 두 시각이
+# 다르고 신규는 같다"는 원장 확정 사실이 사라지고, 케이스가 매 실행 초록으로 통과합니다.
+#
+#   레거시  2026-01-01 …, 2026-08-19 …  ->  Time_1, Time_2
+#   신규    2026-01-01 …, 2026-01-01 …  ->  Time_1, Time_1
+#
+# 컬럼 이름이 아니라 값의 모양으로 찾습니다. DB 출력이 CSV 라 이름으로 셀을 짚으려면 파싱이
+# 필요한데, 모양 기반이면 응답 body 와 DB 행에 같은 함수를 쓰고 컬럼명을 모르는 값(token_hash 등)도
+# 잡힙니다.
+#
+# 맵은 한 번의 호출 안에서만 유효합니다. 양쪽을 따로 치환해야 각 측의 구조가 그대로 남습니다.
+scrub_awk='
+function scrub_type(s, re, prefix,   out, val) {
+  out = ""
+  while (match(s, re)) {
+    val = substr(s, RSTART, RLENGTH)
+    if (!((prefix SUBSEP val) in tok)) {
+      cnt[prefix]++
+      tok[prefix, val] = prefix "_" cnt[prefix]
+    }
+    out = out substr(s, 1, RSTART - 1) tok[prefix, val]
+    s = substr(s, RSTART + RLENGTH)
+  }
+  return out s
+}
+BEGIN {
+  n = split(types, t, ",")
+  for (i = 1; i <= n; i++) want[t[i]] = 1
+  TS = "[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|[+-][0-9]{2}(:?[0-9]{2})?)?"
+  UUID = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+}
+{
+  line = $0
+  if ("uuid" in want) line = scrub_type(line, UUID, "Uuid")
+  if ("time" in want) line = scrub_type(line, TS, "Time")
+  print line
+}'
+
+scrub_text() {
+  local text="$1" types="$2"
+  if [[ -z "$types" ]]; then
+    printf '%s' "$text"
+    return
+  fi
+  printf '%s\n' "$text" | awk -v types="$types" "$scrub_awk"
+}
+
 # status 와 body 를 한 번의 curl 로 받습니다.
 #
 # curl 의 종료 상태를 그대로 넘깁니다. 연결 실패에도 -w 는 status 000 을 출력하므로, 실패를
@@ -144,12 +194,14 @@ skipped=0
 # 잔재 위에서 시작합니다. KEEP=1 이 권하는 반복 실행이 정확히 그 경로입니다.
 dirty=1
 
-while IFS=$'\t' read -r id as method legacy_path server_path ignore; do
+while IFS=$'\t' read -r id as method legacy_path server_path ignore scrub; do
   [[ -z "${id// }" || "${id:0:1}" == "#" ]] && continue
   [[ -n "$only" && "$id" != "$only" ]] && continue
 
   ignore="${ignore:-}"
   [[ "$ignore" == "-" ]] && ignore=""
+  scrub="${scrub:-}"
+  [[ "$scrub" == "-" ]] && scrub=""
 
   case_dir="${cases_dir}/${id}"
   body_file=""
@@ -202,13 +254,14 @@ while IFS=$'\t' read -r id as method legacy_path server_path ignore; do
   legacy_body="${legacy_raw%$'\n'*}"
   server_body="${server_raw%$'\n'*}"
 
-  legacy_json="$(canonicalize "$legacy_body" "$ignore")"
-  server_json="$(canonicalize "$server_body" "$ignore")"
+  legacy_json="$(scrub_text "$(canonicalize "$legacy_body" "$ignore")" "$scrub")"
+  server_json="$(scrub_text "$(canonicalize "$server_body" "$ignore")" "$scrub")"
 
   echo "── ${id}  (as ${as})"
   echo "   legacy  ${legacy_status}  ${method} ${legacy_path}"
   echo "   server  ${server_status}  ${method} ${server_path}"
   [[ -n "$ignore" ]] && echo "   응답 무시 필드: ${ignore}"
+  [[ -n "$scrub" ]] && echo "   자리표시자 치환: ${scrub}"
 
   body_diff="$(diff -u <(printf '%s\n' "$legacy_json") <(printf '%s\n' "$server_json") | tail -n +3)"
 
@@ -230,6 +283,8 @@ while IFS=$'\t' read -r id as method legacy_path server_path ignore; do
         exit 1
       fi
       db_checked=1
+      legacy_rows="$(scrub_text "$legacy_rows" "$scrub")"
+      server_rows="$(scrub_text "$server_rows" "$scrub")"
       db_diff="$(diff -u <(printf '%s\n' "$legacy_rows") <(printf '%s\n' "$server_rows") | tail -n +3)"
     fi
   fi

@@ -1,10 +1,12 @@
 # 비교 대상 목록(MOM-0877). 슬라이스마다 행을 추가합니다.
 #
 # yaml 대신 TSV 인 이유: yq 의존 없이 순수 bash 로 읽습니다.
-# 열: id  as  method  legacy_path  server_path  ignore
+# 열: id  as  method  legacy_path  server_path  ignore  scrub
 # as: fixture.sql 의 사용자 키(owner|member|stranger|nobody|none)
 # none 은 토큰 없이 호출합니다(401 계약 비교).
 # ignore: 응답 body 에서 빼고 볼 필드(쉼표 구분). 없으면 - 입니다(MOM-0882).
+# scrub: 값을 등장 순서 자리표시자로 바꿀 타입(time|uuid, 쉼표 구분). 없으면 - 입니다(MOM-0881).
+#   ignore 는 아예 안 보고, scrub 은 값은 안 보되 같은지 다른지는 봅니다.
 #
 # write 케이스의 요청 body 와 DB 비교 SQL 은 cases/<id>/ 아래 규약으로 둡니다.
 #   cases/<id>/body.json   요청 body
@@ -12,25 +14,25 @@
 # 경로를 열에 적지 않는 것은 규약으로 대체 가능한 정보를 중복 기재하지 않기 위해서입니다.
 # DB 에서 안 볼 컬럼은 SELECT 목록에서 빼면 되므로 ignore 는 응답 body 전용입니다.
 #
-# id	as	method	legacy_path	server_path	ignore
-H020-member	owner	GET	/workspaces	/api/workspaces	-
-H020-empty	nobody	GET	/workspaces	/api/workspaces	-
-H020-noauth	none	GET	/workspaces	/api/workspaces	-
-H022-ok	owner	GET	/workspaces/00000000-0000-4000-8000-000000000012	/api/workspaces/00000000-0000-4000-8000-000000000012	-
-H022-no-description	owner	GET	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-
-H022-forbidden	owner	GET	/workspaces/00000000-0000-4000-8000-000000000013	/api/workspaces/00000000-0000-4000-8000-000000000013	-
-H022-not-found	owner	GET	/workspaces/00000000-0000-4000-8000-0000000000ff	/api/workspaces/00000000-0000-4000-8000-0000000000ff	-
-H022-bad-uuid	owner	GET	/workspaces/not-a-uuid	/api/workspaces/not-a-uuid	-
-H021-available	owner	GET	/workspaces/slug-available?slug=ws-free	/api/workspaces/slug-available?slug=ws-free	-
-H021-taken	owner	GET	/workspaces/slug-available?slug=ws-alpha	/api/workspaces/slug-available?slug=ws-alpha	-
-H021-reserved	owner	GET	/workspaces/slug-available?slug=settings	/api/workspaces/slug-available?slug=settings	-
-H021-uppercase	owner	GET	/workspaces/slug-available?slug=Alpha	/api/workspaces/slug-available?slug=Alpha	-
-H021-empty	owner	GET	/workspaces/slug-available	/api/workspaces/slug-available	-
-H021-noauth	none	GET	/workspaces/slug-available?slug=ws-free	/api/workspaces/slug-available?slug=ws-free	-
-H024-rename	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	updated_at
-H024-noop	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	updated_at
-H024-empty-body	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	updated_at
-H024-forbidden	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000012	/api/workspaces/00000000-0000-4000-8000-000000000012	-
-H024-not-found	owner	PATCH	/workspaces/00000000-0000-4000-8000-0000000000ff	/api/workspaces/00000000-0000-4000-8000-0000000000ff	-
-H024-slug-taken	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-
-H024-slug-reserved	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-
+# id	as	method	legacy_path	server_path	ignore	scrub
+H020-member	owner	GET	/workspaces	/api/workspaces	-	-
+H020-empty	nobody	GET	/workspaces	/api/workspaces	-	-
+H020-noauth	none	GET	/workspaces	/api/workspaces	-	-
+H022-ok	owner	GET	/workspaces/00000000-0000-4000-8000-000000000012	/api/workspaces/00000000-0000-4000-8000-000000000012	-	-
+H022-no-description	owner	GET	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-	-
+H022-forbidden	owner	GET	/workspaces/00000000-0000-4000-8000-000000000013	/api/workspaces/00000000-0000-4000-8000-000000000013	-	-
+H022-not-found	owner	GET	/workspaces/00000000-0000-4000-8000-0000000000ff	/api/workspaces/00000000-0000-4000-8000-0000000000ff	-	-
+H022-bad-uuid	owner	GET	/workspaces/not-a-uuid	/api/workspaces/not-a-uuid	-	-
+H021-available	owner	GET	/workspaces/slug-available?slug=ws-free	/api/workspaces/slug-available?slug=ws-free	-	-
+H021-taken	owner	GET	/workspaces/slug-available?slug=ws-alpha	/api/workspaces/slug-available?slug=ws-alpha	-	-
+H021-reserved	owner	GET	/workspaces/slug-available?slug=settings	/api/workspaces/slug-available?slug=settings	-	-
+H021-uppercase	owner	GET	/workspaces/slug-available?slug=Alpha	/api/workspaces/slug-available?slug=Alpha	-	-
+H021-empty	owner	GET	/workspaces/slug-available	/api/workspaces/slug-available	-	-
+H021-noauth	none	GET	/workspaces/slug-available?slug=ws-free	/api/workspaces/slug-available?slug=ws-free	-	-
+H024-rename	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-	time
+H024-noop	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-	time
+H024-empty-body	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-	time
+H024-forbidden	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000012	/api/workspaces/00000000-0000-4000-8000-000000000012	-	time
+H024-not-found	owner	PATCH	/workspaces/00000000-0000-4000-8000-0000000000ff	/api/workspaces/00000000-0000-4000-8000-0000000000ff	-	time
+H024-slug-taken	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-	time
+H024-slug-reserved	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-	time
