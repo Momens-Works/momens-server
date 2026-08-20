@@ -130,6 +130,26 @@ momens:
       redirect:
         success-uri: ${MOMENS_AUTH_WEB_SUCCESS_REDIRECT_URI}
         failure-uri: ${MOMENS_AUTH_WEB_FAILURE_REDIRECT_URI}
+  source:
+    oauth:
+      redirect-uri: ${MOMENS_SOURCE_OAUTH_REDIRECT_URI:}
+      success-redirect-uri: ${MOMENS_SOURCE_OAUTH_SUCCESS_REDIRECT_URI:}
+      state-secret: ${MOMENS_SOURCE_OAUTH_STATE_SECRET:}
+      token-key: ${MOMENS_SOURCE_OAUTH_TOKEN_KEY:}
+      state-ttl: ${MOMENS_SOURCE_OAUTH_STATE_TTL:10m}
+      providers:
+        github:
+          client-id: ${MOMENS_SOURCE_OAUTH_GITHUB_CLIENT_ID:}
+          client-secret: ${MOMENS_SOURCE_OAUTH_GITHUB_CLIENT_SECRET:}
+        slack:
+          client-id: ${MOMENS_SOURCE_OAUTH_SLACK_CLIENT_ID:}
+          client-secret: ${MOMENS_SOURCE_OAUTH_SLACK_CLIENT_SECRET:}
+        notion:
+          client-id: ${MOMENS_SOURCE_OAUTH_NOTION_CLIENT_ID:}
+          client-secret: ${MOMENS_SOURCE_OAUTH_NOTION_CLIENT_SECRET:}
+        figma:
+          client-id: ${MOMENS_SOURCE_OAUTH_FIGMA_CLIENT_ID:}
+          client-secret: ${MOMENS_SOURCE_OAUTH_FIGMA_CLIENT_SECRET:}
 
 # 헬스체크는 Actuator 기본 /actuator/health 만 노출합니다.
 management:
