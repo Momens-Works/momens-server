@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -45,6 +46,7 @@ class TaskWriteControllerTest {
   @MockitoBean private TaskWriteService taskWriteService;
 
   @Test
+  @DisplayName("태스크 생성은 레거시 응답 형식으로 반환한다")
   void createsLegacyTaskShape() throws Exception {
     when(taskWriteService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()))
         .thenReturn(task());
@@ -62,6 +64,7 @@ class TaskWriteControllerTest {
   }
 
   @Test
+  @DisplayName("태스크 수정과 삭제는 레거시 경로 및 null 필드 의미를 전달한다")
   void patchesAndDeletesLegacyPaths() throws Exception {
     when(taskWriteService.update(
             any(),
@@ -118,6 +121,7 @@ class TaskWriteControllerTest {
   }
 
   @Test
+  @DisplayName("태스크 업데이트 생성과 삭제는 레거시 경로로 처리한다")
   void createsAndDeletesTaskUpdates() throws Exception {
     when(taskWriteService.createUpdate(
             eq(TASK_ID), eq(USER_ID), eq("첫 댓글"), eq("comment"), eq(Map.of("source", "web"))))
