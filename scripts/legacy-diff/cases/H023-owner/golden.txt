@@ -1,0 +1,14 @@
+legacy_status: 200
+server_status: 200
+--- body ---
+@@ -40,9 +40,8 @@
+       "owner_user_ids": [
+         "00000000-0000-4000-8000-000000000002"
+       ],
+-      "progress": 40,
+       "status": "active",
+-      "target_date": "2026-07-31T00:00:00Z",
++      "target_date": "2026-07-31",
+       "unresolved_count": 0,
+       "updated_at": "2026-02-02T00:00:00Z",
+       "voc_signal_count": 0,

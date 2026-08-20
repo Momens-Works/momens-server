@@ -14,6 +14,7 @@ import works.momens.server.web.workspace.dto.request.UpdateWorkspaceRequest;
 import works.momens.server.web.workspace.dto.response.WorkspaceListResponse;
 import works.momens.server.web.workspace.dto.response.WorkspaceResponse;
 import works.momens.server.web.workspace.dto.response.WorkspaceSlugAvailabilityResponse;
+import works.momens.server.web.workspace.dto.response.WorkspaceSnapshotResponse;
 import works.momens.server.workspace.WorkspaceErrorCode;
 
 /**
@@ -53,6 +54,15 @@ interface WorkspaceControllerDocs {
       content = @Content(schema = @Schema(implementation = WorkspaceResponse.class)))
   @ApiExceptions({WorkspaceErrorCode.class, CommonErrorCode.class})
   WorkspaceResponse get(
+      @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
+
+  @Operation(summary = "웹 보드 snapshot 조회", description = "워크스페이스 보드에 필요한 read 모델을 한 응답으로 반환합니다.")
+  @ApiResponse(
+      responseCode = "200",
+      description = "snapshot 조회 성공. 모든 목록은 비어 있으면 빈 배열입니다.",
+      content = @Content(schema = @Schema(implementation = WorkspaceSnapshotResponse.class)))
+  @ApiExceptions({WorkspaceErrorCode.class, CommonErrorCode.class})
+  WorkspaceSnapshotResponse snapshot(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
 
   @Operation(

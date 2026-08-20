@@ -1,0 +1,322 @@
+package works.momens.server.web.workspace.dto.response;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import works.momens.server.memory.ConfirmedMemoryDetail;
+import works.momens.server.memory.MemoryCandidateDetail;
+import works.momens.server.project.BlockerDetail;
+import works.momens.server.project.MilestoneDetail;
+import works.momens.server.project.ProjectDetail;
+import works.momens.server.project.WebTaskDetail;
+import works.momens.server.source.LegacySourceRefDetail;
+import works.momens.server.web.workspace.WorkspaceMemberView;
+import works.momens.server.workspace.WorkspaceDetail;
+
+/** 레거시 H023과 호환되는 웹 보드의 단일 read 응답입니다. */
+public record WorkspaceSnapshotResponse(
+    WorkspaceResponse workspace,
+    List<WorkspaceMemberResponse> members,
+    List<ProjectResponse> projects,
+    List<MilestoneResponse> milestones,
+    List<TaskResponse> tasks,
+    List<BlockerResponse> blockers,
+    List<MemoryCandidateResponse> memoryCandidates,
+    List<MemoryResponse> memories,
+    List<TaskContextResponse> taskContexts) {
+
+  public static WorkspaceSnapshotResponse from(
+      WorkspaceDetail workspace,
+      List<WorkspaceMemberView> members,
+      List<ProjectDetail> projects,
+      List<MilestoneDetail> milestones,
+      List<WebTaskDetail> tasks,
+      List<BlockerDetail> blockers,
+      List<MemoryCandidateDetail> candidates,
+      List<ConfirmedMemoryDetail> memories,
+      List<TaskContextResponse> taskContexts) {
+    return new WorkspaceSnapshotResponse(
+        WorkspaceResponse.from(workspace),
+        members.stream().map(WorkspaceMemberResponse::from).toList(),
+        projects.stream().map(ProjectResponse::from).toList(),
+        milestones.stream().map(MilestoneResponse::from).toList(),
+        tasks.stream().map(TaskResponse::from).toList(),
+        blockers.stream().map(BlockerResponse::from).toList(),
+        candidates.stream().map(MemoryCandidateResponse::from).toList(),
+        memories.stream().map(MemoryResponse::from).toList(),
+        taskContexts);
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record ProjectResponse(
+      UUID id,
+      UUID workspaceId,
+      String label,
+      String name,
+      String description,
+      String status,
+      UUID ownerId,
+      List<UUID> ownerUserIds,
+      LocalDate targetDate,
+      String healthStatus,
+      String summary,
+      int unresolvedCount,
+      int vocSignalCount,
+      Instant lastContextAt,
+      @JsonInclude(JsonInclude.Include.NON_EMPTY) Map<String, Object> metadata,
+      Instant createdAt,
+      Instant updatedAt) {
+    static ProjectResponse from(ProjectDetail project) {
+      return new ProjectResponse(
+          project.id(),
+          project.workspaceId(),
+          project.label(),
+          project.name(),
+          project.description(),
+          project.status(),
+          project.ownerId(),
+          project.ownerUserIds(),
+          project.targetDate(),
+          project.healthStatus(),
+          project.summary(),
+          project.unresolvedCount(),
+          project.vocSignalCount(),
+          project.lastContextAt(),
+          project.metadata(),
+          project.createdAt(),
+          project.updatedAt());
+    }
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record MilestoneResponse(
+      UUID id,
+      UUID projectId,
+      String name,
+      String description,
+      LocalDate targetDate,
+      String status,
+      @JsonInclude(JsonInclude.Include.NON_EMPTY) List<UUID> ownerUserIds,
+      String healthStatus,
+      int progress,
+      String summary,
+      Instant lastContextAt,
+      Instant createdAt,
+      Instant updatedAt) {
+    static MilestoneResponse from(MilestoneDetail milestone) {
+      return new MilestoneResponse(
+          milestone.id(),
+          milestone.projectId(),
+          milestone.name(),
+          milestone.description(),
+          milestone.targetDate(),
+          milestone.status(),
+          milestone.ownerUserIds(),
+          milestone.healthStatus(),
+          milestone.progress(),
+          milestone.summary(),
+          milestone.lastContextAt(),
+          milestone.createdAt(),
+          milestone.updatedAt());
+    }
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record TaskResponse(
+      UUID id,
+      UUID projectId,
+      UUID milestoneId,
+      String label,
+      String title,
+      String description,
+      String status,
+      String priority,
+      UUID assigneeId,
+      LocalDate dueDate,
+      Instant createdAt,
+      Instant updatedAt) {
+    static TaskResponse from(WebTaskDetail task) {
+      return new TaskResponse(
+          task.id(),
+          task.projectId(),
+          task.milestoneId(),
+          task.label(),
+          task.title(),
+          task.description(),
+          task.status(),
+          task.priority(),
+          task.assigneeId(),
+          task.dueDate(),
+          task.createdAt(),
+          task.updatedAt());
+    }
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record BlockerResponse(
+      UUID id,
+      UUID workspaceId,
+      String description,
+      String status,
+      String blockedEntityType,
+      UUID blockedEntityId,
+      Instant createdAt,
+      Instant updatedAt,
+      Instant resolvedAt) {
+    static BlockerResponse from(BlockerDetail blocker) {
+      return new BlockerResponse(
+          blocker.id(),
+          blocker.workspaceId(),
+          blocker.description(),
+          blocker.status(),
+          blocker.blockedEntityType(),
+          blocker.blockedEntityId(),
+          blocker.createdAt(),
+          blocker.updatedAt(),
+          blocker.resolvedAt());
+    }
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record MemoryCandidateResponse(
+      UUID id,
+      UUID workspaceId,
+      String label,
+      String candidateType,
+      String title,
+      String summary,
+      String body,
+      Double confidence,
+      Double importance,
+      String status,
+      @JsonInclude(JsonInclude.Include.NON_EMPTY) List<UUID> sourceRefIds,
+      @JsonInclude(JsonInclude.Include.NON_EMPTY) List<UUID> relatedEntityIds,
+      String proposedBy,
+      Instant reviewedAt,
+      UUID reviewedByUserId,
+      String rejectionReason,
+      Instant expiresAt,
+      @JsonInclude(JsonInclude.Include.NON_EMPTY) Map<String, Object> metadata,
+      Instant createdAt,
+      Instant updatedAt) {
+    static MemoryCandidateResponse from(MemoryCandidateDetail candidate) {
+      return new MemoryCandidateResponse(
+          candidate.id(),
+          candidate.workspaceId(),
+          candidate.label(),
+          candidate.candidateType(),
+          candidate.title(),
+          candidate.summary(),
+          candidate.body(),
+          candidate.confidence(),
+          candidate.importance(),
+          candidate.status(),
+          candidate.sourceRefIds(),
+          candidate.relatedEntityIds(),
+          candidate.proposedBy(),
+          candidate.reviewedAt(),
+          candidate.reviewedByUserId(),
+          candidate.rejectionReason(),
+          candidate.expiresAt(),
+          candidate.metadata(),
+          candidate.createdAt(),
+          candidate.updatedAt());
+    }
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record MemoryResponse(
+      UUID id,
+      UUID workspaceId,
+      String label,
+      String memoryType,
+      String title,
+      String summary,
+      String body,
+      String status,
+      @JsonInclude(JsonInclude.Include.NON_EMPTY) List<UUID> sourceRefIds,
+      @JsonInclude(JsonInclude.Include.NON_EMPTY) List<UUID> relatedEntityIds,
+      UUID createdFromCandidateId,
+      UUID confirmedByUserId,
+      Instant confirmedAt,
+      Instant validFrom,
+      Instant validUntil,
+      Instant invalidatedAt,
+      UUID invalidatedByUserId,
+      String invalidationReason,
+      @JsonInclude(JsonInclude.Include.NON_EMPTY) Map<String, Object> metadata,
+      Instant createdAt,
+      Instant updatedAt) {
+    public static MemoryResponse from(ConfirmedMemoryDetail memory) {
+      return new MemoryResponse(
+          memory.id(),
+          memory.workspaceId(),
+          memory.label(),
+          memory.memoryType(),
+          memory.title(),
+          memory.summary(),
+          memory.body(),
+          memory.status(),
+          memory.sourceRefIds(),
+          memory.relatedEntityIds(),
+          memory.createdFromCandidateId(),
+          memory.confirmedByUserId(),
+          memory.confirmedAt(),
+          memory.validFrom(),
+          memory.validUntil(),
+          memory.invalidatedAt(),
+          memory.invalidatedByUserId(),
+          memory.invalidationReason(),
+          memory.metadata(),
+          memory.createdAt(),
+          memory.updatedAt());
+    }
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record SourceRefResponse(
+      UUID id,
+      UUID workspaceId,
+      String sourceType,
+      String sourceObjectType,
+      String sourceObjectId,
+      String sourceUrl,
+      String title,
+      String snippet,
+      String authorName,
+      String authorEmail,
+      Instant sourceCreatedAt,
+      String visibility,
+      String permissionKey,
+      UUID verifiedByUserId,
+      Instant verifiedAt,
+      Instant createdAt,
+      Instant updatedAt) {
+    public static SourceRefResponse from(LegacySourceRefDetail source) {
+      return new SourceRefResponse(
+          source.id(),
+          source.workspaceId(),
+          source.sourceType(),
+          source.sourceObjectType(),
+          source.sourceObjectId(),
+          source.sourceUrl(),
+          source.title(),
+          source.snippet(),
+          source.authorName(),
+          source.authorEmail(),
+          source.sourceCreatedAt(),
+          source.visibility(),
+          source.permissionKey(),
+          source.verifiedByUserId(),
+          source.verifiedAt(),
+          source.createdAt(),
+          source.updatedAt());
+    }
+  }
+
+  public record TaskContextResponse(
+      UUID taskId, List<MemoryResponse> memories, List<SourceRefResponse> sourceRefs) {}
+}

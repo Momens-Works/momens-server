@@ -94,6 +94,106 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("snapshot은 9개 구획과 빈 컬렉션을 레거시 shape로 응답한다")
+  void snapshotReturnsAllSectionsWithEmptyCollections() throws Exception {
+    UserProfile caller = userService.findOrCreate("web-it-snapshot@momens.works", "홍길동", null);
+    UUID workspaceId = insertWorkspace("web-it-snapshot", null);
+    addMember(workspaceId, caller.id(), "owner");
+
+    mockMvc
+        .perform(
+            authorized(get("/api/workspaces/{workspaceId}/snapshot", workspaceId), caller.id()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.workspace.id").value(workspaceId.toString()))
+        .andExpect(jsonPath("$.members").isArray())
+        .andExpect(jsonPath("$.members.length()").value(1))
+        .andExpect(jsonPath("$.projects").isArray())
+        .andExpect(jsonPath("$.projects.length()").value(0))
+        .andExpect(jsonPath("$.milestones").isArray())
+        .andExpect(jsonPath("$.milestones.length()").value(0))
+        .andExpect(jsonPath("$.tasks").isArray())
+        .andExpect(jsonPath("$.tasks.length()").value(0))
+        .andExpect(jsonPath("$.blockers").isArray())
+        .andExpect(jsonPath("$.blockers.length()").value(0))
+        .andExpect(jsonPath("$.memory_candidates").isArray())
+        .andExpect(jsonPath("$.memory_candidates.length()").value(0))
+        .andExpect(jsonPath("$.memories").isArray())
+        .andExpect(jsonPath("$.memories.length()").value(0))
+        .andExpect(jsonPath("$.task_contexts").isArray())
+        .andExpect(jsonPath("$.task_contexts.length()").value(0));
+  }
+
+  @Test
+  @DisplayName("snapshot은 없는 workspace를 404, 비멤버를 403으로 구분한다")
+  void snapshotMapsNotFoundAndForbidden() throws Exception {
+    UserProfile owner = userService.findOrCreate("web-it-snapshot-owner@momens.works", "홍길동", null);
+    UserProfile stranger =
+        userService.findOrCreate("web-it-snapshot-stranger@momens.works", "김철수", null);
+    UUID workspaceId = insertWorkspace("web-it-snapshot-forbidden", null);
+    addMember(workspaceId, owner.id(), "owner");
+
+    mockMvc
+        .perform(
+            authorized(
+                get("/api/workspaces/{workspaceId}/snapshot", UUID.randomUUID()), owner.id()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.error.code").value("WORKSPACE_NOT_FOUND"));
+    mockMvc
+        .perform(
+            authorized(get("/api/workspaces/{workspaceId}/snapshot", workspaceId), stranger.id()))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.error.code").value("AUTH_FORBIDDEN"));
+  }
+
+  @Test
+  @DisplayName("snapshot은 연결된 context를 합성하고 project와 milestone의 빈 owner 규칙을 구분한다")
+  void snapshotComposesLinkedContextAndOwnerSerializationRules() throws Exception {
+    UserProfile caller = userService.findOrCreate("web-it-snapshot-rich@momens.works", "홍길동", null);
+    UUID workspaceId = insertWorkspace("web-it-snapshot-rich", null);
+    addMember(workspaceId, caller.id(), "owner");
+    UUID projectId = insertProject(workspaceId, caller.id());
+    UUID milestoneId = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO milestones (id, project_id, name, progress) VALUES (?, ?, '마일스톤', 45)",
+        milestoneId,
+        projectId);
+    UUID taskId = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO tasks (id, workspace_id, project_id, label, title, status, priority, origin_type) VALUES (?, ?, ?, 'MOM-862', 'snapshot 태스크', 'todo', 'medium', 'manual')",
+        taskId,
+        workspaceId,
+        projectId);
+    UUID memoryId = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO confirmed_memories (id, workspace_id, memory_type, title) VALUES (?, ?, 'DECISION', '결정')",
+        memoryId,
+        workspaceId);
+    UUID sourceRefId = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO source_refs (id, workspace_id, source_type, source_object_type, source_object_id, title) VALUES (?, ?, 'NOTION', 'PAGE', 'page-862', '근거')",
+        sourceRefId,
+        workspaceId);
+    link(workspaceId, taskId, "MEMORY", memoryId);
+    link(workspaceId, taskId, "SOURCE_OBJECT", sourceRefId);
+
+    mockMvc
+        .perform(
+            authorized(get("/api/workspaces/{workspaceId}/snapshot", workspaceId), caller.id()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.projects[0].id").value(projectId.toString()))
+        .andExpect(jsonPath("$.projects[0].owner_user_ids[0]").value(caller.id().toString()))
+        .andExpect(jsonPath("$.projects[0].progress").doesNotExist())
+        .andExpect(jsonPath("$.milestones[0].id").value(milestoneId.toString()))
+        .andExpect(jsonPath("$.milestones[0].progress").value(45))
+        .andExpect(jsonPath("$.milestones[0].owner_user_ids").doesNotExist())
+        .andExpect(jsonPath("$.tasks[0].id").value(taskId.toString()))
+        .andExpect(jsonPath("$.task_contexts.length()").value(1))
+        .andExpect(jsonPath("$.task_contexts[0].task_id").value(taskId.toString()))
+        .andExpect(jsonPath("$.task_contexts[0].memories[0].id").value(memoryId.toString()))
+        .andExpect(jsonPath("$.task_contexts[0].source_refs[0].id").value(sourceRefId.toString()));
+  }
+
+  @Test
   @DisplayName("없는 워크스페이스는 404 WORKSPACE_NOT_FOUND로 응답한다")
   void getReturnsNotFoundForUnknownWorkspace() throws Exception {
     UserProfile caller = userService.findOrCreate("web-it-404@momens.works", "홍길동", null);
@@ -309,6 +409,26 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
         slug,
         description);
     return id;
+  }
+
+  private UUID insertProject(UUID workspaceId, UUID ownerId) {
+    UUID id = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO projects (id, workspace_id, name, owner_id) VALUES (?, ?, '프로젝트', ?)",
+        id,
+        workspaceId,
+        ownerId);
+    return id;
+  }
+
+  private void link(UUID workspaceId, UUID taskId, String toEntityType, UUID toEntityId) {
+    jdbcTemplate.update(
+        "INSERT INTO entity_relations (id, workspace_id, from_entity_type, from_entity_id, relation_type, to_entity_type, to_entity_id) VALUES (?, ?, 'TASK', ?, 'LINKED_TO', ?, ?)",
+        UUID.randomUUID(),
+        workspaceId,
+        taskId,
+        toEntityType,
+        toEntityId);
   }
 
   private void updateCreatedAt(UUID workspaceId, Instant createdAt) {

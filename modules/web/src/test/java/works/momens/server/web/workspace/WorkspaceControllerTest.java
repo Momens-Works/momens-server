@@ -39,6 +39,7 @@ class WorkspaceControllerTest {
 
   @Autowired private MockMvc mockMvc;
   @MockitoBean private WorkspaceService workspaceService;
+  @MockitoBean private WorkspaceSnapshotService workspaceSnapshotService;
 
   private static final UUID USER_ID = UUID.fromString("5d2f7f3a-5db1-4f2c-8b9e-13607dd1f5e8");
   private static final UUID WORKSPACE_ID = UUID.fromString("30d9e9fe-f43b-4097-a88e-dc19f0a5b025");
