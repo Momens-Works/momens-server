@@ -8,9 +8,11 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
  *
  * <p>같은 헬퍼가 테스트마다 복제되지 않도록 모듈 루트에 한 벌만 둡니다(project 모듈의 {@code ProjectSeedSql}과 같은 방식).
  *
- * <p>워크스페이스와 사용자 행은 만들지 않습니다. 미러가 다른 모듈 테이블로 나가는 FK를 두지 않아 아무 UUID나 그대로 쓸 수 있습니다.
+ * <p>후보·메모리 조회 테스트는 워크스페이스와 사용자 행을 만들지 않습니다. 두 미러가 다른 모듈 테이블로 나가는 FK를 두지 않아 아무 UUID나 그대로 쓸 수 있습니다.
+ * 반대로 write 테스트는 {@code review_actions}가 레거시와 같은 FK를 그대로 갖기 때문에 {@link #insertWorkspace}와 {@link
+ * #insertUser}로 실제 행을 만들어야 합니다.
  *
- * <p>후보·메모리 자체는 이 서버에 쓰기 경로가 전혀 없어(쓰기는 MOM-0869) 각 테스트가 레거시 워커처럼 네이티브 SQL로 넣습니다.
+ * <p>후보·메모리는 워커와 레거시가 만드는 데이터라 각 테스트가 레거시처럼 네이티브 SQL로 넣습니다.
  */
 public final class MemorySeedSql {
 
@@ -32,6 +34,64 @@ public final class MemorySeedSql {
         .setParameter(1, id)
         .setParameter(2, workspaceId)
         .setParameter(3, "확정된 후보")
+        .executeUpdate();
+    return id;
+  }
+
+  /** {@code review_actions.workspace_id} FK를 만족할 워크스페이스 행을 넣습니다. */
+  public static UUID insertWorkspace(TestEntityManager entityManager) {
+    UUID id = UUID.randomUUID();
+    entityManager
+        .getEntityManager()
+        .createNativeQuery("INSERT INTO workspaces (id, name, slug) VALUES (?1, ?2, ?3)")
+        .setParameter(1, id)
+        .setParameter(2, "모멘스")
+        .setParameter(3, "momens-" + id)
+        .executeUpdate();
+    return id;
+  }
+
+  /** {@code review_actions.reviewer_user_id} FK를 만족할 사용자 행을 넣습니다. */
+  public static UUID insertUser(TestEntityManager entityManager) {
+    UUID id = UUID.randomUUID();
+    entityManager
+        .getEntityManager()
+        .createNativeQuery("INSERT INTO users (id, email, name) VALUES (?1, ?2, ?3)")
+        .setParameter(1, id)
+        .setParameter(2, id + "@momens.works")
+        .setParameter(3, "홍길동")
+        .executeUpdate();
+    return id;
+  }
+
+  /** 리뷰를 기다리는 {@code PROPOSED} 후보를 넣습니다. */
+  public static UUID insertProposedCandidate(TestEntityManager entityManager, UUID workspaceId) {
+    UUID id = UUID.randomUUID();
+    entityManager
+        .getEntityManager()
+        .createNativeQuery(
+            "INSERT INTO memory_candidates (id, workspace_id, candidate_type, title, status)"
+                + " VALUES (?1, ?2, 'DECISION', ?3, 'PROPOSED')")
+        .setParameter(1, id)
+        .setParameter(2, workspaceId)
+        .setParameter(3, "결제 재시도는 3회로 고정한다")
+        .executeUpdate();
+    return id;
+  }
+
+  /** 확정 메모리 한 건을 넣습니다. */
+  public static UUID insertMemory(
+      TestEntityManager entityManager, UUID workspaceId, String status) {
+    UUID id = UUID.randomUUID();
+    entityManager
+        .getEntityManager()
+        .createNativeQuery(
+            "INSERT INTO confirmed_memories (id, workspace_id, memory_type, title, status)"
+                + " VALUES (?1, ?2, 'DECISION', ?3, ?4)")
+        .setParameter(1, id)
+        .setParameter(2, workspaceId)
+        .setParameter(3, "기존 메모리")
+        .setParameter(4, status)
         .executeUpdate();
     return id;
   }
