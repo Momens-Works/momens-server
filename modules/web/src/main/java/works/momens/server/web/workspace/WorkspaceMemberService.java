@@ -17,8 +17,8 @@ import works.momens.server.workspace.ChangeMembershipRoleCommand;
 import works.momens.server.workspace.RemoveMembershipCommand;
 import works.momens.server.workspace.WorkspaceErrorCode;
 import works.momens.server.workspace.WorkspaceMembershipDetail;
-import works.momens.server.workspace.WorkspaceMembershipEditor;
 import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.WorkspaceMembershipWriter;
 import works.momens.server.workspace.WorkspaceRole;
 
 /**
@@ -36,7 +36,7 @@ class WorkspaceMemberService {
 
   private final WorkspaceAccessChecker workspaceAccessChecker;
   private final WorkspaceMembershipReader workspaceMembershipReader;
-  private final WorkspaceMembershipEditor workspaceMembershipEditor;
+  private final WorkspaceMembershipWriter workspaceMembershipWriter;
   private final UserService userService;
 
   /**
@@ -95,7 +95,7 @@ class WorkspaceMemberService {
                     new BusinessException(
                         WorkspaceErrorCode.WORKSPACE_INVALID_ROLE,
                         Map.of("role", String.valueOf(rawRole))));
-    workspaceMembershipEditor.changeRole(
+    workspaceMembershipWriter.changeRole(
         new ChangeMembershipRoleCommand(workspaceId, targetUserId, role));
   }
 
@@ -104,7 +104,7 @@ class WorkspaceMemberService {
   public void remove(UUID workspaceId, UUID userId, UUID targetUserId) {
     workspaceAccessChecker.requireWorkspaceExists(workspaceId);
     workspaceAccessChecker.requireRoleAtLeast(workspaceId, userId, WorkspaceRole.ADMIN);
-    workspaceMembershipEditor.remove(
+    workspaceMembershipWriter.remove(
         new RemoveMembershipCommand(workspaceId, userId, targetUserId));
   }
 }

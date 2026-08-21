@@ -2,7 +2,9 @@ package works.momens.server.workspace;
 
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.context.TypeExcludeFilter;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 
 /**
  * 슬라이스 테스트용 부트스트랩.
@@ -12,5 +14,7 @@ import org.springframework.context.annotation.ComponentScan;
  */
 @SpringBootConfiguration
 @EnableAutoConfiguration
-@ComponentScan
+@ComponentScan(
+    excludeFilters =
+        @ComponentScan.Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class))
 class WorkspaceModuleTestApplication {}
