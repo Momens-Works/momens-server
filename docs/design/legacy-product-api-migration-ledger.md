@@ -253,6 +253,11 @@ aggregate별 writer를 한 시점에 하나만 두는 원칙에 따라 다섯 �
 H034의 구현이 완료되더라도 두 endpoint만 단독으로 전환하지 않는다. H019를 포함하는 `MOM-0866`과
 H028, H046을 포함하는 `MOM-0865`까지 모두 준비된 이후 함께 전환한다.
 
+`MOM-0865`에서 H028과 H046을 구현하면서 이 전환 단위에 남은 endpoint는 H019(`MOM-0866`)뿐이다. 초대
+기능 자체는 별도의 전환 단위로 본다. `workspace_invitations`를 참조하는 endpoint는 H029~H032와
+H046이 전부이며, worker와 retrieval에는 해당 테이블을 참조하는 코드가 없다. 따라서 초대 기능은 이번
+작업으로 전환 준비를 마친다.
+
 ### `tasks` target writer 구현과 운영 활성화
 
 `momens-server`에는 모바일 수동 생성·수정·체크리스트 변경, Signal의 convert-to-task, Minsu
@@ -300,11 +305,11 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H025 | Product JSON | `GET /workspaces/:id/onboarding` | `workspace.GetOnboarding` | `WSP` | R | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위에서 **제외 확정**(PR #156). 이관 대상이 아니라 retire 후보 |
 | H026 | Product JSON | `PATCH /workspaces/:id/onboarding` | `workspace.PatchOnboarding` | `WSP` | W | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위에서 **제외 확정**(PR #156). 이관 대상이 아니라 retire 후보 |
 | H027 | Product JSON | `GET /workspaces/:id/members` | `workspace.ListMembers` | `WSP` | R | `implemented`: target `GET /api/workspaces/{workspaceId}/members`. 구현 완료(`MOM-0864`), 전환 전. 레거시는 쿼리에 정렬 조건이 없어 응답 순서가 보장되지 않았지만, 신규 서버는 이름을 기준으로 오름차순 정렬하고 이름이 같으면 사용자 ID를 기준으로 보조 정렬한다(모바일 프로젝트 멤버 목록과 동일한 계약). 정렬 순서가 고정되지 않으면 golden 대조 결과가 실행마다 달라져 하네스에 등록할 수 없다. 레거시에서 워크스페이스 미존재와 비멤버를 모두 403으로 응답하던 동작은 공통 전환 규칙에 따라 각각 404와 403으로 구분한다 |
-| H028 | Product JSON | `POST /workspaces/:id/invite` | `workspace.Invite` | `WSP` | W | `traced`; 즉시 멤버 추가 legacy 경로. 구현 `MOM-0865` |
-| H029 | Product JSON | `POST /workspaces/:id/invitations` | `workspace.CreateInvitation` | `WSP` | W | `traced`; invitation email side effect. 구현 `MOM-0865` |
-| H030 | Product JSON | `GET /workspaces/:id/invitations` | `workspace.ListInvitations` | `WSP` | R | `traced`. 구현 `MOM-0865` |
-| H031 | Product JSON | `POST /workspaces/:id/invitations/:invitationId/resend` | `workspace.ResendInvitation` | `WSP` | W | `traced`; email side effect. 구현 `MOM-0865` |
-| H032 | Product JSON | `POST /workspaces/:id/invitations/:invitationId/revoke` | `workspace.RevokeInvitation` | `WSP` | W | `traced`. 구현 `MOM-0865` |
+| H028 | Product JSON | `POST /workspaces/:id/invite` | `workspace.Invite` | `WSP` | W | `implemented`: target `POST /api/workspaces/{workspaceId}/invite`. 구현 완료(`MOM-0865`), 전환 전. 웹에서 호출하지 않는 경로지만 `workspace_members` 전환 단위에 포함되어 함께 이관했다. 레거시는 이 경로의 실패를 모두 403으로 응답하므로 HTTP status는 유지하고 에러 코드만 구분했다. 이메일에 해당하는 사용자가 없으면 `WORKSPACE_INVITEE_NOT_FOUND`, 사용자가 이미 다른 역할로 참여 중이면 `WORKSPACE_MEMBER_ROLE_CONFLICT`로 응답한다. 이메일은 레거시와 동일하게 대소문자까지 정확히 일치할 때만 사용자를 찾는다 |
+| H029 | Product JSON | `POST /workspaces/:id/invitations` | `workspace.CreateInvitation` | `WSP` | W | `implemented`: target `POST /api/workspaces/{workspaceId}/invitations`. 구현 완료(`MOM-0865`), 전환 전. 같은 워크스페이스에 같은 이메일로 대기 중인 초대가 있으면 새 행을 생성하지 않고 기존 행을 갱신한다. 해당 이메일의 사용자가 이미 워크스페이스 멤버이면 409 `WORKSPACE_MEMBER_ALREADY_EXISTS`로 응답하며, 이 판정은 레거시와 동일하게 이메일의 대소문자를 구분하지 않는다. 이메일 발송에 실패하면 502 `INVITATION_EMAIL_SEND_FAILED`로 응답하지만 생성하거나 갱신한 초대 행은 유지한다 |
+| H030 | Product JSON | `GET /workspaces/:id/invitations` | `workspace.ListInvitations` | `WSP` | R | `implemented`: target `GET /api/workspaces/{workspaceId}/invitations`. 구현 완료(`MOM-0865`), 전환 전. 만료 상태는 DB에 저장하지 않고 조회 시점에 계산한다 |
+| H031 | Product JSON | `POST /workspaces/:id/invitations/:invitationId/resend` | `workspace.ResendInvitation` | `WSP` | W | `implemented`: target `POST /api/workspaces/{workspaceId}/invitations/{invitationId}/resend`. 구현 완료(`MOM-0865`), 전환 전. 토큰과 만료 시각을 새로 발급하며, 폐기된 초대도 대기 상태로 되돌린다. 이미 수락된 초대만 409 `INVITATION_ALREADY_ACCEPTED`로 거부한다. 수락 여부를 조건에 포함한 단일 UPDATE 쿼리로 처리해 조회와 갱신 사이에 초대 수락이 완료되는 동시성 문제를 방지한다 |
+| H032 | Product JSON | `POST /workspaces/:id/invitations/:invitationId/revoke` | `workspace.RevokeInvitation` | `WSP` | W | `implemented`: target `POST /api/workspaces/{workspaceId}/invitations/{invitationId}/revoke`. 구현 완료(`MOM-0865`), 전환 전. 이미 수락된 초대는 폐기할 수 없으며 409 `INVITATION_ALREADY_ACCEPTED`로 응답한다 |
 | H033 | Product JSON | `PATCH /workspaces/:id/members/:userId` | `workspace.UpdateMember` | `WSP` | W | `implemented`: target `PATCH /api/workspaces/{workspaceId}/members/{userId}`. 구현 완료(`MOM-0864`), 전환 전. 레거시에서 403 하나로 처리하던 실패 상황을 네 가지로 구분한다. 워크스페이스가 없으면 404 `WORKSPACE_NOT_FOUND`, 요청자의 권한이 부족하면 403 `AUTH_FORBIDDEN`, 대상 사용자가 멤버가 아니면 404 `WORKSPACE_MEMBER_NOT_FOUND`, 대상이 owner이면 409 `WORKSPACE_OWNER_PROTECTED`를 반환한다. 앞의 두 경우는 공통 전환 규칙에 따른 것이며, 뒤의 두 경우는 이 작업에서 결정했다. `role`이 `admin`이나 `member`가 아니면 레거시와 동일하게 400으로 응답하며, 에러 코드는 `WORKSPACE_INVALID_ROLE`이다 |
 | H034 | Product JSON | `DELETE /workspaces/:id/members/:userId` | `workspace.RemoveMember` | `WSP` | W | `implemented`: target `DELETE /api/workspaces/{workspaceId}/members/{userId}`. 구현 완료(`MOM-0864`), 전환 전. 실패 상황은 H033과 같은 기준으로 구분하며, 요청자가 자기 자신을 제거하려는 경우에는 409 `WORKSPACE_SELF_REMOVAL_NOT_ALLOWED`를 반환한다. 레거시와 동일하게 자기 자신인지 먼저 확인한 뒤 대상 멤버를 조회한다. 따라서 존재하지 않는 사용자 ID라도 요청자 자신의 ID를 전달하면 두 서버 모두 자기 자신을 제거하려는 요청으로 판정한다 |
 | H035 | OAuth | `GET /workspaces/:id/mcp-grants` | `mcpauth.ListGrants` | `MOA-G` | R | `traced`; 조건부 등록. 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
@@ -318,7 +323,7 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H043 | Product JSON | `POST /workspaces/:id/memories` | `memory.Create` | `MEM` | W | `traced`; projection 동반. **웹 미호출**(`MOM-0856`). 소비자 전수 검증에서 호출처가 없어 **retire 후보로 확정**(`MOM-0901`). 기존 클라이언트가 없어 레거시 계약을 보존할 이유가 없다. 필요해지면 신규 서버에서 새로 설계한다 |
 | H044 | Product JSON | `GET /workspaces/:id/memories` | `memory.List` | `MEM` | R | `traced`. read 기반만 구현(`MOM-0860`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백(`workspaceSnapshot.ts:121`)뿐임이 FE 기준선에서 확인됐다. 메모리 데이터는 H023으로 소비된다 |
 | H045 | Product JSON | `POST /workspaces/:id/minsu/query` | `minsu.Query` | `MIN` | R | `traced`; retrieval·LLM 외부 호출 |
-| H046 | Product JSON | `POST /invitations/accept` | `workspace.AcceptInvitation` | `WSP` | W | `traced`. 구현 `MOM-0865` |
+| H046 | Product JSON | `POST /invitations/accept` | `workspace.AcceptInvitation` | `WSP` | W | `implemented`: target `POST /api/invitations/accept`. 구현 완료(`MOM-0865`), 전환 전. 토큰 조회부터 멤버십 생성과 초대 수락 상태 반영까지 하나의 트랜잭션으로 처리하며, 같은 토큰을 사용한 동시 요청이 모두 통과하지 않도록 초대 행에 lock을 건다. 검증 순서는 레거시와 동일하게 초대 상태, 만료 여부, 이메일 일치 여부 순이다. 토큰은 레거시와 같은 방식으로 SHA-256 해시하므로 전환 전에 이미 발송된 초대 링크도 사용할 수 있다 |
 | H047 | Product JSON | `GET /projects/:projectId` | `project.Get` | `PRJ` | R | `traced` |
 | H048 | Product JSON | `PATCH /projects/:projectId` | `project.Update` | `PRJ` | W | `traced`. 구현 `MOM-0866` |
 | H049 | Product JSON | `DELETE /projects/:projectId` | `project.Delete` | `PRJ` | W | `traced`; soft delete. 구현 `MOM-0866` |
