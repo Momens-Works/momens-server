@@ -161,9 +161,13 @@ MCP transport, Slack webhook). 위 표는 나머지 H009~H011과 H014~H096을 �
   `momens-android`, `e2e`, 모바일 계약, `teams` 제품 문서 모두 호출처가 없다. `momens-fe`는
   `git log -S`로 이력까지 봤고 해당 클라이언트 메서드가 존재한 적이 없다(지운 것이 아니다).
 
-  그 결과 **H090~H092·H094는 retire 후보로 확정했다.** 넷은 `momens-api@05a0c60` 일괄 커밋에서 함께
-  들어왔고 테스트가 하나도 없다. H043은 `momens-api@d227b4a`로 따로 추가돼 통합테스트 3건과 입력
-  검증을 갖췄다는 점이 달라 판단을 분리했다.
+  그 결과 **다섯 모두 retire 후보로 확정했다**(`MOM-0901`). H090~H092·H094는 `momens-api@05a0c60`
+  일괄 커밋에서 함께 들어왔고 테스트가 하나도 없다. H043은 `momens-api@d227b4a`로 따로 추가돼
+  통합테스트 3건과 입력 검증을 갖췄지만 소비자가 없기는 마찬가지고, 기존 클라이언트가 없어 레거시
+  계약을 보존할 이유도 없다. 사람이 메모리를 직접 추가하는 요구가 실제로 나오면 그때 신규 서버에서
+  새로 설계하는 편이 낫다.
+
+  다섯 다 되돌릴 길은 닫히지 않는다. 레거시 endpoint와 데이터는 prod에 그대로 남는다.
 - **H027(멤버 목록)과 H072(태스크 컨텍스트)는 폴백 전용이 아니다.** 각각 워크스페이스 설정 화면과
   태스크 상세에서 직접 호출한다.
 - **H081(sync-states)은 호출처가 하나도 없다.**
@@ -311,7 +315,7 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H040 | Product JSON | `GET /workspaces/:id/source-connections` | `source.List` | `SRC` | R | `implemented`: target `GET /api/workspaces/{workspaceId}/source-connections`. 구현 완료(`MOM-0870`), 전환 전. 레거시는 워크스페이스가 없는 경우와 요청자가 멤버가 아닌 경우를 모두 403으로 응답하지만, 신규 서버는 공통 전환 규칙에 따라 워크스페이스 미존재는 404, 권한 부족은 403으로 구분한다. 정렬 기준은 레거시 쿼리와 동일한 생성 시각 내림차순이다 |
 | H041 | Product JSON | `GET /workspaces/:id/source-connections/install` | `source.Install` | `SRC` | W | `implemented`: target `GET /api/workspaces/{workspaceId}/source-connections/install`. provider 승인 화면으로 redirect하는 흐름을 시작한다. 구현 완료(`MOM-0870`), 전환 전. 승인 URL의 쿼리 파라미터 이름과 순서, scope 조합 방식은 레거시 실행 결과와 문자 단위로 대조해 확정했다. provider 설정이 없으면 레거시는 501로 응답하지만, 신규 서버의 status 목록에는 501이 없어 500 `SOURCE_PROVIDER_UNCONFIGURED`로 응답한다 |
 | H042 | Product JSON | `GET /workspaces/:id/memory-candidates` | `candidate.List` | `MEM` | R | `traced`. read 기반만 구현(`MOM-0860`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백(`workspaceSnapshot.ts:120`)뿐임이 FE 기준선에서 확인됐다. 후보 데이터는 H023으로 소비된다 |
-| H043 | Product JSON | `POST /workspaces/:id/memories` | `memory.Create` | `MEM` | W | `traced`; projection 동반. **웹 미호출**(`MOM-0856`). 소비자는 없지만 lifecycle 넷과 달리 의도적으로 만들어졌고(`momens-api@d227b4a`, 통합테스트 3건) 검증 로직을 갖췄다. 이관·retire 판단 미결(`MOM-0901`) |
+| H043 | Product JSON | `POST /workspaces/:id/memories` | `memory.Create` | `MEM` | W | `traced`; projection 동반. **웹 미호출**(`MOM-0856`). 소비자 전수 검증에서 호출처가 없어 **retire 후보로 확정**(`MOM-0901`). 기존 클라이언트가 없어 레거시 계약을 보존할 이유가 없다. 필요해지면 신규 서버에서 새로 설계한다 |
 | H044 | Product JSON | `GET /workspaces/:id/memories` | `memory.List` | `MEM` | R | `traced`. read 기반만 구현(`MOM-0860`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백(`workspaceSnapshot.ts:121`)뿐임이 FE 기준선에서 확인됐다. 메모리 데이터는 H023으로 소비된다 |
 | H045 | Product JSON | `POST /workspaces/:id/minsu/query` | `minsu.Query` | `MIN` | R | `traced`; retrieval·LLM 외부 호출 |
 | H046 | Product JSON | `POST /invitations/accept` | `workspace.AcceptInvitation` | `WSP` | W | `traced`. 구현 `MOM-0865` |
