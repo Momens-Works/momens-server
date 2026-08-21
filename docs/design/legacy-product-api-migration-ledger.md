@@ -151,7 +151,19 @@ MCP transport, Slack webhook). 위 표는 나머지 H009~H011과 H014~H096을 �
   새로 설계해야 하므로 미리 이관해 두는 이득이 없다. 레거시 컬럼과 기존 dismiss 기록은 prod에
   남으므로 되살릴 길은 닫히지 않는다.
 - **H043(`POST /workspaces/:id/memories`)과 H087·H090~H092·H094도 웹 미호출이다.** `MOM-0869`의
-  범위 중 실제로 쓰이는 것은 H084·H085·H086·H088·H093이다.
+  범위 중 실제로 쓰이는 것은 H084·H085·H086·H088·H093이다. H087은 후보 상태 모델을 닫으려고 함께
+  이관했다(`MOM-0869`).
+
+  나머지 다섯은 `MOM-0901`에서 웹 밖까지 전수로 확인했다. 기준선은 `momens-api@71bbd07`·
+  `momens-fe@d76a2d5`이고, MCP 도구 목록(`mcpserver/tools.go`의 11개에 memory 도구 없음), Slack
+  bot(매치가 전부 주석 산문), 레거시 내부 호출(memory `Service`의 write 를 부르는 곳은 HTTP 핸들러
+  뿐), `seed-demo` CLI(DB 직접 INSERT), `momens-worker`(`confirmed_memories` 쓰기 0건),
+  `momens-android`, `e2e`, 모바일 계약, `teams` 제품 문서 모두 호출처가 없다. `momens-fe`는
+  `git log -S`로 이력까지 봤고 해당 클라이언트 메서드가 존재한 적이 없다(지운 것이 아니다).
+
+  그 결과 **H090~H092·H094는 retire 후보로 확정했다.** 넷은 `momens-api@05a0c60` 일괄 커밋에서 함께
+  들어왔고 테스트가 하나도 없다. H043은 `momens-api@d227b4a`로 따로 추가돼 통합테스트 3건과 입력
+  검증을 갖췄다는 점이 달라 판단을 분리했다.
 - **H027(멤버 목록)과 H072(태스크 컨텍스트)는 폴백 전용이 아니다.** 각각 워크스페이스 설정 화면과
   태스크 상세에서 직접 호출한다.
 - **H081(sync-states)은 호출처가 하나도 없다.**
@@ -299,7 +311,7 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H040 | Product JSON | `GET /workspaces/:id/source-connections` | `source.List` | `SRC` | R | `implemented`: target `GET /api/workspaces/{workspaceId}/source-connections`. 구현 완료(`MOM-0870`), 전환 전. 레거시는 워크스페이스가 없는 경우와 요청자가 멤버가 아닌 경우를 모두 403으로 응답하지만, 신규 서버는 공통 전환 규칙에 따라 워크스페이스 미존재는 404, 권한 부족은 403으로 구분한다. 정렬 기준은 레거시 쿼리와 동일한 생성 시각 내림차순이다 |
 | H041 | Product JSON | `GET /workspaces/:id/source-connections/install` | `source.Install` | `SRC` | W | `implemented`: target `GET /api/workspaces/{workspaceId}/source-connections/install`. provider 승인 화면으로 redirect하는 흐름을 시작한다. 구현 완료(`MOM-0870`), 전환 전. 승인 URL의 쿼리 파라미터 이름과 순서, scope 조합 방식은 레거시 실행 결과와 문자 단위로 대조해 확정했다. provider 설정이 없으면 레거시는 501로 응답하지만, 신규 서버의 status 목록에는 501이 없어 500 `SOURCE_PROVIDER_UNCONFIGURED`로 응답한다 |
 | H042 | Product JSON | `GET /workspaces/:id/memory-candidates` | `candidate.List` | `MEM` | R | `traced`. read 기반만 구현(`MOM-0860`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백(`workspaceSnapshot.ts:120`)뿐임이 FE 기준선에서 확인됐다. 후보 데이터는 H023으로 소비된다 |
-| H043 | Product JSON | `POST /workspaces/:id/memories` | `memory.Create` | `MEM` | W | `traced`; projection 동반. **웹 미호출**(`MOM-0856`). `MOM-0869`에서 제외했다. H090~H092·H094 lifecycle과 함께 후속으로 다룬다 |
+| H043 | Product JSON | `POST /workspaces/:id/memories` | `memory.Create` | `MEM` | W | `traced`; projection 동반. **웹 미호출**(`MOM-0856`). 소비자는 없지만 lifecycle 넷과 달리 의도적으로 만들어졌고(`momens-api@d227b4a`, 통합테스트 3건) 검증 로직을 갖췄다. 이관·retire 판단 미결(`MOM-0901`) |
 | H044 | Product JSON | `GET /workspaces/:id/memories` | `memory.List` | `MEM` | R | `traced`. read 기반만 구현(`MOM-0860`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백(`workspaceSnapshot.ts:121`)뿐임이 FE 기준선에서 확인됐다. 메모리 데이터는 H023으로 소비된다 |
 | H045 | Product JSON | `POST /workspaces/:id/minsu/query` | `minsu.Query` | `MIN` | R | `traced`; retrieval·LLM 외부 호출 |
 | H046 | Product JSON | `POST /invitations/accept` | `workspace.AcceptInvitation` | `WSP` | W | `traced`. 구현 `MOM-0865` |
@@ -346,11 +358,11 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H087 | Product JSON | `POST /memory-candidates/:id/expire` | `candidate.Expire` | `MEM` | W | `implemented` (`MOM-0869`): target `POST /api/memory-candidates/{candidateId}/expire`. **웹 미호출**이라 전환 효용은 없고 후보 상태 모델을 닫기 위해 함께 구현했다 |
 | H088 | Product JSON | `POST /memory-candidates/:id/edit-and-confirm` | `candidate.EditAndConfirm` | `MEM` | W | `implemented` (`MOM-0869`): target `POST /api/memory-candidates/{candidateId}/edit-and-confirm`. 비어 있지 않은 편집 필드만 덮어쓰고 review action은 `EDIT_AND_CONFIRM`. H084와 같은 projection gate |
 | H089 | Product JSON | `GET /memories/:id` | `memory.Get` | `MEM` | R | `traced`. 전환 대상이 아니다. 웹 클라이언트에 호출 코드가 없다(FE 기준선 `src/api/client.ts`에 대응 메서드 없음). `MOM-0860`은 단건 조회 public API를 두지 않았다 |
-| H090 | Product JSON | `PATCH /memories/:id` | `memory.Update` | `MEM` | W | `traced`; projection 동반. 구현 `MOM-0869` |
-| H091 | Product JSON | `POST /memories/:id/invalidate` | `memory.Invalidate` | `MEM` | W | `traced`; projection 동반. 구현 `MOM-0869` |
-| H092 | Product JSON | `POST /memories/:id/archive` | `memory.Archive` | `MEM` | W | `traced`; projection 동반. 구현 `MOM-0869` |
+| H090 | Product JSON | `PATCH /memories/:id` | `memory.Update` | `MEM` | W | `traced`; projection 동반. **웹 미호출**(`MOM-0856`). 소비자 전수 검증에서 호출처가 없어 **retire 후보로 확정**(`MOM-0901`) |
+| H091 | Product JSON | `POST /memories/:id/invalidate` | `memory.Invalidate` | `MEM` | W | `traced`; projection 동반. **웹 미호출**(`MOM-0856`). **retire 후보로 확정**(`MOM-0901`). `INVALIDATED` 상태를 만드는 유일한 경로라, 이관하지 않으면 신규 서버는 그 상태를 새로 만들지 않는다. 레거시가 남긴 기존 행이 있어 read 경로는 계속 다룬다(`MOM-0860`) |
+| H092 | Product JSON | `POST /memories/:id/archive` | `memory.Archive` | `MEM` | W | `traced`; projection 동반. **웹 미호출**(`MOM-0856`). **retire 후보로 확정**(`MOM-0901`). `ARCHIVED`는 H093 resolve 가 만들므로 이 경로 없이도 생긴다 |
 | H093 | Product JSON | `POST /memories/:id/resolve` | `memory.Resolve` | `MEM` | W | `implemented` (`MOM-0869`): target `POST /api/memories/{memoryId}/resolve`. `RESOLVES` 관계(`:context` writer)와 대상 `ARCHIVED`를 한 트랜잭션에 두고 `memory.updated` outbox를 남긴다. H084와 같은 projection gate |
-| H094 | Product JSON | `DELETE /memories/:id` | `memory.Delete` | `MEM` | W | `traced`; soft delete·projection 동반. 구현 `MOM-0869` |
+| H094 | Product JSON | `DELETE /memories/:id` | `memory.Delete` | `MEM` | W | `traced`; soft delete·projection 동반. **웹 미호출**(`MOM-0856`). **retire 후보로 확정**(`MOM-0901`). `DELETED` 상태와 `deleted_at`을 만드는 유일한 경로다 |
 | H095 | Product JSON | `GET /memories/:id/linked-tasks` | `relation.LinkedTasks` | `CTX` | R | `traced`; **웹 미호출**(`MOM-0856`). MOM-0861 범위에서 제외 확정; 소비자가 생기면 별도 이관 작업을 만든다 |
 | H096 | Product JSON | `POST /source-refs/:id/verify` | `source.VerifySourceRef` | `SRC` | W | `implemented`: target `POST /api/source-refs/{sourceRefId}/verify`. 구현 완료(`MOM-0870`), 전환 전. 레거시와 동일하게 source-ref의 전체 필드를 반환한다. source-ref가 없거나 소프트 삭제된 경우에는 404 `SOURCE_REF_NOT_FOUND`로 응답한다 |
 
