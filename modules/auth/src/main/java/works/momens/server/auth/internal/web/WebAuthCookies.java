@@ -20,8 +20,8 @@ import works.momens.server.auth.internal.config.AuthProperties;
 @RequiredArgsConstructor
 public class WebAuthCookies {
 
-  public static final String STATE_COOKIE = "oauth_state";
-  public static final String PKCE_VERIFIER_COOKIE = "oauth_pkce_verifier";
+  private static final String STATE_COOKIE = "oauth_state";
+  private static final String PKCE_VERIFIER_COOKIE = "oauth_pkce_verifier";
 
   private static final Duration HANDSHAKE_TTL = Duration.ofMinutes(10);
   private static final String HANDSHAKE_SAME_SITE = "Lax";
@@ -50,10 +50,23 @@ public class WebAuthCookies {
 
   /** 설정된 refresh 쿠키 이름으로 요청에서 refresh token 값을 읽습니다(쿠키명 지식을 한곳에 둡니다). */
   public Optional<String> readRefreshToken(HttpServletRequest request) {
+    return read(request, cookie().refreshName());
+  }
+
+  /** 콜백 요청에서 핸드셰이크 state 값을 읽습니다. */
+  public Optional<String> readState(HttpServletRequest request) {
+    return read(request, STATE_COOKIE);
+  }
+
+  /** 콜백 요청에서 핸드셰이크 PKCE verifier 값을 읽습니다. */
+  public Optional<String> readPkceVerifier(HttpServletRequest request) {
+    return read(request, PKCE_VERIFIER_COOKIE);
+  }
+
+  private static Optional<String> read(HttpServletRequest request, String name) {
     if (request.getCookies() == null) {
       return Optional.empty();
     }
-    String name = cookie().refreshName();
     for (Cookie cookie : request.getCookies()) {
       if (name.equals(cookie.getName())) {
         return Optional.of(cookie.getValue());

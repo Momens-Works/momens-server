@@ -45,8 +45,7 @@ interface WebAuthControllerDocs {
   void googleCallback(
       String code,
       String state,
-      String stateCookie,
-      String codeVerifier,
+      @Parameter(hidden = true) HttpServletRequest request,
       HttpServletResponse response)
       throws IOException;
 
