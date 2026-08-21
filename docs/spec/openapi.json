@@ -407,6 +407,126 @@
           }
         }
       },
+      "CreateMilestoneRequest" : {
+        "description" : "웹 마일스톤 생성 요청",
+        "properties" : {
+          "description" : {
+            "description" : "마일스톤 설명",
+            "type" : "string"
+          },
+          "health_status" : {
+            "description" : "상태. 생략하면 planned가 적용됩니다.",
+            "enum" : [
+              "on_track",
+              "at_risk",
+              "blocked",
+              "planned",
+              "open"
+            ],
+            "type" : "string"
+          },
+          "last_context_at" : {
+            "description" : "마지막 맥락 갱신 시각",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "마일스톤 이름. 필수 입력값입니다.",
+            "type" : "string"
+          },
+          "owner_user_ids" : {
+            "description" : "소유자 식별자 목록. 생략하면 프로젝트 소유자가 적용됩니다.",
+            "items" : {
+              "description" : "소유자 식별자 목록. 생략하면 프로젝트 소유자가 적용됩니다.",
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "progress" : {
+            "description" : "진행률. 0 이상 100 이하이며, 생략하면 0이 적용됩니다.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "summary" : {
+            "description" : "마일스톤 요약",
+            "type" : "string"
+          },
+          "target_date" : {
+            "description" : "목표일",
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "name"
+        ]
+      },
+      "CreateProjectRequest" : {
+        "description" : "웹 프로젝트 생성 요청",
+        "properties" : {
+          "description" : {
+            "description" : "프로젝트 설명",
+            "type" : "string"
+          },
+          "health_status" : {
+            "description" : "상태. 생략하면 open이 적용됩니다.",
+            "enum" : [
+              "on_track",
+              "at_risk",
+              "blocked",
+              "planned",
+              "open"
+            ],
+            "type" : "string"
+          },
+          "last_context_at" : {
+            "description" : "마지막 맥락 갱신 시각",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "프로젝트 이름. 필수 입력값입니다.",
+            "type" : "string"
+          },
+          "owner_user_ids" : {
+            "description" : "소유자 식별자 목록. 생략하면 요청자가 단독 소유자로 지정됩니다. 동일한 식별자를 중복으로 전달하면 400을 반환합니다.",
+            "items" : {
+              "description" : "소유자 식별자 목록. 생략하면 요청자가 단독 소유자로 지정됩니다. 동일한 식별자를 중복으로 전달하면 400을 반환합니다.",
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "progress" : {
+            "description" : "진행률. 0 이상 100 이하이며, 생략하면 0이 적용됩니다.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "summary" : {
+            "description" : "프로젝트 요약",
+            "type" : "string"
+          },
+          "target_date" : {
+            "description" : "목표일",
+            "format" : "date",
+            "type" : "string"
+          },
+          "unresolved_count" : {
+            "description" : "미해결 항목 수. 0 이상이며, 생략하면 0이 적용됩니다.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "voc_signal_count" : {
+            "description" : "VOC 신호 수. 0 이상이며, 생략하면 0이 적용됩니다.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "name"
+        ]
+      },
       "CreateTaskRequest" : {
         "description" : "일반 태스크 생성 요청",
         "properties" : {
@@ -2490,6 +2610,133 @@
           "message" : {
             "description" : "결과 메시지",
             "example" : "updated",
+            "type" : "string"
+          }
+        }
+      },
+      "WebMilestoneResponse" : {
+        "description" : "웹 마일스톤 응답입니다. 필드 구성은 레거시 마일스톤 응답과 동일합니다.",
+        "properties" : {
+          "created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "health_status" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "last_context_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "owner_user_ids" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "progress" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "project_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "summary" : {
+            "type" : "string"
+          },
+          "target_date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "updated_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        }
+      },
+      "WebProjectResponse" : {
+        "description" : "웹 프로젝트 응답입니다. 필드 구성은 레거시 프로젝트 응답과 동일합니다.",
+        "properties" : {
+          "created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "health_status" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "last_context_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "metadata" : {
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "type" : "object"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "owner_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "owner_user_ids" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "summary" : {
+            "type" : "string"
+          },
+          "target_date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "unresolved_count" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updated_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "voc_signal_count" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "workspace_id" : {
+            "format" : "uuid",
             "type" : "string"
           }
         }
@@ -11271,6 +11518,282 @@
         ]
       }
     },
+    "/api/projects/{projectId}/milestones" : {
+      "post" : {
+        "description" : "프로젝트에 마일스톤을 생성하고 소유자 목록을 포함해 반환합니다. 소유자를 지정하지 않으면 프로젝트 소유자가 적용됩니다.",
+        "operationId" : "createMilestone",
+        "parameters" : [
+          {
+            "description" : "프로젝트 식별자",
+            "in" : "path",
+            "name" : "projectId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1.0.0",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateMilestoneRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WebMilestoneResponse"
+                }
+              }
+            },
+            "description" : "마일스톤 생성 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "PROJECT_NOT_FOUND" : {
+                    "description" : "프로젝트를 찾을 수 없습니다.",
+                    "summary" : "PROJECT_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "PROJECT_NOT_FOUND",
+                        "message" : "프로젝트를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
+                    "description" : "완료기준 항목을 찾을 수 없습니다.",
+                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
+                        "message" : "완료기준 항목을 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "TASK_NOT_FOUND" : {
+                    "description" : "태스크를 찾을 수 없습니다.",
+                    "summary" : "TASK_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "TASK_NOT_FOUND",
+                        "message" : "태스크를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
+          }
+        },
+        "summary" : "마일스톤 생성",
+        "tags" : [
+          "Web"
+        ]
+      }
+    },
     "/api/projects/{projectId}/tasks" : {
       "get" : {
         "description" : "프로젝트의 소프트 삭제되지 않은 태스크를 생성 시각 내림차순으로 조회합니다.",
@@ -18456,6 +18979,362 @@
           }
         },
         "summary" : "워크스페이스 멤버 역할 수정",
+        "tags" : [
+          "Web"
+        ]
+      }
+    },
+    "/api/workspaces/{workspaceId}/projects" : {
+      "post" : {
+        "description" : "워크스페이스에 프로젝트를 생성하고, 발급된 라벨과 소유자 목록을 포함해 반환합니다. 입력값이 허용 범위를 벗어나면 400을 반환합니다.",
+        "operationId" : "createProject",
+        "parameters" : [
+          {
+            "description" : "워크스페이스 식별자",
+            "in" : "path",
+            "name" : "workspaceId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1.0.0",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateProjectRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WebProjectResponse"
+                }
+              }
+            },
+            "description" : "프로젝트 생성 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_INVALID_ROLE" : {
+                    "description" : "부여할 수 없는 역할입니다.",
+                    "summary" : "WORKSPACE_INVALID_ROLE",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_INVALID_ROLE",
+                        "message" : "부여할 수 없는 역할입니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_INVALID_SLUG" : {
+                    "description" : "사용할 수 없는 slug 형식입니다.",
+                    "summary" : "WORKSPACE_INVALID_SLUG",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_INVALID_SLUG",
+                        "message" : "사용할 수 없는 slug 형식입니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_RESERVED_SLUG" : {
+                    "description" : "예약어로 지정된 slug입니다.",
+                    "summary" : "WORKSPACE_RESERVED_SLUG",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_RESERVED_SLUG",
+                        "message" : "예약어로 지정된 slug입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_INVITEE_NOT_FOUND" : {
+                    "description" : "초대할 사용자를 찾을 수 없습니다.",
+                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
+                        "message" : "초대할 사용자를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
+                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
+                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
+                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_MEMBER_NOT_FOUND" : {
+                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
+                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
+                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_NOT_FOUND" : {
+                    "description" : "워크스페이스를 찾을 수 없습니다.",
+                    "summary" : "WORKSPACE_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_NOT_FOUND",
+                        "message" : "워크스페이스를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
+                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
+                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
+                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_OWNER_PROTECTED" : {
+                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
+                    "summary" : "WORKSPACE_OWNER_PROTECTED",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_OWNER_PROTECTED",
+                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
+                    "description" : "자기 자신은 제거할 수 없습니다.",
+                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
+                        "message" : "자기 자신은 제거할 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
+                    "description" : "이미 사용 중인 slug입니다.",
+                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
+                        "message" : "이미 사용 중인 slug입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
+          }
+        },
+        "summary" : "프로젝트 생성",
         "tags" : [
           "Web"
         ]
