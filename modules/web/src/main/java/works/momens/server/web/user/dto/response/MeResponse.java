@@ -1,4 +1,4 @@
-package works.momens.server.user.presentation.dto.response;
+package works.momens.server.web.user.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import works.momens.server.user.UserProfile;
