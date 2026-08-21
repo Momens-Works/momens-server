@@ -17,8 +17,8 @@
 | --- | --- | --- |
 | `app` | 실행·조립, 전체 컨텍스트 테스트, Modulith 경계 검증 | `bootstrap` |
 | `common` | 영속성 베이스·공유 확장·테스트 fixture (최소) | — |
-| `user` | 사용자 엔티티·로그인 수단·프로필·`/me`, FindOrCreate public API | `domain.User` |
-| `auth` | OAuth 로그인·JWT·SecurityFilterChain·logout | `auth` |
+| `user` | 사용자 엔티티·로그인 수단·프로필, FindOrCreate public API | `domain.User` |
+| `auth` | OAuth 로그인·JWT·SecurityFilterChain·logout, dev 토큰 발급 | `auth` |
 | `workspace` | workspace·멤버·초대·RBAC·label 발급 (중심 모듈) | `workspace`·`access`·`label` |
 | `project` | project·milestone·task·decision·blocker 운영 흐름 | 동명 5개 패키지 |
 | `signal` | 모바일 Signal 원본 조회·사용자 action ledger·Signal action outbox | 신규 |
@@ -41,19 +41,24 @@
 - `context`는 `entity_relations`를 읽어 연결된 식별자만 돌려준다. 지금은 도메인 모듈에 의존하지 않고,
   식별자로 본문을 채우는 조합은 소비하는 쪽이 한다(`mobile`이 `context`의 링크와 `source`의
   source_ref 조회를 엮어 태스크 관련자료를 만든다).
-- `mobile`은 `user`, `project`, `workspace`, `signal`, `context`, `source`, `notification`, `minsu`의
-  public API만 조합한다(bootstrap, 멤버 조회, 브리프, 태스크 관련자료, push 설치 등록·해제, 태스크
-  상세의 draft 생성 상태). 도메인 정책을 소유하지 않는다.
+- `mobile`은 `user`, `project`, `workspace`, `signal`, `context`, `source`, `notification`, `minsu`,
+  `auth`의 public API만 조합한다(bootstrap, 멤버 조회, 브리프, 태스크 관련자료, push 설치 등록·해제,
+  태스크 상세의 draft 생성 상태, 인증). 도메인 정책을 소유하지 않는다.
 - `web`은 `mobile`과 같은 자리의 표면 모듈이고 **같은 소유 원칙**을 따른다. 웹 클라이언트가 호출하는
   HTTP 표면은 **도메인 스코프가 분명해도** `web`이 소유한다. 여러 capability를 조합하는 endpoint만
   표면이 갖는 것이 아니다.
   - 근거는 의존 방향이다. `workspace`처럼 그래프 아래에 있는 모듈이 웹 응답을 위해 `project`를
     참조하면 순환이 된다([첫 웹 read 슬라이스 계약](legacy-product-api-migration/slice-workspace-read.md),
     `MOM-0850`). 조합 여부를 기준으로 삼으면 응답에 필드가 하나 늘 때마다 컨트롤러를 옮겨야 한다.
-  - **부채**: `/api/auth`(`auth`)와 `/api/me`(`user`)는 이 원칙보다 먼저 만들어져 capability 모듈에
-    남아 있다. 예외로 두지 않고 원칙에 맞춰 정리한다. `auth`의 경우 `WebAuthController`는 웹 전용,
-    `AuthController`는 모바일 전용이라 표면별로 갈라야 하며, 정리 뒤 `auth`·`user`는 도메인과 public
-    API만 소유한다. 정리 시점은 웹 표면이 자리 잡은 뒤로 미룬다(`MOM-0852`).
+  - `/api/auth`와 `/api/me`는 이 원칙보다 먼저 만들어져 capability 모듈에 있었고 `MOM-0852`에서
+    표면별로 갈랐다. 웹 로그인·세션 갱신·로그아웃은 `web`, 모바일 토큰 교환·재발급·로그아웃은
+    `mobile`, `/api/me` 조회·수정은 `web`이 소유하며 `auth`·`user`는 도메인과 public API만 소유한다.
+  - 예외는 dev 도구 표면 하나다. `POST /api/auth/dev/token`은 클라이언트가 호출하는 표면이 아니라
+    테스트 도구이고 운영과 같은 발급 경로를 재사용해야 해서 `auth`(`auth.dev`)가 계속 소유한다.
+    `signal`의 dev Signal 생성(`signal.dev`)과 같은 취급이다.
+- `web`·`mobile` → `auth` public API. 표면은 인증 결과만 응답으로 옮기고, 토큰 정책과 웹 전송 정책
+  (쿠키 속성·리다이렉트 대상·실패 코드 매핑)은 `auth`가 소유한다. 웹 흐름의 결과는 `auth`가 완성한
+  `Set-Cookie` 헤더와 리다이렉트 대상으로 넘어가므로 표면은 쿠키 이름을 알지 못한다(`MOM-0852`).
 - 태스크 상세의 `draft_status`를 `mobile`이 읽는 이유는 태스크 상세를 소유한 `project`에서
   `minsu`를 부르면 `minsu` → `project`(draft 반영)와 맞물려 순환이 되기 때문이다. 두 원장을 엮는
   조합은 표면이 한다(MOM-0822).
@@ -106,7 +111,7 @@
 - user entity (email/name/avatar/job role)
 - user identity entity (provider/provider_user_id, ADR-0016)
 - user repository, user identity repository
-- `/me` 프로필 조회/수정
+- 프로필 조회/수정 정책(`/api/me`의 HTTP 표면은 `web`이 소유, `MOM-0852`)
 - 로그인 수단 기준 사용자 조회·생성 public API (`findOrCreateByIdentity`, 로그인 시 `auth`가 사용)
 - 로그인 수단 없이 사용자를 생성하는 public API (`findOrCreate`, dev 토큰 발급 경로가 사용)
 - 프로필 read/update public API
@@ -129,9 +134,10 @@
 - JWT 발급/검증
 - SecurityFilterChain, 인증 필터, 공개/보호 엔드포인트 분리
 - logout
-- dev 전용 토큰 발급 엔드포인트(`POST /api/auth/dev/token`, MOM-90). dev 계열 프로필(`@DevOnly`)에서만 등록되고 공유 시크릿 헤더와 테스트 사용자 allowlist로 제한한다. prod에는 존재하지 않는다.
+- dev 전용 토큰 발급 엔드포인트(`POST /api/auth/dev/token`, MOM-90). dev 계열 프로필(`@DevOnly`)에서만 등록되고 공유 시크릿 헤더와 테스트 사용자 allowlist로 제한한다. prod에는 존재하지 않는다. 클라이언트 표면이 아니라 테스트 도구라 표면 모듈로 옮기지 않고 `auth.dev`에 둔다(MOM-0852).
+- 웹·모바일 인증 public API(`WebAuthSession`, `MobileAuthService`). 클라이언트가 호출하는 HTTP 표면은 `web`·`mobile`이 소유하고(MOM-0852), 이 모듈은 인증 로직과 토큰·쿠키·리다이렉트 정책을 소유한다.
 
-프로필 조회/수정(`/me`)은 `user`가 소유하고, `auth`는 세션·보안만 책임진다. 인증 세션·전송
+프로필 정책은 `user`가 소유하고, `auth`는 세션·보안만 책임진다. 인증 세션·전송
 모델(모바일 Bearer / 웹 HttpOnly 쿠키 하이브리드, 공통 access+refresh)은 [ADR-0003](../adr/0003-auth-session-transport-model.md),
 토큰 발급·검증 스택(Resource Server + JOSE)은 [ADR-0004](../adr/0004-token-issuance-verification-stack.md),
 refresh token 저장 모델(서버 저장형 + PostgreSQL 원장)은 [ADR-0005](../adr/0005-refresh-token-storage-model.md)에
@@ -357,6 +363,9 @@ dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패
 - `pushdevice` — `PUT`/`DELETE /api/me/push-devices/{firebaseInstallationId}`. push 설치 lifecycle
   정책·영속성을 소유하는 `notification`의 public API(`PushDeviceRegistrar`)에 위임만 하는 얇은
   표면이라 조합 서비스가 없다.
+- `auth` — `POST /api/auth/google/token`, `/api/auth/refresh`, `/api/auth/logout`. 인증 로직과 토큰
+  정책을 소유하는 `auth`의 public API(`MobileAuthService`)에 위임만 하는 얇은 표면이라 조합 서비스가
+  없다(MOM-0852).
 
 ### signal
 

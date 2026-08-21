@@ -1,4 +1,4 @@
-package works.momens.server.auth.presentation;
+package works.momens.server.auth.dev;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -8,9 +8,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import works.momens.server.auth.dev.dto.request.DevTokenRequest;
+import works.momens.server.auth.dev.dto.response.DevTokenResponse;
 import works.momens.server.auth.internal.application.DevTokenErrorCode;
-import works.momens.server.auth.presentation.dto.request.DevTokenRequest;
-import works.momens.server.auth.presentation.dto.response.DevTokenResponse;
 import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
 
