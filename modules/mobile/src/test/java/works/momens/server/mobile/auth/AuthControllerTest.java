@@ -24,7 +24,7 @@ import works.momens.server.auth.MobileAuthService;
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import({AuthController.class, AuthControllerTest.ApiVersionTestConfig.class})
+@Import(AuthControllerTest.ApiVersionTestConfig.class)
 class AuthControllerTest {
 
   private static final String API_VERSION_HEADER = "API-Version";

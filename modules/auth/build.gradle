@@ -20,7 +20,8 @@ dependencies {
     // Bearer 인증을 oauth2ResourceServer로 선언적 처리. 우리/Google 토큰 검증을 같은 Nimbus 계열로 통일.
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     // 인증/인가 거부 핸들러의 HttpServletResponse, @ConfigurationProperties 검증.
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    // WebAuthSession public API가 HttpServletRequest를 시그니처에 노출하므로 api로 둡니다(common 전례).
+    api 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     // 인증/인가 거부 본문(ErrorResponse) 직렬화용 Jackson(Boot BOM 관리, 버전 생략). Boot 4 webmvc·json
     // 스타터가 jackson-databind를 compile classpath로 노출하지 않아 명시합니다.
