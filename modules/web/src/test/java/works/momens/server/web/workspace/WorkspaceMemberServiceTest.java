@@ -28,8 +28,8 @@ import works.momens.server.workspace.RemoveMembershipCommand;
 import works.momens.server.workspace.WorkspaceDetail;
 import works.momens.server.workspace.WorkspaceErrorCode;
 import works.momens.server.workspace.WorkspaceMembershipDetail;
-import works.momens.server.workspace.WorkspaceMembershipEditor;
 import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.WorkspaceMembershipWriter;
 import works.momens.server.workspace.WorkspaceReader;
 import works.momens.server.workspace.WorkspaceRole;
 import works.momens.server.workspace.WorkspaceRoleReader;
@@ -46,7 +46,7 @@ class WorkspaceMemberServiceTest {
   @Mock private WorkspaceReader workspaceReader;
   @Mock private WorkspaceRoleReader workspaceRoleReader;
   @Mock private WorkspaceMembershipReader workspaceMembershipReader;
-  @Mock private WorkspaceMembershipEditor workspaceMembershipEditor;
+  @Mock private WorkspaceMembershipWriter workspaceMembershipWriter;
   @Mock private UserService userService;
   private WorkspaceMemberService workspaceMemberService;
 
@@ -56,7 +56,7 @@ class WorkspaceMemberServiceTest {
         new WorkspaceMemberService(
             new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader),
             workspaceMembershipReader,
-            workspaceMembershipEditor,
+            workspaceMembershipWriter,
             userService);
   }
 
@@ -146,7 +146,7 @@ class WorkspaceMemberServiceTest {
 
     ArgumentCaptor<ChangeMembershipRoleCommand> captor =
         ArgumentCaptor.forClass(ChangeMembershipRoleCommand.class);
-    verify(workspaceMembershipEditor).changeRole(captor.capture());
+    verify(workspaceMembershipWriter).changeRole(captor.capture());
     assertThat(captor.getValue())
         .isEqualTo(new ChangeMembershipRoleCommand(WORKSPACE_ID, TARGET_ID, WorkspaceRole.ADMIN));
   }
@@ -162,7 +162,7 @@ class WorkspaceMemberServiceTest {
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(WorkspaceErrorCode.WORKSPACE_INVALID_ROLE);
-    verifyNoInteractions(workspaceMembershipEditor);
+    verifyNoInteractions(workspaceMembershipWriter);
   }
 
   @Test
@@ -190,7 +190,7 @@ class WorkspaceMemberServiceTest {
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(CommonErrorCode.AUTH_FORBIDDEN);
-    verifyNoInteractions(workspaceMembershipEditor);
+    verifyNoInteractions(workspaceMembershipWriter);
   }
 
   @Test
@@ -201,7 +201,7 @@ class WorkspaceMemberServiceTest {
 
     workspaceMemberService.remove(WORKSPACE_ID, CALLER_ID, TARGET_ID);
 
-    verify(workspaceMembershipEditor)
+    verify(workspaceMembershipWriter)
         .remove(new RemoveMembershipCommand(WORKSPACE_ID, CALLER_ID, TARGET_ID));
   }
 
@@ -215,7 +215,7 @@ class WorkspaceMemberServiceTest {
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(CommonErrorCode.AUTH_FORBIDDEN);
-    verifyNoInteractions(workspaceMembershipEditor);
+    verifyNoInteractions(workspaceMembershipWriter);
   }
 
   private void workspaceExists() {

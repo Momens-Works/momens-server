@@ -16,23 +16,23 @@ import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.workspace.ChangeMembershipRoleCommand;
 import works.momens.server.workspace.RemoveMembershipCommand;
+import works.momens.server.workspace.StubUserServiceConfig;
 import works.momens.server.workspace.WorkspaceErrorCode;
-import works.momens.server.workspace.WorkspaceMembershipEditor;
+import works.momens.server.workspace.WorkspaceMembershipWriter;
 import works.momens.server.workspace.WorkspaceRole;
 import works.momens.server.workspace.WorkspaceSeedSql;
 
 /**
- * 멤버십 변경 public API를 검증합니다.
+ * 멤버십 변경을 담당하는 public API의 동작을 검증합니다.
  *
- * <p>역할 변경과 멤버 제거가 실제 PostgreSQL에 반영되는지, owner 보호와 자기 제거 금지 규칙이 지켜지는지 확인합니다. 요청자의 역할이 충분한지는 이 계층의
- * 책임이 아니므로 검증하지 않습니다.
+ * <p>요청자의 역할에 따른 인가 여부는 이 계층의 책임이 아니므로 검증 범위에서 제외합니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({JpaAuditingConfig.class, WorkspaceMembershipEditorImpl.class})
-class WorkspaceMembershipEditorIntegrationTest extends AbstractPostgresIntegrationTest {
+@Import({JpaAuditingConfig.class, WorkspaceMembershipWriterImpl.class, StubUserServiceConfig.class})
+class WorkspaceMembershipWriterIntegrationTest extends AbstractPostgresIntegrationTest {
 
-  @Autowired private WorkspaceMembershipEditor workspaceMembershipEditor;
+  @Autowired private WorkspaceMembershipWriter workspaceMembershipWriter;
   @Autowired private WorkspaceMemberRepository workspaceMemberRepository;
   @Autowired private TestEntityManager entityManager;
 
@@ -45,7 +45,7 @@ class WorkspaceMembershipEditorIntegrationTest extends AbstractPostgresIntegrati
     entityManager.flush();
     entityManager.clear();
 
-    workspaceMembershipEditor.changeRole(
+    workspaceMembershipWriter.changeRole(
         new ChangeMembershipRoleCommand(workspaceId, member, WorkspaceRole.ADMIN));
     entityManager.flush();
     entityManager.clear();
@@ -63,7 +63,7 @@ class WorkspaceMembershipEditorIntegrationTest extends AbstractPostgresIntegrati
 
     assertThatThrownBy(
             () ->
-                workspaceMembershipEditor.changeRole(
+                workspaceMembershipWriter.changeRole(
                     new ChangeMembershipRoleCommand(workspaceId, owner, WorkspaceRole.MEMBER)))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
@@ -79,7 +79,7 @@ class WorkspaceMembershipEditorIntegrationTest extends AbstractPostgresIntegrati
 
     assertThatThrownBy(
             () ->
-                workspaceMembershipEditor.changeRole(
+                workspaceMembershipWriter.changeRole(
                     new ChangeMembershipRoleCommand(workspaceId, stranger, WorkspaceRole.ADMIN)))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
@@ -97,7 +97,7 @@ class WorkspaceMembershipEditorIntegrationTest extends AbstractPostgresIntegrati
     entityManager.flush();
     entityManager.clear();
 
-    workspaceMembershipEditor.remove(new RemoveMembershipCommand(workspaceId, admin, member));
+    workspaceMembershipWriter.remove(new RemoveMembershipCommand(workspaceId, admin, member));
     entityManager.flush();
     entityManager.clear();
 
@@ -114,7 +114,7 @@ class WorkspaceMembershipEditorIntegrationTest extends AbstractPostgresIntegrati
 
     assertThatThrownBy(
             () ->
-                workspaceMembershipEditor.remove(
+                workspaceMembershipWriter.remove(
                     new RemoveMembershipCommand(workspaceId, stranger, stranger)))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
@@ -133,7 +133,7 @@ class WorkspaceMembershipEditorIntegrationTest extends AbstractPostgresIntegrati
 
     assertThatThrownBy(
             () ->
-                workspaceMembershipEditor.remove(
+                workspaceMembershipWriter.remove(
                     new RemoveMembershipCommand(workspaceId, admin, owner)))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
@@ -151,7 +151,7 @@ class WorkspaceMembershipEditorIntegrationTest extends AbstractPostgresIntegrati
 
     assertThatThrownBy(
             () ->
-                workspaceMembershipEditor.remove(
+                workspaceMembershipWriter.remove(
                     new RemoveMembershipCommand(workspaceId, admin, stranger)))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
