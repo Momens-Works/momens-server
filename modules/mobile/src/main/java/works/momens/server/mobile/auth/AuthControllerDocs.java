@@ -1,4 +1,4 @@
-package works.momens.server.auth.presentation;
+package works.momens.server.mobile.auth;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -7,13 +7,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import works.momens.server.auth.AuthErrorCode;
-import works.momens.server.auth.presentation.dto.request.GoogleTokenRequest;
-import works.momens.server.auth.presentation.dto.request.LogoutRequest;
-import works.momens.server.auth.presentation.dto.request.RefreshTokenRequest;
-import works.momens.server.auth.presentation.dto.response.AuthMessageResponse;
-import works.momens.server.auth.presentation.dto.response.TokenResponse;
 import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.mobile.auth.dto.request.GoogleTokenRequest;
+import works.momens.server.mobile.auth.dto.request.LogoutRequest;
+import works.momens.server.mobile.auth.dto.request.RefreshTokenRequest;
+import works.momens.server.mobile.auth.dto.response.AuthMessageResponse;
+import works.momens.server.mobile.auth.dto.response.TokenResponse;
 
 /**
  * 인증 API 문서. 이 엔드포인트들은 모두 공개이므로(요청 본문의 자격 증명으로 동작하고 SecurityConfig의 공개 체인에 속한다) OpenApiConfig가 적용한
