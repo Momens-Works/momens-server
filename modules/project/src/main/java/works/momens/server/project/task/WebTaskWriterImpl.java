@@ -91,8 +91,14 @@ class WebTaskWriterImpl implements WebTaskWriter {
       boolean dueDateSet) {
     Task task = requireTask(taskId);
     requireMember(task.getWorkspaceId(), userId);
-    if (titleSet && (title == null || title.isBlank())) {
+    if (titleSet && title == null) {
       throw validation("title");
+    }
+    if (statusSet && status == null) {
+      throw validation("status");
+    }
+    if (prioritySet && priority == null) {
+      throw validation("priority");
     }
     if (milestoneSet || assigneeSet) {
       validateReferences(
@@ -101,11 +107,12 @@ class WebTaskWriterImpl implements WebTaskWriter {
           milestoneSet ? milestoneId : null,
           assigneeSet ? assigneeId : null);
     }
-    boolean effectiveStatusSet = statusSet && status != null && !status.isBlank();
-    boolean effectivePrioritySet = prioritySet && priority != null && !priority.isBlank();
+    boolean effectiveTitleSet = titleSet && !title.isEmpty();
+    boolean effectiveStatusSet = statusSet && !status.isEmpty();
+    boolean effectivePrioritySet = prioritySet && !priority.isEmpty();
     task.patch(
         title,
-        titleSet,
+        effectiveTitleSet,
         description,
         descriptionSet,
         effectiveStatusSet ? normalizeStatus(status, false) : status,
@@ -138,9 +145,7 @@ class WebTaskWriterImpl implements WebTaskWriter {
     if (body == null || body.trim().isEmpty()) {
       throw validation("body");
     }
-    if (kind != null && !kind.isBlank() && !kind.equals("comment") && !kind.equals("update")) {
-      throw validation("kind");
-    }
+    String normalizedKind = normalizeTaskUpdateKind(kind);
     TaskUpdate update =
         TaskUpdate.create(
             task.getWorkspaceId(),
@@ -148,7 +153,7 @@ class WebTaskWriterImpl implements WebTaskWriter {
             taskId,
             userId,
             body.trim(),
-            kind,
+            normalizedKind,
             metadata);
     taskUpdateRepository.save(update);
     return update.toDetail();
@@ -224,6 +229,15 @@ class WebTaskWriterImpl implements WebTaskWriter {
       case "low", "high", "urgent" -> normalized;
       case "medium", "med" -> "medium";
       default -> throw validation("priority");
+    };
+  }
+
+  private static String normalizeTaskUpdateKind(String value) {
+    String normalized = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    return switch (normalized) {
+      case "", "comment" -> "comment";
+      case "update" -> "update";
+      default -> throw validation("kind");
     };
   }
 
