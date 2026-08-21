@@ -412,25 +412,26 @@ replayOrConflict로 되돌리는 현재 구조를 유지하므로 최종 task는
 
 ## 13. 관측성
 
-낮은 cardinality의 provider, model, outcome, fallback reason, finish reason을 tag로 사용한다.
-signalId, response ID는 metric tag로 쓰지 않는다.
+낮은 cardinality의 provider, model, prompt version, mode, outcome, fallback reason, finish reason을
+tag로 사용한다. signalId, response ID는 metric tag로 쓰지 않는다. provider observation의 timer에는
+Micrometer가 error tag를 함께 붙인다.
 
 실제 provider 경계는 Micrometer `Observation` 이름 `momens.minsu.llm.generate`로 감싼다. 현재
 HTTP observation을 parent로 하는 child span을 만들고, lazy client 생성과 provider 응답 수신까지
 같은 observation에 포함한다. 성공·실패 모두 observation을 닫고 예외는 error로 기록한 뒤 내부
 fallback으로 전환한다.
 
-provider, model, outcome, fallback reason은 low-cardinality key로 둔다. signalId, response ID,
-prompt와 응답 내용은 observation name, tag, event에 넣지 않는다. 비활성·정적 설정 무효·입력
-부족처럼 provider 경계에 들어가지 않는 fallback에는 provider child span을 만들지 않고 request
-counter만 기록한다.
+provider, model, prompt version, mode, outcome, fallback reason, finish reason은 low-cardinality
+key로 둔다. signalId, response ID, prompt와 응답 내용은 observation name, tag, event에 넣지 않는다.
+비활성·정적 설정 무효·입력 부족처럼 provider 경계에 들어가지 않는 fallback에는 provider child
+span을 만들지 않고 request counter만 기록한다.
 
 | 관측 | 내용 |
 | --- | --- |
 | config gauge | 설정 valid 1/0, enabled, provider/model |
 | request counter | generated/fallback outcome과 reason |
 | provider observation | child span과 client 생성·provider 호출 duration |
-| token summary | prompt/candidate/thoughts/total token |
+| token summary | prompt/candidate/thoughts token |
 | log | provider/model, finish reason, token, response ID, duration, outcome |
 
 startup 무효 설정은 error, 호출 실패·fallback은 warn, 정상 생성은 debug 또는 metric으로 남긴다.

@@ -73,10 +73,10 @@ public class AsyncTaskDraftExecutor implements DisposableBean {
               thread.setDaemon(true);
               return thread;
             });
-    // active·queued·completed·rejected를 Micrometer 표준 이름으로 낸다. 직접 gauge를 만들면 이름만
-    // 우리 것이 되고 의미는 같아진다. monitor()가 아니라 bindTo()를 쓰는 이유는 전자가 실행기를 감싼
-    // ExecutorService를 돌려주기 때문이다. 이 클래스는 ThreadPoolExecutor의 activeCount로 빈 슬롯을
-    // 세므로 래퍼로 바꾸면 availableSlots()가 성립하지 않는다.
+    // active·queued·completed·queue·pool 상태를 Micrometer 표준 이름으로 낸다. 직접 gauge를 만들면
+    // 이름만 우리 것이 되고 의미는 같아진다. monitor()가 아니라 bindTo()를 쓰는 이유는 전자가 실행기를
+    // 감싼 ExecutorService를 돌려주기 때문이다. 이 클래스는 ThreadPoolExecutor의 activeCount로 빈
+    // 슬롯을 세므로 래퍼로 바꾸면 availableSlots()가 성립하지 않는다.
     new ExecutorServiceMetrics(pool, "minsu-draft-drain", Tags.empty()).bindTo(meterRegistry);
     Gauge.builder("momens.minsu.drain.hung.attempts", hungAttempts, AtomicInteger::get)
         .register(meterRegistry);

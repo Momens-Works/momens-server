@@ -25,6 +25,7 @@ WAS 운영 중 요청 흐름을 추적하기 위한 metrics · traces · logs �
 ## 지표 규약
 
 지표는 Micrometer로 계측합니다. 아래는 수집 백엔드가 바뀌어도 그대로 유효한 규칙만 담습니다.
+지표를 추가·개명·삭제하는 PR은 [지표 인벤토리](../design/metrics-inventory.md)를 함께 고칩니다.
 
 ### 이름
 
