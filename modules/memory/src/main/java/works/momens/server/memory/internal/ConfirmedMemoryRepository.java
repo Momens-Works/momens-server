@@ -2,6 +2,7 @@ package works.momens.server.memory.internal;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -55,5 +56,5 @@ interface ConfirmedMemoryRepository extends JpaRepository<ConfirmedMemory, UUID>
           m.invalidationReason, m.metadata, m.createdAt, m.updatedAt)
       from ConfirmedMemory m where m.id = :id and m.deletedAt is null
       """)
-  java.util.Optional<ConfirmedMemoryDetail> findDetailById(@Param("id") UUID id);
+  Optional<ConfirmedMemoryDetail> findDetailById(@Param("id") UUID id);
 }
