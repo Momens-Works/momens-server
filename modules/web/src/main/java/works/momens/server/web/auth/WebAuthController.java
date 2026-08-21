@@ -1,4 +1,4 @@
-package works.momens.server.auth.presentation;
+package works.momens.server.web.auth;
 
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.servlet.http.HttpServletRequest;

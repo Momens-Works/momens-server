@@ -1,4 +1,4 @@
-package works.momens.server.auth.presentation;
+package works.momens.server.web.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
