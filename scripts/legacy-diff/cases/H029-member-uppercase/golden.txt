@@ -1,0 +1,16 @@
+legacy_status: 409
+server_status: 409
+--- body ---
+@@ -1,3 +1,9 @@
+ {
+-  "error": "workspace member already exists"
++  "error": {
++    "code": "WORKSPACE_MEMBER_ALREADY_EXISTS",
++    "details": {
++      "email": "owner@momens.works"
++    },
++    "message": "이미 워크스페이스에 참여 중인 멤버입니다."
++  }
+ }
+--- db ---
+동일
