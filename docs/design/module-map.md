@@ -194,8 +194,8 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 - 조회 public API는 `ProjectReader`(workspaceIdOf, findSnapshot, listByWorkspaceIds, progressOf)와
   `ProjectSnapshot`, `TaskStatus`다. projectId가 속한 workspace를 찾는 책임은 이 모듈이 소유한다.
 - 진행률 계산은 이 모듈에서 담당한다(`progressOf`, MOM-0800). `projects.progress`에 저장된 값은 사용하지 않고,
-  조회할 때마다 태스크 상태를 기준으로 계산하므로 해당 컬럼은 매핑하지 않는다. 컬럼 자체는 레거시 웹이
-  수동 입력으로 계속 사용하므로 DB에는 그대로 유지한다.
+  조회 시점마다 태스크 상태를 기준으로 계산하므로 DB에 저장된 `progress` 값은 조회에 사용하지 않는다.
+  하지만 프로젝트 생성 API가 이 값을 입력받으므로(`MOM-0866`) 컬럼은 매핑하고 요청으로 전달받은 값을 저장한다.
 - 진행률은 `cancelled`를 제외한 태스크를 기준으로 계산하며, 정수 나눗셈을 사용해 소수점은 버린다.
   `cancelled` 제외는 기획이 확정했고, 소수점 버림만 아직 확정되지 않아 서버 구현에서 결정했다(ADR-0013).
 - 상태는 `TaskStatus` enum에서 정의하며, `tasks.status`의 DB CHECK 제약과 동일한 5가지 값을 사용한다.
@@ -226,7 +226,10 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   않아서 호출 쪽 멤버십 스냅샷과 목록 기준이 항상 같다. 접근 범위(멤버십)는 여전히 호출 쪽이
   넘기지만, task 생성이 `LabelAllocator`를 쓰면서 project는 workspace public API에 런타임으로
   의존한다(MOM-62 이전에는 테스트 스코프의 FK 마이그레이션 의존만 있었다).
-- project CRUD API는 아직 없다(MOM-35).
+- 프로젝트와 마일스톤 생성 public API는 각각 `ProjectCreator`와 `MilestoneCreator`이며, 입력 타입은
+  `CreateProjectCommand`와 `CreateMilestoneCommand`다(`MOM-0866`). 두 API는 요청자의 권한을 확인하지 않고,
+  호출하는 쪽에서 소속과 권한을 확인해 확정한 `workspaceId`를 전달받는다. 프로젝트를 생성할 때는 `workspace`
+  모듈의 `LabelAllocator`를 사용해 `PRJ` 라벨을 발급한다. 프로젝트와 마일스톤의 수정·삭제 API는 아직 없다.
 
 내부는 도메인 하위 경계로 논리 분리했다(MOM-71).
 
