@@ -934,7 +934,7 @@ outcome·재시도 가능 여부를 반환하고, 기존 내부 `GenerationOutco
 
 `invalid_response`와 `invalid_output`을 retryable로 둔 이유는 structured output 위반이 결정적
 오류가 아니기 때문이다. 다만 같은 입력으로 반복 실패하면 프롬프트·스키마 문제이므로
-`retry_exhausted` 비율을 outcome별로 관측해 구분한다.
+`retry_exhausted` 중 `failure.reason`별 건수와 구성비를 관측해 구분한다.
 
 `provider_error`는 성격이 다른 실패를 한 값으로 묶는다. 일시 네트워크 오류나 일부 429·5xx는
 재시도로 복구되지만, 잘못된 ADC·IAM 403·존재하지 않는 project/location은 설정을 고치기 전에는
@@ -988,7 +988,7 @@ age"는 원인을 가리지 않는 2차 지표로 함께 본다.
 
 - `completion_reason`별 종료 건수와 그 원장들이 소모한 claim 수. 하나의 summary에서 `_count`와
   `_sum`으로 함께 본다
-- 재시도 횟수 분포와 outcome별 `retry_exhausted` 비율
+- `failure.reason`별 재시도 소진 건수
 - **lease 만료로 회수된 작업 수**
 - **claim token 불일치로 무시된 stale 결과 수**
 - **task 하나당 실제 provider 호출 수** — 별도 지표를 두지 않고 provider observation의
@@ -997,8 +997,10 @@ age"는 원인을 가리지 않는 2차 지표로 함께 본다.
 - **deadline 투영으로 `ready`가 된 건수** — 0이 정상이며 경보 대상(8.6절)
 - **원장 insert 실패율** — fail-closed 선택의 대가를 보는 지표(5.3절)
 
-`retry_exhausted` 비율과 `user_edited` 건수는 제품 판단에 직접 쓰인다. 전자가 높으면 모델·
-프롬프트 문제이고, 후자가 높으면 비동기 생성이 사용자보다 느려 가치가 없다는 신호다.
+전체 종료 중 `retry_exhausted` 비율과 `user_edited` 건수는 제품 판단에 직접 쓰인다. 전자는
+`completion.reason=retry_exhausted`인 summary의 `_count`를 모든 `completion.reason` summary의
+`_count` 합으로 나눠 구한다. 전자가 높으면 모델·프롬프트 문제이고, 후자가 높으면 비동기 생성이
+사용자보다 느려 가치가 없다는 신호다.
 
 lease 만료 회수와 stale 결과 수는 함께 본다. 둘이 같이 오르면 lease가 실제 호출 시간보다
 짧다는 뜻이므로 lease 갱신 도입 또는 lease 연장을 판단한다.

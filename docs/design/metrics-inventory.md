@@ -28,7 +28,7 @@
 | `executor.completed` | counter (`tasks`) | `name=minsu-draft-drain` | 비동기 생성 실행기가 완료한 작업 누적 수를 판단한다. |
 | `executor.active` | gauge (`threads`) | `name=minsu-draft-drain` | 비동기 생성 실행기에서 현재 작업을 실행 중인 thread 수를 판단한다. |
 | `executor.queued` | gauge (`tasks`) | `name=minsu-draft-drain` | 비동기 생성 실행기에서 시작을 기다리는 작업 수를 판단한다. |
-| `executor.queue.remaining` | gauge (`tasks`) | `name=minsu-draft-drain` | 비동기 생성 실행기 queue의 남은 수용량을 판단한다. |
+| `executor.queue.remaining` | gauge (`tasks`) | `name=minsu-draft-drain` | 표준 바인더가 등록하지만, 현재 무제한 `LinkedBlockingQueue`에서는 값이 사실상 `Integer.MAX_VALUE`에 가까워 수용량·포화 판단에는 사용하지 않는다. |
 | `executor.pool.size` | gauge (`threads`) | `name=minsu-draft-drain` | 비동기 생성 실행기의 현재 thread 수를 판단한다. |
 | `executor.pool.core` | gauge (`threads`) | `name=minsu-draft-drain` | 비동기 생성 실행기의 core thread 설정을 판단한다. |
 | `executor.pool.max` | gauge (`threads`) | `name=minsu-draft-drain` | 비동기 생성 실행기의 최대 thread 설정을 판단한다. |
