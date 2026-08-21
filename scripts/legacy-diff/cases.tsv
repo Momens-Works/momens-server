@@ -79,3 +79,5 @@ H086-merge-target-not-found	owner	POST	/memory-candidates/00000000-0000-4000-800
 H087-expire	owner	POST	/memory-candidates/00000000-0000-4000-8000-000000000051/expire	/api/memory-candidates/00000000-0000-4000-8000-000000000051/expire	-	time,uuid
 H093-resolve	owner	POST	/memories/00000000-0000-4000-8000-000000000061/resolve	/api/memories/00000000-0000-4000-8000-000000000061/resolve	-	time,uuid
 H093-resolve-cross-workspace	owner	POST	/memories/00000000-0000-4000-8000-000000000061/resolve	/api/memories/00000000-0000-4000-8000-000000000061/resolve	-	-
+H093-resolve-deleted-target	owner	POST	/memories/00000000-0000-4000-8000-000000000064/resolve	/api/memories/00000000-0000-4000-8000-000000000064/resolve	-	-
+H093-resolve-deleted-resolver	owner	POST	/memories/00000000-0000-4000-8000-000000000061/resolve	/api/memories/00000000-0000-4000-8000-000000000061/resolve	-	-
