@@ -99,3 +99,10 @@ H046-revoked	stranger	POST	/invitations/accept	/api/invitations/accept	-	-
 H028-add	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invite	/api/workspaces/00000000-0000-4000-8000-000000000011/invite	-	-
 H028-role-conflict	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invite	/api/workspaces/00000000-0000-4000-8000-000000000011/invite	-	-
 H028-uppercase-email	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invite	/api/workspaces/00000000-0000-4000-8000-000000000011/invite	-	-
+H037-admin	stranger	POST	/workspaces/00000000-0000-4000-8000-000000000012/projects	/api/workspaces/00000000-0000-4000-8000-000000000012/projects	-	time,uuid
+H037-forbidden	owner	POST	/workspaces/00000000-0000-4000-8000-000000000012/projects	/api/workspaces/00000000-0000-4000-8000-000000000012/projects	-	-
+H037-not-found	owner	POST	/workspaces/00000000-0000-4000-8000-0000000000ff/projects	/api/workspaces/00000000-0000-4000-8000-0000000000ff/projects	-	-
+H037-invalid-owner	stranger	POST	/workspaces/00000000-0000-4000-8000-000000000012/projects	/api/workspaces/00000000-0000-4000-8000-000000000012/projects	-	-
+H050-member	owner	POST	/projects/00000000-0000-4000-8000-000000000021/milestones	/api/projects/00000000-0000-4000-8000-000000000021/milestones	-	time,uuid
+H050-project-not-found	owner	POST	/projects/00000000-0000-4000-8000-0000000000ff/milestones	/api/projects/00000000-0000-4000-8000-0000000000ff/milestones	-	-
+H050-forbidden	nobody	POST	/projects/00000000-0000-4000-8000-000000000021/milestones	/api/projects/00000000-0000-4000-8000-000000000021/milestones	-	-
