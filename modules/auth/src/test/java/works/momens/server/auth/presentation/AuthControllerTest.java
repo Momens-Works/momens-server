@@ -18,8 +18,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import works.momens.server.auth.internal.application.AuthService;
-import works.momens.server.auth.internal.jwt.TokenPair;
+import works.momens.server.auth.AuthTokens;
+import works.momens.server.auth.MobileAuthService;
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -30,12 +30,12 @@ class AuthControllerTest {
   private static final String API_VERSION = "1";
 
   @Autowired private MockMvc mockMvc;
-  @MockitoBean private AuthService authService;
+  @MockitoBean private MobileAuthService mobileAuthService;
 
   @Test
   void googleTokenExchangeReturnsTokenPair() throws Exception {
-    when(authService.loginWithGoogleToken(eq("google-id-token"), eq("iPhone")))
-        .thenReturn(new TokenPair("access-token", "refresh-token", 900));
+    when(mobileAuthService.loginWithGoogleToken(eq("google-id-token"), eq("iPhone")))
+        .thenReturn(new AuthTokens("access-token", "refresh-token", 900));
 
     mockMvc
         .perform(
@@ -52,8 +52,8 @@ class AuthControllerTest {
 
   @Test
   void googleTokenExchangeAcceptsRequestWithoutApiVersionHeader() throws Exception {
-    when(authService.loginWithGoogleToken(eq("google-id-token"), eq("iPhone")))
-        .thenReturn(new TokenPair("access-token", "refresh-token", 900));
+    when(mobileAuthService.loginWithGoogleToken(eq("google-id-token"), eq("iPhone")))
+        .thenReturn(new AuthTokens("access-token", "refresh-token", 900));
 
     mockMvc
         .perform(
@@ -76,8 +76,8 @@ class AuthControllerTest {
 
   @Test
   void refreshReturnsRotatedTokenPair() throws Exception {
-    when(authService.refresh(eq("old-refresh-token")))
-        .thenReturn(new TokenPair("new-access-token", "new-refresh-token", 900));
+    when(mobileAuthService.refresh(eq("old-refresh-token")))
+        .thenReturn(new AuthTokens("new-access-token", "new-refresh-token", 900));
 
     mockMvc
         .perform(
@@ -101,7 +101,7 @@ class AuthControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value("logged out"));
 
-    verify(authService).logout("refresh-token");
+    verify(mobileAuthService).logout("refresh-token");
   }
 
   @TestConfiguration
