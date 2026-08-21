@@ -1,4 +1,4 @@
-package works.momens.server.auth.presentation.dto.request;
+package works.momens.server.mobile.auth.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;

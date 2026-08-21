@@ -1,4 +1,4 @@
-package works.momens.server.auth.presentation;
+package works.momens.server.mobile.auth;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -8,11 +8,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.auth.AuthTokens;
 import works.momens.server.auth.MobileAuthService;
-import works.momens.server.auth.presentation.dto.request.GoogleTokenRequest;
-import works.momens.server.auth.presentation.dto.request.LogoutRequest;
-import works.momens.server.auth.presentation.dto.request.RefreshTokenRequest;
-import works.momens.server.auth.presentation.dto.response.AuthMessageResponse;
-import works.momens.server.auth.presentation.dto.response.TokenResponse;
+import works.momens.server.mobile.auth.dto.request.GoogleTokenRequest;
+import works.momens.server.mobile.auth.dto.request.LogoutRequest;
+import works.momens.server.mobile.auth.dto.request.RefreshTokenRequest;
+import works.momens.server.mobile.auth.dto.response.AuthMessageResponse;
+import works.momens.server.mobile.auth.dto.response.TokenResponse;
 
 @RestController
 @RequestMapping("/api/auth")

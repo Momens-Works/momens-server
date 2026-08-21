@@ -1,4 +1,4 @@
-package works.momens.server.auth.presentation;
+package works.momens.server.mobile.auth;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;

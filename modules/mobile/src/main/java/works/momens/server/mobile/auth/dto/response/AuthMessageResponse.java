@@ -1,4 +1,4 @@
-package works.momens.server.auth.presentation.dto.response;
+package works.momens.server.mobile.auth.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
