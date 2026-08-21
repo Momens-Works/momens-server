@@ -130,6 +130,15 @@ momens:
       redirect:
         success-uri: ${MOMENS_AUTH_WEB_SUCCESS_REDIRECT_URI}
         failure-uri: ${MOMENS_AUTH_WEB_FAILURE_REDIRECT_URI}
+  workspace:
+    invitation:
+      email:
+        provider: ${EMAIL_PROVIDER:noop}
+        accept-url: ${APP_INVITE_URL:}
+        from: ${EMAIL_FROM:}
+        reply-to: ${EMAIL_REPLY_TO:}
+        resend:
+          api-key: ${RESEND_API_KEY:}
   source:
     oauth:
       redirect-uri: ${MOMENS_SOURCE_OAUTH_REDIRECT_URI:}
