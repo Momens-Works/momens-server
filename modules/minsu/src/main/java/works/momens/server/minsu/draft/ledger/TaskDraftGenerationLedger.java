@@ -174,7 +174,7 @@ class TaskDraftGenerationLedger {
       // (11.2절) 이 값은 claim 이후 설정이 무효해진 경합에서만 도달한다.
       case INVALID_CONFIG -> complete(generation, CompletionReason.INVALID_CONFIG);
       // structured output 위반은 결정적 오류가 아니다. 같은 입력으로 반복 실패하면 프롬프트·스키마
-      // 문제이고 그것은 outcome별 retry_exhausted 비율로 구분한다.
+      // 문제이고 그것은 retry_exhausted 중 failure.reason별 건수와 구성비로 구분한다.
       case TIMEOUT, PROVIDER_ERROR, INVALID_RESPONSE, INVALID_OUTPUT ->
           scheduleRetryOrExhaust(generation, now, result.outcome().reason());
       // 이 둘은 요청 경로의 값이라 claim된 실행에서는 나올 수 없다. 나왔다면 실행 경로가 요청 경로의
