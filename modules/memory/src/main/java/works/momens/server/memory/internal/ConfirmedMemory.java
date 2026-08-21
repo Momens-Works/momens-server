@@ -21,9 +21,10 @@ import works.momens.server.common.persistence.BaseEntity;
  * <p>레거시 {@code momens-api}의 {@code confirmed_memories} 테이블과 호환됩니다. snapshot 응답 키는 {@code memories}
  * 지만 테이블 이름은 레거시를 따릅니다. prod는 공유 DB라 이름을 고를 여지가 없습니다.
  *
- * <p>이 서버에는 쓰기 경로가 전혀 없습니다(쓰기는 MOM-0869). 그래서 엔티티 전체를 {@link Immutable}로 둡니다. 조회도 이 엔티티가 아니라 {@link
- * works.momens.server.memory.ConfirmedMemoryReader}의 DTO projection이 담당합니다. 그래도 매핑해 두는 것은 prod에서
- * {@code ddl-auto=validate}가 공유 스키마와의 어긋남을 기동 시점에 잡게 하기 위해서입니다.
+ * <p>이 엔티티를 거치는 쓰기가 없어 전체를 {@link Immutable}로 둡니다. 조회는 {@link
+ * works.momens.server.memory.ConfirmedMemoryReader}의 DTO projection이, 쓰기(MOM-0869)는 네이티브 SQL이
+ * 담당합니다. 레거시가 소유한 테이블이라 우리가 채우는 컬럼만 정확히 건드려야 하기 때문입니다. 그래도 매핑해 두는 것은 prod에서 {@code
+ * ddl-auto=validate}가 공유 스키마와의 어긋남을 기동 시점에 잡게 하기 위해서입니다.
  *
  * <p>후보와 달리 {@code deleted_at}이 있습니다. 레거시 삭제(H094)가 상태를 {@code DELETED}로 바꾸면서 이 컬럼을 함께 채우고, 모든 조회가
  * 이 컬럼으로 거릅니다. 상태값 {@code DELETED}가 아니라 이 컬럼이 조회 기준입니다.

@@ -20,9 +20,10 @@ import works.momens.server.common.persistence.BaseEntity;
  *
  * <p>레거시 {@code momens-api}의 {@code memory_candidates} 테이블과 호환됩니다.
  *
- * <p>이 서버에는 쓰기 경로가 전혀 없습니다(쓰기는 MOM-0869). 그래서 엔티티 전체를 {@link Immutable}로 둡니다. 조회도 이 엔티티가 아니라 {@link
- * works.momens.server.memory.MemoryCandidateReader}의 DTO projection이 담당합니다. 그래도 매핑해 두는 것은 prod에서
- * {@code ddl-auto=validate}가 공유 스키마와의 어긋남을 기동 시점에 잡게 하기 위해서입니다.
+ * <p>이 엔티티를 거치는 쓰기가 없어 전체를 {@link Immutable}로 둡니다. 조회는 {@link
+ * works.momens.server.memory.MemoryCandidateReader}의 DTO projection이, 리뷰 상태 전이(MOM-0869)는 네이티브 SQL이
+ * 담당합니다. 레거시가 소유한 테이블이라 우리가 채우는 컬럼만 정확히 건드려야 하기 때문입니다. 그래도 매핑해 두는 것은 prod에서 {@code
+ * ddl-auto=validate}가 공유 스키마와의 어긋남을 기동 시점에 잡게 하기 위해서입니다.
  *
  * <p>소프트 삭제 컬럼이 없습니다. 레거시가 후보를 지우는 대신 상태로만 다룹니다.
  *
