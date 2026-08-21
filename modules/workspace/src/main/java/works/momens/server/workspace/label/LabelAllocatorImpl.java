@@ -12,6 +12,7 @@ import works.momens.server.workspace.LabelAllocator;
 class LabelAllocatorImpl implements LabelAllocator {
 
   private static final String MOM_PREFIX = "MOM";
+  private static final String MEMORY_PREFIX = "MEM";
 
   private final WorkspaceLabelSequenceRepository sequenceRepository;
 
@@ -25,5 +26,12 @@ class LabelAllocatorImpl implements LabelAllocator {
     // 책임진다.
     long allocated = sequenceRepository.allocate(workspaceId, MOM_PREFIX);
     return String.format("%s-%04d", MOM_PREFIX, allocated);
+  }
+
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public String allocateMemoryLabel(UUID workspaceId) {
+    long allocated = sequenceRepository.allocate(workspaceId, MEMORY_PREFIX);
+    return String.format("%s-%04d", MEMORY_PREFIX, allocated);
   }
 }

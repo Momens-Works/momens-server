@@ -9,7 +9,8 @@ import java.util.UUID;
  * entity_relations 조회 public API입니다.
  *
  * <p>태스크에 연결된 관련자료를 조합할 때 다른 모듈이 context 내부 repository에 직접 의존하지 않고 연결 정보를 조회할 수 있도록 제공합니다. {@code
- * entity_relations}는 레거시 {@code momens-api}가 소유하는 외부 테이블이며, 이 서버는 읽기 전용으로만 사용합니다.
+ * entity_relations}는 레거시 {@code momens-api}가 소유하는 외부 테이블입니다. 조회는 이 API를 사용하고, 변경은 {@link
+ * EntityRelationWriter}를 사용합니다.
  *
  * <p>이 API는 source_ref 식별자만 반환합니다. source_ref의 상세 정보는 호출하는 쪽이 {@code SourceRefReader}로 조회해 조합합니다.
  * context는 연결 정보만 제공하는 얇은 연결 capability를 유지합니다(module-map).

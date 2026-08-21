@@ -9,7 +9,7 @@ import java.util.UUID;
  * application event가 아니라 public API 직접 참조로 둡니다(docs/rules/architecture.md). 발급 카운터 테이블과 repository는
  * 하위 도메인 {@code label}에 숨깁니다.
  *
- * <p>지금은 {@code MOM}만 발급합니다. {@code SUG}/{@code MEM}은 memory 모듈 작업이라 그때 별도 메서드로 엽니다.
+ * <p>{@code MOM}과 {@code MEM} 라벨을 발급합니다. {@code SUG}은 worker가 제안하는 후보라 이 서버가 발급하지 않습니다.
  */
 public interface LabelAllocator {
 
@@ -18,4 +18,7 @@ public interface LabelAllocator {
    * workspace에 동시 발급이 들어와도 번호가 겹치지 않습니다.
    */
   String allocateMomLabel(UUID workspaceId);
+
+  /** workspace 범위에서 다음 {@code MEM} 라벨을 발급합니다. */
+  String allocateMemoryLabel(UUID workspaceId);
 }

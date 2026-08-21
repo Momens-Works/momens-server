@@ -45,4 +45,15 @@ interface ConfirmedMemoryRepository extends JpaRepository<ConfirmedMemory, UUID>
       """)
   List<ConfirmedMemoryDetail> findDetailsByWorkspaceIdAndIdIn(
       @Param("workspaceId") UUID workspaceId, @Param("ids") Collection<UUID> ids);
+
+  @Query(
+      """
+      select new works.momens.server.memory.ConfirmedMemoryDetail(
+          m.id, m.workspaceId, m.label, m.memoryType, m.title, m.summary, m.body, m.status,
+          m.sourceRefIds, m.relatedEntityIds, m.createdFromCandidateId, m.confirmedByUserId,
+          m.confirmedAt, m.validFrom, m.validUntil, m.invalidatedAt, m.invalidatedByUserId,
+          m.invalidationReason, m.metadata, m.createdAt, m.updatedAt)
+      from ConfirmedMemory m where m.id = :id and m.deletedAt is null
+      """)
+  java.util.Optional<ConfirmedMemoryDetail> findDetailById(@Param("id") UUID id);
 }

@@ -30,4 +30,15 @@ interface MemoryCandidateRepository extends JpaRepository<MemoryCandidate, UUID>
       order by c.importance desc nulls last, c.createdAt desc
       """)
   List<MemoryCandidateDetail> findDetailsByWorkspaceId(@Param("workspaceId") UUID workspaceId);
+
+  @Query(
+      """
+      select new works.momens.server.memory.MemoryCandidateDetail(
+          c.id, c.workspaceId, c.label, c.candidateType, c.title, c.summary, c.body,
+          c.confidence, c.importance, c.status, c.sourceRefIds, c.relatedEntityIds,
+          c.proposedBy, c.reviewedAt, c.reviewedByUserId, c.rejectionReason, c.expiresAt,
+          c.metadata, c.createdAt, c.updatedAt)
+      from MemoryCandidate c where c.id = :id
+      """)
+  java.util.Optional<MemoryCandidateDetail> findDetailById(@Param("id") UUID id);
 }

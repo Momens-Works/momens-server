@@ -15,6 +15,9 @@ dependencies {
     // Milestone 과 맞춥니다. source·context 의 읽기 엔티티가 BaseEntity 를 상속하지 않는 것은 그 테이블들이
     // 감사 3종을 그대로 갖지 않아 매핑이 어긋나기 때문이고, 읽기 전용이어서가 아닙니다.
     implementation project(':common')
+    implementation project(':context')
+    implementation project(':outbox')
+    implementation project(':workspace')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
