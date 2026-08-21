@@ -22,9 +22,13 @@ import works.momens.server.web.task.dto.response.WebTaskResponse;
 @Tag(name = "Web", description = "웹 진입 API")
 interface TaskWriteControllerDocs {
 
-  @Operation(operationId = "createProjectTask", summary = "프로젝트 태스크 생성")
+  @Operation(
+      operationId = "createProjectTask",
+      summary = "프로젝트 태스크 생성",
+      description = "워크스페이스 멤버가 프로젝트에 태스크를 생성합니다.")
   @ApiResponse(
       responseCode = "201",
+      description = "생성 성공",
       content = @Content(schema = @Schema(implementation = WebTaskResponse.class)))
   @ApiExceptions({ProjectErrorCode.class, CommonErrorCode.class})
   WebTaskResponse create(
@@ -32,9 +36,13 @@ interface TaskWriteControllerDocs {
       CreateWebTaskRequest request,
       Principal principal);
 
-  @Operation(operationId = "updateTask", summary = "태스크 수정")
+  @Operation(
+      operationId = "updateWebTask",
+      summary = "태스크 수정",
+      description = "워크스페이스 멤버가 전달한 필드만 수정합니다.")
   @ApiResponse(
       responseCode = "200",
+      description = "수정 성공",
       content = @Content(schema = @Schema(implementation = WebTaskResponse.class)))
   @ApiExceptions({ProjectErrorCode.class, CommonErrorCode.class})
   WebTaskResponse update(
@@ -42,16 +50,24 @@ interface TaskWriteControllerDocs {
       UpdateWebTaskRequest request,
       Principal principal);
 
-  @Operation(operationId = "deleteTask", summary = "태스크 삭제")
+  @Operation(
+      operationId = "deleteTask",
+      summary = "태스크 삭제",
+      description = "워크스페이스 멤버가 태스크를 소프트 삭제합니다.")
   @ApiResponse(
       responseCode = "200",
+      description = "삭제 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
   @ApiExceptions({ProjectErrorCode.class, CommonErrorCode.class})
   WebMessageResponse delete(@Parameter(description = "태스크 식별자") UUID taskId, Principal principal);
 
-  @Operation(operationId = "createTaskUpdate", summary = "태스크 업데이트 생성")
+  @Operation(
+      operationId = "createTaskUpdate",
+      summary = "태스크 업데이트 생성",
+      description = "워크스페이스 멤버가 태스크에 업데이트를 작성합니다.")
   @ApiResponse(
       responseCode = "201",
+      description = "생성 성공",
       content = @Content(schema = @Schema(implementation = UpdateResponse.class)))
   @ApiExceptions({ProjectErrorCode.class, CommonErrorCode.class})
   UpdateResponse createUpdate(
@@ -59,9 +75,13 @@ interface TaskWriteControllerDocs {
       CreateTaskUpdateRequest request,
       Principal principal);
 
-  @Operation(operationId = "deleteTaskUpdate", summary = "태스크 업데이트 삭제")
+  @Operation(
+      operationId = "deleteTaskUpdate",
+      summary = "태스크 업데이트 삭제",
+      description = "작성자만 자신의 태스크 업데이트를 소프트 삭제할 수 있습니다.")
   @ApiResponse(
       responseCode = "200",
+      description = "삭제 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
   @ApiExceptions({ProjectErrorCode.class, CommonErrorCode.class})
   WebMessageResponse deleteUpdate(

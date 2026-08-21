@@ -314,48 +314,87 @@
         ]
       },
       "CreateTaskUpdateRequest" : {
+        "description" : "웹 태스크 업데이트 생성 요청",
         "properties" : {
           "body" : {
+            "description" : "업데이트 본문",
             "type" : "string"
           },
           "kind" : {
+            "description" : "업데이트 종류. 생략하거나 빈 값이면 comment입니다.",
+            "enum" : [
+              "comment",
+              "update"
+            ],
             "type" : "string"
           },
           "metadata" : {
             "additionalProperties" : {
+              "description" : "추가 메타데이터",
               "type" : "object"
             },
+            "description" : "추가 메타데이터",
             "type" : "object"
           }
-        }
+        },
+        "required" : [
+          "body"
+        ]
       },
       "CreateWebTaskRequest" : {
+        "description" : "웹 태스크 생성 요청",
         "properties" : {
           "assignee_id" : {
+            "description" : "담당자 식별자",
             "format" : "uuid",
             "type" : "string"
           },
           "description" : {
+            "description" : "태스크 설명",
             "type" : "string"
           },
           "due_date" : {
+            "description" : "마감일",
             "format" : "date",
             "type" : "string"
           },
           "milestone_id" : {
+            "description" : "마일스톤 식별자",
             "format" : "uuid",
             "type" : "string"
           },
           "priority" : {
+            "description" : "태스크 우선순위. 생략하거나 빈 값이면 medium입니다.",
+            "enum" : [
+              "low",
+              "medium",
+              "med",
+              "high",
+              "urgent"
+            ],
             "type" : "string"
           },
           "status" : {
+            "description" : "태스크 상태. 생략하거나 빈 값이면 backlog입니다.",
+            "enum" : [
+              "backlog",
+              "todo",
+              "in_progress",
+              "progress",
+              "in-progress",
+              "done",
+              "cancelled"
+            ],
             "type" : "string"
           },
           "title" : {
+            "description" : "태스크 제목",
             "type" : "string"
           }
-        }
+        },
+        "required" : [
+          "title"
+        ]
       },
       "Details" : {
         "description" : "근거의 대상·변화·영향. signal_evidence가 소유하며 각 값은 공백 포함 30자 이하입니다.",
@@ -1931,6 +1970,7 @@
         ]
       },
       "UpdateWebTaskRequest" : {
+        "description" : "웹 태스크 수정 요청",
         "properties" : {
           "assignee_id" : {
             "format" : "uuid",
@@ -8067,7 +8107,7 @@
       },
       "patch" : {
         "description" : "수정 화면이 저장한 편집 상태 전체로 태스크를 갱신합니다. 제목, 역할, 담당자, 우선순위, 상태, 목적, 완료기준을 한 번에 저장합니다. 담당자를 비우려면 assignee_id를 null로 보내고, 완료기준은 최종 목록으로 전체 교체하며 0개에서 5개까지 허용합니다. 저장만 하고 본문은 반환하지 않으므로, 저장 후 최신 상태는 태스크 상세 조회로 다시 읽습니다.",
-        "operationId" : "updateTask_1",
+        "operationId" : "updateTask",
         "parameters" : [
           {
             "description" : "task 식별자",
@@ -8885,6 +8925,7 @@
         ]
       },
       "post" : {
+        "description" : "워크스페이스 멤버가 프로젝트에 태스크를 생성합니다.",
         "operationId" : "createProjectTask",
         "parameters" : [
           {
@@ -8928,7 +8969,7 @@
                 }
               }
             },
-            "description" : "Created"
+            "description" : "생성 성공"
           },
           "400" : {
             "content" : {
@@ -9160,6 +9201,7 @@
     },
     "/api/tasks/{taskId}" : {
       "delete" : {
+        "description" : "워크스페이스 멤버가 태스크를 소프트 삭제합니다.",
         "operationId" : "deleteTask",
         "parameters" : [
           {
@@ -9193,7 +9235,7 @@
                 }
               }
             },
-            "description" : "OK"
+            "description" : "삭제 성공"
           },
           "400" : {
             "content" : {
@@ -9687,7 +9729,8 @@
         ]
       },
       "patch" : {
-        "operationId" : "updateTask",
+        "description" : "워크스페이스 멤버가 전달한 필드만 수정합니다.",
+        "operationId" : "updateWebTask",
         "parameters" : [
           {
             "description" : "태스크 식별자",
@@ -9730,7 +9773,7 @@
                 }
               }
             },
-            "description" : "OK"
+            "description" : "수정 성공"
           },
           "400" : {
             "content" : {
@@ -10492,6 +10535,7 @@
         ]
       },
       "post" : {
+        "description" : "워크스페이스 멤버가 태스크에 업데이트를 작성합니다.",
         "operationId" : "createTaskUpdate",
         "parameters" : [
           {
@@ -10535,7 +10579,7 @@
                 }
               }
             },
-            "description" : "Created"
+            "description" : "생성 성공"
           },
           "400" : {
             "content" : {
@@ -10767,6 +10811,7 @@
     },
     "/api/tasks/{taskId}/updates/{updateId}" : {
       "delete" : {
+        "description" : "작성자만 자신의 태스크 업데이트를 소프트 삭제할 수 있습니다.",
         "operationId" : "deleteTaskUpdate",
         "parameters" : [
           {
@@ -10810,7 +10855,7 @@
                 }
               }
             },
-            "description" : "OK"
+            "description" : "삭제 성공"
           },
           "400" : {
             "content" : {
