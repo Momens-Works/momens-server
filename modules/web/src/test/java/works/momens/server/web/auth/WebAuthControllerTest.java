@@ -36,7 +36,7 @@ import works.momens.server.auth.WebAuthSession;
  */
 @WebMvcTest(WebAuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import({WebAuthController.class, WebAuthControllerTest.ApiVersionTestConfig.class})
+@Import(WebAuthControllerTest.ApiVersionTestConfig.class)
 class WebAuthControllerTest {
 
   private static final String API_VERSION_HEADER = "API-Version";
