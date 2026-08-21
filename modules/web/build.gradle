@@ -20,6 +20,8 @@ dependencies {
     implementation project(':memory')
     implementation project(':source')
     implementation project(':user')
+    // 웹 인증 표면(MOM-0852)이 auth의 WebAuthSession public API에 위임합니다.
+    implementation project(':auth')
 
     // 워크스페이스 컨트롤러(presentation).
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
