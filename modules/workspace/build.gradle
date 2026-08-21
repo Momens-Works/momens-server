@@ -12,16 +12,17 @@ dependencies {
 
     // 공유 영속성 베이스(BaseEntity, JPA Auditing)와 공유 에러 계약.
     implementation project(':common')
+    // 초대 흐름이 초대한 사람과 초대 대상 사용자를 조회합니다(MOM-0865).
+    implementation project(':user')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework:spring-web'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
     // common testFixtures의 Testcontainers 통합테스트 베이스를 재사용합니다.
     testImplementation testFixtures(project(':common'))
-    // workspace_members.user_id는 users(id)를 FK로 참조합니다. 슬라이스 통합테스트가
-    // Flyway로 users 테이블을 만들 수 있도록 user 모듈 마이그레이션을 테스트 클래스패스에
-    // 올립니다(테스트 스코프, User 엔티티는 workspace 패키지 밖이라 매핑되지 않습니다).
-    testImplementation project(':user')
 }
