@@ -20,8 +20,12 @@ import works.momens.server.memory.MemorySeedSql;
  * confirmed_memories}에 워크스페이스 범위 부분 UNIQUE 인덱스를 걸어 둡니다. 이 서버가 두 테이블에 쓰기 시작했으므로 미러도 같은 제약을 가져야 합니다.
  * 미러가 더 느슨하면 prod가 거부할 중복 라벨을 local/test가 통과시킵니다(docs/rules/persistence.md 미러 기준).
  *
- * <p>제약의 존재만이 아니라 <b>거부하는 집합</b>까지 봅니다. 부분 조건이 {@code WHERE label IS NOT NULL}이라 라벨이 없는 행은 몇 개든
- * 공존해야 하고, 워크스페이스가 다르면 같은 라벨이 허용되어야 합니다. 이름만 같고 조건이 다른 인덱스는 이 세 가지로 갈립니다.
+ * <p>행동과 정의를 함께 봅니다. 앞의 세 테스트는 거부하는 집합을(같은 워크스페이스 중복은 거부, 다른 워크스페이스는 허용, 라벨 없는 행은 공존) 확인하고, 마지막
+ * 테스트는 시스템 카탈로그에서 인덱스 정의 자체를 확인합니다.
+ *
+ * <p>정의를 따로 보는 이유는 행동만으로는 부분 조건이 드러나지 않기 때문입니다. {@code workspace_id}가 {@code NOT NULL}이고 Postgres
+ * 기본이 {@code NULLS DISTINCT}라, 조건 없는 UNIQUE 인덱스도 라벨이 없는 행을 여러 개 허용합니다. 즉 부분 조건을 빼도 앞의 세 테스트는 그대로
+ * 통과합니다. 미러의 기준은 결과가 같아 보이는가가 아니라 레거시와 같은가이므로 정의를 직접 봅니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -71,6 +75,28 @@ class MemoryLabelUniquenessIntegrationTest extends AbstractPostgresIntegrationTe
     insertMemoryWithLabel(workspaceId, null);
 
     assertThat(memoryCount(null)).isEqualTo(2);
+  }
+
+  @Test
+  @DisplayName("두 인덱스는 레거시와 같은 부분 조건을 가진 UNIQUE 인덱스다")
+  void indexesAreUniqueAndPartialOnLabelPresence() {
+    assertThat(indexDefinition("idx_confirmed_memories_workspace_label"))
+        .contains("CREATE UNIQUE INDEX")
+        .contains("ON public.confirmed_memories USING btree (workspace_id, label)")
+        .contains("WHERE (label IS NOT NULL)");
+    assertThat(indexDefinition("idx_memory_candidates_workspace_label"))
+        .contains("CREATE UNIQUE INDEX")
+        .contains("ON public.memory_candidates USING btree (workspace_id, label)")
+        .contains("WHERE (label IS NOT NULL)");
+  }
+
+  private String indexDefinition(String indexName) {
+    return (String)
+        entityManager
+            .getEntityManager()
+            .createNativeQuery("SELECT indexdef FROM pg_indexes WHERE indexname = ?1")
+            .setParameter(1, indexName)
+            .getSingleResult();
   }
 
   private void insertMemoryWithLabel(UUID workspaceId, String label) {

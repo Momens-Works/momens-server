@@ -10,7 +10,10 @@
 --
 -- IF NOT EXISTS 인 이유는 dev·prod 가 레거시와 같은 DB 를 쓰고 같은 이름의 인덱스가 거기 이미 있기
 -- 때문입니다. 조건 없이 만들면 실배포 Flyway 가 relation already exists 로 죽습니다(MOM-0795).
--- 부분 조건까지 레거시와 같게 둡니다. 조건이 다르면 이름만 같고 거부하는 집합이 달라집니다.
+-- 부분 조건까지 레거시와 같게 둡니다. workspace_id 가 NOT NULL 이고 Postgres 기본이 NULLS DISTINCT
+-- 라, 이 데이터에서는 조건을 빼도 거부하는 집합이 같습니다. 그래도 맞추는 이유는 미러의 기준이
+-- "레거시와 같은가"이지 "결과가 같아 보이는가"가 아니기 때문입니다. 레거시가 조건을 바꾸거나
+-- NULLS NOT DISTINCT 가 끼어들면 그때 갈리는데, 그 시점에는 이미 갈린 뒤입니다.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_candidates_workspace_label
     ON memory_candidates(workspace_id, label)
     WHERE label IS NOT NULL;
