@@ -169,6 +169,22 @@ Standard 모드의 에러 응답은 아래 형태를 사용합니다.
 | 400 | `WORKSPACE_INVALID_ROLE` | 부여할 수 없는 역할. `admin`과 `member`만 허용하며, `owner`와 정의되지 않은 값이 해당함 |
 | 409 | `WORKSPACE_OWNER_PROTECTED` | 대상 사용자가 owner이므로 역할을 변경하거나 멤버십을 제거할 수 없음 |
 | 409 | `WORKSPACE_SELF_REMOVAL_NOT_ALLOWED` | 요청자가 자기 자신을 workspace에서 제거하려 함 |
+| 400 | `INVITATION_INVALID_EMAIL` | 초대할 이메일 형식이 올바르지 않음 |
+| 400 | `INVITATION_INVALID_TOKEN` | 초대 토큰이 비어 있거나 알 수 없는 상태의 초대를 가리킴 |
+| 403 | `INVITATION_EMAIL_MISMATCH` | 초대받은 이메일과 로그인한 계정의 이메일이 일치하지 않음 |
+| 404 | `INVITATION_NOT_FOUND` | 초대를 찾을 수 없음 |
+| 409 | `INVITATION_ALREADY_ACCEPTED` | 이미 수락된 초대이므로 재발송, 폐기, 재수락할 수 없음 |
+| 409 | `INVITATION_EXPIRED` | 만료된 초대를 수락하려 함 |
+| 409 | `INVITATION_REVOKED` | 폐기된 초대를 수락하려 함 |
+| 502 | `INVITATION_EMAIL_SEND_FAILED` | 초대 이메일 발송에 실패함 |
+| 409 | `WORKSPACE_MEMBER_ALREADY_EXISTS` | 초대 대상이 이미 워크스페이스 멤버임 |
+| 403 | `WORKSPACE_INVITEE_NOT_FOUND` | 멤버로 추가할 이메일에 해당하는 사용자가 없음 |
+| 403 | `WORKSPACE_MEMBER_ROLE_CONFLICT` | 대상 사용자가 이미 다른 역할로 워크스페이스에 참여 중임 |
+
+`INVITATION_NOT_FOUND`, `INVITATION_INVALID_TOKEN`, `INVITATION_EXPIRED`는 예시 표에 정의되어 있던
+코드를 구현한 것이다. `WORKSPACE_INVITEE_NOT_FOUND`와 `WORKSPACE_MEMBER_ROLE_CONFLICT`를 403으로
+정의한 것은 레거시가 이 경로의 실패를 모두 403으로 응답하기 때문이다. 기존 HTTP status를 보존한다는
+이관 원칙을 따른 결과이다.
 
 ### 모바일 MVP 예정 도메인 코드
 
