@@ -3,22 +3,23 @@ package works.momens.server.web.memory;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import works.momens.server.memory.ConfirmedMemoryDetail;
 import works.momens.server.memory.MemoryWriter;
+import works.momens.server.web.memory.dto.response.ConfirmedMemoryResponse;
 
 @Service
 @RequiredArgsConstructor
 class MemoryWriteService {
   private final MemoryWriter memoryWriter;
 
-  ConfirmedMemoryDetail confirm(UUID candidateId, UUID userId) {
-    return memoryWriter.confirm(candidateId, userId, null);
+  ConfirmedMemoryResponse confirm(UUID candidateId, UUID userId) {
+    return ConfirmedMemoryResponse.from(memoryWriter.confirm(candidateId, userId));
   }
 
-  ConfirmedMemoryDetail editAndConfirm(
+  ConfirmedMemoryResponse editAndConfirm(
       UUID candidateId, UUID userId, String title, String summary, String body) {
-    return memoryWriter.editAndConfirm(
-        candidateId, userId, new MemoryWriter.CandidateEdits(title, summary, body));
+    return ConfirmedMemoryResponse.from(
+        memoryWriter.editAndConfirm(
+            candidateId, userId, new MemoryWriter.CandidateEdits(title, summary, body)));
   }
 
   void reject(UUID candidateId, UUID userId, String reason) {

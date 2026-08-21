@@ -12,13 +12,13 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CurrentUser;
-import works.momens.server.memory.ConfirmedMemoryDetail;
 import works.momens.server.memory.MemoryErrorCode;
 import works.momens.server.web.dto.response.WebMessageResponse;
 import works.momens.server.web.memory.dto.request.EditAndConfirmMemoryCandidateRequest;
 import works.momens.server.web.memory.dto.request.MergeMemoryCandidateRequest;
 import works.momens.server.web.memory.dto.request.RejectMemoryCandidateRequest;
 import works.momens.server.web.memory.dto.request.ResolveMemoryRequest;
+import works.momens.server.web.memory.dto.response.ConfirmedMemoryResponse;
 
 @RestController
 @RequestMapping("/api")
@@ -28,13 +28,13 @@ class MemoryWriteController implements MemoryWriteControllerDocs {
 
   @PostMapping(path = "/memory-candidates/{candidateId}/confirm", version = "1")
   @ResponseStatus(HttpStatus.CREATED)
-  public ConfirmedMemoryDetail confirm(@PathVariable UUID candidateId, Principal principal) {
+  public ConfirmedMemoryResponse confirm(@PathVariable UUID candidateId, Principal principal) {
     return memoryWriteService.confirm(candidateId, CurrentUser.id(principal));
   }
 
   @PostMapping(path = "/memory-candidates/{candidateId}/edit-and-confirm", version = "1")
   @ResponseStatus(HttpStatus.CREATED)
-  public ConfirmedMemoryDetail editAndConfirm(
+  public ConfirmedMemoryResponse editAndConfirm(
       @PathVariable UUID candidateId,
       @RequestBody EditAndConfirmMemoryCandidateRequest request,
       Principal principal) {
@@ -57,10 +57,10 @@ class MemoryWriteController implements MemoryWriteControllerDocs {
       @PathVariable UUID candidateId,
       @RequestBody MergeMemoryCandidateRequest request,
       Principal principal) {
-    if (request.targetMemoryId() == null) {
+    if (request.mergeTargetMemoryId() == null) {
       throw new BusinessException(MemoryErrorCode.MEMORY_INVALID_INPUT);
     }
-    memoryWriteService.merge(candidateId, CurrentUser.id(principal), request.targetMemoryId());
+    memoryWriteService.merge(candidateId, CurrentUser.id(principal), request.mergeTargetMemoryId());
     return new WebMessageResponse("merged");
   }
 
