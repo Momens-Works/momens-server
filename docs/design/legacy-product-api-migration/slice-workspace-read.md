@@ -8,14 +8,14 @@
 
 관련 작업: `MOM-0850`(계약 확정), `MOM-0851`(구현)
 
-관련 문서: [이관 전략](legacy-product-api-migration-strategy.md),
-[이관 원장](legacy-product-api-migration-ledger.md),
-[API 버저닝](../spec/api-versioning.md),
-[API 응답과 에러 코드](../spec/api-response-error-codes.md)
+관련 문서: [이관 전략](strategy.md),
+[이관 원장](ledger.md),
+[API 버저닝](../../spec/api-versioning.md),
+[API 응답과 에러 코드](../../spec/api-response-error-codes.md)
 
 ## 1. 목적
 
-[이관 원장](legacy-product-api-migration-ledger.md)이 비교만 해둔 read-only 후보 중 첫 수직
+[이관 원장](ledger.md)이 비교만 해둔 read-only 후보 중 첫 수직
 슬라이스를 확정하고, 구현 전에 잠가야 할 계약을 고정한다. 이 문서가 확정한 뒤에야 구현 작업을
 만든다.
 
@@ -69,7 +69,7 @@
 
 ### 4.1 path와 버저닝
 
-[API 버저닝](../spec/api-versioning.md)과 ADR-0006을 그대로 따른다. 레거시 path alias는 두지 않는다.
+[API 버저닝](../../spec/api-versioning.md)과 ADR-0006을 그대로 따른다. 레거시 path alias는 두지 않는다.
 
 | 레거시 | 신규 |
 | --- | --- |
@@ -82,7 +82,7 @@
 레거시와 신규 토큰 모두 HS256이고 subject가 `users.id`이며 DB를 공유하므로, 사용자 식별은 추가
 매핑 없이 일치한다.
 
-전환기에는 레거시 `session_token` 쿠키를 함께 수용한다([ADR-0017](../adr/0017-transitional-legacy-session-token-acceptance.md)).
+전환기에는 레거시 `session_token` 쿠키를 함께 수용한다([ADR-0017](../../adr/0017-transitional-legacy-session-token-acceptance.md)).
 운영 웹이 레거시 OAuth로 로그인해 `access_token` 쿠키를 갖지 않으므로, 수용하지 않으면 전환 즉시
 `401`이 된다. `BearerTokenResolver`의 조회 순서는 다음과 같다.
 
@@ -150,13 +150,13 @@ soft-delete 필터는 두지 않는다. 레거시에 해당 컬럼과 필터가 
 | 워크스페이스 없음 | 403 (raw error 문자열) | **404 `WORKSPACE_NOT_FOUND`** |
 | 멤버가 아님 | 403 (raw error 문자열) | **403 `AUTH_FORBIDDEN`** |
 
-`WORKSPACE_NOT_FOUND`는 이미 [에러 코드표](../spec/api-response-error-codes.md)에 있다.
+`WORKSPACE_NOT_FOUND`는 이미 [에러 코드표](../../spec/api-response-error-codes.md)에 있다.
 미존재와 권한 없음을 나누면 워크스페이스 존재 여부가 드러나지만, 식별자가 추측 불가능한 UUID라
 열거 위험이 없다고 판단한다.
 
 ### 4.5 차등 비교 결과
 
-[차등 비교 하네스](../local-development.md#레거시-차등-비교)로 두 서버에 같은 요청을 보내 확인한
+[차등 비교 하네스](../../local-development.md#레거시-차등-비교)로 두 서버에 같은 요청을 보내 확인한
 결과다(`MOM-0877`, 케이스 `H020-*`, `H022-*`).
 
 성공 응답 4건(목록, 빈 목록, 단건, `description` 없는 단건)은 **완전히 동일하다**. 래퍼 유무,
@@ -179,7 +179,7 @@ soft-delete 필터는 두지 않는다. 레거시에 해당 컬럼과 필터가 
 
 웹 HTTP 표면은 신규 orchestration module `:web`이 소유한다. `:mobile`과 같은 자리이며,
 capability 모듈의 public API만 조합하고 도메인 정책을 소유하지 않는다
-([아키텍처](../rules/architecture.md) 모듈 경계).
+([아키텍처](../../rules/architecture.md) 모듈 경계).
 
 capability 모듈에 웹 presentation을 두지 않는 이유는 의존 방향이다. 현재 그래프에서 `:workspace`는
 `:common`, `:user`만 참조하는 바닥 모듈이고 `:project`가 그것을 참조한다. 웹 응답이 다른
@@ -231,7 +231,7 @@ ingress는 **요청 경로 접두사**로 분기한다. `api.momens.works`에서
 `momens-server`로, 접두사가 없는 나머지 경로는 레거시 `momens-api`로 간다
 (`k8s/manifests/apps/momens-server/ingress.yaml`, ingress-nginx longest-prefix matching).
 path rewrite는 하지 않는다. `API-Version` 헤더는 버전 선택용이며 라우팅에 관여하지 않는다
-([ADR-0006](../adr/0006-api-path-and-versioning-policy.md)).
+([ADR-0006](../../adr/0006-api-path-and-versioning-policy.md)).
 
 따라서 전환 단위는 **클라이언트 배포**다. 웹이 path를 `/workspaces`에서 `/api/workspaces`로
 바꾸면 그 순간 신규 서버로 넘어가고, 되돌리는 것도 클라이언트 배포다. `/api` 라우팅 규칙은 이미

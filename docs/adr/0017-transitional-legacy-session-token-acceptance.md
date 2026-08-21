@@ -14,7 +14,7 @@
 - 신규 서버의 `BearerTokenResolver`는 `Authorization` 헤더와 `access_token` 쿠키만 본다.
   따라서 이 상태로 전환하면 신규 endpoint 호출이 `401`을 받는다.
 
-[이관 전략](../design/legacy-product-api-migration-strategy.md)은 이 상태를 혼합 트래픽으로
+[이관 전략](../design/legacy-product-api-migration/strategy.md)은 이 상태를 혼합 트래픽으로
 정의하고 호환 방식 세 가지 중 하나를 명시적으로 고르도록 규정한다. 이 결정은 웹 세션 쿠키를
 폐기하기로 한 [ADR-0003](0003-auth-session-transport-model.md)의 한시적 예외이므로 별도 기록이
 필요하다.

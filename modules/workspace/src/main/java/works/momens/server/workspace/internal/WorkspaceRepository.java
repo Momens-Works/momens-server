@@ -15,7 +15,7 @@ interface WorkspaceRepository extends JpaRepository<Workspace, UUID> {
 
   /**
    * userId가 멤버인 워크스페이스를 {@code workspace_members} 조인으로 조회합니다. 정렬은 레거시와 같은 생성 시각 내림차순으로 쿼리에서
-   * 고정합니다(docs/design/legacy-product-api-migration-workspace-read-design.md 4.3).
+   * 고정합니다(docs/design/legacy-product-api-migration/slice-workspace-read.md 4.3).
    *
    * <p>{@link Workspace}와 {@code WorkspaceMember}(access 하위 도메인) 사이에 JPA 연관관계를 두지 않으므로 native
    * query로 테이블을 직접 조인합니다.

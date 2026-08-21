@@ -16,14 +16,14 @@
 그 구분은 범위를 설명하지만 실제 이관 단위, 레거시 웹 트래픽 컷오버, writer 소유권, projection,
 롤백 조건을 정하지 않는다. 이 문서는 그 실행 규칙을 보완한다.
 
-관련 상시 규칙과 결정은 [아키텍처](../rules/architecture.md), [영속성](../rules/persistence.md),
-[API 버저닝](../spec/api-versioning.md), [API 응답과 에러 코드](../spec/api-response-error-codes.md),
-[인증 세션·전송 모델](../adr/0003-auth-session-transport-model.md),
-[토큰 발급·검증 스택](../adr/0004-token-issuance-verification-stack.md),
-[refresh token 저장 모델](../adr/0005-refresh-token-storage-model.md),
-[사용자 신원 식별](../adr/0016-user-identity-key-google-sub.md),
-[projection 경계](../adr/0008-outbox-worker-projection-boundary.md)를 따른다. 현재 모듈 책임은
-[모듈 맵](module-map.md)을 기준으로 하되, 이관 중 발견한 충돌은 아래 미결정 절차로 다시 확정한다.
+관련 상시 규칙과 결정은 [아키텍처](../../rules/architecture.md), [영속성](../../rules/persistence.md),
+[API 버저닝](../../spec/api-versioning.md), [API 응답과 에러 코드](../../spec/api-response-error-codes.md),
+[인증 세션·전송 모델](../../adr/0003-auth-session-transport-model.md),
+[토큰 발급·검증 스택](../../adr/0004-token-issuance-verification-stack.md),
+[refresh token 저장 모델](../../adr/0005-refresh-token-storage-model.md),
+[사용자 신원 식별](../../adr/0016-user-identity-key-google-sub.md),
+[projection 경계](../../adr/0008-outbox-worker-projection-boundary.md)를 따른다. 현재 모듈 책임은
+[모듈 맵](../module-map.md)을 기준으로 하되, 이관 중 발견한 충돌은 아래 미결정 절차로 다시 확정한다.
 
 ## 범위
 
@@ -132,7 +132,7 @@ service, repository 같은 수평 레이어가 아니라 독립적으로 검증 
 불변식을 원자적으로 지키는 일관성 경계다. 같은 aggregate의 write entry point는 서로 다른 PR에서 구현할
 수 있지만 운영 writer 전환은 함께 해야 한다. read-only entry point는 이 전환 단위에 포함하지 않는다.
 
-`users`는 [ADR-0016](../adr/0016-user-identity-key-google-sub.md)에 따라 이 원칙의 한시적 예외다. 모바일이
+`users`는 [ADR-0016](../../adr/0016-user-identity-key-google-sub.md)에 따라 이 원칙의 한시적 예외다. 모바일이
 신규 인증을 사용하는 동안에도 레거시 웹 로그인이 남아 있어 두 서버가 같은 `users` 행을 쓸 수 있다. 이는
 한 요청을 두 서버로 복제하는 dual-write가 아니라 클라이언트 경로별 writer가 공존하는 상태다. 이관 원장에는
 두 현재 writer, ADR-0016의 예외 근거, 레거시 `users` write 중단 조건을 함께 기록한다. 신규 서버가 유일한
@@ -186,7 +186,7 @@ Momens 작업 본문에 남긴다.
 - pagination, filter, sort, default 값
 
 같은 fixture와 요청을 두 구현에 적용해 결과를 비교한다. 이 비교는
-[차등 비교 하네스](../local-development.md#레거시-차등-비교)(`scripts/legacy-diff/`)로 실행한다.
+[차등 비교 하네스](../../local-development.md#레거시-차등-비교)(`scripts/legacy-diff/`)로 실행한다.
 하네스는 고정 id·시각 픽스처를 양쪽 DB에 같은 내용으로 심어 값까지 그대로 비교하므로, 로컬
 비교에서는 정규화가 JSON 키 정렬 하나뿐이다. dev 실서버처럼 값을 고정할 수 없는 대상에는
 `--normalize`로 UUID·타임스탬프를 자리표시자로 바꾸고 shape만 비교한다.
@@ -211,7 +211,7 @@ Bearer token을 사용한다. 두 서버가 같은 DB를 쓴다는 사실만으�
 - 사용자 신원은 이메일이 아니라 `(provider, provider_user_id)`로 식별하며 Google `sub`을
   `provider_user_id`로 사용한다.
 - 로그인·콜백·웹 refresh·logout의 경로와 응답 계약은
-  [API 응답과 에러 코드](../spec/api-response-error-codes.md)를 따른다.
+  [API 응답과 에러 코드](../../spec/api-response-error-codes.md)를 따른다.
 
 미확정인 것은 신규 인증 모델이 아니라 레거시와 신규 서버 사이의 **웹 트래픽 전환 단위**다. 다음
 상태를 구분한다.
@@ -229,9 +229,9 @@ Bearer token을 사용한다. 두 서버가 같은 DB를 쓴다는 사실만으�
 3. 로그인 과정이 두 서버의 세션을 함께 만든다.
 
 방식 1과 2를 시점을 나눠 모두 채택했다. 웹 컷오버 **이전**에는 방식 1로 신규 서버가 레거시
-`session_token`을 수용하고([ADR-0017](../adr/0017-transitional-legacy-session-token-acceptance.md)),
+`session_token`을 수용하고([ADR-0017](../../adr/0017-transitional-legacy-session-token-acceptance.md)),
 컷오버 **이후**에는 방식 2로 레거시가 신규 `access_token`을 수용한다
-([ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)). 방식 3은 두 ADR
+([ADR-0018](../../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)). 방식 3은 두 ADR
 모두에서 기각했다.
 
 호환 방식을 도입하면 ADR-0003의 레거시 단일 세션 폐기 결정에 대한 한시적 예외가 되므로 보안 모델,
@@ -281,7 +281,7 @@ API 구현 전체의 일률적인 선행 조건이 아니라 projection 대상 a
 
 ## prod 운영 준비 조건
 
-prod 배포 전에는 [prod 운영 준비 대장](../prod-schema-ledger.md)에서 해당 슬라이스와 활성화할
+prod 배포 전에는 [prod 운영 준비 대장](../../prod-schema-ledger.md)에서 해당 슬라이스와 활성화할
 capability에 필요한 조건을 확인한다. 대장은 다음 세 종류를 함께 관리한다.
 
 - **스키마 반영**: 신규 객체의 prod 반영 위치·상태와 writer 호환성

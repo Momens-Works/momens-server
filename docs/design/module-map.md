@@ -48,7 +48,7 @@
   HTTP 표면은 **도메인 스코프가 분명해도** `web`이 소유한다. 여러 capability를 조합하는 endpoint만
   표면이 갖는 것이 아니다.
   - 근거는 의존 방향이다. `workspace`처럼 그래프 아래에 있는 모듈이 웹 응답을 위해 `project`를
-    참조하면 순환이 된다([첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md),
+    참조하면 순환이 된다([첫 웹 read 슬라이스 계약](legacy-product-api-migration/slice-workspace-read.md),
     `MOM-0850`). 조합 여부를 기준으로 삼으면 응답에 필드가 하나 늘 때마다 컨트롤러를 옮겨야 한다.
   - **부채**: `/api/auth`(`auth`)와 `/api/me`(`user`)는 이 원칙보다 먼저 만들어져 capability 모듈에
     남아 있다. 예외로 두지 않고 원칙에 맞춰 정리한다. `auth`의 경우 `WebAuthController`는 웹 전용,

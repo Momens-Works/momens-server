@@ -11,7 +11,7 @@
 (`internal/platform/httpx/middleware.go:73`) 그 순간 아직 이관되지 않은 레거시 보호 endpoint가
 전부 `401`을 받는다. `Authorization` 헤더도, 다른 쿠키도 보지 않는다.
 
-[이관 원장](../design/legacy-product-api-migration-ledger.md)으로 컷오버 시점에 실제로 끊기는
+[이관 원장](../design/legacy-product-api-migration/ledger.md)으로 컷오버 시점에 실제로 끊기는
 **웹 실사용** endpoint를 전수 확인하면 12개이고, 그중 7개는 이미 담당 이관 티켓이 있다.
 
 | 미이관 웹 실사용 | 담당 |
@@ -48,7 +48,7 @@ MCP 연동 자체는 웹 세션과 무관하다는 점이 이 결정의 범위�
 - 만료 동작도 같다. 레거시 세션은 24시간(`JWT_EXPIRY_HOURS` 기본값, 쿠키 `maxAge` 86400)이고 신규
   access TTL도 24시간이다(`application.yml`의 `momens.auth.access-ttl`).
 
-[이관 전략](../design/legacy-product-api-migration-strategy.md)은 혼합 트래픽 호환 방식 세 가지 중
+[이관 전략](../design/legacy-product-api-migration/strategy.md)은 혼합 트래픽 호환 방식 세 가지 중
 하나를 명시적으로 고르고 ADR로 남기도록 규정한다. 이 결정은 그중 **호환 방식 2**이며,
 [ADR-0003](0003-auth-session-transport-model.md)의 한시적 예외이므로 별도 기록이 필요하다.
 ADR-0017이 신규 서버가 레거시 쿠키를 수용하는 방향을 정했고, 이 ADR은 그 반대 방향을 정한다.
