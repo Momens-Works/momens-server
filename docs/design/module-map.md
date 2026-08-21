@@ -159,7 +159,7 @@ refresh token 저장 모델(서버 저장형 + PostgreSQL 원장)은 [ADR-0005](
 
 - workspace, workspace member, invitation, onboarding state
 - role checks (RBAC)
-- label 발급 public API (MEM-0001/TASK-xxxx; `workspace_label_sequences`)
+- label 발급 public API (`MOM-0001`, `MEM-0001`, `PRJ-0001`; `workspace_label_sequences`)
 
 레거시 `access`(중앙 RBAC 서비스)와 `label`(workspace-scoped 라벨 발급)을 이 모듈이 흡수한다.
 project나 task가 속한 workspace를 찾는 책임은 해당 리소스를 소유한 모듈이 맡는다. 다른 모듈은
