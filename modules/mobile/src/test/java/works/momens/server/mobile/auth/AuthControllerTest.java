@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -33,6 +34,7 @@ class AuthControllerTest {
   @MockitoBean private MobileAuthService mobileAuthService;
 
   @Test
+  @DisplayName("Google ID 토큰 교환은 access·refresh 토큰을 snake_case로 응답한다")
   void googleTokenExchangeReturnsTokenPair() throws Exception {
     when(mobileAuthService.loginWithGoogleToken(eq("google-id-token"), eq("iPhone")))
         .thenReturn(new AuthTokens("access-token", "refresh-token", 900));
@@ -51,6 +53,7 @@ class AuthControllerTest {
   }
 
   @Test
+  @DisplayName("API-Version 헤더가 없으면 v1으로 라우팅한다")
   void googleTokenExchangeAcceptsRequestWithoutApiVersionHeader() throws Exception {
     when(mobileAuthService.loginWithGoogleToken(eq("google-id-token"), eq("iPhone")))
         .thenReturn(new AuthTokens("access-token", "refresh-token", 900));
@@ -64,6 +67,7 @@ class AuthControllerTest {
   }
 
   @Test
+  @DisplayName("지원하지 않는 API-Version은 거부한다")
   void googleTokenExchangeRejectsUnsupportedApiVersion() throws Exception {
     mockMvc
         .perform(
@@ -75,6 +79,7 @@ class AuthControllerTest {
   }
 
   @Test
+  @DisplayName("재발급은 회전된 access·refresh 토큰을 응답한다")
   void refreshReturnsRotatedTokenPair() throws Exception {
     when(mobileAuthService.refresh(eq("old-refresh-token")))
         .thenReturn(new AuthTokens("new-access-token", "new-refresh-token", 900));
@@ -91,6 +96,7 @@ class AuthControllerTest {
   }
 
   @Test
+  @DisplayName("로그아웃은 refresh token을 폐기한다")
   void logoutRevokesRefreshToken() throws Exception {
     mockMvc
         .perform(

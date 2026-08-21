@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import jakarta.servlet.http.Cookie;
 import java.time.Duration;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import works.momens.server.auth.AuthErrorCode;
@@ -39,6 +40,7 @@ class WebAuthSessionImplTest {
           webAuthService, new WebAuthCookies(authProperties()), authProperties());
 
   @Test
+  @DisplayName("로그인 시작은 consent URL과 state·PKCE 핸드셰이크 쿠키를 돌려준다")
   void startLoginReturnsConsentUrlWithHandshakeCookies() {
     when(webAuthService.startLogin())
         .thenReturn(
@@ -59,6 +61,7 @@ class WebAuthSessionImplTest {
   }
 
   @Test
+  @DisplayName("로그인 시작이 실패하면 쿠키 없이 failure-uri의 server_error로 보낸다")
   void startLoginRedirectsToServerErrorWhenStartFails() {
     when(webAuthService.startLogin()).thenThrow(new IllegalStateException("boom"));
 
@@ -69,6 +72,7 @@ class WebAuthSessionImplTest {
   }
 
   @Test
+  @DisplayName("콜백 성공은 세션 쿠키를 설정하고 핸드셰이크 쿠키를 정리한 뒤 success-uri로 보낸다")
   void completeLoginIssuesSessionCookiesAndClearsHandshakeCookies() {
     when(webAuthService.completeLogin("auth-code", "state-xyz", "state-xyz", "verifier-xyz"))
         .thenReturn(new TokenPair("access-jwt", "refresh-token", 900));
@@ -84,6 +88,7 @@ class WebAuthSessionImplTest {
   }
 
   @Test
+  @DisplayName("핸드셰이크 거부는 invalid_state로 매핑하고 핸드셰이크 쿠키만 정리한다")
   void completeLoginMapsHandshakeRejectionToInvalidState() {
     when(webAuthService.completeLogin(any(), any(), any(), any()))
         .thenThrow(new BusinessException(AuthErrorCode.AUTH_OAUTH_STATE_INVALID));
@@ -95,6 +100,7 @@ class WebAuthSessionImplTest {
   }
 
   @Test
+  @DisplayName("검증되지 않은 Google 이메일은 email_not_verified로 매핑한다")
   void completeLoginMapsEmailNotVerified() {
     when(webAuthService.completeLogin(any(), any(), any(), any()))
         .thenThrow(new BusinessException(AuthErrorCode.AUTH_GOOGLE_EMAIL_NOT_VERIFIED));
@@ -104,6 +110,7 @@ class WebAuthSessionImplTest {
   }
 
   @Test
+  @DisplayName("code 교환 실패는 google_error로 매핑한다")
   void completeLoginMapsExchangeFailureToGoogleError() {
     when(webAuthService.completeLogin(any(), any(), any(), any()))
         .thenThrow(new BusinessException(AuthErrorCode.AUTH_OAUTH_EXCHANGE_FAILED));
@@ -113,6 +120,7 @@ class WebAuthSessionImplTest {
   }
 
   @Test
+  @DisplayName("다른 로그인 수단에 연결된 이메일은 email_conflict로 매핑한다")
   void completeLoginMapsLinkedEmailToEmailConflict() {
     when(webAuthService.completeLogin(any(), any(), any(), any()))
         .thenThrow(new BusinessException(UserErrorCode.USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY));
@@ -122,6 +130,7 @@ class WebAuthSessionImplTest {
   }
 
   @Test
+  @DisplayName("예기치 못한 예외는 server_error로 매핑한다")
   void completeLoginMapsUnexpectedExceptionToServerError() {
     when(webAuthService.completeLogin(any(), any(), any(), any()))
         .thenThrow(new IllegalStateException("boom"));
@@ -131,6 +140,7 @@ class WebAuthSessionImplTest {
   }
 
   @Test
+  @DisplayName("세션 갱신은 refresh 쿠키를 읽어 새 access·refresh 쿠키를 돌려준다")
   void refreshRotatesSessionCookiesFromRefreshCookie() {
     when(webAuthService.refresh("old-web-refresh"))
         .thenReturn(new TokenPair("new-access-jwt", "new-refresh-token", 900));
@@ -152,6 +162,7 @@ class WebAuthSessionImplTest {
   }
 
   @Test
+  @DisplayName("무효한 refresh는 예외를 그대로 전파해 Standard 에러로 응답하게 한다")
   void refreshPropagatesInvalidRefreshError() {
     when(webAuthService.refresh(any()))
         .thenThrow(new BusinessException(AuthErrorCode.AUTH_REFRESH_TOKEN_INVALID));
@@ -161,6 +172,7 @@ class WebAuthSessionImplTest {
   }
 
   @Test
+  @DisplayName("로그아웃은 refresh를 폐기하고 세션 쿠키를 정리한다")
   void logoutRevokesRefreshAndClearsCookies() {
     WebAuthCookieUpdate result =
         session.logout(requestWithCookies(new Cookie("refresh_token", "web-refresh")));
@@ -170,6 +182,7 @@ class WebAuthSessionImplTest {
   }
 
   @Test
+  @DisplayName("refresh 쿠키가 없어도 폐기 없이 세션 쿠키를 정리한다")
   void logoutClearsCookiesWhenNoRefreshCookie() {
     WebAuthCookieUpdate result = session.logout(new MockHttpServletRequest());
 
@@ -178,6 +191,7 @@ class WebAuthSessionImplTest {
   }
 
   @Test
+  @DisplayName("이미 무효한 refresh여도 세션 쿠키를 정리한다(멱등)")
   void logoutClearsCookiesEvenWhenRefreshAlreadyInactive() {
     doThrow(new BusinessException(AuthErrorCode.AUTH_REFRESH_TOKEN_INVALID))
         .when(webAuthService)

@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.security.Principal;
 import java.time.Instant;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -40,6 +41,7 @@ class UserControllerTest {
   private final Principal principal = USER_ID::toString;
 
   @Test
+  @DisplayName("내 정보 조회는 user 래퍼와 snake_case 필드로 응답한다")
   void getMeReturnsWrappedSnakeCaseProfile() throws Exception {
     when(userService.getProfile(eq(USER_ID)))
         .thenReturn(
@@ -64,6 +66,7 @@ class UserControllerTest {
   }
 
   @Test
+  @DisplayName("프로필 수정은 변경된 프로필을 응답한다")
   void patchMeUpdatesProfile() throws Exception {
     when(userService.updateProfile(eq(USER_ID), eq("새이름"), eq("Designer")))
         .thenReturn(
@@ -89,6 +92,7 @@ class UserControllerTest {
   }
 
   @Test
+  @DisplayName("API-Version 헤더가 없으면 v1으로 라우팅한다")
   void getMeWithoutVersionHeaderRoutesToV1() throws Exception {
     when(userService.getProfile(eq(USER_ID)))
         .thenReturn(

@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.servlet.http.Cookie;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -46,6 +47,7 @@ class WebAuthControllerTest {
   @MockitoBean private WebAuthSession webAuthSession;
 
   @Test
+  @DisplayName("로그인 시작은 받은 쿠키 헤더를 붙이고 consent URL로 리다이렉트한다")
   void googleLoginAppliesCookiesAndRedirects() throws Exception {
     when(webAuthSession.startLogin())
         .thenReturn(
@@ -66,6 +68,7 @@ class WebAuthControllerTest {
   }
 
   @Test
+  @DisplayName("콜백은 요청을 auth로 넘기고 받은 결과를 응답에 그대로 옮긴다")
   void googleCallbackPassesRequestCookiesToAuthAndAppliesResult() throws Exception {
     when(webAuthSession.completeLogin(any(), eq("auth-code"), eq("state-xyz")))
         .thenReturn(
@@ -88,6 +91,7 @@ class WebAuthControllerTest {
   }
 
   @Test
+  @DisplayName("세션 갱신은 받은 쿠키 헤더를 붙이고 204로 응답한다")
   void webRefreshAppliesCookiesAndReturns204() throws Exception {
     when(webAuthSession.refresh(any()))
         .thenReturn(
@@ -112,6 +116,7 @@ class WebAuthControllerTest {
   }
 
   @Test
+  @DisplayName("로그아웃은 받은 쿠키 헤더를 붙이고 204로 응답한다")
   void webLogoutAppliesCookiesAndReturns204() throws Exception {
     when(webAuthSession.logout(any()))
         .thenReturn(new WebAuthCookieUpdate(List.of("access_token=cleared; Path=/; HttpOnly")));
