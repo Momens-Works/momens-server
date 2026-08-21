@@ -1,4 +1,4 @@
-package works.momens.server.auth.presentation;
+package works.momens.server.auth.dev;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -7,9 +7,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import works.momens.server.auth.dev.dto.request.DevTokenRequest;
+import works.momens.server.auth.dev.dto.response.DevTokenResponse;
 import works.momens.server.auth.internal.application.DevTokenService;
-import works.momens.server.auth.presentation.dto.request.DevTokenRequest;
-import works.momens.server.auth.presentation.dto.response.DevTokenResponse;
 import works.momens.server.common.config.DevOnly;
 
 /**

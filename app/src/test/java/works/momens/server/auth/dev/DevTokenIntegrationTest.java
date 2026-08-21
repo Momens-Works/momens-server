@@ -1,4 +1,4 @@
-package works.momens.server.auth.presentation;
+package works.momens.server.auth.dev;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
