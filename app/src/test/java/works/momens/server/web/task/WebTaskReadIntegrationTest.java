@@ -1,6 +1,8 @@
 package works.momens.server.web.task;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -28,6 +31,35 @@ class WebTaskReadIntegrationTest extends AbstractPostgresIntegrationTest {
   @Autowired private AccessTokenTestFactory accessTokens;
   @Autowired private UserService userService;
   @Autowired private JdbcTemplate jdbcTemplate;
+
+  @Test
+  @DisplayName("웹 task write는 레거시 PATCH no-op과 update kind 정규화를 보존한다")
+  void preservesLegacyWriteSemantics() throws Exception {
+    UserProfile caller = userService.findOrCreate("web-task-write@momens.works", "홍길동", null);
+    UUID workspaceId = insertWorkspace();
+    UUID projectId = insertProject(workspaceId, caller.id());
+    UUID taskId = insertTask(workspaceId, projectId);
+    addMember(workspaceId, caller.id());
+
+    mockMvc
+        .perform(
+            authorized(patch("/api/tasks/{taskId}", taskId), caller.id())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"\",\"status\":\"\",\"priority\":\"\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("태스크"))
+        .andExpect(jsonPath("$.status").value("todo"))
+        .andExpect(jsonPath("$.priority").value("medium"));
+
+    mockMvc
+        .perform(
+            authorized(post("/api/tasks/{taskId}/updates", taskId), caller.id())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"body\":\" 내용 \",\"kind\":\" Comment \"}"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.body").value("내용"))
+        .andExpect(jsonPath("$.kind").value("comment"));
+  }
 
   @Test
   @DisplayName("워크스페이스 멤버는 태스크·목록·업데이트·컨텍스트를 조회한다")

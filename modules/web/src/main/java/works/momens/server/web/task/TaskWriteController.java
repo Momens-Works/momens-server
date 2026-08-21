@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.CurrentUser;
 import works.momens.server.project.TaskUpdateDetail;
@@ -23,12 +24,12 @@ import works.momens.server.web.task.dto.response.WebTaskResponse;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-class TaskWriteController {
+class TaskWriteController implements TaskWriteControllerDocs {
   private final TaskWriteService taskWriteService;
 
   @PostMapping(path = "/projects/{projectId}/tasks", version = "1")
-  @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.CREATED)
-  WebTaskResponse create(
+  @ResponseStatus(HttpStatus.CREATED)
+  public WebTaskResponse create(
       @PathVariable UUID projectId,
       @RequestBody CreateWebTaskRequest request,
       Principal principal) {
@@ -46,7 +47,7 @@ class TaskWriteController {
   }
 
   @PatchMapping(path = "/tasks/{taskId}", version = "1")
-  WebTaskResponse update(
+  public WebTaskResponse update(
       @PathVariable UUID taskId, @RequestBody UpdateWebTaskRequest request, Principal principal) {
     return WebTaskResponse.from(
         taskWriteService.update(
@@ -69,14 +70,14 @@ class TaskWriteController {
   }
 
   @DeleteMapping(path = "/tasks/{taskId}", version = "1")
-  WebMessageResponse delete(@PathVariable UUID taskId, Principal principal) {
+  public WebMessageResponse delete(@PathVariable UUID taskId, Principal principal) {
     taskWriteService.delete(taskId, CurrentUser.id(principal));
     return new WebMessageResponse("deleted");
   }
 
   @PostMapping(path = "/tasks/{taskId}/updates", version = "1")
-  @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.CREATED)
-  UpdateResponse createUpdate(
+  @ResponseStatus(HttpStatus.CREATED)
+  public UpdateResponse createUpdate(
       @PathVariable UUID taskId,
       @RequestBody CreateTaskUpdateRequest request,
       Principal principal) {
@@ -87,7 +88,7 @@ class TaskWriteController {
   }
 
   @DeleteMapping(path = "/tasks/{taskId}/updates/{updateId}", version = "1")
-  WebMessageResponse deleteUpdate(
+  public WebMessageResponse deleteUpdate(
       @PathVariable UUID taskId, @PathVariable UUID updateId, Principal principal) {
     taskWriteService.deleteUpdate(taskId, updateId, CurrentUser.id(principal));
     return new WebMessageResponse("deleted");

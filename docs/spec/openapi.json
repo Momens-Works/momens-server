@@ -8067,7 +8067,7 @@
       },
       "patch" : {
         "description" : "수정 화면이 저장한 편집 상태 전체로 태스크를 갱신합니다. 제목, 역할, 담당자, 우선순위, 상태, 목적, 완료기준을 한 번에 저장합니다. 담당자를 비우려면 assignee_id를 null로 보내고, 완료기준은 최종 목록으로 전체 교체하며 0개에서 5개까지 허용합니다. 저장만 하고 본문은 반환하지 않으므로, 저장 후 최신 상태는 태스크 상세 조회로 다시 읽습니다.",
-        "operationId" : "updateTask",
+        "operationId" : "updateTask_1",
         "parameters" : [
           {
             "description" : "task 식별자",
@@ -8885,9 +8885,10 @@
         ]
       },
       "post" : {
-        "operationId" : "create",
+        "operationId" : "createProjectTask",
         "parameters" : [
           {
+            "description" : "프로젝트 식별자",
             "in" : "path",
             "name" : "projectId",
             "required" : true,
@@ -8928,18 +8929,241 @@
               }
             },
             "description" : "Created"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "PROJECT_NOT_FOUND" : {
+                    "description" : "프로젝트를 찾을 수 없습니다.",
+                    "summary" : "PROJECT_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "PROJECT_NOT_FOUND",
+                        "message" : "프로젝트를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
+                    "description" : "완료기준 항목을 찾을 수 없습니다.",
+                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
+                        "message" : "완료기준 항목을 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "TASK_NOT_FOUND" : {
+                    "description" : "태스크를 찾을 수 없습니다.",
+                    "summary" : "TASK_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "TASK_NOT_FOUND",
+                        "message" : "태스크를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
           }
         },
+        "summary" : "프로젝트 태스크 생성",
         "tags" : [
-          "task-write-controller"
+          "Web"
         ]
       }
     },
     "/api/tasks/{taskId}" : {
       "delete" : {
-        "operationId" : "delete",
+        "operationId" : "deleteTask",
         "parameters" : [
           {
+            "description" : "태스크 식별자",
             "in" : "path",
             "name" : "taskId",
             "required" : true,
@@ -8970,10 +9194,232 @@
               }
             },
             "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "PROJECT_NOT_FOUND" : {
+                    "description" : "프로젝트를 찾을 수 없습니다.",
+                    "summary" : "PROJECT_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "PROJECT_NOT_FOUND",
+                        "message" : "프로젝트를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
+                    "description" : "완료기준 항목을 찾을 수 없습니다.",
+                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
+                        "message" : "완료기준 항목을 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "TASK_NOT_FOUND" : {
+                    "description" : "태스크를 찾을 수 없습니다.",
+                    "summary" : "TASK_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "TASK_NOT_FOUND",
+                        "message" : "태스크를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
           }
         },
+        "summary" : "태스크 삭제",
         "tags" : [
-          "task-write-controller"
+          "Web"
         ]
       },
       "get" : {
@@ -9241,9 +9687,10 @@
         ]
       },
       "patch" : {
-        "operationId" : "update_2",
+        "operationId" : "updateTask",
         "parameters" : [
           {
+            "description" : "태스크 식별자",
             "in" : "path",
             "name" : "taskId",
             "required" : true,
@@ -9284,10 +9731,232 @@
               }
             },
             "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "PROJECT_NOT_FOUND" : {
+                    "description" : "프로젝트를 찾을 수 없습니다.",
+                    "summary" : "PROJECT_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "PROJECT_NOT_FOUND",
+                        "message" : "프로젝트를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
+                    "description" : "완료기준 항목을 찾을 수 없습니다.",
+                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
+                        "message" : "완료기준 항목을 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "TASK_NOT_FOUND" : {
+                    "description" : "태스크를 찾을 수 없습니다.",
+                    "summary" : "TASK_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "TASK_NOT_FOUND",
+                        "message" : "태스크를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
           }
         },
+        "summary" : "태스크 수정",
         "tags" : [
-          "task-write-controller"
+          "Web"
         ]
       }
     },
@@ -9823,9 +10492,10 @@
         ]
       },
       "post" : {
-        "operationId" : "createUpdate",
+        "operationId" : "createTaskUpdate",
         "parameters" : [
           {
+            "description" : "태스크 식별자",
             "in" : "path",
             "name" : "taskId",
             "required" : true,
@@ -9866,18 +10536,241 @@
               }
             },
             "description" : "Created"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "PROJECT_NOT_FOUND" : {
+                    "description" : "프로젝트를 찾을 수 없습니다.",
+                    "summary" : "PROJECT_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "PROJECT_NOT_FOUND",
+                        "message" : "프로젝트를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
+                    "description" : "완료기준 항목을 찾을 수 없습니다.",
+                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
+                        "message" : "완료기준 항목을 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "TASK_NOT_FOUND" : {
+                    "description" : "태스크를 찾을 수 없습니다.",
+                    "summary" : "TASK_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "TASK_NOT_FOUND",
+                        "message" : "태스크를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
           }
         },
+        "summary" : "태스크 업데이트 생성",
         "tags" : [
-          "task-write-controller"
+          "Web"
         ]
       }
     },
     "/api/tasks/{taskId}/updates/{updateId}" : {
       "delete" : {
-        "operationId" : "deleteUpdate",
+        "operationId" : "deleteTaskUpdate",
         "parameters" : [
           {
+            "description" : "태스크 식별자",
             "in" : "path",
             "name" : "taskId",
             "required" : true,
@@ -9887,6 +10780,7 @@
             }
           },
           {
+            "description" : "태스크 업데이트 식별자",
             "in" : "path",
             "name" : "updateId",
             "required" : true,
@@ -9917,10 +10811,232 @@
               }
             },
             "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "PROJECT_NOT_FOUND" : {
+                    "description" : "프로젝트를 찾을 수 없습니다.",
+                    "summary" : "PROJECT_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "PROJECT_NOT_FOUND",
+                        "message" : "프로젝트를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
+                    "description" : "완료기준 항목을 찾을 수 없습니다.",
+                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
+                        "message" : "완료기준 항목을 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "TASK_NOT_FOUND" : {
+                    "description" : "태스크를 찾을 수 없습니다.",
+                    "summary" : "TASK_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "TASK_NOT_FOUND",
+                        "message" : "태스크를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
           }
         },
+        "summary" : "태스크 업데이트 삭제",
         "tags" : [
-          "task-write-controller"
+          "Web"
         ]
       }
     },
