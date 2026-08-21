@@ -28,8 +28,8 @@ import works.momens.server.workspace.WorkspaceSeedSql;
 /**
  * 라벨 발급 동작 검증.
  *
- * <p>실제 PostgreSQL(Testcontainers) + Flyway 위에서, workspace별로 {@code MOM} 라벨이 1부터 독립적으로 증가하는지, 그리고
- * 같은 workspace에 동시 발급이 들어와도 번호가 겹치지 않는지 확인합니다.
+ * <p>PostgreSQL(Testcontainers)에 Flyway 마이그레이션을 적용한 환경에서 세 가지를 검증합니다. 워크스페이스마다 라벨 번호가 1부터 독립적으로
+ * 증가하는지, 동일한 워크스페이스 안에서도 접두사별로 번호가 독립적으로 증가하는지, 동일한 워크스페이스에서 라벨을 동시에 발급해도 번호가 중복되지 않는지 확인합니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -57,6 +57,15 @@ class LabelAllocatorIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(labelAllocator.allocateMomLabel(first)).isEqualTo("MOM-0001");
     assertThat(labelAllocator.allocateMomLabel(second)).isEqualTo("MOM-0001");
     assertThat(labelAllocator.allocateMomLabel(first)).isEqualTo("MOM-0002");
+  }
+
+  @Test
+  void keepsSequencesIndependentAcrossPrefixes() {
+    UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-prefix");
+
+    assertThat(labelAllocator.allocateProjectLabel(workspaceId)).isEqualTo("PRJ-0001");
+    assertThat(labelAllocator.allocateMomLabel(workspaceId)).isEqualTo("MOM-0001");
+    assertThat(labelAllocator.allocateProjectLabel(workspaceId)).isEqualTo("PRJ-0002");
   }
 
   /**
