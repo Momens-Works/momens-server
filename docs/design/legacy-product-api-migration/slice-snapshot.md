@@ -10,11 +10,11 @@ FE 기준선: `momens-fe@d76a2d5`
 
 관련 작업: `MOM-0856`(계약 확정), `MOM-0862`(구현), `MOM-0857`~`MOM-0861`(capability read 기반)
 
-관련 문서: [이관 전략](legacy-product-api-migration-strategy.md),
-[이관 원장](legacy-product-api-migration-ledger.md),
-[첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md),
-[API 버저닝](../spec/api-versioning.md),
-[API 응답과 에러 코드](../spec/api-response-error-codes.md)
+관련 문서: [이관 전략](strategy.md),
+[이관 원장](ledger.md),
+[첫 웹 read 슬라이스 계약](slice-workspace-read.md),
+[API 버저닝](../../spec/api-versioning.md),
+[API 응답과 에러 코드](../../spec/api-response-error-codes.md)
 
 ## 1. 목적
 
@@ -23,7 +23,7 @@ FE 기준선: `momens-fe@d76a2d5`
 이관의 중심은 이 endpoint의 계약을 잠그는 것이고, 이 문서가 확정한 응답 계약이
 `MOM-0857`~`MOM-0861`의 capability read 기반 요구사항을 도출하는 기준이 된다.
 
-합성 로직의 소유는 `:web`으로 이미 확정됐다([첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) 5절).
+합성 로직의 소유는 `:web`으로 이미 확정됐다([첫 웹 read 슬라이스 계약](slice-workspace-read.md) 5절).
 이 문서는 그 위에서 응답 계약과 필드별 소유 capability를 고정한다.
 
 ## 2. 레거시 트레이스
@@ -164,7 +164,7 @@ milestone에는 `owner_id` 컬럼 자체가 없어 폴백할 대상이 없다. �
 ### 4.2 인증과 권한
 
 보호 체인이 access token을 읽고 컨트롤러가 `CurrentUser.id(principal)`로 `users.id`를 받는다.
-전환기에는 레거시 `session_token` 쿠키를 함께 수용한다([ADR-0017](../adr/0017-transitional-legacy-session-token-acceptance.md)).
+전환기에는 레거시 `session_token` 쿠키를 함께 수용한다([ADR-0017](../../adr/0017-transitional-legacy-session-token-acceptance.md)).
 
 권한 판정은 `WorkspaceAccess.isMember` 한 번이다. 레거시는 9개 서비스가 각각 `RequireMember`를
 호출하지만 결과가 같고 쿼리만 늘어난다.
@@ -214,7 +214,7 @@ milestone에는 `owner_id` 컬럼 자체가 없어 폴백할 대상이 없다. �
   `taskCompletionRatio`(`src/domain/selectors.ts`)가 태스크에서 직접 계산한다. API 타입
   `ApiProject.progress`가 optional이라 키가 없어도 타입 검사와 런타임 모두 영향이 없다.
 - **이 서버는 저장값을 쓰지 않는다.** 진행률은 태스크 기준 계산이고 `projects.progress`는 읽지도
-  쓰지도 않는 레거시 컬럼으로 유지한다([ADR-0013](../adr/0013-project-progress-derivation.md)).
+  쓰지도 않는 레거시 컬럼으로 유지한다([ADR-0013](../../adr/0013-project-progress-derivation.md)).
   ADR이 "웹 이관 시 진행률 정책과 함께 다시 판단한다"로 유예한 지점을 여기서 정한다.
 
 계산값을 채우는 선택지도 있었으나, 아무도 읽지 않는 값을 위해 project별 태스크 집계를 4.7의 쿼리
@@ -284,7 +284,7 @@ Java에는 `omitempty`가 없으므로 이 폭 차이는 명시적으로 선언�
 
 ### 4.6 에러 응답 — Standard 모드
 
-[첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) 4.4에서 FE와
+[첫 웹 read 슬라이스 계약](slice-workspace-read.md) 4.4에서 FE와
 합의한 규칙을 승계하고, 거기에 없던 서버 오류 한 행을 더한다. 같은 워크스페이스 리소스에 다른
 규칙을 둘 이유가 없다.
 
@@ -375,7 +375,7 @@ H051의 유일한 호출자는 snapshot이 없을 때만 타는 폴백이고, FE
 4.3이 `projects[].progress`를 제외한 것과 다르다. 마일스톤 진행률은 레거시 write 경로가 실제로
 유지하는 저장값이고(`milestone/service.go`의 `normalizeProgress`), `momens-fe`의
 `mapMilestone`(`src/api/mappers.ts:75`)이 이 값을 읽는다. 저장값을 쓰지 않기로 한 결정
-([ADR-0013](../adr/0013-project-progress-derivation.md))은 `projects.progress`에만 해당한다.
+([ADR-0013](../../adr/0013-project-progress-derivation.md))은 `projects.progress`에만 해당한다.
 
 ## 6. 테스트
 

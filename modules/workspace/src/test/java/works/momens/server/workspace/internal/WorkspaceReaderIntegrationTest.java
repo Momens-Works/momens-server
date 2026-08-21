@@ -23,7 +23,7 @@ import works.momens.server.workspace.WorkspaceSeedSql;
  * {@link WorkspaceReader} public API 검증.
  *
  * <p>실제 PostgreSQL(Testcontainers)에서 정렬(생성 시각 내림차순), 멤버십 필터, {@code description} null 동작을
- * 고정합니다(docs/design/legacy-product-api-migration-workspace-read-design.md 4.3).
+ * 고정합니다(docs/design/legacy-product-api-migration/slice-workspace-read.md 4.3).
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

@@ -169,7 +169,7 @@ MVP 이후 단계(웹/레거시 이관)의 이관 후보로 둔다.
 | 후속 Signal 흐름 | 처리된 Signal inbox, record-decision, resolve, snooze, keep-watching | 선택 | 제외 | 삭제 처리한 Signal 다시 보기와 후속 액션은 MVP 이후 |
 
 단계 C·D의 실행 단위, 계약 보존, writer·projection 전환과 종료 조건은
-[레거시 Product API 이관 전략](legacy-product-api-migration-strategy.md)에서 관리한다. prod 스키마,
+[레거시 Product API 이관 전략](legacy-product-api-migration/strategy.md)에서 관리한다. prod 스키마,
 필수 설정, 수기 운영 의무는 로직 이관의 일률적인 선행 단계가 아니라 각 배포와 트래픽 전환이 요구하는
 prod gate로 별도 추적한다.
 

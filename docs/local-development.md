@@ -117,7 +117,7 @@ checksum을 갱신해야 합니다.
 
 ## 레거시 차등 비교
 
-[이관 전략](design/legacy-product-api-migration-strategy.md)의 characterization은 같은 요청을 레거시
+[이관 전략](design/legacy-product-api-migration/strategy.md)의 characterization은 같은 요청을 레거시
 `momens-api`와 신규 서버에 적용해 결과를 비교하도록 정합니다. 그 비교를 실행하는 하네스가
 `scripts/legacy-diff/`입니다(`MOM-0877`).
 
@@ -196,7 +196,7 @@ write 케이스는 부속 파일을 `cases/<id>/` 아래 규약으로 둡니다(
   수렴해 비교가 성립합니다
 - `H024-noop`은 레거시만 갱신해 `Time_1, Time_2` 대 `Time_1, Time_1`로 갈립니다. 변경할 값이 없는
   요청에도 레거시는 갱신하지만 신규 서버는 갱신하지 않는다는
-  [이관 원장](design/legacy-product-api-migration-ledger.md) H024 행의 확정 사항이 그대로 드러납니다
+  [이관 원장](design/legacy-product-api-migration/ledger.md) H024 행의 확정 사항이 그대로 드러납니다
 
 write 케이스는 실행 직전마다 `fixture.sql`을 다시 적용합니다. `fixture.sql`이 `TRUNCATE ...
 CASCADE`로 시작해 멱등하기 때문에 가능하고, 덕분에 `cases.tsv`의 행 순서에 의존하지 않습니다.

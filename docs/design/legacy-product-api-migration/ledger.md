@@ -10,7 +10,7 @@
 
 ## 목적과 읽는 법
 
-이 원장은 [레거시 Product API 이관 전략](legacy-product-api-migration-strategy.md)의 상태 원장이다.
+이 원장은 [레거시 Product API 이관 전략](strategy.md)의 상태 원장이다.
 레거시의 HTTP route declaration 96개와 HTTP 밖의 실행 진입점을 코드 기준으로 추적한다.
 
 HTTP 행은 `H001`부터, 비-HTTP 행은 `N001`부터 식별한다. 각 행의 필수 필드는 다음 세 곳을
@@ -85,7 +85,7 @@ rg --files ../momens-api/cmd
 - Product JSON API의 target path는 `/api`, handler version은 `1`이며 레거시 root path alias는
   만들지 않는다.
 - Product JSON API의 **성공 응답은 레거시 body shape를 보존하고, 에러 응답은 전면 Standard
-  모드**를 쓴다([API 응답과 에러 코드](../spec/api-response-error-codes.md)의 표준 형식·코드).
+  모드**를 쓴다([API 응답과 에러 코드](../../spec/api-response-error-codes.md)의 표준 형식·코드).
   FE가 서버 기준을 따르기로 합의했다(2026-08-18, `MOM-0856`). 초기 합의는 H020·H022 한정이었으나
   (`MOM-0851`) 웹 이관 endpoint 전체로 확대됐다. status와 성공 body shape는 characterization
   test로 고정한다.
@@ -94,15 +94,15 @@ rg --files ../momens-api/cmd
     레거시가 서버 오류까지 403으로 매핑하는 경우도 보존하지 않고 500으로 낸다.
 - 레거시 보호 route는 `session_token` 쿠키 JWT를 사용한다. 신규 웹은
   `access_token`·`refresh_token` HttpOnly 쿠키를 사용한다. 전환기에는 신규 서버가 레거시
-  `session_token`을 한시 수용하고([ADR-0017](../adr/0017-transitional-legacy-session-token-acceptance.md)),
+  `session_token`을 한시 수용하고([ADR-0017](../../adr/0017-transitional-legacy-session-token-acceptance.md)),
   웹 컷오버 이후에는 레거시가 신규 `access_token`을 수용한다
-  ([ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)).
+  ([ADR-0018](../../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)).
 - 모든 Product JSON route에는 FE의 path·`API-Version: 1`·세션 전환이 client gate로 걸린다.
 - read-only route의 기본 rollback은 routing rollback이다. write route는 신규 데이터가 레거시
   schema·enum·relation·projection과 호환된다는 증거가 있기 전까지 writer rollback을 보장하지 않는다.
 - aggregate별 writer는 한 시점에 하나만 둔다. REST, MCP tool, Slack action, webhook,
   background runtime을 함께 계산한다.
-- prod schema와 설정의 전역 release gate는 [prod 운영 준비 대장](../prod-schema-ledger.md)에서
+- prod schema와 설정의 전역 release gate는 [prod 운영 준비 대장](../../prod-schema-ledger.md)에서
   확인한다. 이 게이트는 trace·local/dev 구현의 선행 조건이 아니다.
 
 ## 웹 FE 사용 실태
@@ -198,7 +198,7 @@ handler/service/repository를 뜻한다.
 | `AUT` | `auth/handler.go` → `auth/service.go` → `auth/repository.go` → `domain.User`, `platform/auth/jwt.go`, `platform/oauth/google.go` | `000001_init.sql`, `000007_user_job_role.sql`, `000018_refresh_tokens.sql`; `auth/service_integration_test.go`, `platform/auth/jwt_test.go` | `auth` 세션과 `user` 신원·프로필 |
 | `USR` | legacy `auth/handler.go`의 `Me`·`UpdateMe` → `auth/service.go` → `auth/repository.go` → `domain.User` | `000001_init.sql`, `000007_user_job_role.sql`; `auth/service_integration_test.go` | `user`; `/api/me` GET/PATCH 구현 완료 |
 | `WSP` | `workspace/handler.go` → `service.go` → `repository.go`, `access/service.go`·`repository.go`, `label/label.go` → workspace 관련 `domain/models.go` | `000001_init.sql`, `000006_fe_contract.sql`, `000009_member_onboarding_state.sql`, `000011_workspace_invitations.sql`; `workspace/*_test.go`, `access/service_integration_test.go` | 도메인 `workspace`, 웹 표면 `web` |
-| `SNP` | `snapshot/handler.go` → workspace/project/milestone/task/blocker/memory/relation service·repository | 위 capability의 모든 schema; `snapshot/handler_integration_test.go` | 표면과 합성 로직 모두 `:web`(`MOM-0850`). 응답 계약은 [웹 snapshot 계약](legacy-product-api-migration-snapshot-design.md)에서 확정(`MOM-0856`) |
+| `SNP` | `snapshot/handler.go` → workspace/project/milestone/task/blocker/memory/relation service·repository | 위 capability의 모든 schema; `snapshot/handler_integration_test.go` | 표면과 합성 로직 모두 `:web`(`MOM-0850`). 응답 계약은 [웹 snapshot 계약](slice-snapshot.md)에서 확정(`MOM-0856`) |
 | `PRJ` | `project/handler.go` → `service.go` → `repository.go` → `domain.Project`, `access` | `000001_init.sql`, `000006_fe_contract.sql`, `000008_project_metadata.sql`, `000017_project_label.sql`; `project/handler_test.go`, `service_integration_test.go` | `project` |
 | `MIL` | `milestone/handler.go` → `service.go` → `repository.go` → `domain.Milestone`, `access` | `000001_init.sql`, `000006_fe_contract.sql`; `milestone/service_integration_test.go` | `project` |
 | `TSK` | `task/handler.go` → `service.go` → `repository.go` → `domain.Task`·`TaskUpdate`, `retrieval/projection.go`·`repository.go` | `000001_init.sql`, `000002_retrieval_projection.sql`, `000006_fe_contract.sql`, `000012_task_updates.sql`, `000013_task_workspace_cascade.sql`; `task/service_integration_test.go`, `retrieval/projection_test.go` | `project`의 nested `task`; 웹 계약은 `MOM-0773` 필요 |
@@ -215,8 +215,8 @@ handler/service/repository를 뜻한다.
 | --- | --- | --- | --- |
 | `OP` | 운영 계약. 공개 health | read-only, DB 없음 | 신규 `/actuator/health`는 구현됨. ingress/probe 전환과 routing rollback 필요. `MOM-0848` |
 | `MOA-P` | OAuth metadata·등록·인가·token·revoke protocol 계약. endpoint별 client/token 검증 | `oauth_*` writer; OAuth client와 MCP client 외부 의존 | `oauth_*` prod 존재와 target module 미확정. protocol client rollback/runbook 필요. 후속 MCP/OAuth 결정 작업 |
-| `MOA-I` | legacy `session_token` 인증 후 interaction user/workspace 검증 | `oauth_interactions`, grant/code writer | 웹 컷오버 시점 동작은 [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)로 해소(레거시가 신규 `access_token` 수용). writer rollback 미확정. 후속 MCP/OAuth 결정 작업 |
-| `MOA-G` | legacy 세션 + workspace membership/grant ownership | `oauth_grants` writer | 웹 컷오버 시점 동작은 [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)로 해소. grant/token drain·폐기 정책 필요. 후속 MCP/OAuth 결정 작업 |
+| `MOA-I` | legacy `session_token` 인증 후 interaction user/workspace 검증 | `oauth_interactions`, grant/code writer | 웹 컷오버 시점 동작은 [ADR-0018](../../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)로 해소(레거시가 신규 `access_token` 수용). writer rollback 미확정. 후속 MCP/OAuth 결정 작업 |
+| `MOA-G` | legacy 세션 + workspace membership/grant ownership | `oauth_grants` writer | 웹 컷오버 시점 동작은 [ADR-0018](../../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)로 해소. grant/token drain·폐기 정책 필요. 후속 MCP/OAuth 결정 작업 |
 | `MCP` | MCP Streamable HTTP, OAuth bearer와 tool별 scope | project/milestone/task/comment writer가 REST와 같은 aggregate를 공유 | MCP client 재등록, grant/token 전환, 단일 writer와 rollback 필요. 후속 MCP/OAuth 결정 작업 |
 | `SLK` | Slack signature·retry·3초 ack 계약 | retrieval·Vertex·Slack API; action layer가 task writer | signing secret, bot identity, redirect/event URL, 비동기 실패 관측 필요. task writer·projection과 함께 전환. 후속 Slack 표면 작업 |
 | `AUT` | 레거시 단일 JWT 대신 확정된 Standard 웹 access+refresh 쿠키 계약. H014~H016은 공개 transport | `users`, `user_identities`, `refresh_tokens`; Google OAuth. 아래 `users` writer 예외 적용 | 신규 경로 구현 완료(`MOM-0640`, `MOM-0641`). FE 로그인과 함께 전환하며 레거시 세션 rollback은 별도 브리지 없이는 불가 |
@@ -235,7 +235,7 @@ handler/service/repository를 뜻한다.
 
 ### `users` writer 한시적 예외
 
-`AUT`와 `USR`의 `users` aggregate는 [ADR-0016](../adr/0016-user-identity-key-google-sub.md)에 따른
+`AUT`와 `USR`의 `users` aggregate는 [ADR-0016](../../adr/0016-user-identity-key-google-sub.md)에 따른
 단일 writer 원칙의 한시적 예외다. 현재 writer는 레거시 웹 로그인·프로필 수정의 `momens-api`와 신규
 모바일·웹 로그인·`/api/me`의 `momens-server` 두 곳이다. 한 요청을 복제하는 dual-write가 아니라
 클라이언트 경로별 writer가 같은 `users` 행에 공존하는 상태다.
@@ -288,9 +288,9 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H006 | OAuth | `GET /oauth/authorize` | `Authorize` | `MOA-P` | W | `traced`; consent interaction 생성·redirect |
 | H007 | OAuth | `POST /oauth/token` | `Token` | `MOA-P` | W | `traced`; code 교환·refresh 회전 |
 | H008 | OAuth | `POST /oauth/revoke` | `Revoke` | `MOA-P` | W | `traced` |
-| H009 | OAuth | `GET /oauth/interactions/:id` | `GetInteraction` | `MOA-I` | R | `traced`; legacy 세션 필요. 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
-| H010 | OAuth | `POST /oauth/interactions/:id/approve` | `Approve` | `MOA-I` | W | `traced`; grant/code 생성. 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
-| H011 | OAuth | `POST /oauth/interactions/:id/deny` | `Deny` | `MOA-I` | W | `traced`; 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
+| H009 | OAuth | `GET /oauth/interactions/:id` | `GetInteraction` | `MOA-I` | R | `traced`; legacy 세션 필요. 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
+| H010 | OAuth | `POST /oauth/interactions/:id/approve` | `Approve` | `MOA-I` | W | `traced`; grant/code 생성. 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
+| H011 | OAuth | `POST /oauth/interactions/:id/deny` | `Deny` | `MOA-I` | W | `traced`; 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
 | H012 | MCP | `ANY /mcp` | `mcpserver.Server` | `MCP` | RW | `traced`; 조건부 등록, 선언 하나로 계산 |
 | H013 | webhook | `POST /slack/events` | `slackbot.Events` | `SLK` | RW | `traced`; 조건부 등록, signed webhook |
 | H014 | Product auth | `GET /auth/google/login` | `auth.GoogleLogin` | `AUT` | W | `implemented`: target `/api/auth/google/login`, state+PKCE 계약으로 교체 |
@@ -299,10 +299,10 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H017 | Product auth | `GET /auth/me` | `auth.Me` | `USR` | R | `implemented`: target `GET /api/me`; cutover 전 |
 | H018 | Product auth | `PATCH /auth/me` | `auth.UpdateMe` | `USR` | W | `implemented`: target `PATCH /api/me`; cutover 전 |
 | H019 | Product JSON | `POST /workspaces` | `workspace.Create` | `WSP` | W | `traced`. 구현 `MOM-0863` |
-| H020 | Product JSON | `GET /workspaces` | `workspace.List` | `WSP` | R | `implemented`: target `GET /api/workspaces`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환 대상; cutover 전 |
+| H020 | Product JSON | `GET /workspaces` | `workspace.List` | `WSP` | R | `implemented`: target `GET /api/workspaces`, [첫 웹 read 슬라이스 계약](slice-workspace-read.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환 대상; cutover 전 |
 | H021 | Product JSON | `GET /workspaces/slug-available` | `workspace.SlugAvailable` | `WSP` | R | `implemented`: target `GET /api/workspaces/slug-available`. 구현 완료(`MOM-0863`), 전환 전 |
-| H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `implemented`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환은 제외. 웹 소비자가 snapshot 폴백뿐임이 FE 기준선에서 확인됐다. H023 제공 시 폴백이 삭제되면 웹 소비자가 사라지므로, 전환 여부는 `MOM-0862` 머지 후 판단한다 |
-| H023 | Product JSON | `GET /workspaces/:id/snapshot` | `snapshot.Get` | `SNP` | R | `implemented`: target `GET /api/workspaces/{workspaceId}/snapshot`, [웹 snapshot 계약](legacy-product-api-migration-snapshot-design.md) (`MOM-0856`). 구현 완료(`MOM-0862`), 전환 전. 웹 read의 유일한 실질 경로 |
+| H022 | Product JSON | `GET /workspaces/:id` | `workspace.Get` | `WSP` | R | `implemented`: target `GET /api/workspaces/{workspaceId}`, [첫 웹 read 슬라이스 계약](slice-workspace-read.md) (`MOM-0850`). 구현 완료(`MOM-0851`), 전환은 제외. 웹 소비자가 snapshot 폴백뿐임이 FE 기준선에서 확인됐다. H023 제공 시 폴백이 삭제되면 웹 소비자가 사라지므로, 전환 여부는 `MOM-0862` 머지 후 판단한다 |
+| H023 | Product JSON | `GET /workspaces/:id/snapshot` | `snapshot.Get` | `SNP` | R | `implemented`: target `GET /api/workspaces/{workspaceId}/snapshot`, [웹 snapshot 계약](slice-snapshot.md) (`MOM-0856`). 구현 완료(`MOM-0862`), 전환 전. 웹 read의 유일한 실질 경로 |
 | H024 | Product JSON | `PATCH /workspaces/:id` | `workspace.Update` | `WSP` | W | `implemented`: target `PATCH /api/workspaces/{workspaceId}`. 구현 완료(`MOM-0863`), 전환 전. 레거시에서는 미존재와 권한 부족을 모두 403으로 응답했으나, 신규 서버에서는 미존재는 404, 권한 부족은 403으로 구분한다. 레거시는 변경할 값이 없는 요청에도 `updated_at`을 갱신했지만, 신규 서버는 값이 실제로 변경된 경우에만 갱신한다. 웹이 이 endpoint를 신규 서버로 호출하기 시작하면 신규 서버가 `workspaces` 행을 수정하는 반면, 레거시는 H019를 통해 같은 테이블에 행을 생성하므로 H019와 같은 시점에 전환한다 |
 | H025 | Product JSON | `GET /workspaces/:id/onboarding` | `workspace.GetOnboarding` | `WSP` | R | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위에서 **제외 확정**(PR #156). 이관 대상이 아니라 retire 후보 |
 | H026 | Product JSON | `PATCH /workspaces/:id/onboarding` | `workspace.PatchOnboarding` | `WSP` | W | `traced`; **웹 미호출**(`MOM-0856`). `MOM-0863` 범위에서 **제외 확정**(PR #156). 이관 대상이 아니라 retire 후보 |
@@ -314,8 +314,8 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H032 | Product JSON | `POST /workspaces/:id/invitations/:invitationId/revoke` | `workspace.RevokeInvitation` | `WSP` | W | `implemented`: target `POST /api/workspaces/{workspaceId}/invitations/{invitationId}/revoke`. 구현 완료(`MOM-0865`), 전환 전. 이미 수락된 초대는 폐기할 수 없으며 409 `INVITATION_ALREADY_ACCEPTED`로 응답한다 |
 | H033 | Product JSON | `PATCH /workspaces/:id/members/:userId` | `workspace.UpdateMember` | `WSP` | W | `implemented`: target `PATCH /api/workspaces/{workspaceId}/members/{userId}`. 구현 완료(`MOM-0864`), 전환 전. 레거시에서 403 하나로 처리하던 실패 상황을 네 가지로 구분한다. 워크스페이스가 없으면 404 `WORKSPACE_NOT_FOUND`, 요청자의 권한이 부족하면 403 `AUTH_FORBIDDEN`, 대상 사용자가 멤버가 아니면 404 `WORKSPACE_MEMBER_NOT_FOUND`, 대상이 owner이면 409 `WORKSPACE_OWNER_PROTECTED`를 반환한다. 앞의 두 경우는 공통 전환 규칙에 따른 것이며, 뒤의 두 경우는 이 작업에서 결정했다. `role`이 `admin`이나 `member`가 아니면 레거시와 동일하게 400으로 응답하며, 에러 코드는 `WORKSPACE_INVALID_ROLE`이다 |
 | H034 | Product JSON | `DELETE /workspaces/:id/members/:userId` | `workspace.RemoveMember` | `WSP` | W | `implemented`: target `DELETE /api/workspaces/{workspaceId}/members/{userId}`. 구현 완료(`MOM-0864`), 전환 전. 실패 상황은 H033과 같은 기준으로 구분하며, 요청자가 자기 자신을 제거하려는 경우에는 409 `WORKSPACE_SELF_REMOVAL_NOT_ALLOWED`를 반환한다. 레거시와 동일하게 자기 자신인지 먼저 확인한 뒤 대상 멤버를 조회한다. 따라서 존재하지 않는 사용자 ID라도 요청자 자신의 ID를 전달하면 두 서버 모두 자기 자신을 제거하려는 요청으로 판정한다 |
-| H035 | OAuth | `GET /workspaces/:id/mcp-grants` | `mcpauth.ListGrants` | `MOA-G` | R | `traced`; 조건부 등록. 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
-| H036 | OAuth | `DELETE /workspaces/:id/mcp-grants/:grantId` | `mcpauth.RevokeGrant` | `MOA-G` | W | `traced`; 조건부 등록. 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
+| H035 | OAuth | `GET /workspaces/:id/mcp-grants` | `mcpauth.ListGrants` | `MOA-G` | R | `traced`; 조건부 등록. 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
+| H036 | OAuth | `DELETE /workspaces/:id/mcp-grants/:grantId` | `mcpauth.RevokeGrant` | `MOA-G` | W | `traced`; 조건부 등록. 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
 | H037 | Product JSON | `POST /workspaces/:id/projects` | `project.Create` | `PRJ` | W | `traced`. 구현 `MOM-0866` |
 | H038 | Product JSON | `GET /workspaces/:id/projects` | `project.List` | `PRJ` | R | `traced`. 구현 `MOM-0857` |
 | H039 | Product JSON | `GET /workspaces/:id/blockers` | `blocker.List` | `BLK` | R | `traced`. blocker read 기반만 구현(`MOM-0859`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백뿐이며 blocker 데이터는 H023으로 소비된다 |
@@ -385,7 +385,7 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 
 | Profile | contract·auth/RBAC | legacy trace·schema·test | target·writer/projection/external | prod/client gate | rollback |
 | --- | --- | --- | --- | --- | --- |
-| `N-MIG` | 프로세스 startup에서 SQL 파일을 lexical order로 실행하고 파일별 transaction·version row·advisory lock을 보장. 최종 사용자 auth는 N/A, 배포 runtime의 migration DB 권한이 실행 권한 | `bootstrap/app.go` → `platform/db/migrations.go` → `migrations/*.sql`; `schema_migrations`; `platform/db/migrations_integration_test.go` | local/test는 target module Flyway, prod DDL writer는 현재 `momens-api`; 최종 owner 미결 | prod는 legacy migration owner와 [prod 운영 준비 대장](../prod-schema-ledger.md) 확인. 외부 client gate는 N/A, deploy/startup gate만 존재 | 실패한 파일 transaction은 rollback되지만 이미 적용된 이전 파일의 down migration은 없음. 배포 rollback과 schema rollback을 분리하고 객체별 보상 절차 없이는 retire 금지 |
+| `N-MIG` | 프로세스 startup에서 SQL 파일을 lexical order로 실행하고 파일별 transaction·version row·advisory lock을 보장. 최종 사용자 auth는 N/A, 배포 runtime의 migration DB 권한이 실행 권한 | `bootstrap/app.go` → `platform/db/migrations.go` → `migrations/*.sql`; `schema_migrations`; `platform/db/migrations_integration_test.go` | local/test는 target module Flyway, prod DDL writer는 현재 `momens-api`; 최종 owner 미결 | prod는 legacy migration owner와 [prod 운영 준비 대장](../../prod-schema-ledger.md) 확인. 외부 client gate는 N/A, deploy/startup gate만 존재 | 실패한 파일 transaction은 rollback되지만 이미 적용된 이전 파일의 down migration은 없음. 배포 rollback과 schema rollback을 분리하고 객체별 보상 절차 없이는 retire 금지 |
 | `N-BACKFILL` | startup goroutine이 live row의 NULL `search_tokens`를 batch로 채우며 조건부 UPDATE로 재실행·경합에 안전. 최종 사용자 auth는 N/A, runtime DB 권한으로 실행 | `bootstrap/app.go` → `retrieval/backfill.go`·`tokenizer.go`; `retrieval_documents.search_tokens`; `retrieval/backfill_test.go`, `retrieval/tokenizer_test.go` | `retrieval_documents.search_tokens` writer; target `momens-worker`/retrieval projection owner 미결, 외부 gateway 없음 | prod gate는 owner·재처리 계약과 NULL backlog 관측. client gate는 N/A | goroutine을 중단해 rollback하며 이미 계산된 파생 token은 유지 가능. tokenizer 계약이 바뀌면 전체 재계산 절차가 필요 |
 | `N-EMBED` | startup 뒤 즉시 stale row를 drain하고 ticker로 반복. text race guard와 model/dimension 검증을 사용. 최종 사용자 auth는 N/A, Vertex ADC와 runtime DB 권한으로 실행 | `bootstrap/app.go` → `retrieval/embedder.go` → `platform/llm/embeddings.go`; `retrieval_documents.embedding`, `embedding_model`, `text_hash`; `retrieval/embedder_test.go`, `platform/llm/embeddings_test.go` | embedding writer, Vertex AI; target `momens-worker`/retrieval owner 미결 | prod gate는 owner 단일화, model·dimension·ADC·비용·지연·중복 실행 관측. client gate는 N/A | loop를 끄고 lexical 검색으로 후퇴하며 기존 vector는 유지. owner/model 전환 시 stale 판정과 재embedding 가능성을 확인 |
 | `N-SLK` | H013의 Slack signature·retry·3초 ack 계약을 공유하고 app mention을 goroutine에서 answer/post. Slack 서명과 구성된 bot identity가 권한 경계 | `slackbot/handler.go` → `answerAndPost`, `grounded.go`, `action.go` → `minsu/*`; `slackbot/handler_test.go`, `grounded_test.go`, `action_test.go` | Slack API·retrieval·Vertex, action이면 task writer; target `minsu` + `project` public API | signing secret·bot identity·event URL·timeout·실패 관측과 task projection 준비. Slack event URL이 client gate | event URL을 legacy로 되돌리고 신규 유입을 중단. 현재 child goroutine drain 관리가 없으므로 최대 answer/post 시간의 in-flight 유실 허용 여부와 Slack retry를 runbook에 명시 |
@@ -419,7 +419,7 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 ## 첫 수직 슬라이스 후보 비교
 
 첫 슬라이스는 **워크스페이스 목록·상세(H020, H022)** 로 확정했다(`MOM-0850`). 계약은
-[첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md)이 잠갔다. 아래는 확정 당시
+[첫 웹 read 슬라이스 계약](slice-workspace-read.md)이 잠갔다. 아래는 확정 당시
 비교한 read-only 후보이며, write 전환과 projection 공통 기반을 처음부터 묶지 않아도 되는 범위만
 비교했다.
 
@@ -432,7 +432,7 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 | 결정·블로커 read | H039, H055, H073 | write를 제외하면 projection 전환 없이 routing rollback 가능 | target entity/API 미구현, legacy 전용 test 없음, 현재 클라이언트 사용 근거 확인 필요 | ~~characterization 근거가 약해 후순위~~ **무효.** H039는 snapshot 폴백 전용이라 H023 합성용 blocker read 기반만 구현했다(`MOM-0859`). H055·H073은 호출처가 없어 decision read 기반도 만들지 않는다 |
 
 확정한 슬라이스의 route → handler → service → repository → schema → test 재추적 결과와 잠근
-계약은 [첫 웹 read 슬라이스 계약](legacy-product-api-migration-workspace-read-design.md)에 있다.
+계약은 [첫 웹 read 슬라이스 계약](slice-workspace-read.md)에 있다.
 
 ## 미결정 사항
 
@@ -442,13 +442,13 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 2. MCP transport·OAuth authorization server의 target Gradle module과 grant/token 이전 방식
    — 미결정으로 남는다. 다만 **웹 컷오버 시점의 동작만은 분리해 결정했다**. 레거시가 신규
    `access_token`을 수용해 H009~H011·H035·H036을 유지한다
-   ([ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md), `MOM-0871`).
+   ([ADR-0018](../../adr/0018-transitional-legacy-acceptance-of-new-access-token.md), `MOM-0871`).
    표면 전체의 이관은 여전히 이 항목이 풀어야 한다
 3. `momens-worker`의 공통 outbox 소비 기반(offset·멱등·재시도·DLQ)과 task/decision/blocker/memory
    projector 분리
 4. startup retrieval backfill·embedding의 최종 owner와 기존 document 재projection 방식
 5. ~~snapshot 합성 endpoint의 합성 로직 소유와 응답 계약~~ — 해소. 표면·합성 모두 `:web`이고
-   (`MOM-0850`) 응답 계약은 [웹 snapshot 계약](legacy-product-api-migration-snapshot-design.md)이
+   (`MOM-0850`) 응답 계약은 [웹 snapshot 계약](slice-snapshot.md)이
    잠갔다(`MOM-0856`)
 6. offline CLI 3개의 유지·대체·폐기와 소유 저장소
 7. `MOM-0773` task 계약, `MOM-0774` source-ref 관계, `MOM-0845` workspace scope
@@ -460,11 +460,11 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 중복 여부를 Momens에서 다시 확인한 뒤 필요한 것만 만든다.
 
 1. ~~`[Docs] 첫 웹 read 수직 슬라이스 선정과 계약 잠금`~~ — `MOM-0850`에서 완료.
-   H020·H022로 확정하고 [계약 문서](legacy-product-api-migration-workspace-read-design.md)로 잠갔다
+   H020·H022로 확정하고 [계약 문서](slice-workspace-read.md)로 잠갔다
 2. `[Docs] MCP/OAuth target module·token/grant 전환 ADR`
    - H002~H012, H035~H036, N009~N019 소유
    - 웹 컷오버 시점의 동작은 여기서 빠졌다. `MOM-0871`이
-     [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)로 분리 결정했다
+     [ADR-0018](../../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)로 분리 결정했다
 3. `[Feat] worker outbox 공통 소비 기반`
    - offset, idempotency, retry, DLQ와 관측성만 소유
 4. aggregate별 projection 작업
