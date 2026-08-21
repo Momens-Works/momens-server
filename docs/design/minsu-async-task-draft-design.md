@@ -971,7 +971,8 @@ age"는 원인을 가리지 않는 2차 지표로 함께 본다.
 
 진행 상태:
 
-- 원장 상태별 건수(`pending`/`processing`/`completed`)
+- 미종료 원장 상태별 건수(`pending`/`processing`). `completed`를 포함하면 전체 테이블을 스캔해야
+  하므로 제외하고, 미종료 부분 인덱스로 유계인 집합만 집계한다
 - **가장 오래된 미종료(`pending`+`processing`) 원장의 age** — scheduler 중단을 보는 1차 지표.
   `pending`만 보면 claim 직후 멈춘 경우를 놓친다. 그때는 전부 `processing`이고 `pending`은 비어
   있다
@@ -979,16 +980,20 @@ age"는 원인을 가리지 않는 2차 지표로 함께 본다.
 - **`read_deadline_at`을 지난 미종료 원장 수** — deadline 투영 counter는 사용자가 실제 조회해야
   올라가므로 이 지표가 없으면 중단을 늦게 안다
 - **scheduler heartbeat(마지막 성공 주기 시각)**
-- **claim 이후 실제 모델 호출 시작까지의 queue delay**
+- **`next_attempt_at`부터 claim까지의 대기** — 빈 슬롯 수만큼만 claim하므로 claim 이후 모델 호출
+  시작까지는 항상 0에 가깝고, 실제 scheduler 지연은 직전 배치가 다음 claim을 미루는 구간에 있다
 - convert 커밋부터 반영까지의 end-to-end 지연
 
 종료와 실패:
 
-- `completion_reason`별 counter
+- `completion_reason`별 종료 건수와 그 원장들이 소모한 claim 수. 하나의 summary에서 `_count`와
+  `_sum`으로 함께 본다
 - 재시도 횟수 분포와 outcome별 `retry_exhausted` 비율
 - **lease 만료로 회수된 작업 수**
 - **claim token 불일치로 무시된 stale 결과 수**
-- **task 하나당 실제 provider 호출 수** — 복구 과정의 중복 실행 비용(8.4절)
+- **task 하나당 실제 provider 호출 수** — 별도 지표를 두지 않고 provider observation의
+  `_count`를 종료 summary의 `_count`로 나눠 복구 과정의 평균 중복 실행 비용을 본다(8.4절).
+  진행 중 원장은 분모에서 빠지므로 비용 추정에 쓸 때 그만큼 과소 집계된다
 - **deadline 투영으로 `ready`가 된 건수** — 0이 정상이며 경보 대상(8.6절)
 - **원장 insert 실패율** — fail-closed 선택의 대가를 보는 지표(5.3절)
 

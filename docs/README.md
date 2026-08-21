@@ -43,6 +43,7 @@ docs/
 - [상세설계 > MOM-0689 Signal push 데모](design/signal-push-demo-design.md)
 - [상세설계 > MOM-0803 Signal Minsu task draft](design/minsu-signal-task-draft-design.md)
 - [상세설계 > MOM-0810 Minsu 비동기 task draft 생성](design/minsu-async-task-draft-design.md)
+- [상세설계 > 지표 인벤토리](design/metrics-inventory.md)
 
 ## 제품 레벨 문서는 어디에?
 
