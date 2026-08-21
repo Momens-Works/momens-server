@@ -1,4 +1,4 @@
-package works.momens.server.user.presentation;
+package works.momens.server.web.user;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -28,7 +28,7 @@ import works.momens.server.user.UserService;
 
 /**
  * {@code /api/me}의 실패 경로가 {@link GlobalExceptionHandler}를 거쳐 Standard 에러 body로 나가는지 검증하는 app 레벨 계약
- * 테스트. 핸들러 일반 매핑은 {@code GlobalExceptionHandlerTest}가, 성공 shape는 user 모듈의 {@code
+ * 테스트. 핸들러 일반 매핑은 {@code GlobalExceptionHandlerTest}가, 성공 shape는 web 모듈의 {@code
  * UserControllerTest}가 본다.
  */
 @WebMvcTest(UserController.class)

@@ -1,4 +1,4 @@
-package works.momens.server.user.presentation;
+package works.momens.server.web.user;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;

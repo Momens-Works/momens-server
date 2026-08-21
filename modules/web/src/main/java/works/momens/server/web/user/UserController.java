@@ -1,4 +1,4 @@
-package works.momens.server.user.presentation;
+package works.momens.server.web.user;
 
 import jakarta.validation.Valid;
 import java.security.Principal;
@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.CurrentUser;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
-import works.momens.server.user.presentation.dto.request.UpdateMeRequest;
-import works.momens.server.user.presentation.dto.response.MeResponse;
+import works.momens.server.web.user.dto.request.UpdateMeRequest;
+import works.momens.server.web.user.dto.response.MeResponse;
 
 /**
  * 현재 사용자 프로필 엔드포인트.
