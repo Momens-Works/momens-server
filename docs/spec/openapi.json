@@ -212,7 +212,8 @@
           }
         }
       },
-      "ConfirmedMemoryDetail" : {
+      "ConfirmedMemoryResponse" : {
+        "description" : "확정 메모리",
         "properties" : {
           "body" : {
             "type" : "string"
@@ -852,14 +853,14 @@
       "MergeMemoryCandidateRequest" : {
         "description" : "메모리 후보 병합 요청",
         "properties" : {
-          "target_memory_id" : {
+          "merge_target_memory_id" : {
             "description" : "병합 대상 메모리 식별자",
             "format" : "uuid",
             "type" : "string"
           }
         },
         "required" : [
-          "target_memory_id"
+          "merge_target_memory_id"
         ]
       },
       "OpenQuestionResponse" : {
@@ -5846,7 +5847,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ConfirmedMemoryDetail"
+                  "$ref" : "#/components/schemas/ConfirmedMemoryResponse"
                 }
               }
             },
@@ -6130,7 +6131,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ConfirmedMemoryDetail"
+                  "$ref" : "#/components/schemas/ConfirmedMemoryResponse"
                 }
               }
             },

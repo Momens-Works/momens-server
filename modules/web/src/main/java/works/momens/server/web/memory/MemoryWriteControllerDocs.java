@@ -10,30 +10,30 @@ import java.security.Principal;
 import java.util.UUID;
 import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
-import works.momens.server.memory.ConfirmedMemoryDetail;
 import works.momens.server.memory.MemoryErrorCode;
 import works.momens.server.web.dto.response.WebMessageResponse;
 import works.momens.server.web.memory.dto.request.EditAndConfirmMemoryCandidateRequest;
 import works.momens.server.web.memory.dto.request.MergeMemoryCandidateRequest;
 import works.momens.server.web.memory.dto.request.RejectMemoryCandidateRequest;
 import works.momens.server.web.memory.dto.request.ResolveMemoryRequest;
+import works.momens.server.web.memory.dto.response.ConfirmedMemoryResponse;
 
 @Tag(name = "Web", description = "웹 진입 API")
 interface MemoryWriteControllerDocs {
   @Operation(operationId = "confirmMemoryCandidate", summary = "메모리 후보 확정")
   @ApiResponse(
       responseCode = "201",
-      content = @Content(schema = @Schema(implementation = ConfirmedMemoryDetail.class)))
+      content = @Content(schema = @Schema(implementation = ConfirmedMemoryResponse.class)))
   @ApiExceptions({MemoryErrorCode.class, CommonErrorCode.class})
-  ConfirmedMemoryDetail confirm(
+  ConfirmedMemoryResponse confirm(
       @Parameter(description = "메모리 후보 식별자") UUID candidateId, Principal principal);
 
   @Operation(operationId = "editAndConfirmMemoryCandidate", summary = "메모리 후보 수정 후 확정")
   @ApiResponse(
       responseCode = "201",
-      content = @Content(schema = @Schema(implementation = ConfirmedMemoryDetail.class)))
+      content = @Content(schema = @Schema(implementation = ConfirmedMemoryResponse.class)))
   @ApiExceptions({MemoryErrorCode.class, CommonErrorCode.class})
-  ConfirmedMemoryDetail editAndConfirm(
+  ConfirmedMemoryResponse editAndConfirm(
       UUID candidateId, EditAndConfirmMemoryCandidateRequest request, Principal principal);
 
   @Operation(operationId = "rejectMemoryCandidate", summary = "메모리 후보 거절")
