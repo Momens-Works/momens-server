@@ -20,18 +20,19 @@ import works.momens.server.common.persistence.BaseEntity;
  *
  * <p>레거시 {@code momens-api}의 {@code projects} 테이블과 호환됩니다.
  *
- * <p>{@code label}, {@code healthStatus}, {@code unresolvedCount}, {@code vocSignalCount}, {@code
- * lastContextAt}, {@code metadata}는 웹 이관(MOM-0857)이 추가한 레거시 read 전용 컬럼입니다. 이 서버는 이 값들을 계산하지도 쓰지도
- * 않고, 조회도 이 엔티티가 아니라 {@link works.momens.server.project.ProjectDetailReader}의 DTO projection이
- * 담당합니다. 그래도 매핑해 두는 것은 prod에서 {@code ddl-auto=validate}가 공유 스키마와의 어긋남을 기동 시점에 잡게 하기 위해서입니다. 스키마 검증은
- * 컬럼 존재와 타입만 보므로 읽기 전용 매핑이어도 검증력은 같습니다({@code Task.nextAction}과 같은 방식).
+ * <p>{@code label}, {@code healthStatus}, {@code progress}, {@code unresolvedCount}, {@code
+ * vocSignalCount}, {@code lastContextAt}, {@code metadata}는 웹 이관 작업(MOM-0857)에서 추가한 레거시 컬럼입니다. 프로젝트
+ * 생성 작업(MOM-0866)이 추가되면서 읽기 전용 매핑을 해제했습니다. 생성 요청으로 전달받은 값을 레거시와 동일하게 저장해야 어느 서버가 요청을 처리하더라도 같은 행이
+ * 생성됩니다. 조회는 계속 이 엔티티가 아닌 {@link works.momens.server.project.ProjectDetailReader}가 담당합니다.
  *
- * <p>읽기 전용이라 INSERT 직후 메모리의 {@code healthStatus}는 {@code null}입니다. DB DEFAULT가 채운 값은 다시 읽어야 보입니다.
+ * <p>{@code label}에만 {@code updatable = false}를 적용합니다. 라벨은 프로젝트를 생성할 때 한 번 발급하며 이후에는 변경하지 않습니다. 나머지
+ * 컬럼은 매핑으로 변경을 차단하는 대신 이 클래스에 수정 메서드를 제공하지 않는 방식으로 보호합니다.
  *
- * <p>{@code progress} 컬럼은 매핑하지 않습니다.
+ * <p>{@code progress}는 저장만 하며 신규 서버의 조회에는 사용하지 않습니다. 진행률은 태스크를 기준으로 계산하므로(MOM-0800, ADR-0013) DB에
+ * 저장된 값을 조회 결과에 사용하지 않습니다. 생성 API가 입력받기로 한 값을 조용히 버리지 않도록 저장을 위한 매핑은 유지합니다.
  *
- * <p>진행률은 태스크를 기준으로 계산하므로(MOM-0800, ADR-0013), 저장된 {@code progress} 값은 사용하지 않습니다. 컬럼은 레거시 웹 호환을 위해
- * DB에 그대로 유지합니다.
+ * <p>{@code status}와 {@code healthStatus}의 기본값은 생성자에서 설정합니다. INSERT 문에 값을 포함하면 DB DEFAULT가 적용되지
+ * 않으므로, 입력값이 없을 때 레거시가 사용하는 {@code active}와 {@code open}을 애플리케이션에서도 동일하게 보장합니다.
  *
  * <p>{@code status}는 base persistence 단계라 문자열로만 둡니다. DB CHECK 제약이 {@code active}/{@code archived}만
  * 허용합니다.
@@ -64,23 +65,26 @@ class Project extends BaseEntity {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
-  @Column(insertable = false, updatable = false)
+  @Column(updatable = false)
   private String label;
 
-  @Column(name = "health_status", nullable = false, insertable = false, updatable = false)
+  @Column(name = "health_status", nullable = false)
   private String healthStatus;
 
-  @Column(name = "unresolved_count", nullable = false, insertable = false, updatable = false)
+  @Column(nullable = false)
+  private int progress;
+
+  @Column(name = "unresolved_count", nullable = false)
   private int unresolvedCount;
 
-  @Column(name = "voc_signal_count", nullable = false, insertable = false, updatable = false)
+  @Column(name = "voc_signal_count", nullable = false)
   private int vocSignalCount;
 
-  @Column(name = "last_context_at", insertable = false, updatable = false)
+  @Column(name = "last_context_at")
   private Instant lastContextAt;
 
   @JdbcTypeCode(SqlTypes.JSON)
-  @Column(columnDefinition = "jsonb", insertable = false, updatable = false)
+  @Column(columnDefinition = "jsonb")
   private Map<String, Object> metadata;
 
   @Builder
@@ -91,7 +95,13 @@ class Project extends BaseEntity {
       String status,
       UUID ownerId,
       LocalDate targetDate,
-      String summary) {
+      String summary,
+      String label,
+      String healthStatus,
+      int progress,
+      int unresolvedCount,
+      int vocSignalCount,
+      Instant lastContextAt) {
     this.workspaceId = workspaceId;
     this.name = name;
     this.description = description;
@@ -100,5 +110,11 @@ class Project extends BaseEntity {
     this.ownerId = ownerId;
     this.targetDate = targetDate;
     this.summary = summary;
+    this.label = label;
+    this.healthStatus = healthStatus != null ? healthStatus : "open";
+    this.progress = progress;
+    this.unresolvedCount = unresolvedCount;
+    this.vocSignalCount = vocSignalCount;
+    this.lastContextAt = lastContextAt;
   }
 }
