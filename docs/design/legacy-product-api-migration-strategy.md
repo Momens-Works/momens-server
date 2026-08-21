@@ -228,6 +228,12 @@ Bearer token을 사용한다. 두 서버가 같은 DB를 쓴다는 사실만으�
 2. 레거시 서버가 신규 access token을 신뢰한다.
 3. 로그인 과정이 두 서버의 세션을 함께 만든다.
 
+방식 1과 2를 시점을 나눠 모두 채택했다. 웹 컷오버 **이전**에는 방식 1로 신규 서버가 레거시
+`session_token`을 수용하고([ADR-0017](../adr/0017-transitional-legacy-session-token-acceptance.md)),
+컷오버 **이후**에는 방식 2로 레거시가 신규 `access_token`을 수용한다
+([ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)). 방식 3은 두 ADR
+모두에서 기각했다.
+
 호환 방식을 도입하면 ADR-0003의 레거시 단일 세션 폐기 결정에 대한 한시적 예외가 되므로 보안 모델,
 롤백, 세션 폐기, 클라이언트 공수를 비교한 ADR이 필요하다. 혼합 트래픽을 사용하지 않는다면 별도 인증
 ADR 대신 이관 원장과 컷오버 계획에 전환 단위와 롤백 조건을 기록한다. 어느 쪽이든 “웹이 병행 운영될

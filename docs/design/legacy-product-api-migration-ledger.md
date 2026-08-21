@@ -94,7 +94,9 @@ rg --files ../momens-api/cmd
     레거시가 서버 오류까지 403으로 매핑하는 경우도 보존하지 않고 500으로 낸다.
 - 레거시 보호 route는 `session_token` 쿠키 JWT를 사용한다. 신규 웹은
   `access_token`·`refresh_token` HttpOnly 쿠키를 사용한다. 전환기에는 신규 서버가 레거시
-  `session_token`을 한시 수용한다([ADR-0017](../adr/0017-transitional-legacy-session-token-acceptance.md)).
+  `session_token`을 한시 수용하고([ADR-0017](../adr/0017-transitional-legacy-session-token-acceptance.md)),
+  웹 컷오버 이후에는 레거시가 신규 `access_token`을 수용한다
+  ([ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)).
 - 모든 Product JSON route에는 FE의 path·`API-Version: 1`·세션 전환이 client gate로 걸린다.
 - read-only route의 기본 rollback은 routing rollback이다. write route는 신규 데이터가 레거시
   schema·enum·relation·projection과 호환된다는 증거가 있기 전까지 writer rollback을 보장하지 않는다.
@@ -213,8 +215,8 @@ handler/service/repository를 뜻한다.
 | --- | --- | --- | --- |
 | `OP` | 운영 계약. 공개 health | read-only, DB 없음 | 신규 `/actuator/health`는 구현됨. ingress/probe 전환과 routing rollback 필요. `MOM-0848` |
 | `MOA-P` | OAuth metadata·등록·인가·token·revoke protocol 계약. endpoint별 client/token 검증 | `oauth_*` writer; OAuth client와 MCP client 외부 의존 | `oauth_*` prod 존재와 target module 미확정. protocol client rollback/runbook 필요. 후속 MCP/OAuth 결정 작업 |
-| `MOA-I` | legacy `session_token` 인증 후 interaction user/workspace 검증 | `oauth_interactions`, grant/code writer | 신규 웹 세션과 consent UI 동시 전환 필요. writer rollback 미확정. 후속 MCP/OAuth 결정 작업 |
-| `MOA-G` | legacy 세션 + workspace membership/grant ownership | `oauth_grants` writer | grant/token drain·폐기 정책 필요. 후속 MCP/OAuth 결정 작업 |
+| `MOA-I` | legacy `session_token` 인증 후 interaction user/workspace 검증 | `oauth_interactions`, grant/code writer | 웹 컷오버 시점 동작은 [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)로 해소(레거시가 신규 `access_token` 수용). writer rollback 미확정. 후속 MCP/OAuth 결정 작업 |
+| `MOA-G` | legacy 세션 + workspace membership/grant ownership | `oauth_grants` writer | 웹 컷오버 시점 동작은 [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)로 해소. grant/token drain·폐기 정책 필요. 후속 MCP/OAuth 결정 작업 |
 | `MCP` | MCP Streamable HTTP, OAuth bearer와 tool별 scope | project/milestone/task/comment writer가 REST와 같은 aggregate를 공유 | MCP client 재등록, grant/token 전환, 단일 writer와 rollback 필요. 후속 MCP/OAuth 결정 작업 |
 | `SLK` | Slack signature·retry·3초 ack 계약 | retrieval·Vertex·Slack API; action layer가 task writer | signing secret, bot identity, redirect/event URL, 비동기 실패 관측 필요. task writer·projection과 함께 전환. 후속 Slack 표면 작업 |
 | `AUT` | 레거시 단일 JWT 대신 확정된 Standard 웹 access+refresh 쿠키 계약. H014~H016은 공개 transport | `users`, `user_identities`, `refresh_tokens`; Google OAuth. 아래 `users` writer 예외 적용 | 신규 경로 구현 완료(`MOM-0640`, `MOM-0641`). FE 로그인과 함께 전환하며 레거시 세션 rollback은 별도 브리지 없이는 불가 |
@@ -286,9 +288,9 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H006 | OAuth | `GET /oauth/authorize` | `Authorize` | `MOA-P` | W | `traced`; consent interaction 생성·redirect |
 | H007 | OAuth | `POST /oauth/token` | `Token` | `MOA-P` | W | `traced`; code 교환·refresh 회전 |
 | H008 | OAuth | `POST /oauth/revoke` | `Revoke` | `MOA-P` | W | `traced` |
-| H009 | OAuth | `GET /oauth/interactions/:id` | `GetInteraction` | `MOA-I` | R | `traced`; legacy 세션 필요. 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
-| H010 | OAuth | `POST /oauth/interactions/:id/approve` | `Approve` | `MOA-I` | W | `traced`; grant/code 생성. 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
-| H011 | OAuth | `POST /oauth/interactions/:id/deny` | `Deny` | `MOA-I` | W | `traced`; 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
+| H009 | OAuth | `GET /oauth/interactions/:id` | `GetInteraction` | `MOA-I` | R | `traced`; legacy 세션 필요. 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
+| H010 | OAuth | `POST /oauth/interactions/:id/approve` | `Approve` | `MOA-I` | W | `traced`; grant/code 생성. 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
+| H011 | OAuth | `POST /oauth/interactions/:id/deny` | `Deny` | `MOA-I` | W | `traced`; 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
 | H012 | MCP | `ANY /mcp` | `mcpserver.Server` | `MCP` | RW | `traced`; 조건부 등록, 선언 하나로 계산 |
 | H013 | webhook | `POST /slack/events` | `slackbot.Events` | `SLK` | RW | `traced`; 조건부 등록, signed webhook |
 | H014 | Product auth | `GET /auth/google/login` | `auth.GoogleLogin` | `AUT` | W | `implemented`: target `/api/auth/google/login`, state+PKCE 계약으로 교체 |
@@ -312,8 +314,8 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H032 | Product JSON | `POST /workspaces/:id/invitations/:invitationId/revoke` | `workspace.RevokeInvitation` | `WSP` | W | `implemented`: target `POST /api/workspaces/{workspaceId}/invitations/{invitationId}/revoke`. 구현 완료(`MOM-0865`), 전환 전. 이미 수락된 초대는 폐기할 수 없으며 409 `INVITATION_ALREADY_ACCEPTED`로 응답한다 |
 | H033 | Product JSON | `PATCH /workspaces/:id/members/:userId` | `workspace.UpdateMember` | `WSP` | W | `implemented`: target `PATCH /api/workspaces/{workspaceId}/members/{userId}`. 구현 완료(`MOM-0864`), 전환 전. 레거시에서 403 하나로 처리하던 실패 상황을 네 가지로 구분한다. 워크스페이스가 없으면 404 `WORKSPACE_NOT_FOUND`, 요청자의 권한이 부족하면 403 `AUTH_FORBIDDEN`, 대상 사용자가 멤버가 아니면 404 `WORKSPACE_MEMBER_NOT_FOUND`, 대상이 owner이면 409 `WORKSPACE_OWNER_PROTECTED`를 반환한다. 앞의 두 경우는 공통 전환 규칙에 따른 것이며, 뒤의 두 경우는 이 작업에서 결정했다. `role`이 `admin`이나 `member`가 아니면 레거시와 동일하게 400으로 응답하며, 에러 코드는 `WORKSPACE_INVALID_ROLE`이다 |
 | H034 | Product JSON | `DELETE /workspaces/:id/members/:userId` | `workspace.RemoveMember` | `WSP` | W | `implemented`: target `DELETE /api/workspaces/{workspaceId}/members/{userId}`. 구현 완료(`MOM-0864`), 전환 전. 실패 상황은 H033과 같은 기준으로 구분하며, 요청자가 자기 자신을 제거하려는 경우에는 409 `WORKSPACE_SELF_REMOVAL_NOT_ALLOWED`를 반환한다. 레거시와 동일하게 자기 자신인지 먼저 확인한 뒤 대상 멤버를 조회한다. 따라서 존재하지 않는 사용자 ID라도 요청자 자신의 ID를 전달하면 두 서버 모두 자기 자신을 제거하려는 요청으로 판정한다 |
-| H035 | OAuth | `GET /workspaces/:id/mcp-grants` | `mcpauth.ListGrants` | `MOA-G` | R | `traced`; 조건부 등록. 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
-| H036 | OAuth | `DELETE /workspaces/:id/mcp-grants/:grantId` | `mcpauth.RevokeGrant` | `MOA-G` | W | `traced`; 조건부 등록. 웹 컷오버 시 레거시 `session_token` 세션이 사라지면 이 경로가 끊긴다(`MOM-0871`) |
+| H035 | OAuth | `GET /workspaces/:id/mcp-grants` | `mcpauth.ListGrants` | `MOA-G` | R | `traced`; 조건부 등록. 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
+| H036 | OAuth | `DELETE /workspaces/:id/mcp-grants/:grantId` | `mcpauth.RevokeGrant` | `MOA-G` | W | `traced`; 조건부 등록. 웹 컷오버 시 레거시가 신규 `access_token` 쿠키를 수용해 유지한다(`MOM-0871`, [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)) |
 | H037 | Product JSON | `POST /workspaces/:id/projects` | `project.Create` | `PRJ` | W | `traced`. 구현 `MOM-0866` |
 | H038 | Product JSON | `GET /workspaces/:id/projects` | `project.List` | `PRJ` | R | `traced`. 구현 `MOM-0857` |
 | H039 | Product JSON | `GET /workspaces/:id/blockers` | `blocker.List` | `BLK` | R | `traced`. blocker read 기반만 구현(`MOM-0859`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백뿐이며 blocker 데이터는 H023으로 소비된다 |
@@ -438,6 +440,10 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 
 1. 웹 트래픽을 capability별로 혼합 전환할지, 신규 인증과 준비된 Product API를 한 번에 전환할지
 2. MCP transport·OAuth authorization server의 target Gradle module과 grant/token 이전 방식
+   — 미결정으로 남는다. 다만 **웹 컷오버 시점의 동작만은 분리해 결정했다**. 레거시가 신규
+   `access_token`을 수용해 H009~H011·H035·H036을 유지한다
+   ([ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md), `MOM-0871`).
+   표면 전체의 이관은 여전히 이 항목이 풀어야 한다
 3. `momens-worker`의 공통 outbox 소비 기반(offset·멱등·재시도·DLQ)과 task/decision/blocker/memory
    projector 분리
 4. startup retrieval backfill·embedding의 최종 owner와 기존 document 재projection 방식
@@ -457,6 +463,8 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
    H020·H022로 확정하고 [계약 문서](legacy-product-api-migration-workspace-read-design.md)로 잠갔다
 2. `[Docs] MCP/OAuth target module·token/grant 전환 ADR`
    - H002~H012, H035~H036, N009~N019 소유
+   - 웹 컷오버 시점의 동작은 여기서 빠졌다. `MOM-0871`이
+     [ADR-0018](../adr/0018-transitional-legacy-acceptance-of-new-access-token.md)로 분리 결정했다
 3. `[Feat] worker outbox 공통 소비 기반`
    - offset, idempotency, retry, DLQ와 관측성만 소유
 4. aggregate별 projection 작업
