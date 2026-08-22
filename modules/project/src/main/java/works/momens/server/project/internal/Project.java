@@ -23,7 +23,8 @@ import works.momens.server.common.persistence.BaseEntity;
  * <p>{@code label}, {@code healthStatus}, {@code progress}, {@code unresolvedCount}, {@code
  * vocSignalCount}, {@code lastContextAt}, {@code metadata}는 웹 이관 작업(MOM-0857)에서 추가한 레거시 컬럼입니다. 프로젝트
  * 생성 작업(MOM-0866)이 추가되면서 읽기 전용 매핑을 해제했습니다. 생성 요청으로 전달받은 값을 레거시와 동일하게 저장해야 어느 서버가 요청을 처리하더라도 같은 행이
- * 생성됩니다. 조회는 계속 이 엔티티가 아닌 {@link works.momens.server.project.ProjectDetailReader}가 담당합니다.
+ * 생성됩니다. 조회는 계속 이 엔티티가 아닌 {@link works.momens.server.project.ProjectDetailReader}가 담당합니다. {@code
+ * metadata}는 워크스페이스 생성(MOM-0897)에서 값을 저장하기 시작하면서 생성자에 추가했습니다. 다른 생성 경로에서는 값을 전달하지 않으므로 NULL로 저장됩니다.
  *
  * <p>{@code label}에만 {@code updatable = false}를 적용합니다. 라벨은 프로젝트를 생성할 때 한 번 발급하며 이후에는 변경하지 않습니다. 나머지
  * 컬럼은 매핑으로 변경을 차단하는 대신 이 클래스에 수정 메서드를 제공하지 않는 방식으로 보호합니다.
@@ -101,7 +102,8 @@ class Project extends BaseEntity {
       int progress,
       int unresolvedCount,
       int vocSignalCount,
-      Instant lastContextAt) {
+      Instant lastContextAt,
+      Map<String, Object> metadata) {
     this.workspaceId = workspaceId;
     this.name = name;
     this.description = description;
@@ -116,5 +118,6 @@ class Project extends BaseEntity {
     this.unresolvedCount = unresolvedCount;
     this.vocSignalCount = vocSignalCount;
     this.lastContextAt = lastContextAt;
+    this.metadata = metadata;
   }
 }
