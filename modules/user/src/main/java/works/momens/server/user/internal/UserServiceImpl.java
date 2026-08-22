@@ -57,11 +57,15 @@ class UserServiceImpl implements UserService {
       return refreshProfile(linkedUserId, email, name, avatarUrl);
     }
 
-    // 동일한 이메일로 최초 로그인 요청이 동시에 들어오더라도 upsert를 통해 하나의 users 행으로 수렴한다.
-    // 이후 로그인 수단 삽입 과정에서 경쟁에 진 요청은 0건을 반환한다.
-    // 경쟁에서 승리한 요청도 동일한 users 행에 로그인 수단을 연결하므로,
-    // 이후 조회 시 두 요청 모두 동일한 사용자를 반환한다.
-    userRepository.upsertByEmail(UUID.randomUUID(), email, name, avatarUrl);
+    // 같은 이메일로 최초 로그인 요청이 동시에 들어오면 먼저 생성된 행과 충돌한 나머지 삽입은 아무 작업도 하지 않습니다.
+    // 이어지는 조회에서 먼저 생성된 행을 읽으므로 users 행은 하나만 생성됩니다.
+    // 해당 동작은 users.email의 UNIQUE 제약이 유지되는 동안 성립합니다.
+    //
+    // UNIQUE 제약을 제거하면 요청마다 users 행이 생성되고, 로그인 수단 삽입에 성공한 요청의 행만 user_identities에 연결됩니다.
+    // 로그인 수단 삽입에 실패한 요청은 삽입 건수 0을 확인한 뒤 성공한 요청의 사용자를 다시 조회하므로,
+    // 모든 요청이 같은 사용자를 반환하는 동작은 유지됩니다.
+    // 연결되지 않은 users 행이 남는 결과는 ADR-0016 결과 절에서 허용했습니다.
+    userRepository.insertIgnoringConflict(UUID.randomUUID(), email, name, avatarUrl);
     User created = userRepository.findByEmail(email).orElseThrow();
     int inserted =
         userIdentityRepository.insertIgnoringConflict(
@@ -93,10 +97,20 @@ class UserServiceImpl implements UserService {
   @Override
   @Transactional
   public UserProfile findOrCreate(String email, String name, String avatarUrl) {
-    // email 기준 원자적 upsert. 같은 신규 email로 동시 최초 로그인이 들어와도 unique 충돌 500 없이 한 행으로 수렴한다
-    // (read-then-insert의 경합 회피). id는 신규 행에만 쓰이고 충돌 시 기존 행을 유지한다.
-    userRepository.upsertByEmail(UUID.randomUUID(), email, name, avatarUrl);
-    return toProfile(userRepository.findByEmail(email).orElseThrow());
+    // 조회보다 삽입을 먼저 시도합니다.
+    // 조회를 먼저 수행하면 같은 신규 이메일로 동시에 들어온 두 요청이 모두 삽입을 시도해 한쪽 요청이 실패할 수 있습니다.
+    //
+    // 이름과 프로필 이미지는 엔티티 변경으로 갱신합니다.
+    // 삽입이 충돌하면 SQL은 아무 작업도 하지 않으므로 기존 행의 값은 변경되지 않습니다.
+    // 엔티티의 값이 기존 값과 같으면 UPDATE 쿼리도 실행되지 않습니다.
+    //
+    // @LastModifiedDate는 flush 시점에 updated_at을 갱신합니다.
+    // flush하지 않으면 반환하는 프로필에 갱신 전 updated_at이 포함되므로 명시적으로 호출합니다.
+    userRepository.insertIgnoringConflict(UUID.randomUUID(), email, name, avatarUrl);
+    User user = userRepository.findByEmail(email).orElseThrow();
+    user.refreshLoginProfile(name, avatarUrl);
+    userRepository.flush();
+    return toProfile(user);
   }
 
   @Override
