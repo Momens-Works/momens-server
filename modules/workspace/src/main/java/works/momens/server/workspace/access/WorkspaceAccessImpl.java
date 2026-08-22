@@ -25,7 +25,9 @@ class WorkspaceAccessImpl implements WorkspaceAccess {
   @Transactional(readOnly = true)
   public List<WorkspaceMembership> listMemberships(UUID workspaceId) {
     // 멤버십(userId, role)만 노출하고, 이름과 아바타는 호출하는 쪽에서 user public API를 통해 결합한다(MOM-61).
-    return workspaceMemberRepository.findByWorkspaceId(workspaceId).stream()
+    return workspaceMemberRepository
+        .findByWorkspaceIdOrderByCreatedAtAscUserIdAsc(workspaceId)
+        .stream()
         .map(member -> new WorkspaceMembership(member.getUserId(), member.getRole()))
         .toList();
   }

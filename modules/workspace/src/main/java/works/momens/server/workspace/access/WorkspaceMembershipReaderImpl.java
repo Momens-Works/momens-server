@@ -18,7 +18,9 @@ class WorkspaceMembershipReaderImpl implements WorkspaceMembershipReader {
   @Override
   @Transactional(readOnly = true)
   public List<WorkspaceMembershipDetail> listDetailsByWorkspaceId(UUID workspaceId) {
-    return workspaceMemberRepository.findByWorkspaceId(workspaceId).stream()
+    return workspaceMemberRepository
+        .findByWorkspaceIdOrderByCreatedAtAscUserIdAsc(workspaceId)
+        .stream()
         .map(
             member ->
                 new WorkspaceMembershipDetail(
