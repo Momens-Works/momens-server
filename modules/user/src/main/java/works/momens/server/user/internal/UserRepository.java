@@ -12,8 +12,16 @@ interface UserRepository extends JpaRepository<User, UUID> {
   Optional<User> findByEmail(String email);
 
   /**
-   * email 기준 원자적 upsert. 신규면 INSERT, 이미 있으면 name/avatar를 최신값으로 갱신합니다. {@code id}는 신규 행에만 쓰이고 충돌 시
-   * 기존 행을 유지합니다. 감사 필드는 스키마 기본값(created_at {@code DEFAULT now()})과 갱신 시 {@code now()}로 채웁니다.
+   * 사용자 행을 삽입하며, 기존 행과 충돌하면 아무 작업도 하지 않습니다. 감사 필드는 스키마 기본값으로 채웁니다.
+   *
+   * <p>충돌 대상 컬럼은 명시하지 않습니다. 대상을 명시하면 PostgreSQL이 해당 컬럼과 일치하는 UNIQUE 인덱스를 추론합니다. {@code MOM-0836}에서
+   * {@code users.email}의 UNIQUE 제약을 제거하면 추론할 대상이 없어 쿼리가 실패합니다. {@code DO NOTHING}은 충돌 대상 생략을 허용하며,
+   * 생략하면 특정 인덱스를 추론하지 않고 적용 가능한 모든 UNIQUE 제약과 인덱스의 충돌을 처리합니다.
+   *
+   * <p>충돌 대상을 생략하면 기본 키 충돌도 무시합니다. 식별자는 애플리케이션에서 생성하는 UUID이므로 기본 키가 충돌하지 않는다는 전제입니다.
+   *
+   * <p>삽입 여부는 반환하지 않습니다. 두 호출자 모두 이후 {@code findByEmail}로 저장된 행을 조회하므로 해당 호출에서 행을 삽입했는지 구분할 필요가
+   * 없습니다.
    */
   @Modifying(flushAutomatically = true)
   @Query(
@@ -21,13 +29,10 @@ interface UserRepository extends JpaRepository<User, UUID> {
           """
           INSERT INTO users (id, email, name, avatar_url)
           VALUES (:id, :email, :name, :avatarUrl)
-          ON CONFLICT (email) DO UPDATE
-            SET name = EXCLUDED.name,
-                avatar_url = EXCLUDED.avatar_url,
-                updated_at = now()
+          ON CONFLICT DO NOTHING
           """,
       nativeQuery = true)
-  void upsertByEmail(
+  void insertIgnoringConflict(
       @Param("id") UUID id,
       @Param("email") String email,
       @Param("name") String name,
