@@ -106,3 +106,21 @@ H037-invalid-owner	stranger	POST	/workspaces/00000000-0000-4000-8000-00000000001
 H050-member	owner	POST	/projects/00000000-0000-4000-8000-000000000021/milestones	/api/projects/00000000-0000-4000-8000-000000000021/milestones	-	time,uuid
 H050-project-not-found	owner	POST	/projects/00000000-0000-4000-8000-0000000000ff/milestones	/api/projects/00000000-0000-4000-8000-0000000000ff/milestones	-	-
 H050-forbidden	nobody	POST	/projects/00000000-0000-4000-8000-000000000021/milestones	/api/projects/00000000-0000-4000-8000-000000000021/milestones	-	-
+# H019는 번호가 가장 앞이지만 파일 마지막에 배치합니다. 하네스는 스택을 한 번 기동하고 픽스처를 한 번만 적용한 뒤 위에서부터
+# 케이스를 실행합니다. 워크스페이스 생성 케이스를 앞에 배치하면 이후 케이스의 기대값이 달라집니다. H020은 owner의 워크스페이스
+# 목록 전체를 비교하고, H021은 ws-free가 비어 있다고 가정합니다.
+#
+# H019-slug-collision은 이름으로 생성한 slug가 픽스처의 ws-alpha와 충돌하는 경우입니다. H019-korean-name은 한글
+# 이름에서 slug에 사용할 수 있는 문자가 모두 제거되어 workspace를 사용하는 경우입니다. 한국어 이름을 사용하는 워크스페이스는
+# 모두 해당 경로를 거칩니다.
+#
+# 에러 케이스 네 건은 HTTP status가 레거시와 같고 응답 본문 형식만 다릅니다. 이관 목록 문서의 공통 전환 규칙에 따라
+# Standard 에러 형식을 사용합니다.
+H019-create	owner	POST	/workspaces	/api/workspaces	-	time,uuid
+H019-with-description	owner	POST	/workspaces	/api/workspaces	-	time,uuid
+H019-slug-collision	owner	POST	/workspaces	/api/workspaces	-	time,uuid
+H019-korean-name	owner	POST	/workspaces	/api/workspaces	-	time,uuid
+H019-slug-taken	owner	POST	/workspaces	/api/workspaces	-	-
+H019-slug-invalid	owner	POST	/workspaces	/api/workspaces	-	-
+H019-slug-reserved	owner	POST	/workspaces	/api/workspaces	-	-
+H019-noauth	none	POST	/workspaces	/api/workspaces	-	-
