@@ -18,6 +18,7 @@ def capabilityModules = [
     'minsu',
     'mobile',
     'notification',
+    'onboarding',
     'outbox',
     'project',
     'signal',

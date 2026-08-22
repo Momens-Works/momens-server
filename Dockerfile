@@ -28,6 +28,7 @@ COPY modules/memory/build.gradle ./modules/memory/
 COPY modules/minsu/build.gradle ./modules/minsu/
 COPY modules/mobile/build.gradle ./modules/mobile/
 COPY modules/notification/build.gradle ./modules/notification/
+COPY modules/onboarding/build.gradle ./modules/onboarding/
 COPY modules/outbox/build.gradle ./modules/outbox/
 COPY modules/project/build.gradle ./modules/project/
 COPY modules/signal/build.gradle ./modules/signal/
