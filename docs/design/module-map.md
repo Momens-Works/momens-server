@@ -29,6 +29,7 @@
 | `memory` | 메모리 후보 검토·confirmed memory lifecycle | `memory` |
 | `source` | 외부 연결 lifecycle·provider OAuth·source-ref verify | `source` |
 | `context` | task-memory/source-ref 연결·context API (얇은 orchestration) | `relation` |
+| `onboarding` | 새 워크스페이스 생성과 초기 데이터 구성. 도메인 public API를 조합하는 얇은 orchestration 계층. `MOM-0897`에서 추가 | `workspace.seedWelcome` |
 | `retrieval` | 검색 read-model projection·document/event schema 소유 | `retrieval` |
 | `minsu` | Minsu usecase·LLM provider/model 경계·gRPC client·Slack 표면 | `minsu`·`slackbot` |
 
@@ -78,6 +79,13 @@
   `signal`의 `SignalReader`로 Signal을 hydrate하며, `project`의 프로젝트명 조회와 `workspace`의
   `WorkspaceAccess.listMemberships`로 수신자를 결정한다. `outbox`는 다른 도메인 모듈을 참조하지 않는다.
 - `retrieval`은 `project`·`memory`의 도메인 write 이후 발행(event 또는 public API)을 받는다.
+- `onboarding`은 `workspace`, `project`, `memory`의 public API를 조합해 워크스페이스 생성 작업을 하나의
+  트랜잭션으로 묶는다. 해당 조합을 `workspace`에 두면 `project`와 `memory`가 이미 `workspace`를 참조하고 있어
+  순환 의존성이 발생한다. `web`에 두는 방안도 검토했지만, 지금까지 `web`과 `mobile`에서 시작한 쓰기 트랜잭션은
+  권한 확인 후 하나의 도메인 모듈만 변경했다. 두 개 이상의 도메인 모듈을 하나의 트랜잭션에서 변경하는 구현은
+  `signal` 모듈의 `SignalActionExecutor`뿐이며, 해당 구현도 도메인 모듈에 속한다. 따라서 세 모듈을 모두 참조할
+  수 있는 위치에 `onboarding` 모듈을 추가했다. `onboarding`을 참조하는 모듈은 `web`뿐이며 자체 테이블은
+  소유하지 않는다.
 - 다른 모듈의 `internal` package 참조와 순환 의존은 금지한다.
 
 ## 모듈별 책임
