@@ -1,28 +1,22 @@
 package works.momens.server.web.workspace;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
-import works.momens.server.common.api.CommonErrorCode;
-import works.momens.server.user.UserProfile;
-import works.momens.server.user.UserService;
 import works.momens.server.web.WorkspaceAccessChecker;
 import works.momens.server.workspace.ChangeMembershipRoleCommand;
 import works.momens.server.workspace.RemoveMembershipCommand;
 import works.momens.server.workspace.WorkspaceErrorCode;
-import works.momens.server.workspace.WorkspaceMembershipDetail;
-import works.momens.server.workspace.WorkspaceMembershipReader;
 import works.momens.server.workspace.WorkspaceMembershipWriter;
 import works.momens.server.workspace.WorkspaceRole;
 
 /**
- * 워크스페이스 멤버 조회와 변경을 조합하는 서비스. workspace와 user 모듈의 public API만 조합하며 도메인 정책은 소유하지 않습니다.
+ * 워크스페이스 멤버 조회와 변경을 조합하는 서비스입니다. 조회는 {@link WorkspaceMemberListService}에 위임하고, 변경은 {@code
+ * workspace} 모듈의 public API를 호출합니다. 도메인 정책은 소유하지 않습니다.
  *
  * <p>워크스페이스 존재 여부와 요청자의 역할은 이 서비스에서 확인하고, owner 보호와 자기 제거 금지 등 멤버십 도메인 규칙은 workspace 모듈에서 확인합니다.
  * 워크스페이스 존재 여부를 역할보다 먼저 확인하는 이유는 순서를 바꾸면 존재하지 않는 워크스페이스에도 404가 아닌 403을 반환하기 때문입니다.
@@ -35,52 +29,17 @@ import works.momens.server.workspace.WorkspaceRole;
 class WorkspaceMemberService {
 
   private final WorkspaceAccessChecker workspaceAccessChecker;
-  private final WorkspaceMembershipReader workspaceMembershipReader;
+  private final WorkspaceMemberListService workspaceMemberListService;
   private final WorkspaceMembershipWriter workspaceMembershipWriter;
-  private final UserService userService;
 
   /**
-   * 워크스페이스의 멤버를 이름 오름차순으로 조회합니다. 이름이 같으면 사용자 ID를 기준으로 보조 정렬합니다.
-   *
-   * <p>멤버십은 한 번만 조회해 요청자의 멤버 여부를 확인하고 응답 목록을 만드는 데 함께 사용합니다. 별도로 조회하면 READ COMMITTED 격리 수준에서는 각 SQL
-   * 문이 시작될 때마다 최신 커밋을 보므로, 권한 확인과 목록 조회 사이에 멤버십이 회수된 사용자에게 목록이 반환될 수 있습니다.
-   *
-   * <p>정렬 기준인 사용자 이름은 user 모듈에서 가져오므로 SQL에서 정렬하지 않고 두 모듈의 정보를 조합한 뒤 정렬합니다. workspace 모듈은 {@code
-   * users} 테이블을 직접 조인하지 않습니다.
+   * 워크스페이스 존재 여부를 확인한 뒤 멤버 목록 조회를 {@link WorkspaceMemberListService}에 위임합니다. 정렬 기준과 사용자 정보 결합은 해당
+   * 서비스가 담당하므로, 해당 메서드는 존재하지 않는 워크스페이스에 404를 먼저 반환하는 판정 순서만 관리합니다.
    */
   @Transactional(readOnly = true)
   public List<WorkspaceMemberView> list(UUID workspaceId, UUID userId) {
     workspaceAccessChecker.requireWorkspaceExists(workspaceId);
-    List<WorkspaceMembershipDetail> memberships =
-        workspaceMembershipReader.listDetailsByWorkspaceId(workspaceId);
-    boolean callerIsMember =
-        memberships.stream().anyMatch(membership -> membership.userId().equals(userId));
-    if (!callerIsMember) {
-      throw new BusinessException(
-          CommonErrorCode.AUTH_FORBIDDEN, Map.of("workspace_id", workspaceId.toString()));
-    }
-    Map<UUID, UserProfile> profiles =
-        userService
-            .getProfiles(memberships.stream().map(WorkspaceMembershipDetail::userId).toList())
-            .stream()
-            .collect(Collectors.toMap(UserProfile::id, profile -> profile));
-    return memberships.stream()
-        .filter(membership -> profiles.containsKey(membership.userId()))
-        .map(
-            membership -> {
-              UserProfile profile = profiles.get(membership.userId());
-              return new WorkspaceMemberView(
-                  profile.id(),
-                  profile.email(),
-                  profile.name(),
-                  membership.role(),
-                  membership.createdAt(),
-                  membership.updatedAt());
-            })
-        .sorted(
-            Comparator.comparing(WorkspaceMemberView::name)
-                .thenComparing(WorkspaceMemberView::userId))
-        .toList();
+    return workspaceMemberListService.list(workspaceId, userId);
   }
 
   /** 멤버의 역할을 변경합니다. 부여할 수 있는 역할인지는 enum이 판정하며, 판정 결과가 없으면 {@code WORKSPACE_INVALID_ROLE}을 던집니다. */
