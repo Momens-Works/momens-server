@@ -36,8 +36,8 @@ public class DevTokenService {
   public String issueForTestUser(String providedSecret, String requestedEmail) {
     verifySecret(providedSecret);
     String email = resolveEmail(requestedEmail);
-    // 기존 사용자는 조회만 한다. findOrCreate는 upsert라 바로 부르면 기존 프로필(name/avatar)을 덮어쓰므로,
-    // 없을 때만 생성한다.
+    // 기존 사용자는 조회만 합니다.
+    // findOrCreate는 기존 행의 이름과 프로필 이미지를 갱신하므로 사용자가 없을 때만 호출합니다.
     UserProfile user =
         userService
             .findByEmail(email)
