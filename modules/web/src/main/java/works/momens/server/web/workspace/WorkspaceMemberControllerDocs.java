@@ -29,7 +29,7 @@ interface WorkspaceMemberControllerDocs {
   @Operation(
       operationId = "listWorkspaceMembers",
       summary = "워크스페이스 멤버 목록 조회",
-      description = "워크스페이스의 멤버를 이름 오름차순으로 조회합니다.")
+      description = "워크스페이스 멤버를 가입 시각 오름차순으로 조회합니다. 가입 시각이 같으면 사용자 식별자 오름차순으로 정렬합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "목록 조회 성공",
