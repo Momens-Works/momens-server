@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.onboarding.WorkspaceOnboarding;
 import works.momens.server.web.WorkspaceAccessChecker;
 import works.momens.server.workspace.UpdateWorkspaceCommand;
 import works.momens.server.workspace.WorkspaceAccess;
@@ -40,6 +41,7 @@ class WorkspaceServiceTest {
   @Mock private WorkspaceSlugReader workspaceSlugReader;
   @Mock private WorkspaceRoleReader workspaceRoleReader;
   @Mock private WorkspaceEditor workspaceEditor;
+  @Mock private WorkspaceOnboarding workspaceOnboarding;
   private WorkspaceService workspaceService;
 
   @BeforeEach
@@ -50,7 +52,8 @@ class WorkspaceServiceTest {
             workspaceAccess,
             workspaceSlugReader,
             workspaceEditor,
-            new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader));
+            new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader),
+            workspaceOnboarding);
   }
 
   private static final UUID WORKSPACE_ID = UUID.randomUUID();

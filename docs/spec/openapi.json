@@ -656,6 +656,26 @@
           }
         }
       },
+      "CreateWorkspaceRequest" : {
+        "description" : "워크스페이스 생성 요청",
+        "properties" : {
+          "description" : {
+            "description" : "워크스페이스 설명",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "워크스페이스 이름. 필수 입력값입니다.",
+            "type" : "string"
+          },
+          "slug" : {
+            "description" : "워크스페이스 slug. 생략하면 이름을 기준으로 생성합니다.",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "name"
+        ]
+      },
       "Details" : {
         "description" : "근거의 대상·변화·영향. signal_evidence가 소유하며 각 값은 공백 포함 30자 이하입니다.",
         "properties" : {
@@ -14672,7 +14692,7 @@
     "/api/workspaces" : {
       "get" : {
         "description" : "요청자가 멤버인 워크스페이스 목록을 생성 시각 내림차순으로 조회합니다.",
-        "operationId" : "list_1",
+        "operationId" : "listWorkspaces",
         "parameters" : [
           {
             "in" : "header",
@@ -14890,6 +14910,350 @@
           }
         },
         "summary" : "워크스페이스 목록 조회",
+        "tags" : [
+          "Web"
+        ]
+      },
+      "post" : {
+        "description" : "워크스페이스를 생성하고 이름이 Welcome인 프로젝트와 메모리 세 건을 함께 저장합니다. 이름이 비어 있거나 slug가 형식 또는 예약어 규칙에 맞지 않으면 400, 이미 사용 중인 slug이면 409를 반환합니다.",
+        "operationId" : "createWorkspace",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1.0.0",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateWorkspaceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            },
+            "description" : "생성 성공. 생성된 워크스페이스를 반환합니다."
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_INVALID_ROLE" : {
+                    "description" : "부여할 수 없는 역할입니다.",
+                    "summary" : "WORKSPACE_INVALID_ROLE",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_INVALID_ROLE",
+                        "message" : "부여할 수 없는 역할입니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_INVALID_SLUG" : {
+                    "description" : "사용할 수 없는 slug 형식입니다.",
+                    "summary" : "WORKSPACE_INVALID_SLUG",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_INVALID_SLUG",
+                        "message" : "사용할 수 없는 slug 형식입니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_RESERVED_SLUG" : {
+                    "description" : "예약어로 지정된 slug입니다.",
+                    "summary" : "WORKSPACE_RESERVED_SLUG",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_RESERVED_SLUG",
+                        "message" : "예약어로 지정된 slug입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_INVITEE_NOT_FOUND" : {
+                    "description" : "초대할 사용자를 찾을 수 없습니다.",
+                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
+                        "message" : "초대할 사용자를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
+                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
+                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
+                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_MEMBER_NOT_FOUND" : {
+                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
+                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
+                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_NOT_FOUND" : {
+                    "description" : "워크스페이스를 찾을 수 없습니다.",
+                    "summary" : "WORKSPACE_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_NOT_FOUND",
+                        "message" : "워크스페이스를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
+                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
+                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
+                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_OWNER_PROTECTED" : {
+                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
+                    "summary" : "WORKSPACE_OWNER_PROTECTED",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_OWNER_PROTECTED",
+                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
+                    "description" : "자기 자신은 제거할 수 없습니다.",
+                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
+                        "message" : "자기 자신은 제거할 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
+                    "description" : "이미 사용 중인 slug입니다.",
+                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
+                        "message" : "이미 사용 중인 slug입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
+          }
+        },
+        "summary" : "워크스페이스 생성",
         "tags" : [
           "Web"
         ]
@@ -15833,7 +16197,7 @@
     "/api/workspaces/{workspaceId}/invitations" : {
       "get" : {
         "description" : "워크스페이스의 초대 목록을 생성 시각 기준 내림차순으로 조회합니다. admin 또는 owner 권한이 필요합니다.",
-        "operationId" : "list",
+        "operationId" : "listWorkspaceInvitations",
         "parameters" : [
           {
             "description" : "워크스페이스 식별자",
@@ -17921,7 +18285,7 @@
     "/api/workspaces/{workspaceId}/members" : {
       "get" : {
         "description" : "워크스페이스의 멤버를 이름 오름차순으로 조회합니다.",
-        "operationId" : "list_3",
+        "operationId" : "listWorkspaceMembers",
         "parameters" : [
           {
             "description" : "워크스페이스 식별자",
@@ -19689,7 +20053,7 @@
     "/api/workspaces/{workspaceId}/source-connections" : {
       "get" : {
         "description" : "워크스페이스에 연결된 외부 source를 생성 시각 내림차순으로 조회합니다.",
-        "operationId" : "list_2",
+        "operationId" : "listSourceConnections",
         "parameters" : [
           {
             "description" : "워크스페이스 식별자",

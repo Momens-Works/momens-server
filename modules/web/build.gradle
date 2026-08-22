@@ -18,6 +18,7 @@ dependencies {
     implementation project(':project')
     implementation project(':context')
     implementation project(':memory')
+    implementation project(':onboarding')
     implementation project(':source')
     implementation project(':user')
     // 웹 인증 표면(MOM-0852)이 auth의 WebAuthSession public API에 위임합니다.
