@@ -168,8 +168,12 @@ class WebWorkspacesIntegrationTest extends AbstractPostgresIntegrationTest {
     updateMemberCreatedAt(workspaceId, caller.id(), joinedAt.plusSeconds(1));
     updateMemberCreatedAt(workspaceId, first.id(), joinedAt);
     updateMemberCreatedAt(workspaceId, second.id(), joinedAt);
-    UUID firstAtSameTime = first.id().compareTo(second.id()) < 0 ? first.id() : second.id();
-    UUID secondAtSameTime = first.id().compareTo(second.id()) < 0 ? second.id() : first.id();
+    // 기대 순서는 사용자 식별자의 16진수 문자열을 기준으로 정합니다.
+    // PostgreSQL은 UUID를 부호 없는 16바이트 값으로 비교하지만 Java의 UUID 비교는 상위 64비트를 부호 있는 값으로 다루므로,
+    // 두 식별자의 부호 비트가 다르면 서로 반대 순서로 판정합니다.
+    boolean firstComesFirst = first.id().toString().compareTo(second.id().toString()) < 0;
+    UUID firstAtSameTime = firstComesFirst ? first.id() : second.id();
+    UUID secondAtSameTime = firstComesFirst ? second.id() : first.id();
 
     mockMvc
         .perform(

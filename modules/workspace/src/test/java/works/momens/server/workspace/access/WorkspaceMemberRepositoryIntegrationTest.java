@@ -46,6 +46,7 @@ class WorkspaceMemberRepositoryIntegrationTest extends AbstractPostgresIntegrati
     assertThat(found.getRole()).isEqualTo("owner");
     assertThat(found.getCreatedAt()).isNotNull();
     assertThat(found.getUpdatedAt()).isNotNull();
-    assertThat(workspaceMemberRepository.findByWorkspaceId(workspaceId)).hasSize(1);
+    assertThat(workspaceMemberRepository.findByWorkspaceIdOrderByCreatedAtAscUserIdAsc(workspaceId))
+        .hasSize(1);
   }
 }

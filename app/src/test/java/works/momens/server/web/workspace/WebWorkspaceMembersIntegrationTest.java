@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -39,15 +41,15 @@ class WebWorkspaceMembersIntegrationTest extends AbstractPostgresIntegrationTest
   @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
-  @DisplayName("멤버 목록을 이름 오름차순으로 응답한다")
-  void listReturnsMembersSortedByName() throws Exception {
+  @DisplayName("멤버 목록을 가입 시각 오름차순으로 응답한다")
+  void listReturnsMembersSortedByJoinedAt() throws Exception {
     UUID workspaceId = insertWorkspace("web-members-sorted");
-    UserProfile caller = user("members-sorted-caller@momens.works", "가장 먼저 오는 이름");
-    UserProfile second = user("members-sorted-second@momens.works", "나중에 오는 이름");
-    UserProfile third = user("members-sorted-third@momens.works", "다음에 오는 이름");
-    addMember(workspaceId, third.id(), "member");
-    addMember(workspaceId, caller.id(), "owner");
-    addMember(workspaceId, second.id(), "admin");
+    UserProfile caller = user("members-sorted-caller@momens.works", "나중에 오는 이름");
+    UserProfile joinedSecond = user("members-sorted-second@momens.works", "다음에 오는 이름");
+    UserProfile joinedLast = user("members-sorted-third@momens.works", "가장 먼저 오는 이름");
+    addMember(workspaceId, caller.id(), "owner", Instant.parse("2026-08-01T00:00:00Z"));
+    addMember(workspaceId, joinedSecond.id(), "admin", Instant.parse("2026-08-05T00:00:00Z"));
+    addMember(workspaceId, joinedLast.id(), "member", Instant.parse("2026-08-10T00:00:00Z"));
 
     mockMvc
         .perform(authorized(get("/api/workspaces/{id}/members", workspaceId), caller.id()))
@@ -58,8 +60,8 @@ class WebWorkspaceMembersIntegrationTest extends AbstractPostgresIntegrationTest
         .andExpect(jsonPath("$.members[0].role").value("owner"))
         .andExpect(jsonPath("$.members[0].created_at").exists())
         .andExpect(jsonPath("$.members[0].updated_at").exists())
-        .andExpect(jsonPath("$.members[1].id").value(second.id().toString()))
-        .andExpect(jsonPath("$.members[2].id").value(third.id().toString()));
+        .andExpect(jsonPath("$.members[1].id").value(joinedSecond.id().toString()))
+        .andExpect(jsonPath("$.members[2].id").value(joinedLast.id().toString()));
   }
 
   @Test
@@ -281,6 +283,17 @@ class WebWorkspaceMembersIntegrationTest extends AbstractPostgresIntegrationTest
         workspaceId,
         userId,
         role);
+  }
+
+  private void addMember(UUID workspaceId, UUID userId, String role, Instant joinedAt) {
+    jdbcTemplate.update(
+        "INSERT INTO workspace_members (workspace_id, user_id, role, created_at, updated_at)"
+            + " VALUES (?, ?, ?, ?, ?)",
+        workspaceId,
+        userId,
+        role,
+        Timestamp.from(joinedAt),
+        Timestamp.from(joinedAt));
   }
 
   private String readRole(UUID workspaceId, UUID userId) {
