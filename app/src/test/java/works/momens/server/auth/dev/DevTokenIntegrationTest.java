@@ -133,8 +133,8 @@ class DevTokenIntegrationTest extends AbstractPostgresIntegrationTest {
                 .content("{\"email\":\"preserve@momens.works\"}"))
         .andExpect(status().isOk());
 
-    // findOrCreate는 upsert라 바로 부르면 기존 name/avatar를 덮어쓴다. dev 발급은 findByEmail 조회를 먼저 하므로
-    // 기존 프로필이 그대로 남아야 한다.
+    // findOrCreate를 호출하면 기존 이름과 프로필 이미지를 갱신합니다.
+    // dev 토큰 발급은 findByEmail로 기존 사용자를 먼저 조회하므로 저장된 프로필이 유지되어야 합니다.
     UserProfile after = userService.getProfile(userId);
     assertThat(after.name()).isEqualTo("홍길동");
     assertThat(after.avatarUrl()).isEqualTo("https://example.com/a.png");

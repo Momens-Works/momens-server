@@ -22,7 +22,7 @@ import works.momens.server.user.UserService;
 /**
  * user public API의 실제 DB(Testcontainers) 동작 검증.
  *
- * <p>{@code findOrCreate} upsert, 프로필 수정, not-found 에러를 Flyway 스키마 위에서 확인합니다.
+ * <p>{@code findOrCreate}의 조회와 생성, 프로필 갱신, 사용자를 찾지 못했을 때의 에러를 Flyway 스키마에서 검증합니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -44,11 +44,12 @@ class UserServiceIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
-  void findOrCreateUpsertsExistingByEmailAndRefreshesProfile() {
+  void findOrCreateReusesExistingUserAndRefreshesProfile() {
     UserProfile first = userService.findOrCreate("same@momens.works", "이전", null);
 
-    // 실제 로그인은 호출마다 별도 트랜잭션이다. 첫 호출을 커밋한 뒤 새 트랜잭션에서 다시 조회해
-    // 같은 테스트 트랜잭션의 1차 캐시가 아니라 DB 기준 upsert 동작을 검증한다.
+    // 로그인 요청마다 별도의 트랜잭션을 사용합니다.
+    // 첫 번째 호출을 커밋한 뒤 새 트랜잭션에서 다시 호출해 테스트 트랜잭션의 1차 캐시가 아닌
+    // 데이터베이스에 저장된 행을 기준으로 동작하는지 검증합니다.
     TestTransaction.flagForCommit();
     TestTransaction.end();
     TestTransaction.start();
