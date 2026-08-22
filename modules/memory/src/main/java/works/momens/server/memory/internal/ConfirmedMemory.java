@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import works.momens.server.common.persistence.BaseEntity;
@@ -21,20 +21,20 @@ import works.momens.server.common.persistence.BaseEntity;
  * <p>레거시 {@code momens-api}의 {@code confirmed_memories} 테이블과 호환됩니다. snapshot 응답 키는 {@code memories}
  * 지만 테이블 이름은 레거시를 따릅니다. prod는 공유 DB라 이름을 고를 여지가 없습니다.
  *
- * <p>이 엔티티를 거치는 쓰기가 없어 전체를 {@link Immutable}로 둡니다. 조회는 {@link
- * works.momens.server.memory.ConfirmedMemoryReader}의 DTO projection이, 쓰기(MOM-0869)는 네이티브 SQL이
- * 담당합니다. 레거시가 소유한 테이블이라 우리가 채우는 컬럼만 정확히 건드려야 하기 때문입니다. 그래도 매핑해 두는 것은 prod에서 {@code
- * ddl-auto=validate}가 공유 스키마와의 어긋남을 기동 시점에 잡게 하기 위해서입니다.
+ * <p>조회는 {@link works.momens.server.memory.ConfirmedMemoryReader}의 DTO projection이 담당하고, 후보 검토와
+ * 해결(MOM-0869)은 네이티브 SQL로 처리합니다. 레거시가 소유한 테이블이므로 해당 경로에서는 신규 서버가 담당하는 컬럼만 명시적으로 변경해야 합니다. 반면 새 행을
+ * 생성하는 경로(MOM-0897)는 해당 엔티티로 저장하므로 {@code @Immutable}을 선언하지 않습니다.
  *
  * <p>후보와 달리 {@code deleted_at}이 있습니다. 레거시 삭제(H094)가 상태를 {@code DELETED}로 바꾸면서 이 컬럼을 함께 채우고, 모든 조회가
  * 이 컬럼으로 거릅니다. 상태값 {@code DELETED}가 아니라 이 컬럼이 조회 기준입니다.
  */
 @Getter
 @Entity
-@Immutable
 @Table(name = "confirmed_memories")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 class ConfirmedMemory extends BaseEntity {
+
+  private static final String STATUS_ACTIVE = "ACTIVE";
 
   @Column(name = "workspace_id", nullable = false, columnDefinition = "uuid")
   private UUID workspaceId;
@@ -92,4 +92,29 @@ class ConfirmedMemory extends BaseEntity {
 
   @Column(name = "deleted_at")
   private Instant deletedAt;
+
+  @Builder
+  private ConfirmedMemory(
+      UUID workspaceId,
+      String label,
+      String memoryType,
+      String title,
+      String body,
+      List<UUID> relatedEntityIds,
+      UUID confirmedByUserId,
+      Instant confirmedAt,
+      Instant validFrom,
+      Map<String, Object> metadata) {
+    this.workspaceId = workspaceId;
+    this.label = label;
+    this.memoryType = memoryType;
+    this.title = title;
+    this.body = body;
+    this.status = STATUS_ACTIVE;
+    this.relatedEntityIds = relatedEntityIds;
+    this.confirmedByUserId = confirmedByUserId;
+    this.confirmedAt = confirmedAt;
+    this.validFrom = validFrom;
+    this.metadata = metadata;
+  }
 }

@@ -22,9 +22,9 @@ import works.momens.server.workspace.WorkspaceAccess;
 /**
  * 레거시 {@code memory/service.go}의 후보 리뷰·메모리 해결 write 경로를 옮긴 구현입니다.
  *
- * <p>쓰기는 JPA 엔티티가 아니라 네이티브 SQL로 합니다. 이 테이블들은 레거시가 소유하고 엔티티는 조회 projection의 매핑 검증용이라 쓰기 상태를 갖지
- * 않습니다({@link ConfirmedMemory}·{@link MemoryCandidate}가 {@code @Immutable}인 이유). 컬럼도 레거시가 채우는 것만
- * 정확히 건드려야 해서, 매핑되지 않은 컬럼까지 함께 관리하는 엔티티 쓰기보다 SQL이 계약을 그대로 드러냅니다.
+ * <p>JPA 엔티티 대신 네이티브 SQL로 저장합니다. 값이 비어 있지 않은 컬럼만 덮어쓰는 부분 UPDATE, 후보 행의 값을 복사하는 INSERT, 행 잠금이 필요하기
+ * 때문입니다. 레거시가 소유한 테이블이므로 레거시 동작에 필요한 컬럼만 명시적으로 변경합니다. 새 행 생성만 담당하는 {@link
+ * ConfirmedMemoryCreatorImpl}은 엔티티를 사용합니다.
  *
  * <p>검사 순서는 레거시를 따릅니다. 워크스페이스 확인(404) → 멤버십(403) → 잠금 → 상태(409) 순이며, 순서가 바뀌면 비멤버가 후보 상태를 알게 되고 레거시와
  * status code가 갈립니다.
