@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.given;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,7 +74,8 @@ class ProjectCreatorIntegrationTest extends AbstractPostgresIntegrationTest {
                 3,
                 1,
                 Instant.parse("2026-08-20T00:00:00Z"),
-                List.of(memberId, requesterId)));
+                List.of(memberId, requesterId),
+                Map.of("seeded", true)));
 
     assertThat(detail.label()).isEqualTo("PRJ-0007");
     assertThat(detail.ownerId()).isEqualTo(memberId);
@@ -88,6 +90,7 @@ class ProjectCreatorIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(saved.getProgress()).isEqualTo(42);
     assertThat(saved.getUnresolvedCount()).isEqualTo(3);
     assertThat(saved.getVocSignalCount()).isEqualTo(1);
+    assertThat(saved.getMetadata()).containsEntry("seeded", true);
     assertThat(
             projectOwnerRepository.findByProjectIdInOrderByCreatedAtAscOwnerUserIdAsc(
                 List.of(detail.id())))
@@ -150,6 +153,7 @@ class ProjectCreatorIntegrationTest extends AbstractPostgresIntegrationTest {
         null,
         null,
         null,
-        ownerUserIds);
+        ownerUserIds,
+        null);
   }
 }

@@ -3,6 +3,7 @@ package works.momens.server.project;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -15,6 +16,9 @@ import java.util.UUID;
  *
  * <p>{@code progress}, {@code unresolvedCount}, {@code vocSignalCount}를 {@link Integer}로 선언한 것은 값을
  * 전달하지 않은 경우와 0을 전달한 경우를 구분하기 위해서입니다. 레거시는 값이 없으면 범위 검증을 생략하고 0을 저장합니다.
+ *
+ * <p>{@code metadata}는 워크스페이스 생성 과정에서 함께 저장하는 프로젝트에만 사용합니다. 해당 프로젝트는 {@code seeded} 값을 저장해 사용자가 생성한
+ * 프로젝트와 구분합니다. 레거시 프로젝트 생성(H037)은 해당 값을 입력받지 않으므로 웹 요청 DTO에는 노출하지 않고 해당 command에서만 관리합니다.
  */
 public record CreateProjectCommand(
     UUID workspaceId,
@@ -28,4 +32,5 @@ public record CreateProjectCommand(
     Integer unresolvedCount,
     Integer vocSignalCount,
     Instant lastContextAt,
-    List<UUID> ownerUserIds) {}
+    List<UUID> ownerUserIds,
+    Map<String, Object> metadata) {}

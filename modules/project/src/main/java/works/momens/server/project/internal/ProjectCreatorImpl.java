@@ -64,6 +64,7 @@ class ProjectCreatorImpl implements ProjectCreator {
                 .unresolvedCount(countOf(command.unresolvedCount(), FIELD_UNRESOLVED_COUNT))
                 .vocSignalCount(countOf(command.vocSignalCount(), FIELD_VOC_SIGNAL_COUNT))
                 .lastContextAt(command.lastContextAt())
+                .metadata(command.metadata())
                 .build());
     projectOwnerRepository.saveAll(
         ownerUserIds.stream().map(ownerId -> ProjectOwner.of(project.getId(), ownerId)).toList());

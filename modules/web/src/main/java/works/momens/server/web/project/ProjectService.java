@@ -43,6 +43,7 @@ class ProjectService {
             request.unresolvedCount(),
             request.vocSignalCount(),
             request.lastContextAt(),
-            request.ownerUserIds()));
+            request.ownerUserIds(),
+            null));
   }
 }
