@@ -18,7 +18,11 @@ public abstract class AbstractPostgresIntegrationTest {
 
   private static final PostgreSQLContainer POSTGRES =
       new PostgreSQLContainer(
-          DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+              DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"))
+          // Spring 컨텍스트마다 커넥션 풀이 생성되므로 빈을 교체하는 테스트가 늘어나면 컨텍스트와 커넥션 수도 함께 증가합니다.
+          // PostgreSQL 기본 한도인 100개로는 app 모듈 테스트가 한도에 도달해 이후 컨텍스트가 기동하지 못합니다.
+          // 풀 크기를 줄이면 여러 커넥션이 필요한 테스트의 실행 시간이 늘어날 수 있으므로 PostgreSQL의 커넥션 한도를 높입니다.
+          .withCommand("postgres", "-c", "max_connections=300");
 
   static {
     POSTGRES.start();
