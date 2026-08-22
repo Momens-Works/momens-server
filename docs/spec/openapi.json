@@ -3003,7 +3003,7 @@
         "description" : "워크스페이스 멤버 목록 응답",
         "properties" : {
           "members" : {
-            "description" : "멤버 목록(이름 오름차순). 결과가 없으면 빈 배열입니다.",
+            "description" : "멤버 목록(가입 시각 오름차순, 가입 시각이 같으면 사용자 식별자 오름차순). 결과가 없으면 빈 배열입니다.",
             "items" : {
               "$ref" : "#/components/schemas/WorkspaceMemberResponse"
             },
