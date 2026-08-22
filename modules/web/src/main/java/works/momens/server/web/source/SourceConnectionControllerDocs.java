@@ -27,6 +27,7 @@ import works.momens.server.workspace.WorkspaceErrorCode;
 interface SourceConnectionControllerDocs {
 
   @Operation(
+      operationId = "listSourceConnections",
       summary = "source 연결 목록 조회",
       description = "워크스페이스에 연결된 외부 source를 생성 시각 내림차순으로 조회합니다.")
   @ApiResponse(

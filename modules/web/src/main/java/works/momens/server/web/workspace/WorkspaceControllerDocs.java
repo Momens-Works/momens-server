@@ -10,6 +10,7 @@ import java.security.Principal;
 import java.util.UUID;
 import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.web.workspace.dto.request.CreateWorkspaceRequest;
 import works.momens.server.web.workspace.dto.request.UpdateWorkspaceRequest;
 import works.momens.server.web.workspace.dto.response.WorkspaceListResponse;
 import works.momens.server.web.workspace.dto.response.WorkspaceResponse;
@@ -26,7 +27,10 @@ import works.momens.server.workspace.WorkspaceErrorCode;
 @Tag(name = "Web", description = "웹 진입 API")
 interface WorkspaceControllerDocs {
 
-  @Operation(summary = "워크스페이스 목록 조회", description = "요청자가 멤버인 워크스페이스 목록을 생성 시각 내림차순으로 조회합니다.")
+  @Operation(
+      operationId = "listWorkspaces",
+      summary = "워크스페이스 목록 조회",
+      description = "요청자가 멤버인 워크스페이스 목록을 생성 시각 내림차순으로 조회합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "목록 조회 성공. 결과가 없으면 workspaces는 빈 배열입니다.",
@@ -64,6 +68,19 @@ interface WorkspaceControllerDocs {
   @ApiExceptions({WorkspaceErrorCode.class, CommonErrorCode.class})
   WorkspaceSnapshotResponse snapshot(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
+
+  @Operation(
+      operationId = "createWorkspace",
+      summary = "워크스페이스 생성",
+      description =
+          "워크스페이스를 생성하고 이름이 Welcome인 프로젝트와 메모리 세 건을 함께 저장합니다. "
+              + "이름이 비어 있거나 slug가 형식 또는 예약어 규칙에 맞지 않으면 400, 이미 사용 중인 slug이면 409를 반환합니다.")
+  @ApiResponse(
+      responseCode = "201",
+      description = "생성 성공. 생성된 워크스페이스를 반환합니다.",
+      content = @Content(schema = @Schema(implementation = WorkspaceResponse.class)))
+  @ApiExceptions({WorkspaceErrorCode.class, CommonErrorCode.class})
+  WorkspaceResponse createWorkspace(CreateWorkspaceRequest request, Principal principal);
 
   @Operation(
       summary = "워크스페이스 수정",

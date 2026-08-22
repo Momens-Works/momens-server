@@ -30,6 +30,7 @@ import works.momens.server.workspace.WorkspaceErrorCode;
 interface WorkspaceInvitationControllerDocs {
 
   @Operation(
+      operationId = "listWorkspaceInvitations",
       summary = "워크스페이스 초대 목록 조회",
       description = "워크스페이스의 초대 목록을 생성 시각 기준 내림차순으로 조회합니다. admin 또는 owner 권한이 필요합니다.")
   @ApiResponse(
