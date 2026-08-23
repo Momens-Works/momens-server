@@ -10,13 +10,13 @@
 # 이제 배포 시점에 Flyway가 막는다. 폐지 경위는 docs/design/prod-schema-ownership-transfer.md 6절.
 #
 # 사용법:
-#   prod-schema-ledger.sh --check          prod 필수 설정 선언을 검사한다
-#   prod-schema-ledger.sh --release-check  미반영 필수 설정이 남아 있으면 실패한다
+#   prod-readiness-ledger.sh --check          prod 필수 설정 선언을 검사한다
+#   prod-readiness-ledger.sh --release-check  미반영 필수 설정이 남아 있으면 실패한다
 
 set -uo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ledger_doc="docs/prod-schema-ledger.md"
+ledger_doc="docs/prod-readiness-ledger.md"
 config_begin='<!-- BEGIN DECLARATION: prod-required-config -->'
 config_end='<!-- END DECLARATION: prod-required-config -->'
 prod_config_files=(

@@ -3,7 +3,7 @@
 # prod-flyway-bootstrap-check.sh 회귀 테스트.
 #
 # 그 스크립트는 CI 필수 체크에 실린 게이트다. 게이트 자체가 검증되지 않으면 조용히 통과하는
-# 게이트가 된다. 자매 스크립트(prod-schema-ledger-test.sh)와 같은 위치를 차지한다.
+# 게이트가 된다. 자매 스크립트(prod-readiness-ledger-test.sh)와 같은 위치를 차지한다.
 
 set -euo pipefail
 

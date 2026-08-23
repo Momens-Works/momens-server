@@ -3,7 +3,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-source "$repo_root/scripts/prod-schema-ledger.sh"
+source "$repo_root/scripts/prod-readiness-ledger.sh"
 
 fixture_root="$(mktemp -d)"
 trap 'rm -rf "$fixture_root"' EXIT
@@ -122,4 +122,4 @@ if check_marker_pair "$config_begin" "$config_end" "test" >/dev/null 2>&1; then
     exit 1
 fi
 
-echo "prod-schema-ledger 회귀 테스트 OK"
+echo "prod-readiness-ledger 회귀 테스트 OK"

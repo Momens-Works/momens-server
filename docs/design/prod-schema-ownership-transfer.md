@@ -503,7 +503,7 @@ local에서도 돌지만 local이 검증하는 대상은 우리 파일이 만든
 릴리스가 아니라 **이력 INSERT + ConfigMap 토글**이라는 운영 조작이 일으키고, 그 두 가지는 사람이 순서를
 통제한다.
 
-대장 문서(`docs/prod-schema-ledger.md`) 자체는 남는다. 선언 구간(prod 필수 환경변수)과 수기 구간은
+대장 문서(`docs/prod-readiness-ledger.md`) 자체는 남는다. 선언 구간(prod 필수 환경변수)과 수기 구간은
 MOM-0841 소유이며 이 결정의 영향을 받지 않는다. 제거 대상은 생성 구간과 `--release-check`의 스키마 검사다.
 
 ## 7. 결정 5 — 롤백
@@ -667,5 +667,5 @@ MOM-0909가 요구하는 "prod와 같은 형상(레거시 러너가 만든 스�
 
 - [ADR-0019 prod 스키마 주도권을 서버로 이전](../adr/0019-prod-schema-ownership-transfer.md)
 - [데이터 규칙](../rules/persistence.md)
-- [prod 운영 준비 대장](../prod-schema-ledger.md)
+- [prod 운영 준비 대장](../prod-readiness-ledger.md)
 - [레거시 Product API 이관 전략](legacy-product-api-migration/strategy.md)
