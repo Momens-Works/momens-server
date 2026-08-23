@@ -269,6 +269,25 @@ local/dev에는 원본 세 파일이 이미 적용돼 있으므로 보정 마이
 바뀌지 않으며, 재적용해도 실패하지 않는다. 적용 후 두 형상의 `tasks.role` 컬럼 정의, `tasks_role_check`
 정의, `task_checklist_items` 전체 컬럼 정의가 **문자 그대로 일치한다.**
 
+#### FK를 넣지 않는다 (의도된 차이)
+
+`momens-api#28`은 prod 용 DDL에 FK를 넣었고, 이 리포의 파일이 FK를 뺀 것을 *"a mirror-only artifact"*
+라고 적었다. 주도권이 넘어오면 **이 리포의 파일이 곧 prod DDL**이므로 그 차이가 prod로 그대로 간다.
+
+required 16건 중 FK를 가진 것은 3건뿐이다 — `task_checklist_items`→`tasks`,
+`task_open_questions`→`tasks`, `user_identities`→`users`. `signals`·`signal_actions`·`signal_evidence`·
+`outbox_events`·`push_*`·`minsu_*`에는 없다.
+
+**이것은 미러 부산물이 아니라 모듈 경계 결정으로 본다.** `persistence.md`가 "읽기 전용 테이블은 새 모듈
+의존이 생기면 FK를 두지 않습니다"라고 적고 있고, FK를 가진 3건은 전부 모듈 안에서 닫히거나 core를
+가리킨다. `signal` 모듈이 `workspaces`에 FK를 걸면 모듈 의존이 새로 생긴다.
+
+그대로 둔다. 파일을 고치면 checksum이 깨지고, 필요해지면 나중에 새 마이그레이션으로 FK를 더할 수 있다.
+
+**대가는 참조 무결성이 DB 차원에 없다는 것이다.** 워크스페이스를 지워도 `signals`·`outbox_events`가
+`ON DELETE CASCADE`로 따라 지워지지 않는다. 지금은 무해하다 — `momens-worker`가 아직 `signals`에
+INSERT 하지 않아 생산자가 없다. **worker가 생산을 시작하기 전에 재검토한다**(MOM-0916).
+
 ##### 대조 방법의 한계
 
 객체 추출을 정규식으로 했기 때문에 인용 식별자를 놓친다. `V20260713120000`의 `"change"` 컬럼이
@@ -500,13 +519,26 @@ MOM-0908 (이 문서 + ADR-0019)
 리포 쪽 변경이 위험하지 않은 이유는 `application-prod.yml`이 계속 `flyway.enabled: false`이기 때문이다.
 릴리스가 나가도 prod 동작은 바뀌지 않는다. **실제 전환은 릴리스가 아니라 아래 운영 조작이 일으킨다.**
 
-1. prod에 `flyway_schema_history` INSERT (단일 트랜잭션)
-2. `momens-server-config` ConfigMap에 토글 추가 — `SPRING_FLYWAY_ENABLED: "true"`,
-   `JAVA_TOOL_OPTIONS`에 `-Dspring.flyway.out-of-order=true`
-3. 롤아웃 (`deploy-service.sh`가 이미지 변경 없이도 `rollout restart`를 건다)
-4. 기동과 스키마 확인
-5. ConfigMap에서 `out-of-order`만 제거하고 재롤아웃
-6. 후속 PR로 `application-prod.yml`을 `flyway.enabled: true`로 정본화하고 ConfigMap 오버라이드 제거
+1. **릴리스 대상 커밋**을 체크아웃해 체크섬 산출 (`scripts/prod-flyway-bootstrap.sh --generate`)
+2. prod에 `flyway_schema_history` INSERT (단일 트랜잭션)
+3. **`k8s` 토글 PR 머지**
+4. `Deploy momens-server` 워크플로를 dispatch. `deploy-service.sh`가 이미지 변경 없이도
+   `rollout restart`를 걸어 ConfigMap 변경이 반영된다
+5. 기동과 스키마 확인
+6. `out-of-order`만 제거하는 PR 머지 후 다시 dispatch
+7. 후속 PR로 `application-prod.yml`을 `flyway.enabled: true`로 정본화하고 ConfigMap 오버라이드 제거
+
+#### 토글은 수기 변경이 아니라 커밋이어야 한다
+
+`deploy-service.sh`가 `kubectl apply -k`로 리포의 매니페스트를 적용한다. `kubectl edit`으로 넣은
+ConfigMap 키는 **다음 배포에서 지워진다.** 토글은 `k8s` 리포에 커밋돼야 한다.
+
+그것이 위험 구간을 배포 리포로 옮긴다. `Deploy momens-server`는 `workflow_dispatch`와
+`repository_dispatch`로만 돌고 **`k8s` 리포 push로는 돌지 않는다.** 여기까지는 좋다 — 타이밍을 사람이
+쥔다. 문제는 그 `repository_dispatch`를 보내는 것이 **momens-server의 `main` push**라는 점이다.
+토글을 미리 머지해 두면 시딩 전에 나가는 무관한 릴리스가 그것을 적용해 버린다.
+
+그래서 **토글 PR은 시딩(2단계)이 끝난 뒤에 머지한다.** 그때까지 draft로 둔다.
 
 ### 배포 리포(`k8s`)도 함께 바꿔야 한다
 
