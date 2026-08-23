@@ -37,7 +37,9 @@ prod는 레거시와 공유 DB를 쓰는 전환기라 이 서버의 Flyway가 �
 
 ### 2.1 공유 DB의 DDL writer는 둘이다
 
-`persistence.md`와 대장은 "레거시 `momens-api`가 단일 소유"라고 적고 있으나 사실이 아니다.
+`persistence.md`는 "공유 운영 스키마는 레거시가 단일 소유"라고 적고 있었으나 사실이 아니다(이 PR에서
+고쳤다). 대장은 단일 소유를 주장하지 않고 "담당 저장소는 스키마 소유자에 따라 갈립니다"라고 적으므로
+이 지적 대상이 아니다.
 
 | 주체 | 러너 | 이력 | 소유 | 마지막 DDL |
 | --- | --- | --- | --- | --- |
@@ -46,8 +48,9 @@ prod는 레거시와 공유 DB를 쓰는 전환기라 이 서버의 Flyway가 �
 | `momens-retrieval` | 없음 (Flyway 미사용) | — | 없음. 읽기만 한다 | — |
 | `momens-server` | Flyway 12.4.0 (prod off) | `flyway_schema_history` | 부트스트랩 후 | — |
 
-`k8s/manifests/apps/momens-worker/configmap.yaml`이 `MIGRATIONS_ENABLED: "true"`를 명시적으로 켠다.
-`ENV=production`의 기본값이 `false`인데 worker가 자기 전용 스키마를 소유하므로 뒤집은 것이다.
+`k8s`의 ConfigMap이 `momens-api`(`configmap.yaml:29`)와 `momens-worker`(`configmap.yaml:33`) **양쪽 모두**
+`MIGRATIONS_ENABLED: "true"`를 명시적으로 켠다. worker 쪽은 `ENV=production`의 기본값이 `false`인데도
+자기 전용 스키마를 소유하므로 뒤집은 것이고, 그 이유가 주석에 적혀 있다.
 (`k8s/docs/secrets.md`는 아직 "the API stays the single migration owner"라고 적고 있어 매니페스트와
 어긋난다. 배포 리포 변경은 8절이 정리한다.)
 
@@ -87,7 +90,7 @@ worker가 소유하는 테이블은 `raw_source_events`, `normalized_source_even
 ### 2.4 version 배치가 섞여 있다
 
 ```
-V20260624090000 ~ V20260707090000   심기 (미러 9 + applied 1)
+V20260624090000 ~ V20260707090000   심기 (미러 8 + applied 1)
 V20260707100000 ~ V20260811090000   실행 (required 16)  ※ 중간에 미러 1건(V20260715100000)
 V20260819090000 ~ V20260822000600   심기 (미러 14)
 ```
@@ -151,7 +154,7 @@ retrieval_cursors, retrieval_documents, retrieval_events
 
 | 파일 | prod 실행 | 이유 |
 | --- | --- | --- |
-| `V20260707120000` add_task_detail_and_checklist | **부분 충돌** | `description`·`assignee_id`가 prod에 이미 있다. `task_checklist_items`만 필요하다 |
+| `V20260707120000` add_task_detail_and_checklist | **부분 충돌** | `description`·`assignee_id`와 인덱스 `idx_tasks_assignee_id`가 prod에 이미 있다(레거시 `000001_init.sql:109`). `task_checklist_items`와 그 인덱스만 필요하다 |
 | `V20260707150000` task_role_single_value | **실행 불가** | 아래 참조 |
 | `V20260714091000` add_task_origin | 안전 | `origin_type`·`origin_signal_id`가 prod에 없다 |
 | `V20260715090000` task_role_drop_not_null | **실행 불가** | 위 파일이 만드는 컬럼에 의존한다 |
@@ -175,6 +178,21 @@ retrieval_cursors, retrieval_documents, retrieval_events
 prod에서 이 파일은 두 번 실패한다. `UPDATE`에서 `relation "task_roles" does not exist`로 한 번,
 그것을 넘겨도 기존 `tasks` 행의 `role`이 전부 `NULL`이라 `SET NOT NULL`에서 다시 한 번.
 **어떤 조건에서도 실행할 수 없다.**
+
+### 헤더가 아니라 주석이 진실을 갖고 있었다
+
+`V20260706120000__create_task.sql`의 7행은 이렇게 적는다.
+
+```
+-- (local/test 전용 Flyway. prod 공유 스키마의 task_roles 는 컷오버 시 레거시 마이그레이션으로 추가합니다.)
+```
+
+**파일 주석은 이미 알고 있었다.** 헤더 어휘로 표현할 수 없는 상태였을 뿐이다. `mirror`는 "레거시가 이미
+만들었다"는 뜻이고, `required`는 "우리가 만든 것을 레거시가 반영해야 한다"는 뜻이다. `task_roles`는
+**"아직 prod에 없고 나중에 레거시가 만들어 줄 것"** 이라 둘 중 어느 것도 아니었고, 그 상태가 헤더를
+빠져나가 주석으로 흘러갔다.
+
+MOM-0909의 객체 대조에 값싼 힌트가 된다. **같은 종류는 헤더가 아니라 마이그레이션 주석에서 찾는다.**
 
 ## 3. 결정 1 — 소유 범위
 
@@ -234,9 +252,16 @@ version으로 올라가므로 `outOfOrder` 의존도 함께 줄어든다.
 ### 토글은 리포가 아니라 배포 ConfigMap에 둔다
 
 **`application-prod.yml`의 `flyway.enabled`를 `true`로 바꿔 `develop`에 머지하면 위험 구간이 생긴다.**
-운영 배포 트리거는 `main` push이므로 `develop`에 있는 동안은 안전하지만, 이력 INSERT가 끝나기 전에
-다른 릴리스가 나가는 순간 prod에서 Flyway가 40건 전부를 미적용으로 보고 첫 파일부터 실행하려 한다.
-릴리스 시점을 사람이 통제해야만 안전한 상태를 리포에 두는 셈이다.
+이력 INSERT가 끝나기 전에 그 커밋이 prod에 뜨는 순간 Flyway가 40건 전부를 미적용으로 보고 첫 파일부터
+실행하려 한다.
+
+그리고 **prod로 가는 길은 `main` push 하나가 아니다.** `build-and-deploy.yml`에는 `workflow_dispatch`가
+있고, 이미지를 push한 뒤 `k8s`로 배포를 요청하는 `Request production deploy` 스텝은 ref가 아니라
+`K8S_DISPATCH_TOKEN` 존재 여부로만 걸린다. 즉 **어느 브랜치에서 dispatch해도 그 커밋이 prod에 뜬다.**
+릴리스 게이트도 함께 우회된다.
+
+따라서 "릴리스 시점만 사람이 통제하면 된다"는 완화가 성립하지 않는다. dispatch 한 번이면 통제가 무너진다.
+리포에 위험한 상태를 아예 두지 않는 편이 안전하다.
 
 대신 **k8s ConfigMap 환경변수로 토글한다.** `k8s/scripts/deploy-service.sh`가 이미지 변경 여부와
 무관하게 항상 `kubectl rollout restart`를 걸기 때문에(스크립트 117~120행이 "ConfigMap env and mounted
@@ -340,10 +365,14 @@ UNIQUE는 보지 않으므로 완전한 탐지가 아니다. 결정 1을 택한 
 
 직관과 반대다. 처음에는 "게이트 폐지는 부트스트랩 적용 뒤"로 두려 했으나 그 순서는 성립하지 않는다.
 
-운영 배포 트리거는 `build-and-deploy.yml`의 `push: branches: [main]`이다. 부트스트랩을 prod에 올리려면
+정규 배포 경로는 `build-and-deploy.yml`의 `push: branches: [main]`이다. 부트스트랩을 그 경로로 올리려면
 `develop` → `main` 릴리스 PR이 필요한데, `pr-check.yml`의 `Block release with unreflected prod requirements`가
 `github.base_ref == 'main'`인 모든 PR에서 `required` 헤더가 남아 있으면 실패시킨다. 헤더는 checksum 때문에
 고칠 수 없다(「폐지가 파일 수정을 뜻해서는 안 된다」). **게이트를 남겨 두면 부트스트랩 릴리스 자체가 통과하지 못한다.**
+
+`workflow_dispatch`로 게이트를 우회해 `develop`을 바로 올리는 길은 있다(4절). **그 길을 택하지 않는다.**
+리뷰와 승인을 거치지 않은 트리를 prod에 올리지 않는다는 원칙이 게이트보다 상위이고, 부트스트랩은
+되돌리기 어려운 작업이라 더욱 그렇다. dispatch는 정규 경로가 막혔을 때의 우회로가 아니라 사고 경로로 취급한다.
 
 ```
 게이트 폐지  →  부트스트랩 적용이 선행이라 대기
@@ -470,7 +499,7 @@ MOM-0909가 요구하는 "prod와 같은 형상(레거시 러너가 만든 스�
 | 체크섬 불일치로 기동 실패 | 스크래치 DB에서 Flyway가 계산한 값을 그대로 복사한다. 실패해도 스키마 무변경 |
 | `mirror` 헤더가 더 잘못 붙어 있다 | 2.8이 한 건 드러났다. MOM-0909의 객체 대조가 실행 집합 전체를 다시 판정한다 |
 | local·prod가 완전히 같지 않다 | 2.6의 5개 컬럼. 의도된 것이며 `validate` 대상이 아니다 |
-| 게이트를 없앤 뒤 부트스트랩 전에 다른 릴리스가 나간다 | 리포의 `flyway.enabled`가 계속 `false`라 prod 동작이 바뀌지 않는다. 전환은 운영 조작이 일으킨다 |
+| 게이트를 없앤 뒤 부트스트랩 전에 다른 커밋이 prod에 뜬다 (릴리스 또는 `workflow_dispatch`) | 리포의 `flyway.enabled`가 계속 `false`라 어느 경로로 떠도 prod 동작이 바뀌지 않는다. 전환은 운영 조작이 일으킨다 |
 | 리포 설정과 prod 실제 설정이 어긋난 채 방치된다 | 8절 6단계(정본화 PR)를 부트스트랩과 같은 스프린트에서 닫는다. ConfigMap 오버라이드는 임시 상태다 |
 | ConfigMap 환경변수가 바인딩되지 않는다 | `spring.flyway.out-of-order`는 대시 때문에 변환형이 애매하다. 시스템 프로퍼티로 주고 리허설에서 확인한다 |
 | 롤아웃 실패 후 정리가 안 된 채 남는다 | `deploy-service.sh`에 `rollout undo`가 없다. 수동 정리 단계를 절차에 명시한다 |
