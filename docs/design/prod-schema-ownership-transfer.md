@@ -268,9 +268,41 @@ secrets change without a new image"라고 명시한다) **서버 릴리스 없�
 
 **동결 대상은 "이 리포에 그 객체를 만드는 마이그레이션 파일이 있는가"로 판정한다.**
 
-부트스트랩 시점의 파일 집합이 경계를 정의한다. 그 안쪽(서버가 매핑하는 공유 제품 스키마)은 레거시와
-worker가 DDL을 하지 않는다. 바깥쪽(2.5의 11개 + worker 전용 스키마)은 각자가 계속 소유한다. 이후 새로
-만드는 객체는 만든 쪽이 소유한다.
+부트스트랩 시점의 파일 집합이 경계를 정의한다. 그 안쪽은 레거시와 worker가 DDL을 하지 않는다.
+바깥쪽은 각자가 계속 소유한다. 이후 새로 만드는 객체는 만든 쪽이 소유한다.
+
+**동결은 기간이 아니라 범위의 문제다.** 부트스트랩 기간 한정이 아니라 영구적인 소유권 이전이다.
+
+### 실제 목록
+
+서버 마이그레이션 40건이 만들거나 바꾸는 객체는 33개다. 그중 레거시와 겹쳐 **실제로 동결을 요청해야
+하는 것은 20개**다.
+
+```
+blockers, confirmed_memories, entity_relations, memory_candidates,
+milestone_owners, milestones, project_owners, projects, refresh_tokens,
+review_actions, source_connections, source_credentials, source_refs,
+task_updates, tasks, users, workspace_invitations,
+workspace_label_sequences, workspace_members, workspaces
+```
+
+나머지 13개 중 12개는 서버 신규(`signals` 계열 4, `outbox_events`, `push_installations`,
+`push_deliveries`, `notification_consumer_offsets`, `minsu_task_draft_generations`, `user_identities`,
+`task_checklist_items`, `task_open_questions`)라 레거시가 애초에 건드리지 않으므로 실질 제약이 아니다.
+남은 하나는 `task_roles`로 prod에 없는 local/test 전용이다(2.8).
+
+**계속 각자 소유하는 것은 17개다.** 레거시 전용 11개(2.5)와 worker 전용 6개(2.1)다. MCP OAuth
+(`oauth_*`)가 여기 속하는 것이 전면 동결을 택하지 않은 이유다.
+
+### 부트스트랩 기간에 특별히 조심할 대상은 레거시가 아니다
+
+레거시나 worker가 부트스트랩 진행 중에 **자기 전용 객체**를 바꾸는 것은 안전하다. 심을 이력은 이 리포의
+파일에서 산출되므로 그쪽이 새로 만든 객체는 애초에 집합에 없고, `validate`는 매핑된 엔티티만 본다.
+두 이력은 서로를 모른다(2.2).
+
+기간 한정으로 위험한 것은 **이 리포에 새 마이그레이션이 머지되는 것**이다. 체크섬 산출과 INSERT 사이에
+파일이 늘면 그 파일이 심기 집합에서 빠지고, 레거시 소유 객체를 만드는 것이었다면 prod에서
+`already exists`로 죽는다. 4절의 산출 기준 커밋 고정이 이것을 막는다.
 
 레거시를 전면 동결하지 않는 이유는 `oauth_*` 때문이다. MCP OAuth는 레거시의 가장 최근 DDL 영역이고 아직
 이관 계획도 확정되지 않았다(MOM-0871). 서버가 매핑하지도 않는 테이블의 마이그레이션을 이 리포가 들고
