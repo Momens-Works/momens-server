@@ -269,7 +269,12 @@ required 16건이 만들거나 바꾸는 모든 객체를 prod 형상(`legacy-di
 
 - **심기 28건** — 레거시가 만든 객체 25 + 위 세 파일 3
 - **실행 13건**
-- **보정 1건** — `V20260823090000__prod_bootstrap_task_role_and_checklist.sql`
+- **보정 1건** — `V20260823110000__prod_bootstrap_task_role_and_checklist.sql`
+
+보정 마이그레이션의 **version은 리포 최고 version보다 위여야 한다.** 아래로 두면 이미 그 위까지
+진행한 DB(오늘 `develop`을 받은 로컬)가 다음 기동에서 `Detected resolved migration not applied`로
+죽는다. 실제로 처음에 `20260823090000`으로 두었다가 이 실패를 재현하고 `20260823110000`으로 올렸다.
+4절이 세운 "이후 새 마이그레이션은 항상 그보다 뒤에 온다"는 원칙이 보정 파일 자신에게도 적용된다.
 
 보정 마이그레이션은 세 파일의 순효과만 만든다. `tasks.role TEXT`(nullable) + `tasks_role_check`,
 그리고 `task_checklist_items`와 그 인덱스다. `NOT NULL`을 거쳤다 푸는 중간 단계와 `task_roles`
@@ -560,8 +565,13 @@ MOM-0908 (이 문서 + ADR-0019)
 리포 쪽 변경이 위험하지 않은 이유는 `application-prod.yml`이 계속 `flyway.enabled: false`이기 때문이다.
 릴리스가 나가도 prod 동작은 바뀌지 않는다. **실제 전환은 릴리스가 아니라 아래 운영 조작이 일으킨다.**
 
-1. **릴리스 대상 커밋**을 체크아웃해 `--verify`로 dev 이력과 체크섬을 대조한다. 심기 목록 전건이
-   검증돼야 한다 — 대조되지 못한 항목이 남으면 그 체크섬이 검증 없이 prod로 들어간다
+1. **릴리스 대상 커밋**을 체크아웃해 `--verify`로 체크섬을 대조한다. 심기 목록 전건이 검증돼야
+   한다 — 대조되지 못한 항목이 남으면 그 체크섬이 검증 없이 prod로 들어간다.
+   - **대조 대상은 dev가 아니다.** dev는 `main` 릴리스로만 전진하는데 부트스트랩 전까지 릴리스를
+     내지 않으므로 최신 마이그레이션이 없고, `--verify`가 구조적으로 실패한다.
+   - **`scripts/legacy-diff`의 `server-db`를 릴리스 대상 커밋으로 만들어 대조한다.** `run.sh`가
+     bootJar를 띄우므로 그 이력은 **앱의 Flyway가 만든 것**이다. 이것이 요점이다 — 스크래치 DB를
+     CLI로 만들어 대조하면 CLI끼리 비교하는 순환이 된다
 2. 같은 커밋에서 `--generate`로 INSERT 문을 만든다
 3. prod에 `flyway_schema_history` INSERT (단일 트랜잭션)
 4. **`k8s` 토글 PR 머지**
@@ -617,7 +627,7 @@ MOM-0909가 요구하는 "prod와 같은 형상(레거시 러너가 만든 스�
 | CLI와 앱의 체크섬이 같은가 | **공통 38건 전부 일치, 불일치 0건.** 앱이 만든 이력(`legacy-diff`의 `server-db`)과 대조했다 |
 | 이력 28건 INSERT | 성공. 최고 version `20260823100000` |
 | `outOfOrder` 없이 migrate | **거부.** *"Detected resolved migration not applied to database: 20260716091000. … To allow executing this migration, set `-outOfOrder=true`"* — 스키마는 하나도 바뀌지 않았다 |
-| `outOfOrder=true` + `group=true` | **정확히 14건만 실행.** 심은 28건은 건너뛰고 실패 0건 |
+| `outOfOrder=true` + `group=true` | **정확히 14건만 실행.** 심은 28건은 건너뛰고 실패 0건. 최종 version `20260823110000` |
 | 결과 스키마 | required 12개 테이블 전부 생성, `tasks`에 `role`·`origin_type`·`origin_signal_id`·`next_action` 추가, 레거시 이력 19건과 테이블 온전 |
 | `tasks_role_check` 귀속 | `tasks`에 정확히 걸림 (가드가 `conrelid`를 함께 보도록 고친 뒤 재확인) |
 | 부트스트랩 후 `outOfOrder`·`group` 없이 재기동 | *"Schema is up to date. No migration necessary."* — **1회성으로 끄는 설계가 성립한다** |

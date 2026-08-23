@@ -18,6 +18,10 @@
 #   PGPASSWORD=... prod-flyway-bootstrap.sh --verify <libpq URL>
 #                                                   기존 이력과 체크섬이 같은지 대조한다
 #
+# --verify 의 대상은 **앱의 Flyway 가 만든 이력**이어야 한다. 스크래치 DB 를 CLI 로 만들어 대조하면
+# CLI 끼리 비교하는 순환이다. scripts/legacy-diff 의 server-db 가 bootJar 로 만들어지므로 그것을
+# 릴리스 대상 커밋으로 띄워 쓴다. dev 는 main 릴리스로만 전진해 최신 마이그레이션이 없다.
+#
 # **산출 기준은 실제로 배포되는 커밋이다.** 미러성 파일은 계속 늘고 있으므로, 릴리스 대상 커밋을
 # 체크아웃한 상태에서 실행하고 산출부터 INSERT 까지 그 커밋을 바꾸지 않는다.
 
@@ -155,6 +159,16 @@ generate() {
         where version in ($(printf "'%s'," $seeds | sed 's/,$//'))
         order by installed_rank")"
 
+    # 파일을 쓰기 전에 대조한다. 뒤에 두면 실패해도 산출물이 디스크에 남아 운영자가 집어들 수 있다.
+    local inserted expected
+    inserted="$(printf '%s\n' "$rows" | grep -c '^INSERT INTO' || true)"
+    expected="$(printf '%s\n' "$seeds" | grep -c . || true)"
+    [[ "$inserted" -eq "$expected" ]] || {
+        echo "심기 목록 ${expected}건인데 INSERT 는 ${inserted}행입니다." >&2
+        return 1
+    }
+    echo "INSERT ${inserted}행 (심기 목록과 일치)" >&2
+
     {
         echo "-- prod flyway_schema_history 부트스트랩 (MOM-0909)"
         echo "-- 생성: $(date -u +%Y-%m-%dT%H:%M:%SZ) · 기준 커밋: $(git -C "$repo_root" rev-parse HEAD)"
@@ -199,17 +213,6 @@ generate() {
         echo "COMMIT;"
     } > "${output:-/dev/stdout}"
 
-    # 심기 목록 건수와 실제 INSERT 행수를 대조한다. 앞의 파일 존재 검사로 대체로 닫히지만,
-    # 그 검사는 파일이 있는지만 보고 이 대조는 이력에 실제로 들어갔는지를 본다.
-    local inserted expected
-    inserted="$(printf '%s\n' "$rows" | grep -c '^INSERT INTO')"
-    expected="$(printf '%s\n' "$seeds" | grep -c .)"
-    [[ "$inserted" -eq "$expected" ]] || {
-        echo "심기 목록 ${expected}건인데 INSERT 는 ${inserted}행입니다." >&2
-        return 1
-    }
-    echo "INSERT ${inserted}행 생성 (심기 목록과 일치)" >&2
-
     [[ -n "$output" ]] && echo "생성했습니다: $output" >&2
     return 0
 }
@@ -244,15 +247,18 @@ verify() {
                    where version is not null and checksum is not null" \
         | LC_ALL=C sort -t'|' -k1,1 > "$work_dir/cli.txt"
 
+    # set -e 와 pipefail 때문에 psql 실패가 여기서 즉사하면 아래 안내에 도달하지 못한다.
     docker run --rm -e PGPASSWORD pgvector/pgvector:pg16 \
         psql "$url" -Atc "select version || '|' || checksum from flyway_schema_history
                           where version is not null and checksum is not null" \
-        | LC_ALL=C sort -t'|' -k1,1 > "$work_dir/target.txt"
+        > "$work_dir/target.raw" 2>"$work_dir/target.err" || true
+    LC_ALL=C sort -t'|' -k1,1 "$work_dir/target.raw" > "$work_dir/target.txt" 2>/dev/null || true
 
     local target_rows
-    target_rows="$(grep -c . "$work_dir/target.txt" || true)"
+    target_rows="$(grep -c . "$work_dir/target.txt" 2>/dev/null || true)"
     [[ "$target_rows" -gt 0 ]] || {
         echo "대상 DB 에서 flyway_schema_history 를 읽지 못했습니다." >&2
+        [[ -s "$work_dir/target.err" ]] && sed 's/^/  /' "$work_dir/target.err" >&2
         return 1
     }
 
