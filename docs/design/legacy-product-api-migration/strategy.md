@@ -289,19 +289,19 @@ capability에 필요한 조건을 확인한다. 대장은 다음 세 종류를 �
 - **수기 prod 의무**: provider 등록, OAuth redirect URI, ADC·IAM, DNS·ingress·TLS, 배포 순서처럼
   코드로 완전히 검증할 수 없는 조건
 
-공유 DB를 사용하므로 일반적인 데이터 복사 migration은 필요하지 않지만 스키마 조건은 다음과 같이
-별도로 검증한다.
+공유 DB를 사용하므로 일반적인 데이터 복사 migration은 필요하지 않다. 스키마 조건은 다음과 같다.
 
-- local/test에서는 각 신규 모듈의 Flyway migration이 스키마를 만든다.
-- prod 전환기에는 신규 서버 Flyway가 꺼져 있고 `ddl-auto=validate`로 확인한다.
-- 신규 객체의 prod 반영 위치와 상태는 prod 운영 준비 대장의 스키마 구간과 해당 Momens 작업이 소유한다.
-- 이미 적용된 객체를 레거시 migration에 다시 추가하지 않고 객체 단위로 대조한다.
+- prod 스키마는 이 서버가 소유한다([ADR-0019](../../adr/0019-prod-schema-ownership-transfer.md)).
+  마이그레이션은 배포 때 Flyway가 직접 적용하고, 잘못된 마이그레이션은 그 시점에 Flyway가 막는다.
+  슬라이스마다 반영 위치를 정하거나 다른 저장소의 반영을 기다릴 일이 없다.
+- 부트스트랩(MOM-0909)이 prod에 적용되기 전까지는 prod Flyway가 꺼져 있고 `ddl-auto=validate`로만
+  확인한다. 그동안 추가하는 마이그레이션은 **부트스트랩의 실행 집합에 포함되어야 한다.**
+- 레거시가 만든 테이블을 기술하는 파일은 여전히 prod 실물과 갈릴 수 있다. 충실도 기준은
+  [데이터 규칙](../../rules/persistence.md)이 소유한다.
 
-`MOM-0840`과 같은 prod 스키마 반영 작업은 로직 이관 전략의 선행 단계가 아니다. 분석, 문서화, 구현,
-local/dev 검증과 독립적으로 진행할 수 있다. 다만 현재 자동 release gate는 슬라이스 범위를 구분하지
-않는다. `main` 대상 PR에서는 대장 전체의 스키마 `required`·`pending` 상태와 prod 필수 설정의 `required`
-상태를 검사하며, 하나라도 남아 있으면 릴리스를 차단한다. `ddl-auto=validate`도 기동 시 매핑된 엔티티
-전체를 검증한다. 따라서 스키마와 prod 필수 설정은 해당 릴리스의 전역 조건이다.
+스키마 release gate는 폐지했다. `main` 대상 PR에서 검사하는 것은 prod 필수 설정의 `required` 상태뿐이다.
+`ddl-auto=validate`는 기동 시 매핑된 엔티티 전체를 검증하므로 prod 필수 설정과 스키마는 여전히 해당
+릴리스의 전역 조건이다.
 
 수기 prod 의무는 자동 release gate 대상이 아니며 capability별로 확인 완료·비활성·적용 제외 상태와 근거를
 기록한다. 이관 원장의 **prod gate** 필드에는 슬라이스가 직접 요구하는 스키마·필수 설정·수기 의무와 적용

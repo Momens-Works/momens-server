@@ -1,102 +1,24 @@
 # prod 운영 준비 대장
 
-prod 배포 전에 함께 확인해야 하는 스키마, 필수 설정, 파일 밖 운영 의무를 한곳에 모읍니다.
+prod 배포 전에 함께 확인해야 하는 필수 설정과 파일 밖 운영 의무를 한곳에 모읍니다.
 
-- **생성 구간**: 스키마 헤더가 정본입니다. 직접 수정하지 않고
-  `scripts/prod-schema-ledger.sh --write`로 갱신합니다.
 - **선언 구간**: prod 필수 환경변수의 주입 위치와 반영 상태를 사람이 관리합니다. CI가
   `application.yml`과 `application-prod.yml`의 기본값 없는 placeholder와 정확히 일치하는지 검사하고,
   `required` 상태가 남은 릴리스를 차단합니다.
 - **수기 구간**: 코드로 감지할 수 없는 외부 등록물과 배포 순서 의무를 사람이 확인합니다.
 
-> **스키마 구간은 주도권 이전 중입니다.** prod 스키마 소유권을 이 서버로 옮기기로 정했습니다
-> ([ADR-0019](adr/0019-prod-schema-ownership-transfer.md),
-> [설계](design/prod-schema-ownership-transfer.md)). 아래 생성 구간은 아직 옛 모델로 쓰여 있습니다 —
-> 특히 "worker가 생산하는 테이블의 반영 위치는 아직 확정되지 않았습니다"는 ADR-0019가 이미 답했습니다
-> (서버가 소유합니다). 부트스트랩이 prod에 적용되기 전까지 **미반영 목록과 릴리스 게이트는 그대로
-> 유효합니다.** 구간 폐지는 MOM-0910이 소유합니다.
+## 스키마 구간은 없습니다
 
-<!-- BEGIN GENERATED: prod-schema -->
-## 스키마 반영
+prod 스키마 주도권이 이 서버로 넘어오면서([ADR-0019](adr/0019-prod-schema-ownership-transfer.md))
+이 문서가 추적하던 **스키마 반영 구간을 폐지했습니다.** 반영을 기다릴 다른 저장소가 없어졌기
+때문입니다. 이제 마이그레이션은 배포 때 이 서버의 Flyway가 직접 적용하고, 잘못된 마이그레이션은
+그 시점에 Flyway가 막습니다. dev가 이미 그렇게 동작합니다.
 
-prod는 레거시 `momens-api`와 공유 DB를 쓰는 전환기라 이 서버의 Flyway가 꺼져 있고
-`ddl-auto: validate`로 매핑만 검증합니다([데이터](rules/persistence.md)). 따라서 서버가 추가한
-신규 스키마는 **반영 담당 저장소**의 마이그레이션으로 prod에 반영해야 하고, 반영되지 않으면 매핑
-검증에 실패해 **애플리케이션이 기동하지 않습니다.**
+마이그레이션 첫 줄의 `-- prod-schema:` 헤더도 함께 폐지했습니다. 기존 파일에 남아 있는 헤더는
+Flyway checksum 때문에 지우지 않고 역사적 주석으로 둡니다. **새 마이그레이션에는 달지 않습니다.**
 
-담당 저장소는 스키마 소유자에 따라 갈립니다. 레거시가 소유한 스키마는 `momens-api`가 반영하지만,
-worker가 생산하는 테이블(`signals` 계열, ADR-0007)의 반영 위치는 아직 확정되지 않았습니다.
-
-이 문서는 그 반영 상태를 마이그레이션 단위로 추적합니다. 미반영 한 줄은 **"이 파일을 그대로
-옮긴다"가 아니라 "이 파일이 만드는 객체 중 prod에 없는 것이 있다"**는 뜻입니다. 한 파일이 여러
-객체를 건드리고 그중 일부만 레거시에 없을 수 있으므로, 반영 범위는 반영 시점에 객체 단위로
-대조해 정합니다.
-
-## 미반영 — 16건
-
-prod에 반영해야 하고 아직 반영 PR이 없는 항목입니다. 릴리스 PR에서 차단됩니다.
-
-| 마이그레이션 | 모듈 | 근거 |
-| --- | --- | --- |
-| `V20260707100000__create_signals.sql` | `signal` | MOM-0840 |
-| `V20260707110000__create_signal_actions.sql` | `signal` | MOM-0840 |
-| `V20260707120000__add_task_detail_and_checklist.sql` | `project` | MOM-0840 |
-| `V20260707130000__create_signal_evidence.sql` | `signal` | MOM-0840 |
-| `V20260707150000__task_role_single_value.sql` | `project` | MOM-0840 |
-| `V20260713120000__add_signal_evidence_semantic_fields.sql` | `signal` | MOM-0840 |
-| `V20260714090000__create_outbox_events.sql` | `outbox` | MOM-0840 |
-| `V20260714091000__add_task_origin.sql` | `project` | MOM-0840 |
-| `V20260715090000__task_role_drop_not_null.sql` | `project` | MOM-0840 |
-| `V20260716090000__add_task_minsu_fields.sql` | `project` | MOM-0840 |
-| `V20260716091000__create_signal_digests.sql` | `signal` | MOM-0840 |
-| `V20260717090000__create_push_installations.sql` | `notification` | MOM-0840 |
-| `V20260717090100__create_push_deliveries.sql` | `notification` | MOM-0840 |
-| `V20260803090000__create_minsu_task_draft_generations.sql` | `minsu` | MOM-0840 |
-| `V20260810090000__create_user_identities.sql` | `user` | MOM-0840 |
-| `V20260811090000__add_minsu_generation_unfinished_index.sql` | `minsu` | MOM-0840 |
-
-## 반영 중 — 0건
-
-반영 PR이 열려 있고 아직 prod에 적용되지 않은 항목입니다. 릴리스 PR에서 차단됩니다.
-
-없습니다.
-
-## 반영 완료 — 1건
-
-| 마이그레이션 | 모듈 | 근거 |
-| --- | --- | --- |
-| `V20260626023000__create_refresh_token.sql` | `auth` | momens-api#10 |
-
-## 레거시 소유 미러 — 23건
-
-레거시가 이미 소유한 스키마라 prod 반영 의무가 없습니다. 이 서버는 local/test용 미러만 만듭니다.
-
-| 마이그레이션 | 모듈 | 근거 |
-| --- | --- | --- |
-| `V20260624090000__enable_extensions.sql` | `common` | - |
-| `V20260624090100__create_user.sql` | `user` | - |
-| `V20260624120000__add_user_job_role.sql` | `user` | - |
-| `V20260627090000__create_workspace.sql` | `workspace` | - |
-| `V20260627100000__create_workspace_label_sequences.sql` | `workspace` | - |
-| `V20260703150000__create_project.sql` | `project` | - |
-| `V20260706120000__create_task.sql` | `project` | - |
-| `V20260707090000__create_source_refs_read_mirror.sql` | `source` | - |
-| `V20260715100000__create_entity_relations_read_mirror.sql` | `context` | - |
-| `V20260819090000__add_project_web_columns.sql` | `project` | - |
-| `V20260819100000__create_milestone.sql` | `project` | - |
-| `V20260819110000__create_memory_read_mirror.sql` | `memory` | - |
-| `V20260820150313__create_blocker_read_mirror.sql` | `project` | - |
-| `V20260821090000__add_task_web_read_columns.sql` | `project` | - |
-| `V20260821090100__create_task_updates_read_mirror.sql` | `project` | - |
-| `V20260821090200__add_source_ref_web_read_columns.sql` | `source` | - |
-| `V20260821100000__create_source_connections_mirror.sql` | `source` | - |
-| `V20260821100100__create_source_credentials_mirror.sql` | `source` | - |
-| `V20260821100200__add_source_ref_full_read_columns.sql` | `source` | - |
-| `V20260821110000__create_workspace_invitations_mirror.sql` | `workspace` | - |
-| `V20260821140000__create_memory_write_mirror.sql` | `memory` | - |
-| `V20260821160000__restore_memory_label_unique_indexes.sql` | `memory` | - |
-| `V20260822000600__allow_project_label_prefix.sql` | `workspace` | - |
-<!-- END GENERATED: prod-schema -->
+경위와 부트스트랩 절차는 [prod 스키마 주도권 이전 설계](design/prod-schema-ownership-transfer.md)가
+소유합니다.
 
 ## prod 필수 설정 선언
 
