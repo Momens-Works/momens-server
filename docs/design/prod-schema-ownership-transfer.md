@@ -181,8 +181,11 @@ prod에서 이 파일은 두 번 실패한다. `UPDATE`에서 `relation "task_ro
 
 #### 실행되는 파일의 주석 하나가 낡는다
 
-`V20260716090000__add_task_minsu_fields.sql`의 둘째 줄은 *"local/test와 dev에 … 추가한다"*로 적혀 있는데
-이 파일은 부트스트랩에서 **prod에서도 실행된다.** checksum 때문에 고칠 수 없으므로
+실행 집합에 든 파일 중 둘이 그렇다. `V20260716090000__add_task_minsu_fields.sql`은 *"local/test와 dev에
+… 추가한다"*로, `V20260714091000__add_task_origin.sql`은 *"기존 행(local/test 데이터뿐)은 전부 사람이
+만든 태스크라"*로 적혀 있는데 두 파일 모두 부트스트랩에서 **prod에서도 실행된다.** 후자의 동작 자체는
+안전하다 — `NOT NULL DEFAULT 'manual'`이라 기존 prod 행이 채워지고 `tasks_origin_signal_check`도
+`(false) = (false)`로 통과한다. 낡는 것은 주석의 사실 진술뿐이다. checksum 때문에 고칠 수 없으므로
 `create_memory_read_mirror` 주석을 `persistence.md`가 대체한 것과 같은 방식으로 여기에 남긴다.
 그 문구는 작성 시점의 사실이고 지금은 이 문서가 정본이다.
 
@@ -260,7 +263,7 @@ required 16건이 만들거나 바꾸는 모든 객체를 prod 형상(`legacy-di
 
 따라서 최종 분할은 다음과 같다.
 
-- **심기 27건** — 미러 23 + `create_refresh_token` 1 + 위 세 파일 3
+- **심기 28건** — 레거시가 만든 객체 25 + 위 세 파일 3
 - **실행 13건**
 - **보정 1건** — `V20260823090000__prod_bootstrap_task_role_and_checklist.sql`
 
@@ -315,6 +318,24 @@ Flyway의 `group` 기본값은 `false`라 **마이그레이션마다 별도 트�
 `group=true`면 전부 되거나 전부 안 된다. PostgreSQL은 DDL도 트랜잭션에 넣으므로 성립하고, 실패 시
 이력 행까지 함께 롤백되므로 **7절의 "완전 원복은 이력 심기 단계까지"라는 경계가 실행 단계까지
 넓어진다.** `out-of-order`와 같은 자리에 두고 7단계에서 함께 뺀다.
+
+**대가는 `tasks` 락 보유 시간이다.** 실행 14건 중 다섯이 `tasks`에 `ACCESS EXCLUSIVE`를 건다
+(`add_task_origin`, `add_task_minsu_fields`, 보정, 그리고 `task_open_questions`·`task_checklist_items`의
+FK가 부모를 잠근다). 실측으로 확인했다 — `ADD COLUMN NOT NULL DEFAULT` + `CHECK`는
+`AccessExclusiveLock on tasks`를 잡는다. `group=false`면 각 락이 그 마이그레이션 커밋과 함께 풀리고,
+`group=true`면 첫 `ALTER TABLE tasks`부터 배치 끝까지 계속 잡는다.
+
+**`tasks`는 레거시가 지금도 트래픽을 받는 테이블이다.** 7절의 "사용자 영향 0"은 momens-server 파드
+기준이고 레거시에는 적용되지 않는다.
+
+그럼에도 `group=true`를 택한다. 막히는 위험은 **락을 잡는 횟수**에 비례하는데, `group=false`는 `tasks`
+락 획득 창이 다섯 번 생기고 `group=true`는 한 번이다. 배치 자체는 리허설에서 0.2초였다.
+
+**대신 `lock_timeout`이 반드시 있어야 한다.** 지금 리포 어디에도 없다(0건). 없으면 레거시의 긴 트랜잭션
+하나가 `ALTER`를 막을 때 그 뒤의 모든 `tasks` 쿼리가 함께 줄을 선다. `lock_timeout`이 있으면 락을 못
+잡을 때 빨리 실패하고, `group=true` 덕에 통째로 롤백돼 시딩 직후 상태로 돌아간다 — 두 설정이 여기서
+맞물린다. 지정 수단은 `spring.flyway.init-sqls`이며, **정확한 전달 형태는 ConfigMap 바인딩 확인과 함께
+닫는다**(아래 "리허설로 닫지 못한 것").
 
 부트스트랩이 끝나면 이력의 최고 version이 리포 최고 version과 같아지고 이후 새 마이그레이션은 항상 그보다
 뒤에 온다. 따라서 **부트스트랩에서만 켜고 끝나면 되돌린다.** 상시로 두면 오래된 브랜치의
@@ -590,11 +611,12 @@ MOM-0909가 요구하는 "prod와 같은 형상(레거시 러너가 만든 스�
 | 단계 | 결과 |
 | --- | --- |
 | CLI와 앱의 체크섬이 같은가 | **공통 38건 전부 일치, 불일치 0건.** 앱이 만든 이력(`legacy-diff`의 `server-db`)과 대조했다 |
-| 이력 27건 INSERT | 성공. 최고 version `20260822000600` |
+| 이력 28건 INSERT | 성공. 최고 version `20260823100000` |
 | `outOfOrder` 없이 migrate | **거부.** *"Detected resolved migration not applied to database: 20260716091000. … To allow executing this migration, set `-outOfOrder=true`"* — 스키마는 하나도 바뀌지 않았다 |
-| `outOfOrder=true`로 migrate | **정확히 14건만 실행.** 심은 27건은 건너뛰고 실패 0건 |
+| `outOfOrder=true` + `group=true` | **정확히 14건만 실행.** 심은 28건은 건너뛰고 실패 0건 |
 | 결과 스키마 | required 12개 테이블 전부 생성, `tasks`에 `role`·`origin_type`·`origin_signal_id`·`next_action` 추가, 레거시 이력 19건과 테이블 온전 |
-| 부트스트랩 후 `outOfOrder` 없이 재기동 | *"Schema is up to date. No migration necessary."* — **1회성으로 끄는 설계가 성립한다** |
+| `tasks_role_check` 귀속 | `tasks`에 정확히 걸림 (가드가 `conrelid`를 함께 보도록 고친 뒤 재확인) |
+| 부트스트랩 후 `outOfOrder`·`group` 없이 재기동 | *"Schema is up to date. No migration necessary."* — **1회성으로 끄는 설계가 성립한다** |
 
 2.4의 동작 예측이 Flyway의 에러 메시지로 직접 확인됐고, 그 메시지가 해법까지 지목한다.
 
@@ -604,8 +626,12 @@ MOM-0909가 요구하는 "prod와 같은 형상(레거시 러너가 만든 스�
   momens-server role이 `public` 스키마에 `CREATE` 권한을 갖는지, `tasks`를 `ALTER` 할 수 있는지
   (= 소유 role의 멤버인지)는 **실제 prod에서만 확인된다.** `ALTER TABLE`은 GRANT 대상이 아니라 소유자
   권한이라 별도 조치가 필요할 수 있다. **부트스트랩의 선행 조건이다.**
-- **ConfigMap 환경변수 바인딩.** 특히 `spring.flyway.out-of-order`는 대시 때문에 변환형이 애매하다.
-  CLI 리허설은 명령행 인자를 쓰므로 이 경로를 검증하지 못한다. 실제 배포 형태로 확인해야 한다.
+- **ConfigMap 환경변수 바인딩.** `spring.flyway.out-of-order`·`group`·`init-sqls`는 대시가 있거나
+  값에 공백이 있어 전달 형태가 애매하다. CLI 리허설은 명령행 인자를 쓰므로 이 경로를 검증하지 못한다.
+  **실제 배포 형태로 세 값이 모두 적용되는지 확인해야 한다.** 특히 `lock_timeout`은 적용되지 않아도
+  조용히 넘어가므로, 적용 여부를 기동 로그나 `pg_settings`로 직접 확인한다.
+- **레거시 트래픽과의 락 경합.** 리허설 DB는 비어 있고 동시 접속이 없어 `tasks`
+  `ACCESS EXCLUSIVE` 대기를 재현하지 못한다. `lock_timeout`이 그 대비책이다.
 - **기존 데이터가 있어야 드러나는 실패.** 리허설 DB는 비어 있어 `SET NOT NULL`·CHECK 위반이 재현되지
   않는다. 이 위험은 객체 대조로 닫았다(4절).
 
