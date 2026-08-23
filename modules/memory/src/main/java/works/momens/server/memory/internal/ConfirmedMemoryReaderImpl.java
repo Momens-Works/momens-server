@@ -2,6 +2,7 @@ package works.momens.server.memory.internal;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,5 +28,11 @@ class ConfirmedMemoryReaderImpl implements ConfirmedMemoryReader {
     return ids.isEmpty()
         ? List.of()
         : confirmedMemoryRepository.findDetailsByWorkspaceIdAndIdIn(workspaceId, ids);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<UUID> findWorkspaceId(UUID memoryId) {
+    return confirmedMemoryRepository.findWorkspaceIdById(memoryId);
   }
 }

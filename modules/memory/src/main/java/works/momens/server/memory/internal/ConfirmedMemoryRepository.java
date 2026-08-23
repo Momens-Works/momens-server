@@ -57,4 +57,7 @@ interface ConfirmedMemoryRepository extends JpaRepository<ConfirmedMemory, UUID>
       from ConfirmedMemory m where m.id = :id and m.deletedAt is null
       """)
   Optional<ConfirmedMemoryDetail> findDetailById(@Param("id") UUID id);
+
+  @Query("select m.workspaceId from ConfirmedMemory m where m.id = :id and m.deletedAt is null")
+  Optional<UUID> findWorkspaceIdById(@Param("id") UUID id);
 }
