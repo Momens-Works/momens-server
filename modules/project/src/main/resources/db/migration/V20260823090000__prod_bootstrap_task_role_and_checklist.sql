@@ -34,10 +34,17 @@ ALTER TABLE tasks
 
 -- ADD CONSTRAINT 에는 IF NOT EXISTS 가 없다. local/dev 에는 V20260707150000 이 만든 같은 이름의
 -- 제약이 이미 있으므로 존재 여부를 보고 건다.
+--
+-- conrelid 로 테이블을 함께 본다. Postgres 는 제약 이름을 테이블 단위로만 유일하게 강제하므로
+-- (pg_constraint 의 유니크 인덱스가 conrelid, contypid, conname), 이름만 보면 다른 테이블의 동명
+-- 제약에 걸려 tasks 에는 CHECK 가 붙지 않은 채 조용히 넘어간다. 마이그레이션은 성공하고
+-- ddl-auto=validate 는 제약을 보지 않으므로 아무도 모른다.
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'tasks_role_check'
+        SELECT 1 FROM pg_constraint
+         WHERE conname = 'tasks_role_check'
+           AND conrelid = 'tasks'::regclass
     ) THEN
         ALTER TABLE tasks
             ADD CONSTRAINT tasks_role_check

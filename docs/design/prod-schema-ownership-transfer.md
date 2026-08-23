@@ -179,6 +179,13 @@ prod에서 이 파일은 두 번 실패한다. `UPDATE`에서 `relation "task_ro
 그것을 넘겨도 기존 `tasks` 행의 `role`이 전부 `NULL`이라 `SET NOT NULL`에서 다시 한 번.
 **어떤 조건에서도 실행할 수 없다.**
 
+#### 실행되는 파일의 주석 하나가 낡는다
+
+`V20260716090000__add_task_minsu_fields.sql`의 둘째 줄은 *"local/test와 dev에 … 추가한다"*로 적혀 있는데
+이 파일은 부트스트랩에서 **prod에서도 실행된다.** checksum 때문에 고칠 수 없으므로
+`create_memory_read_mirror` 주석을 `persistence.md`가 대체한 것과 같은 방식으로 여기에 남긴다.
+그 문구는 작성 시점의 사실이고 지금은 이 문서가 정본이다.
+
 ### 헤더가 아니라 주석이 진실을 갖고 있었다
 
 `V20260706120000__create_task.sql`의 7행은 이렇게 적는다.
@@ -299,6 +306,15 @@ INSERT 하지 않아 생산자가 없다. **worker가 생산을 시작하기 전
 
 2.4 때문에 심기 방식은 `spring.flyway.out-of-order=true`를 동반한다. 없으면 실행 대상이 조용히
 건너뛰어져 기동 후 `validate`에서 죽거나, `validateOnMigrate`가 먼저 실패한다.
+
+#### `group=true`도 함께 켠다
+
+Flyway의 `group` 기본값은 `false`라 **마이그레이션마다 별도 트랜잭션**이다. 14건 중 8번째가 실패하면
+앞 7건은 커밋된 채 남는다. prod가 반쯤 적용된 상태로 남아 두 번째 시도의 형상이 리허설과 달라진다.
+
+`group=true`면 전부 되거나 전부 안 된다. PostgreSQL은 DDL도 트랜잭션에 넣으므로 성립하고, 실패 시
+이력 행까지 함께 롤백되므로 **7절의 "완전 원복은 이력 심기 단계까지"라는 경계가 실행 단계까지
+넓어진다.** `out-of-order`와 같은 자리에 두고 7단계에서 함께 뺀다.
 
 부트스트랩이 끝나면 이력의 최고 version이 리포 최고 version과 같아지고 이후 새 마이그레이션은 항상 그보다
 뒤에 온다. 따라서 **부트스트랩에서만 켜고 끝나면 되돌린다.** 상시로 두면 오래된 브랜치의
@@ -472,7 +488,7 @@ MOM-0841 소유이며 이 결정의 영향을 받지 않는다. 제거 대상은
 | ② 리허설 | prod 무관 |
 | ③ prod에 이력 INSERT | **완전 원복 가능.** `DROP TABLE flyway_schema_history`. 이 시점 Flyway는 아직 꺼져 있어 그 표를 읽는 주체가 없다 |
 | ④ ConfigMap 토글 + 롤아웃 — 기동 전 실패 | 스키마 무변경. ConfigMap 원복 후 ①부터 재시도 |
-| ④ ConfigMap 토글 + 롤아웃 — 실행 중 실패 | **되돌리지 않는다.** 부분 적용 상태를 기록하고 원인 수정 후 재롤아웃으로 이어서 진행한다 |
+| ④ ConfigMap 토글 + 롤아웃 — 실행 중 실패 | `group=true` 덕에 14건이 통째로 롤백된다(4절). 이력 행도 함께 사라져 ③ 직후 상태로 돌아간다. 그래도 남는 부분 적용이 있으면 **되돌리지 않고** fix-forward 한다 |
 | ⑤ `outOfOrder` 제거 | ConfigMap 한 줄 제거 + 롤아웃. 서버 릴리스 불필요 |
 
 fix-forward가 기본인 이유는 **부트스트랩 중 사용자 영향이 0**이기 때문이다. 근거는 배포 매니페스트에서
@@ -519,14 +535,16 @@ MOM-0908 (이 문서 + ADR-0019)
 리포 쪽 변경이 위험하지 않은 이유는 `application-prod.yml`이 계속 `flyway.enabled: false`이기 때문이다.
 릴리스가 나가도 prod 동작은 바뀌지 않는다. **실제 전환은 릴리스가 아니라 아래 운영 조작이 일으킨다.**
 
-1. **릴리스 대상 커밋**을 체크아웃해 체크섬 산출 (`scripts/prod-flyway-bootstrap.sh --generate`)
-2. prod에 `flyway_schema_history` INSERT (단일 트랜잭션)
-3. **`k8s` 토글 PR 머지**
-4. `Deploy momens-server` 워크플로를 dispatch. `deploy-service.sh`가 이미지 변경 없이도
+1. **릴리스 대상 커밋**을 체크아웃해 `--verify`로 dev 이력과 체크섬을 대조한다. 심기 목록 전건이
+   검증돼야 한다 — 대조되지 못한 항목이 남으면 그 체크섬이 검증 없이 prod로 들어간다
+2. 같은 커밋에서 `--generate`로 INSERT 문을 만든다
+3. prod에 `flyway_schema_history` INSERT (단일 트랜잭션)
+4. **`k8s` 토글 PR 머지**
+5. `Deploy momens-server` 워크플로를 dispatch. `deploy-service.sh`가 이미지 변경 없이도
    `rollout restart`를 걸어 ConfigMap 변경이 반영된다
-5. 기동과 스키마 확인
-6. `out-of-order`만 제거하는 PR 머지 후 다시 dispatch
-7. 후속 PR로 `application-prod.yml`을 `flyway.enabled: true`로 정본화하고 ConfigMap 오버라이드 제거
+6. 기동과 스키마 확인
+7. `out-of-order`와 `group`을 제거하는 PR 머지 후 다시 dispatch
+8. 후속 PR로 `application-prod.yml`을 `flyway.enabled: true`로 정본화하고 ConfigMap 오버라이드 제거
 
 #### 토글은 수기 변경이 아니라 커밋이어야 한다
 

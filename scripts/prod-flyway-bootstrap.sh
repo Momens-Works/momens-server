@@ -15,7 +15,7 @@
 #
 # 사용법:
 #   prod-flyway-bootstrap.sh --generate [출력파일]   심을 INSERT 문을 만든다
-#   prod-flyway-bootstrap.sh --verify <JDBC URL> <user> <password>
+#   FLYWAY_PASSWORD=... prod-flyway-bootstrap.sh --verify <JDBC URL> <user>
 #                                                   기존 이력과 체크섬이 같은지 대조한다
 #
 # **산출 기준은 실제로 배포되는 커밋이다.** 미러성 파일은 계속 늘고 있으므로, 릴리스 대상 커밋을
@@ -51,8 +51,18 @@ collect_migrations() {
     find "$repo_root" -type d \( -name build -o -name .git -o -name .gradle-work \) -prune -o \
         -path '*/src/main/resources/db/migration/V*.sql' -print \
         | while IFS= read -r file; do cp "$file" "$target/"; done
+    local found
+    found="$(find "$repo_root" -type d \( -name build -o -name .git -o -name .gradle-work \) -prune -o \
+        -path '*/src/main/resources/db/migration/V*.sql' -print | wc -l | tr -d ' ')"
     count="$(find "$target" -name 'V*.sql' | wc -l | tr -d ' ')"
     [[ "$count" -gt 0 ]] || { echo "마이그레이션을 찾지 못했습니다." >&2; return 1; }
+    # basename 으로 평탄화하므로 모듈 간 파일명이 겹치면 조용히 덮어쓴다. 버전이 같으면 Flyway 가
+    # 죽지만 이름만 같은 경우는 드러나지 않으므로 개수로 잡는다.
+    [[ "$count" -eq "$found" ]] || {
+        echo "마이그레이션 수집에서 파일이 유실됐습니다: 리포 $found 건, 수집 $count 건." >&2
+        echo "모듈 간 파일명이 겹칩니다." >&2
+        return 1
+    }
     echo "$count"
 }
 
@@ -91,13 +101,16 @@ generate() {
     local output="${1:-}" sql_dir count seeds missing rows
 
     work_dir="$(mktemp -d)"
-    trap cleanup EXIT
+    trap cleanup EXIT INT TERM
     sql_dir="$work_dir/sql"
 
     count="$(collect_migrations "$sql_dir")"
     echo "마이그레이션 $count 건을 모았습니다." >&2
 
     seeds="$(seed_versions)"
+    # 목록이 비면 version not in ('') 가 되어 전건이 실행 대상으로 잡히고 INSERT 는 0건이 된다.
+    # 성공처럼 보이지만 prod 에서는 첫 파일부터 실행돼 죽는다.
+    [[ -n "$seeds" ]] || { echo "심기 목록이 비어 있습니다: $seed_manifest" >&2; return 1; }
     echo "심기 목록 $(printf '%s\n' "$seeds" | grep -c .) 건을 읽었습니다." >&2
 
     # 목록에 있는데 실제 파일이 없으면 오타이거나 파일이 지워진 것이다. 조용히 넘기면 그 파일이
@@ -150,6 +163,20 @@ generate() {
         echo ""
         echo "BEGIN;"
         echo ""
+        echo "-- 대상 스키마를 고정한다. 운영자 세션의 search_path 가 public 이 아니면 엉뚱한"
+        echo "-- 스키마에 이력이 생기고, 실패가 아니라 성공으로 보인다."
+        echo "SET LOCAL search_path = public;"
+        echo ""
+        echo "-- 선행 조건을 주석이 아니라 assert 로 건다. 아래 CREATE TABLE 이 IF NOT EXISTS 라"
+        echo "-- 이미 이력이 있는 DB 에서도 통과해 버리기 때문이다."
+        echo "DO \$\$"
+        echo "BEGIN"
+        echo "    IF EXISTS (SELECT 1 FROM pg_tables"
+        echo "                WHERE schemaname = 'public' AND tablename = 'flyway_schema_history') THEN"
+        echo "        RAISE EXCEPTION 'flyway_schema_history 가 이미 있습니다. 부트스트랩 대상이 아닙니다.';"
+        echo "    END IF;"
+        echo "END \$\$;"
+        echo ""
         echo "CREATE TABLE IF NOT EXISTS flyway_schema_history ("
         echo "    installed_rank INTEGER NOT NULL,"
         echo "    version VARCHAR(50),"
@@ -176,11 +203,19 @@ generate() {
 
 # 기존 Flyway 이력(dev 등)과 체크섬이 같은지 대조한다. CLI 와 앱이 같은 값을 내는지 확인하는
 # 용도이며, 다르면 부트스트랩 후 prod 가 checksum mismatch 로 기동에 실패한다.
+#
+# 비밀번호는 위치 인자가 아니라 FLYWAY_PASSWORD 환경변수로 받는다. 위치 인자는 ps 출력과 셸
+# 히스토리에 남는다.
 verify() {
-    local url="$1" user="$2" password="$3" sql_dir count
+    local url="$1" user="$2" sql_dir count
+
+    [[ -n "${FLYWAY_PASSWORD:-}" ]] || {
+        echo "FLYWAY_PASSWORD 환경변수가 필요합니다." >&2
+        return 2
+    }
 
     work_dir="$(mktemp -d)"
-    trap cleanup EXIT
+    trap cleanup EXIT INT TERM
     sql_dir="$work_dir/sql"
     count="$(collect_migrations "$sql_dir")"
     echo "마이그레이션 $count 건을 모았습니다." >&2
@@ -188,26 +223,49 @@ verify() {
     start_scratch_db
     run_flyway_migrate "$sql_dir"
     scratch_query "select version || '|' || checksum from flyway_schema_history
-                   where version is not null order by version" > "$work_dir/cli.txt"
+                   where version is not null and checksum is not null" \
+        | LC_ALL=C sort -t'|' -k1,1 > "$work_dir/cli.txt"
 
-    docker run --rm "flyway/flyway:$flyway_version" \
-        -url="$url" -user="$user" -password="$password" info -outputType=json \
-        | grep -oE '"version" *: *"[0-9]+"|"checksum" *: *-?[0-9]+' \
-        | paste - - | sed -E 's/"version" *: *"([0-9]+)".*"checksum" *: *(-?[0-9]+)/\1|\2/' \
-        | sort > "$work_dir/target.txt"
+    # jq 로 파싱한다. grep+paste 는 version 과 checksum 이 항상 쌍으로 이 순서로 나온다는 가정에
+    # 기대는데, checksum 이 없는 항목(BASELINE 등)이 하나라도 섞이면 짝이 밀려 조용히 틀린다.
+    docker run --rm -e FLYWAY_PASSWORD "flyway/flyway:$flyway_version" \
+        -url="$url" -user="$user" info -outputType=json \
+        | jq -r '.migrations[]
+                 | select(.version != null and .version != "" and .checksum != null)
+                 | "\(.version)|\(.checksum)"' \
+        | LC_ALL=C sort -t'|' -k1,1 > "$work_dir/target.txt"
 
-    local common mismatch
-    common="$(join -t'|' "$work_dir/cli.txt" "$work_dir/target.txt" | wc -l | tr -d ' ')"
+    local mismatch only_cli only_target unverified_seeds failed=0
     mismatch="$(join -t'|' "$work_dir/cli.txt" "$work_dir/target.txt" \
         | awk -F'|' '$2 != $3 { print "  " $1 " cli=" $2 " target=" $3 }')"
 
-    echo "공통 항목 ${common}건 대조" >&2
+    echo "공통 $(join -t'|' "$work_dir/cli.txt" "$work_dir/target.txt" | wc -l | tr -d ' ')건 대조" >&2
+
     if [[ -n "$mismatch" ]]; then
+        failed=1
         echo "체크섬이 다릅니다:" >&2
         printf '%s\n' "$mismatch" >&2
-        return 1
     fi
-    echo "체크섬 전부 일치" >&2
+
+    # join 은 한쪽에만 있는 줄을 조용히 버린다. 대조되지 못한 항목을 드러내지 않으면 "공통 N건
+    # 일치"가 실제로 몇 건을 검증했는지 알 수 없다.
+    only_cli="$(join -t'|' -v1 "$work_dir/cli.txt" "$work_dir/target.txt" | cut -d'|' -f1)"
+    only_target="$(join -t'|' -v2 "$work_dir/cli.txt" "$work_dir/target.txt" | cut -d'|' -f1)"
+    [[ -n "$only_cli" ]] && { echo "대조 대상에 없어 검증되지 않음:" >&2; printf '%s\n' "$only_cli" | sed 's/^/  /' >&2; }
+    [[ -n "$only_target" ]] && { echo "이 리포에 없는데 대조 대상에는 있음:" >&2; printf '%s\n' "$only_target" | sed 's/^/  /' >&2; }
+
+    # 심기 목록에 든 항목이 검증되지 않았다면 그 체크섬이 prod 에 그대로 들어간다. 실패로 다룬다.
+    unverified_seeds="$(comm -12 <(printf '%s\n' "$only_cli" | LC_ALL=C sort) \
+                                 <(seed_versions | LC_ALL=C sort))"
+    if [[ -n "$unverified_seeds" ]]; then
+        failed=1
+        echo "심기 목록에 있으나 검증되지 않은 항목입니다. 이 체크섬이 prod 로 들어갑니다:" >&2
+        printf '%s\n' "$unverified_seeds" | sed 's/^/  /' >&2
+        echo "  대조 대상 DB 를 최신 마이그레이션까지 올린 뒤 다시 실행하세요." >&2
+    fi
+
+    [[ "$failed" -eq 0 ]] && echo "체크섬 전부 일치, 심기 목록 전건 검증됨" >&2
+    return "$failed"
 }
 
 main() {
@@ -215,11 +273,11 @@ main() {
         --generate) shift; generate "${1:-}" ;;
         --verify)
             shift
-            [[ $# -eq 3 ]] || { echo "사용법: $(basename "$0") --verify <JDBC URL> <user> <password>" >&2; exit 2; }
-            verify "$1" "$2" "$3"
+            [[ $# -eq 2 ]] || { echo "사용법: FLYWAY_PASSWORD=... $(basename "$0") --verify <JDBC URL> <user>" >&2; exit 2; }
+            verify "$1" "$2"
             ;;
         *)
-            echo "사용법: $(basename "$0") [--generate [출력파일] | --verify <JDBC URL> <user> <password>]" >&2
+            echo "사용법: $(basename "$0") [--generate [출력파일] | --verify <JDBC URL> <user>]" >&2
             exit 2
             ;;
     esac
