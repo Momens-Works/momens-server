@@ -12,6 +12,8 @@ import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.context.EntityRelationCommand;
 import works.momens.server.context.EntityRelationWriter;
+import works.momens.server.context.EntityType;
+import works.momens.server.context.RelationType;
 import works.momens.server.memory.ConfirmedMemoryDetail;
 import works.momens.server.memory.MemoryErrorCode;
 import works.momens.server.memory.MemoryWriter;
@@ -195,7 +197,12 @@ class MemoryWriterImpl implements MemoryWriter {
 
     relationWriter.link(
         new EntityRelationCommand(
-            workspaceId, "MEMORY", resolvingMemoryId, "RESOLVES", "MEMORY", resolvedMemoryId));
+            workspaceId,
+            EntityType.MEMORY,
+            resolvingMemoryId,
+            RelationType.RESOLVES,
+            EntityType.MEMORY,
+            resolvedMemoryId));
     entityManager
         .createNativeQuery(
             "UPDATE confirmed_memories SET status = 'ARCHIVED', updated_at = :now WHERE id = :id")

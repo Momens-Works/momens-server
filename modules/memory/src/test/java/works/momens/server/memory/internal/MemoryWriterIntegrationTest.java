@@ -28,6 +28,8 @@ import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.context.EntityRelationCommand;
 import works.momens.server.context.EntityRelationWriter;
+import works.momens.server.context.EntityType;
+import works.momens.server.context.RelationType;
 import works.momens.server.memory.ConfirmedMemoryDetail;
 import works.momens.server.memory.MemoryErrorCode;
 import works.momens.server.memory.MemorySeedSql;
@@ -271,8 +273,8 @@ class MemoryWriterIntegrationTest extends AbstractPostgresIntegrationTest {
     // 방향은 해결하는 쪽 -> 해결된 쪽입니다.
     assertThat(command.getValue().fromEntityId()).isEqualTo(resolving);
     assertThat(command.getValue().toEntityId()).isEqualTo(resolved);
-    assertThat(command.getValue().relationType()).isEqualTo("RESOLVES");
-    assertThat(command.getValue().fromEntityType()).isEqualTo("MEMORY");
+    assertThat(command.getValue().relationType()).isEqualTo(RelationType.RESOLVES);
+    assertThat(command.getValue().fromEntityType()).isEqualTo(EntityType.MEMORY);
     verify(outboxAppender)
         .append(
             eq(workspaceId),

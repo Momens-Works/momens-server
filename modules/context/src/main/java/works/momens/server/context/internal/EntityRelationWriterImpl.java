@@ -16,6 +16,9 @@ import works.momens.server.context.EntityRelationWriter;
  *
  * <p>가장 최근 행 하나를 보고 세 갈래로 갈립니다. 활성이면 no-op, 소프트 삭제면 되살리기, 없으면 INSERT입니다. 레거시가 같은 순서 ({@code ORDER
  * BY created_at DESC LIMIT 1})로 판단하므로 중복 행이 이미 쌓인 워크스페이스에서도 두 서버의 결과가 같습니다.
+ *
+ * <p>{@code unlink}는 레거시의 {@code Unlink}와 같이 조건부 UPDATE 한 번으로 처리합니다. 대상을 먼저 조회하지 않으므로 조회와 삭제 사이에 다른
+ * 요청이 실행되어도 결과가 달라지지 않으며, 갱신된 행 수로 삭제할 연결이 있었는지 판단합니다.
  */
 @Service
 @RequiredArgsConstructor
@@ -53,14 +56,38 @@ class EntityRelationWriterImpl implements EntityRelationWriter {
             """)
         .setParameter("id", relationId)
         .setParameter("workspaceId", command.workspaceId())
-        .setParameter("fromType", command.fromEntityType())
+        .setParameter("fromType", command.fromEntityType().name())
         .setParameter("fromId", command.fromEntityId())
-        .setParameter("relationType", command.relationType())
-        .setParameter("toType", command.toEntityType())
+        .setParameter("relationType", command.relationType().name())
+        .setParameter("toType", command.toEntityType().name())
         .setParameter("toId", command.toEntityId())
         .setParameter("now", now)
         .executeUpdate();
     return relationId;
+  }
+
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public boolean unlink(EntityRelationCommand command) {
+    int updated =
+        entityManager
+            .createNativeQuery(
+                """
+                UPDATE entity_relations SET deleted_at = :now, updated_at = :now
+                WHERE workspace_id = :workspaceId AND from_entity_type = :fromType
+                  AND from_entity_id = :fromId AND relation_type = :relationType
+                  AND to_entity_type = :toType AND to_entity_id = :toId
+                  AND deleted_at IS NULL
+                """)
+            .setParameter("now", Instant.now())
+            .setParameter("workspaceId", command.workspaceId())
+            .setParameter("fromType", command.fromEntityType().name())
+            .setParameter("fromId", command.fromEntityId())
+            .setParameter("relationType", command.relationType().name())
+            .setParameter("toType", command.toEntityType().name())
+            .setParameter("toId", command.toEntityId())
+            .executeUpdate();
+    return updated > 0;
   }
 
   private ExistingRelation findLatest(EntityRelationCommand command) {
@@ -75,10 +102,10 @@ class EntityRelationWriterImpl implements EntityRelationWriter {
             ORDER BY created_at DESC LIMIT 1
             """)
             .setParameter("workspaceId", command.workspaceId())
-            .setParameter("fromType", command.fromEntityType())
+            .setParameter("fromType", command.fromEntityType().name())
             .setParameter("fromId", command.fromEntityId())
-            .setParameter("relationType", command.relationType())
-            .setParameter("toType", command.toEntityType())
+            .setParameter("relationType", command.relationType().name())
+            .setParameter("toType", command.toEntityType().name())
             .setParameter("toId", command.toEntityId())
             .getResultList();
     if (rows.isEmpty()) {
