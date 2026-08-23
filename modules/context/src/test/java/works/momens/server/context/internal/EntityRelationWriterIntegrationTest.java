@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.context.EntityRelationCommand;
 import works.momens.server.context.EntityRelationWriter;
+import works.momens.server.context.EntityType;
+import works.momens.server.context.RelationType;
 
 /**
  * 엔티티 연결 쓰기 public API를 검증합니다.
@@ -78,14 +80,54 @@ class EntityRelationWriterIntegrationTest extends AbstractPostgresIntegrationTes
 
     UUID references =
         entityRelationWriter.link(
-            new EntityRelationCommand(workspaceId, "MEMORY", fromId, "REFERENCES", "MEMORY", toId));
+            new EntityRelationCommand(
+                workspaceId,
+                EntityType.MEMORY,
+                fromId,
+                RelationType.LINKED_TO,
+                EntityType.MEMORY,
+                toId));
 
     assertThat(references).isNotEqualTo(resolves);
     assertThat(relationIds()).containsExactlyInAnyOrder(resolves, references);
   }
 
+  @Test
+  @DisplayName("삭제되지 않은 연결을 지우면 행은 남기고 삭제 시각만 채운다")
+  void softDeletesLiveRelation() {
+    UUID relationId = entityRelationWriter.link(command());
+
+    boolean removed = entityRelationWriter.unlink(command());
+
+    assertThat(removed).isTrue();
+    assertThat(relationIds()).containsExactly(relationId);
+    assertThat(deletedAt(relationId)).isNotNull();
+  }
+
+  @Test
+  @DisplayName("지울 연결이 없으면 아무것도 지우지 않았다고 알린다")
+  void reportsNothingRemovedWhenRelationAbsent() {
+    boolean removed = entityRelationWriter.unlink(command());
+
+    assertThat(removed).isFalse();
+    assertThat(relationIds()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("이미 지운 연결을 다시 지우면 아무것도 지우지 않았다고 알린다")
+  void reportsNothingRemovedWhenRelationAlreadySoftDeleted() {
+    UUID relationId = entityRelationWriter.link(command());
+    entityRelationWriter.unlink(command());
+
+    boolean removed = entityRelationWriter.unlink(command());
+
+    assertThat(removed).isFalse();
+    assertThat(relationIds()).containsExactly(relationId);
+  }
+
   private EntityRelationCommand command() {
-    return new EntityRelationCommand(workspaceId, "MEMORY", fromId, "RESOLVES", "MEMORY", toId);
+    return new EntityRelationCommand(
+        workspaceId, EntityType.MEMORY, fromId, RelationType.RESOLVES, EntityType.MEMORY, toId);
   }
 
   private List<UUID> relationIds() {
