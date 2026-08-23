@@ -26,7 +26,7 @@
 -- "미지정"으로 렌더한다). 같은 판단이 momens-api#28의 `000019`에 남아 있다.
 --
 -- **local/dev에서는 위 세 파일이 이미 실행됐으므로 이 파일이 만드는 객체가 전부 존재한다.**
--- 그래서 모든 구문을 idempotent하게 쓴다([데이터](../../../../../../docs/rules/persistence.md)의
+-- 그래서 모든 구문을 idempotent하게 쓴다(docs/rules/persistence.md 의
 -- "대상 객체가 이미 있는 환경" 규칙). prod에서만 실제로 무언가를 만든다.
 
 ALTER TABLE tasks

@@ -26,8 +26,10 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 seed_manifest="$repo_root/scripts/prod-flyway-bootstrap-seed.txt"
 
-# 앱이 쓰는 flyway-core 와 같은 버전이어야 한다. gradle/libs.versions.toml 또는
-# `./gradlew :app:dependencies` 로 확인하고 바꿀 때 함께 올린다.
+# 앱이 쓰는 flyway-core 와 같은 버전이어야 한다. libs.versions.toml 에는 flyway 항목이 없다 —
+# spring-boot-starter-flyway 의 BOM 이 버전을 정하므로 Spring Boot 를 올리면 여기가 조용히 어긋난다.
+# 확인:
+#   ./gradlew -q :app:dependencies --configuration runtimeClasspath | grep flyway-core
 flyway_version="12.4.0"
 scratch_container="momens-flyway-bootstrap-scratch"
 scratch_db="scratch"
@@ -196,6 +198,17 @@ generate() {
         echo ""
         echo "COMMIT;"
     } > "${output:-/dev/stdout}"
+
+    # 심기 목록 건수와 실제 INSERT 행수를 대조한다. 앞의 파일 존재 검사로 대체로 닫히지만,
+    # 그 검사는 파일이 있는지만 보고 이 대조는 이력에 실제로 들어갔는지를 본다.
+    local inserted expected
+    inserted="$(printf '%s\n' "$rows" | grep -c '^INSERT INTO')"
+    expected="$(printf '%s\n' "$seeds" | grep -c .)"
+    [[ "$inserted" -eq "$expected" ]] || {
+        echo "심기 목록 ${expected}건인데 INSERT 는 ${inserted}행입니다." >&2
+        return 1
+    }
+    echo "INSERT ${inserted}행 생성 (심기 목록과 일치)" >&2
 
     [[ -n "$output" ]] && echo "생성했습니다: $output" >&2
     return 0
