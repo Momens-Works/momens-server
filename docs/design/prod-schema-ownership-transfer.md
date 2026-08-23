@@ -10,9 +10,9 @@ prod의 스키마 DDL 주도권을 레거시 `momens-api`에서 이 서버로 �
 | # | 결정 | 내용 |
 | --- | --- | --- |
 | 1 | 소유 범위 | 서버가 prod 스키마를 소유한다. 레거시 DDL은 동결한다 |
-| 2 | baseline 방식 | `flyway_schema_history`에 기존 적용분을 심고 나머지만 실행한다. `outOfOrder`는 부트스트랩 1회만 켠다 |
+| 2 | baseline 방식 | `flyway_schema_history`에 기존 적용분을 심고 나머지만 실행한다. `outOfOrder`는 부트스트랩 1회만 켠다. **토글은 리포가 아니라 배포 ConfigMap에 둔다** |
 | 3 | 레거시 정책 | 동결 대상은 **이 리포에 마이그레이션 파일이 있는 객체**로 한정한다 |
-| 4 | 헤더·게이트 | `prod-schema` 헤더 4종과 스키마 릴리스 게이트를 폐지한다. 폐지 머지는 부트스트랩 prod 적용 이후 |
+| 4 | 헤더·게이트 | `prod-schema` 헤더 4종과 스키마 릴리스 게이트를 폐지한다. **폐지 머지가 부트스트랩 릴리스보다 먼저다** |
 | 5 | 롤백 | fix-forward를 기본으로 한다. 완전 원복은 이력 심기 단계까지만 보장한다 |
 
 ## 1. 배경
@@ -49,7 +49,23 @@ prod는 레거시와 공유 DB를 쓰는 전환기라 이 서버의 Flyway가 �
 `k8s/manifests/apps/momens-worker/configmap.yaml`이 `MIGRATIONS_ENABLED: "true"`를 명시적으로 켠다.
 `ENV=production`의 기본값이 `false`인데 worker가 자기 전용 스키마를 소유하므로 뒤집은 것이다.
 (`k8s/docs/secrets.md`는 아직 "the API stays the single migration owner"라고 적고 있어 매니페스트와
-어긋난다. `k8s` 리포 문서라 여기서 고치지 않고 기록만 남긴다.)
+어긋난다. 배포 리포 변경은 8절이 정리한다.)
+
+세 서비스가 **같은 Neon DB**를 쓴다는 것은 배포 리포에 명시돼 있다. `momens-server`의
+`secret.example.yaml`은 "Same database as momens-api", `momens-worker`의 것은 "shared Neon DB with api"라고
+적는다.
+
+레거시 러너(`momens-api/internal/platform/db/migrations.go`)의 동작을 확인한 결과는 다음과 같다.
+
+- `pg_advisory_lock(7236451890217)`으로 동시 실행을 직렬화한다. api와 worker가 같은 키를 쓰므로 경합하지 않는다.
+- `schema_migrations(version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ)` — 체크섬 컬럼이 없다.
+- 각 마이그레이션을 **자기 트랜잭션 안에서 version 행과 함께** 커밋한다. 실패하면 그 파일은 통째로 롤백된다.
+- 임베드된 FS에서 `*.sql`을 glob 해 사전순으로 적용하고, version은 확장자를 뗀 파일명이다. api의
+  `000001_init`과 worker의 `000001_worker_schema`가 다른 키라 한 표에서 충돌하지 않는다.
+- **`flyway_schema_history`를 전혀 알지 못한다.** 우리가 심는 행을 읽지도 지우지도 않는다.
+
+worker가 소유하는 테이블은 `raw_source_events`, `normalized_source_events`, `webhook_deliveries`,
+`dead_letters`, `curation_tasks`, `backfill_runs` 6개다.
 
 ### 2.2 두 이력 테이블은 충돌하지 않는다
 
@@ -98,6 +114,23 @@ retrieval_cursors, retrieval_documents, retrieval_events
 
 `oauth_*` 6개는 MCP OAuth(레거시 `000019`, 레거시의 가장 최근 DDL)이고 아직 이관 전이다(MOM-0871).
 `retrieval_*`는 worker/retrieval 투영 테이블이다. 이 서버에는 엔티티도 마이그레이션도 없다.
+
+이 목록은 `momens-api` 형상만 본 것이라 **worker 소유 6개(2.1절)가 빠져 있다.** prod 기준으로는
+서버가 파일을 갖지 않는 테이블이 17개다.
+
+### 2.5.1 required 12개 테이블은 전부 엔티티로 매핑돼 있다
+
+`signals`, `signal_actions`, `signal_evidence`, `signal_digests`, `outbox_events`, `push_installations`,
+`push_deliveries`, `notification_consumer_offsets`, `minsu_task_draft_generations`, `user_identities`,
+`task_checklist_items`, `task_open_questions` — 모두 `@Table(name = ...)`을 가진 엔티티가 있다.
+
+`ddl-auto=validate`는 매핑된 엔티티 전체를 검사하므로 **현재 `develop`을 prod에 배포하면 확실히
+기동에 실패한다.** "기동하지 않는다"는 추정이 아니다.
+
+다만 prod에 지금 떠 있는 이미지는 별개 문제다. 배포 워크플로가 롤아웃 시점에 이미지를 덮어쓰므로
+(`k8s/scripts/deploy-service.sh`) 리포의 `newTag` 값으로는 알 수 없고 `kubectl`로 확인해야 한다.
+`momens-server`는 이미 `api.momens.works`의 `/api` prefix로 라우팅되지만 FE가 cutover하지 않아
+트래픽이 없다(`deployment.yaml` 주석).
 
 ### 2.6 미러가 재현하지 않는 prod 컬럼이 5개 있다
 
@@ -189,9 +222,31 @@ version으로 올라가므로 `outOfOrder` 의존도 함께 줄어든다.
 건너뛰어져 기동 후 `validate`에서 죽거나, `validateOnMigrate`가 먼저 실패한다.
 
 부트스트랩이 끝나면 이력의 최고 version이 리포 최고 version과 같아지고 이후 새 마이그레이션은 항상 그보다
-뒤에 온다. 따라서 **부트스트랩 릴리스에서만 켜고 다음 릴리스에서 되돌린다.** 상시로 두면 오래된 브랜치의
+뒤에 온다. 따라서 **부트스트랩에서만 켜고 끝나면 되돌린다.** 상시로 두면 오래된 브랜치의
 낮은 version 마이그레이션이 나중에 조용히 적용되는 통로가 영구히 남는다. 이 리포는 여러 브랜치가 병렬로
 진행되므로(하루에 미러 7건이 들어온 적이 있다) 현실적인 위험이다.
+
+### 토글은 리포가 아니라 배포 ConfigMap에 둔다
+
+**`application-prod.yml`의 `flyway.enabled`를 `true`로 바꿔 `develop`에 머지하면 위험 구간이 생긴다.**
+운영 배포 트리거는 `main` push이므로 `develop`에 있는 동안은 안전하지만, 이력 INSERT가 끝나기 전에
+다른 릴리스가 나가는 순간 prod에서 Flyway가 40건 전부를 미적용으로 보고 첫 파일부터 실행하려 한다.
+릴리스 시점을 사람이 통제해야만 안전한 상태를 리포에 두는 셈이다.
+
+대신 **k8s ConfigMap 환경변수로 토글한다.** `k8s/scripts/deploy-service.sh`가 이미지 변경 여부와
+무관하게 항상 `kubectl rollout restart`를 걸기 때문에(스크립트 117~120행이 "ConfigMap env and mounted
+secrets change without a new image"라고 명시한다) **서버 릴리스 없이 ConfigMap 변경만으로 반영된다.**
+
+- 리포의 `application-prod.yml`은 부트스트랩이 성공할 때까지 `flyway.enabled: false`를 유지한다.
+  리포에 위험한 상태가 존재하지 않는다.
+- 부트스트랩은 이력 INSERT 직후 ConfigMap에 토글을 넣고 롤아웃한다.
+- 성공 후 별도 PR로 `application-prod.yml`을 `true`로 정본화하고 ConfigMap 오버라이드를 걷어낸다.
+- `outOfOrder` 해제도 ConfigMap 한 줄 제거 + 롤아웃으로 끝난다. **서버 릴리스가 필요 없다.**
+
+**환경변수 이름 주의.** `spring.flyway.enabled` → `SPRING_FLYWAY_ENABLED`는 모호함이 없다.
+`spring.flyway.out-of-order`는 대시가 있어 relaxed binding 변환형이 애매하므로, ConfigMap이 이미 쓰고 있는
+`JAVA_TOOL_OPTIONS`에 `-Dspring.flyway.out-of-order=true`를 더하는 편이 안전하다. 시스템 프로퍼티는
+정규 이름을 그대로 쓴다. 어느 쪽을 택하든 **리허설에서 실제로 적용되는지 확인한다.**
 
 ### 채택하지 않은 대안 — 실행 대상 재번호 + `baselineVersion`
 
@@ -244,13 +299,30 @@ UNIQUE는 보지 않으므로 완전한 탐지가 아니다. 결정 1을 택한 
 기존 40건의 헤더 주석은 **지우지 않는다.** 주석 한 줄이라도 고치면 Flyway checksum이 바뀌어 local·dev
 이력이 깨진다. 헤더는 역사적 주석으로 그대로 두고, 부트스트랩 이후 새로 쓰는 파일에만 헤더를 달지 않는다.
 
-### 순서가 강제된다
+### 순서 — 게이트 폐지가 부트스트랩 릴리스보다 **먼저** 들어가야 한다
 
-**게이트 폐지 머지는 부트스트랩이 prod에 실제로 적용된 뒤여야 한다.** 지금 게이트는 오작동하는 것이
-아니라 정확히 제 일을 하고 있다. 미반영 스키마가 prod에 나가면 서버가 기동하지 않으므로 막는 것이 맞다.
-먼저 풀면 그 사이 릴리스가 prod를 죽인다.
+직관과 반대다. 처음에는 "게이트 폐지는 부트스트랩 적용 뒤"로 두려 했으나 그 순서는 성립하지 않는다.
 
-MOM-0910은 작성을 MOM-0909와 병행할 수 있으나 **머지 순서는 부트스트랩 적용 이후**다.
+운영 배포 트리거는 `build-and-deploy.yml`의 `push: branches: [main]`이다. 부트스트랩을 prod에 올리려면
+`develop` → `main` 릴리스 PR이 필요한데, `pr-check.yml`의 `Block release with unreflected prod requirements`가
+`github.base_ref == 'main'`인 모든 PR에서 `required` 헤더가 남아 있으면 실패시킨다. 헤더는 checksum 때문에
+고칠 수 없다(「폐지가 파일 수정을 뜻해서는 안 된다」). **게이트를 남겨 두면 부트스트랩 릴리스 자체가 통과하지 못한다.**
+
+```
+게이트 폐지  →  부트스트랩 적용이 선행이라 대기
+부트스트랩 적용  →  릴리스 PR이 게이트에 막혀 대기
+```
+
+해소 근거는 CI 동작이다. `pr-check.yml`은 `actions/checkout@v7`을 `pull_request`에서 쓰므로 **PR이 머지된
+상태의 트리를 체크아웃한다.** 즉 릴리스 PR은 자기 자신이 실어 나르는 스크립트로 검사받는다. 게이트 제거가
+이미 `develop`에 있으면 그 릴리스 PR은 통과한다.
+
+따라서 **MOM-0910의 게이트 제거는 부트스트랩 릴리스 이전에 `develop`에 머지한다.**
+
+게이트를 먼저 없애는 위험(미반영 스키마가 prod로 나감)은 「토글은 리포가 아니라 배포 ConfigMap에 둔다」가 이미 막고 있다. 리포의
+`flyway.enabled`가 계속 `false`라 그 사이 어떤 릴리스가 나가도 prod 동작이 바뀌지 않는다. 실제 전환은
+릴리스가 아니라 **이력 INSERT + ConfigMap 토글**이라는 운영 조작이 일으키고, 그 두 가지는 사람이 순서를
+통제한다.
 
 대장 문서(`docs/prod-schema-ledger.md`) 자체는 남는다. 선언 구간(prod 필수 환경변수)과 수기 구간은
 MOM-0841 소유이며 이 결정의 영향을 받지 않는다. 제거 대상은 생성 구간과 `--release-check`의 스키마 검사다.
@@ -265,14 +337,27 @@ MOM-0841 소유이며 이 결정의 영향을 받지 않는다. 제거 대상은
 | --- | --- |
 | ① 스크래치 DB에서 체크섬 산출 | prod 무관 |
 | ② 리허설 | prod 무관 |
-| ③ prod에 이력 INSERT | **완전 원복 가능.** `DROP TABLE flyway_schema_history`. 이 시점 서버는 아직 `flyway.enabled=false`라 그 표를 읽지 않는다 |
-| ④ 서버 배포 (flyway on + outOfOrder) — 기동 전 실패 | 스키마 무변경. 배포 롤백 후 ①부터 재시도 |
-| ④ 서버 배포 — 실행 중 실패 | **되돌리지 않는다.** 부분 적용 상태를 기록하고 원인 수정 후 재배포로 이어서 진행한다 |
-| ⑤ 다음 릴리스에서 `outOfOrder` 제거 | 긴급도 낮음. 다음 정기 릴리스에서 처리 |
+| ③ prod에 이력 INSERT | **완전 원복 가능.** `DROP TABLE flyway_schema_history`. 이 시점 Flyway는 아직 꺼져 있어 그 표를 읽는 주체가 없다 |
+| ④ ConfigMap 토글 + 롤아웃 — 기동 전 실패 | 스키마 무변경. ConfigMap 원복 후 ①부터 재시도 |
+| ④ ConfigMap 토글 + 롤아웃 — 실행 중 실패 | **되돌리지 않는다.** 부분 적용 상태를 기록하고 원인 수정 후 재롤아웃으로 이어서 진행한다 |
+| ⑤ `outOfOrder` 제거 | ConfigMap 한 줄 제거 + 롤아웃. 서버 릴리스 불필요 |
 
-fix-forward가 기본인 이유는 **부트스트랩 중 사용자 영향이 0**이기 때문이다. 레거시가 계속 서비스하고
-있고 서버는 기동에 실패해도 이전 Pod가 유지된다. 서두른 원복보다 정확한 수정이 낫다. 부분 적용된
-객체들은 prod에 없던 신규 테이블·컬럼이라 레거시가 읽지도 쓰지도 않으므로 남아 있어도 무해하다.
+fix-forward가 기본인 이유는 **부트스트랩 중 사용자 영향이 0**이기 때문이다. 근거는 배포 매니페스트에서
+확인했다.
+
+- `momens-server`는 `api.momens.works`의 `/api` prefix로 라우팅되지만 **FE가 cutover하지 않아 트래픽이
+  없다.** 레거시 경로(`/`)는 그대로 서비스된다.
+- `replicas: 1` + 기본 RollingUpdate라 `maxUnavailable`이 0이다. **새 Pod가 Ready 되기 전에는 옛 Pod가
+  종료되지 않는다.** `startupProbe`가 `failureThreshold: 30 × periodSeconds: 5`로 150초를 주고,
+  `deploy-service.sh`의 `rollout status --timeout=300s`가 그 뒤에 실패한다.
+
+즉 부트스트랩이 실패해도 옛 Pod가 계속 떠 있고 사용자는 영향을 받지 않는다. 서두른 원복보다 정확한
+수정이 낫다. 부분 적용된 객체들은 prod에 없던 신규 테이블·컬럼이라 레거시가 읽지도 쓰지도 않으므로
+남아 있어도 무해하다.
+
+**복구는 자동이 아니다.** `deploy-service.sh`에 `rollout undo`가 없다. 실패하면 워크플로만 실패하고
+새 ReplicaSet의 Pod가 Ready 되지 못한 채 남는다. 정리는 사람이 `kubectl rollout undo` 또는 ConfigMap
+원복으로 수행한다. 절차 문서에 이 단계를 명시한다.
 
 역스크립트를 준비하는 방식(roll-backward)은 택하지 않았다. 스크립트 자체가 `DROP`문 덩어리라 사고 시
 손실이 더 크고, 되돌려서 얻는 것이 "레거시가 안 쓰는 빈 테이블이 사라지는 것"뿐이다.
@@ -289,18 +374,36 @@ fix-forward가 기본인 이유는 **부트스트랩 중 사용자 영향이 0**
 
 ```
 MOM-0908 (이 문서 + ADR-0019)
-   └─ MOM-0909  부트스트랩 스크립트 + prod 설정 + 리허설
-        └─ [prod 적용]
-             └─ MOM-0910  헤더·대장·게이트 폐지 (머지는 여기서)
+   ├─ MOM-0909  부트스트랩 스크립트 + 보정 마이그레이션 + 리허설   → develop
+   └─ MOM-0910  헤더·대장·게이트 폐지                            → develop
+        └─ [릴리스 PR develop → main]  ← 게이트가 이미 없어야 통과한다
+             └─ [운영 조작] 이력 INSERT → ConfigMap 토글 → 확인 → 토글 정리
 ```
 
-배포 순서는 다음과 같다.
+두 실행 티켓은 순서 없이 병행하고 **둘 다 `develop`에 머지된 뒤 하나의 릴리스로 나간다.**
+게이트 폐지가 먼저 들어가야 하는 이유는 6절에 있다.
 
-1. prod에 이력 INSERT (서버는 아직 flyway off)
-2. 서버 배포 — `flyway.enabled=true`, `out-of-order=true`
-3. 기동과 스키마 확인
-4. 다음 릴리스에서 `out-of-order` 제거
-5. MOM-0910 머지 — 헤더·게이트 폐지
+리포 쪽 변경이 위험하지 않은 이유는 `application-prod.yml`이 계속 `flyway.enabled: false`이기 때문이다.
+릴리스가 나가도 prod 동작은 바뀌지 않는다. **실제 전환은 릴리스가 아니라 아래 운영 조작이 일으킨다.**
+
+1. prod에 `flyway_schema_history` INSERT (단일 트랜잭션)
+2. `momens-server-config` ConfigMap에 토글 추가 — `SPRING_FLYWAY_ENABLED: "true"`,
+   `JAVA_TOOL_OPTIONS`에 `-Dspring.flyway.out-of-order=true`
+3. 롤아웃 (`deploy-service.sh`가 이미지 변경 없이도 `rollout restart`를 건다)
+4. 기동과 스키마 확인
+5. ConfigMap에서 `out-of-order`만 제거하고 재롤아웃
+6. 후속 PR로 `application-prod.yml`을 `flyway.enabled: true`로 정본화하고 ConfigMap 오버라이드 제거
+
+### 배포 리포(`k8s`)도 함께 바꿔야 한다
+
+설계 초안에 빠져 있던 항목이다. MOM-0909의 범위에 `k8s` 리포 PR이 하나 포함된다.
+
+- `manifests/apps/momens-server/deployment.yaml` — DB env 주석의 *"read/validate only in prod: Flyway
+  disabled, Hibernate ddl-auto=validate; schema is owned by legacy momens-api"* 가 사실과 어긋나게 된다.
+- `manifests/apps/momens-server/configmap.yaml` — 위 2단계 토글이 들어가고 5단계에서 일부 빠진다.
+- `docs/secrets.md` — *"`ENV=production` also defaults the worker's `MIGRATIONS_ENABLED` to false so the
+  API stays the single migration owner on the shared database"* 는 이미 worker ConfigMap과 어긋나 있고
+  (2.1절), 주도권 이전으로 두 번째로 틀리게 된다.
 
 ### 리허설 환경은 이미 있다
 
@@ -310,6 +413,18 @@ MOM-0909가 요구하는 "prod와 같은 형상(레거시 러너가 만든 스�
 단, 리허설 DB에는 prod 데이터가 없다. 기존 행이 있어야만 드러나는 실패(`SET NOT NULL`, CHECK 위반)는
 리허설로 잡히지 않으므로 객체 대조로 미리 닫는다.
 
+리허설이 실질적인 게이트라는 점을 짚어 둔다. 하네스의 `compose.yml`은 DB를 둘로 나눈 이유를 *"레거시와
+신규 서버가 같은 테이블의 DDL을 각자 소유해 한 DB에 두 마이그레이션을 함께 돌릴 수 없습니다"* 라고
+적는다. 우리 계획은 둘 다 돌리지 않고 **심어서** 그 제약을 우회하는 것이므로, 그 우회가 실제로 성립하는지는
+리허설로만 증명된다.
+
+리허설에서 함께 확인할 항목이다.
+
+- 심은 24건(±보정)을 Flyway가 건너뛰는가
+- `outOfOrder` 없이는 실행 대상이 건너뛰어지는가 (2.4의 동작 재확인)
+- ConfigMap 환경변수 형태로 준 설정이 실제로 바인딩되는가 — 특히 `spring.flyway.out-of-order`
+- 실행 대상에 `DROP`이나 파괴적 `UPDATE`가 남아 있지 않은가
+
 ## 9. 남은 위험
 
 | 위험 | 대응 |
@@ -317,8 +432,11 @@ MOM-0909가 요구하는 "prod와 같은 형상(레거시 러너가 만든 스�
 | 레거시·worker가 동결을 어긴다 | 강제 수단 없음. 합의 + 다음 배포의 `validate`로 사후 탐지. 제약·기본값·UNIQUE 변경은 탐지되지 않는다 |
 | 체크섬 불일치로 기동 실패 | 스크래치 DB에서 Flyway가 계산한 값을 그대로 복사한다. 실패해도 스키마 무변경 |
 | `mirror` 헤더가 더 잘못 붙어 있다 | 2.8이 한 건 드러났다. MOM-0909의 객체 대조가 실행 집합 전체를 다시 판정한다 |
-| MOM-0910이 부트스트랩 전에 머지된다 | 6절의 순서 제약. 릴리스 게이트가 그때까지는 유지된다 |
 | local·prod가 완전히 같지 않다 | 2.6의 5개 컬럼. 의도된 것이며 `validate` 대상이 아니다 |
+| 게이트를 없앤 뒤 부트스트랩 전에 다른 릴리스가 나간다 | 리포의 `flyway.enabled`가 계속 `false`라 prod 동작이 바뀌지 않는다. 전환은 운영 조작이 일으킨다 |
+| 리포 설정과 prod 실제 설정이 어긋난 채 방치된다 | 8절 6단계(정본화 PR)를 부트스트랩과 같은 스프린트에서 닫는다. ConfigMap 오버라이드는 임시 상태다 |
+| ConfigMap 환경변수가 바인딩되지 않는다 | `spring.flyway.out-of-order`는 대시 때문에 변환형이 애매하다. 시스템 프로퍼티로 주고 리허설에서 확인한다 |
+| 롤아웃 실패 후 정리가 안 된 채 남는다 | `deploy-service.sh`에 `rollout undo`가 없다. 수동 정리 단계를 절차에 명시한다 |
 
 ## 관련 문서
 
