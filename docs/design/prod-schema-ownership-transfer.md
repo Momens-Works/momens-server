@@ -239,6 +239,43 @@ version으로 올라가므로 `outOfOrder` 의존도 함께 줄어든다.
 
 정확한 분할과 보정 마이그레이션 작성은 MOM-0909가 소유한다.
 
+#### 확정된 분할 (MOM-0909, 2026-08-23)
+
+required 16건이 만들거나 바꾸는 모든 객체를 prod 형상(`legacy-diff`의 `legacy-db`)과 기계적으로
+대조했다. **충돌은 한 파일에만 있다.**
+
+| 파일 | 판정 |
+| --- | --- |
+| `V20260707120000` add_task_detail_and_checklist | `tasks.description`·`assignee_id`·`idx_tasks_assignee_id` 이미 존재. `task_checklist_items`와 그 인덱스만 필요 |
+| `V20260707150000` task_role_single_value | 실행 불가(2.8) |
+| `V20260715090000` task_role_drop_not_null | 위 파일에 의존 |
+| 나머지 13건 | 만드는 객체가 prod에 하나도 없다. 그대로 실행 가능 |
+
+따라서 최종 분할은 다음과 같다.
+
+- **심기 27건** — 미러 23 + `create_refresh_token` 1 + 위 세 파일 3
+- **실행 13건**
+- **보정 1건** — `V20260823090000__prod_bootstrap_task_role_and_checklist.sql`
+
+보정 마이그레이션은 세 파일의 순효과만 만든다. `tasks.role TEXT`(nullable) + `tasks_role_check`,
+그리고 `task_checklist_items`와 그 인덱스다. `NOT NULL`을 거쳤다 푸는 중간 단계와 `task_roles`
+조인 테이블은 prod에 존재한 적이 없으므로 재현하지 않고, 백필도 하지 않는다(읽어 올 원본이 없다).
+같은 판단이 `momens-api#28`의 `000019`에 남아 있다.
+
+local/dev에는 원본 세 파일이 이미 적용돼 있으므로 보정 마이그레이션의 모든 구문을 idempotent하게
+썼다. `ADD CONSTRAINT`에는 `IF NOT EXISTS`가 없어 `pg_constraint`를 보고 건다.
+
+**두 형상에서 실측했다.** prod 형상에 적용하면 세 객체가 생기고, local/dev 형상에 적용하면 아무것도
+바뀌지 않으며, 재적용해도 실패하지 않는다. 적용 후 두 형상의 `tasks.role` 컬럼 정의, `tasks_role_check`
+정의, `task_checklist_items` 전체 컬럼 정의가 **문자 그대로 일치한다.**
+
+##### 대조 방법의 한계
+
+객체 추출을 정규식으로 했기 때문에 인용 식별자를 놓친다. `V20260713120000`의 `"change"` 컬럼이
+그 예다(해당 테이블 자체가 prod에 없어 판정에는 영향이 없었다). 구문 유형을 따로 열거해
+`ADD CONSTRAINT`·`ALTER COLUMN`·`DROP TABLE`·`UPDATE`가 `tasks` 세 파일에만 있는 것을 확인했으나,
+**스캔은 보조 수단이고 판정의 근거는 파일을 읽는 것이다.**
+
 ### `outOfOrder`
 
 2.4 때문에 심기 방식은 `spring.flyway.out-of-order=true`를 동반한다. 없으면 실행 대상이 조용히
