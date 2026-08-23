@@ -87,8 +87,8 @@ jobs:
       # 시점에 Flyway 가 막습니다.
       - name: Check prod required config ledger
         run: |
-          ./scripts/prod-schema-ledger-test.sh
-          ./scripts/prod-schema-ledger.sh --check
+          ./scripts/prod-readiness-ledger-test.sh
+          ./scripts/prod-readiness-ledger.sh --check
 
       # 모든 마이그레이션이 부트스트랩에서 심기/실행 중 하나로 분류됐는지 검사합니다. 분류를
       # 빠뜨리면 그 파일이 prod 에서 실행되고, 레거시가 이미 만든 객체라면 already exists 로
@@ -108,4 +108,4 @@ jobs:
       # (workflow_dispatch 로 임의 ref 를 배포하는 경로는 이 게이트가 막지 못합니다.)
       - name: Block release with unreflected prod requirements
         if: github.base_ref == 'main'
-        run: ./scripts/prod-schema-ledger.sh --release-check
+        run: ./scripts/prod-readiness-ledger.sh --release-check

@@ -281,7 +281,7 @@ API 구현 전체의 일률적인 선행 조건이 아니라 projection 대상 a
 
 ## prod 운영 준비 조건
 
-prod 배포 전에는 [prod 운영 준비 대장](../../prod-schema-ledger.md)에서 해당 슬라이스와 활성화할
+prod 배포 전에는 [prod 운영 준비 대장](../../prod-readiness-ledger.md)에서 해당 슬라이스와 활성화할
 capability에 필요한 조건을 확인한다. 대장은 다음 세 종류를 함께 관리한다.
 
 - **스키마 반영**: 신규 객체의 prod 반영 위치·상태와 writer 호환성
