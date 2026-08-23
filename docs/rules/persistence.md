@@ -61,14 +61,18 @@ worker 전용(`raw_source_events` 등)입니다. 이 서버는 그 객체들의 
 
 ### 레거시가 만든 테이블을 기술하는 마이그레이션
 
-레거시가 이미 만든 객체를 `local`/`test`에도 만드는 파일이 **24건** 있습니다 — 과거의 `mirror` 23건과
-`create_refresh_token`입니다. 후자는 헤더가 `applied momens-api#10`이지만 prod 실물이 레거시
-`000018_refresh_tokens.sql`에서 나왔으므로 성격이 같습니다(두 파일의 DDL은 현재 완전히 일치합니다).
+레거시가 이미 생성한 객체를 `local`과 `test` 환경에서도 생성하는 파일은 **25건**입니다. 헤더 체계를
+사용하던 시점에 추가한 23건과 `create_refresh_token`, `add_source_ref_content_hash`가 해당합니다.
+
+`create_refresh_token`의 헤더는 `applied momens-api#10`이지만 운영 객체는 레거시
+`000018_refresh_tokens.sql`에서 생성되었으며, 두 파일의 DDL도 현재 일치하므로 같은 유형으로
+분류합니다. `add_source_ref_content_hash`는 헤더 체계를 폐지한 뒤 추가한 파일이며, 대상 컬럼과
+인덱스는 레거시 `000015_source_refs_content_hash.sql`에서 생성되었습니다.
 주도권이 넘어와도 **이 파일들의 성격은 바뀌지 않습니다.** prod의 실물은 레거시 DDL이 만든 것이고,
-이 파일은 `local`/`test`용 재구성이기 때문입니다. 부트스트랩에서 이 24건은 실행되지 않고 이력에만
+이 파일은 `local`/`test`용 재구성이기 때문입니다. 부트스트랩에서 이 25건은 실행되지 않고 이력에만
 심깁니다.
 
-그래서 **"local은 통과하는데 prod에서 깨진다"는 위험이 이 24건에 대해서는 그대로 남습니다.**
+그래서 **"local은 통과하는데 prod에서 깨진다"는 위험이 이 25건에 대해서는 그대로 남습니다.**
 `ddl-auto=validate`는 공통 설정이라 local에서도 돌지만, local이 검증하는 대상은 이 파일이 만든
 테이블이고 prod가 검증하는 대상은 레거시가 만든 실물입니다. 둘이 갈리면 local만 통과합니다.
 
