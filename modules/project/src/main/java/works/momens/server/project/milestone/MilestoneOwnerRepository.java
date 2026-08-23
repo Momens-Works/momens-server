@@ -1,4 +1,4 @@
-package works.momens.server.project.internal;
+package works.momens.server.project.milestone;
 
 import java.util.Collection;
 import java.util.List;

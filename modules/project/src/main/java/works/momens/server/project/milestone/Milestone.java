@@ -1,4 +1,4 @@
-package works.momens.server.project.internal;
+package works.momens.server.project.milestone;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -22,7 +22,7 @@ import works.momens.server.common.persistence.BaseEntity;
  * works.momens.server.project.MilestoneReader}가 담당합니다. 엔티티 매핑은 운영 환경의 {@code ddl-auto=validate}가 공유
  * 스키마와의 불일치를 서버 기동 시점에 검출할 수 있도록 유지합니다.
  *
- * <p>{@code workspace_id}가 없습니다. 워크스페이스는 {@code project_id}를 거쳐서만 알 수 있어 조회가 {@link Project}를
+ * <p>{@code workspace_id}가 없습니다. 워크스페이스는 {@code project_id}를 거쳐서만 알 수 있어 조회 쿼리가 {@code projects}를
  * 조인합니다. {@code label}과 {@code metadata}도 없어 project와 필드 집합이 다릅니다.
  *
  * <p>{@code progress}는 project와 달리 매핑합니다. 레거시 write 경로가 실제로 유지하는 값이고 웹이 그대로 읽습니다. 저장값을 쓰지 않기로 한

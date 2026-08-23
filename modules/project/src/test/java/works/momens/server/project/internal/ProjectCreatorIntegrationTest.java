@@ -41,7 +41,7 @@ import works.momens.server.workspace.WorkspaceMembership;
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({JpaAuditingConfig.class, ProjectCreatorImpl.class, OwnerMembershipChecker.class})
+@Import({JpaAuditingConfig.class, ProjectCreatorImpl.class, ProjectOwnerMembershipChecker.class})
 class ProjectCreatorIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Autowired private ProjectCreator projectCreator;

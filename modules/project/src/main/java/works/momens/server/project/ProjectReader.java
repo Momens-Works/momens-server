@@ -3,7 +3,6 @@ package works.momens.server.project;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.UUID;
 
 /**
@@ -20,17 +19,6 @@ public interface ProjectReader {
 
   /** project 한 건의 스냅샷을 조회합니다. */
   Optional<ProjectSnapshot> findSnapshot(UUID projectId);
-
-  /**
-   * project 진행률을 0~100 사이의 정수 퍼센트로 조회합니다.
-   *
-   * <p>진행률은 저장된 {@code projects.progress}를 사용하지 않고 태스크 상태에서 계산합니다. cancelled를 제외한 태스크를 기준으로 done
-   * 비율을 계산하며, 소수점은 버립니다. 소프트 삭제된 태스크는 제외하고, 태스크가 없으면 0을 반환합니다.
-   *
-   * <p>계산 기준은 2026-06-24 기획 회의 ADR을 따르며, cancelled 제외도 기획이 확정했습니다. 소수점 버림만 아직 확정되지 않아 서버 구현에서
-   * 결정했고(ADR-0013), 추후 기획 확정 시 변경될 수 있습니다.
-   */
-  OptionalInt progressOf(UUID projectId);
 
   /**
    * workspaceIds에 속한 project를 모두 조회합니다. 정렬은 레거시와 같은 생성 시각 내림차순입니다.

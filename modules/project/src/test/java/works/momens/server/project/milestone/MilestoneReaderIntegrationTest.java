@@ -1,4 +1,4 @@
-package works.momens.server.project.internal;
+package works.momens.server.project.milestone;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

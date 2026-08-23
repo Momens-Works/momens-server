@@ -1,4 +1,4 @@
-package works.momens.server.project.internal;
+package works.momens.server.project.milestone;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -17,6 +17,7 @@ import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.CreateMilestoneCommand;
 import works.momens.server.project.MilestoneCreator;
 import works.momens.server.project.MilestoneDetail;
+import works.momens.server.project.ProjectOwnerReader;
 import works.momens.server.project.ProjectSeedSql;
 import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceMembership;
@@ -32,16 +33,20 @@ import works.momens.server.workspace.WorkspaceMembership;
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({JpaAuditingConfig.class, MilestoneCreatorImpl.class, OwnerMembershipChecker.class})
+@Import({
+  JpaAuditingConfig.class,
+  MilestoneCreatorImpl.class,
+  MilestoneOwnerMembershipChecker.class
+})
 class MilestoneCreatorIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Autowired private MilestoneCreator milestoneCreator;
   @Autowired private MilestoneRepository milestoneRepository;
   @Autowired private MilestoneOwnerRepository milestoneOwnerRepository;
-  @Autowired private ProjectOwnerRepository projectOwnerRepository;
   @Autowired private TestEntityManager entityManager;
 
   @MockitoBean private WorkspaceAccess workspaceAccess;
+  @MockitoBean private ProjectOwnerReader projectOwnerReader;
 
   @Test
   void savesRequestedOwnersAndLegacyDefaults() {
@@ -70,7 +75,8 @@ class MilestoneCreatorIntegrationTest extends AbstractPostgresIntegrationTest {
   void fallsBackToProjectOwnersWhenOwnersAreOmitted() {
     Fixture fixture = newProject("momens-project-owners");
     UUID projectOwnerId = ProjectSeedSql.insertUser(entityManager, "projectowner@momens.works");
-    projectOwnerRepository.saveAndFlush(ProjectOwner.of(fixture.projectId(), projectOwnerId));
+    given(projectOwnerReader.listOwnerUserIds(fixture.projectId()))
+        .willReturn(List.of(projectOwnerId));
     givenMembers(fixture.workspaceId(), fixture.requesterId(), projectOwnerId);
 
     MilestoneDetail detail = milestoneCreator.create(command(fixture, null));
@@ -81,6 +87,7 @@ class MilestoneCreatorIntegrationTest extends AbstractPostgresIntegrationTest {
   @Test
   void fallsBackToRequesterWhenProjectHasNoOwners() {
     Fixture fixture = newProject("momens-no-owners");
+    given(projectOwnerReader.listOwnerUserIds(fixture.projectId())).willReturn(List.of());
     givenMembers(fixture.workspaceId(), fixture.requesterId());
 
     MilestoneDetail detail = milestoneCreator.create(command(fixture, null));

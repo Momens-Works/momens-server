@@ -11,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.outbox.OutboxAppender;
+import works.momens.server.project.MilestoneDirectory;
 import works.momens.server.project.ProjectErrorCode;
+import works.momens.server.project.ProjectReader;
 import works.momens.server.project.TaskUpdateDetail;
 import works.momens.server.project.WebTaskDetail;
 import works.momens.server.project.WebTaskWriter;
@@ -26,6 +28,8 @@ class WebTaskWriterImpl implements WebTaskWriter {
 
   private final TaskRepository taskRepository;
   private final TaskUpdateRepository taskUpdateRepository;
+  private final ProjectReader projectReader;
+  private final MilestoneDirectory milestoneDirectory;
   private final WorkspaceAccess workspaceAccess;
   private final LabelAllocator labelAllocator;
   private final OutboxAppender outboxAppender;
@@ -42,8 +46,7 @@ class WebTaskWriterImpl implements WebTaskWriter {
       String priority,
       UUID assigneeId,
       LocalDate dueDate) {
-    UUID workspaceId =
-        taskRepository.findWorkspaceIdByProjectId(projectId).orElseThrow(this::projectNotFound);
+    UUID workspaceId = projectReader.workspaceIdOf(projectId).orElseThrow(this::projectNotFound);
     requireMember(workspaceId, userId);
     if (title == null || title.isBlank()) {
       throw validation("title");
@@ -176,8 +179,7 @@ class WebTaskWriterImpl implements WebTaskWriter {
 
   private void validateReferences(
       UUID workspaceId, UUID projectId, UUID milestoneId, UUID assigneeId) {
-    if (milestoneId != null
-        && !taskRepository.existsLiveMilestoneInProject(milestoneId, projectId)) {
+    if (milestoneId != null && !milestoneDirectory.existsInProject(milestoneId, projectId)) {
       throw validation("milestone_id");
     }
     if (assigneeId != null && !workspaceAccess.isMember(workspaceId, assigneeId)) {

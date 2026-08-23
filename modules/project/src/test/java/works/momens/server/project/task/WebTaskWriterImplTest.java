@@ -20,6 +20,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.outbox.OutboxAppender;
+import works.momens.server.project.MilestoneDirectory;
+import works.momens.server.project.ProjectReader;
 import works.momens.server.workspace.LabelAllocator;
 import works.momens.server.workspace.WorkspaceAccess;
 
@@ -30,6 +32,8 @@ class WebTaskWriterImplTest {
   private final UUID userId = UUID.randomUUID();
   @Mock private TaskRepository taskRepository;
   @Mock private TaskUpdateRepository taskUpdateRepository;
+  @Mock private ProjectReader projectReader;
+  @Mock private MilestoneDirectory milestoneDirectory;
   @Mock private WorkspaceAccess workspaceAccess;
   @Mock private LabelAllocator labelAllocator;
   @Mock private OutboxAppender outboxAppender;
@@ -38,7 +42,7 @@ class WebTaskWriterImplTest {
   @Test
   @DisplayName("웹 태스크 생성은 레이블을 발급하고 manual task.created outbox를 기록한다")
   void createsTaskAndOutboxEvent() {
-    when(taskRepository.findWorkspaceIdByProjectId(projectId)).thenReturn(Optional.of(workspaceId));
+    when(projectReader.workspaceIdOf(projectId)).thenReturn(Optional.of(workspaceId));
     when(workspaceAccess.isMember(workspaceId, userId)).thenReturn(true);
     when(labelAllocator.allocateMomLabel(workspaceId)).thenReturn("MOM-867");
 

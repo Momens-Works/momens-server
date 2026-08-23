@@ -199,9 +199,10 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 - `projects` 테이블은 레거시 초기 형상에 모바일 스냅샷 컬럼(target_date, progress, summary)을
   더한 범위만 만들었다. 제외한 레거시 컬럼(health_status, 카운트 컬럼, metadata, label)과
   `project_owners`는 웹 이관(MOM-35 계열)에서 추가한다.
-- 조회 public API는 `ProjectReader`(workspaceIdOf, findSnapshot, listByWorkspaceIds, progressOf)와
-  `ProjectSnapshot`, `TaskStatus`다. projectId가 속한 workspace를 찾는 책임은 이 모듈이 소유한다.
-- 진행률 계산은 이 모듈에서 담당한다(`progressOf`, MOM-0800). `projects.progress`에 저장된 값은 사용하지 않고,
+- project core의 조회 public API는 `ProjectReader`(workspaceIdOf, findSnapshot, listByWorkspaceIds)와
+  `ProjectSnapshot`이다. projectId가 속한 workspace를 찾는 책임은 project core가 소유한다.
+- 진행률 계산은 task 하위 경계의 `TaskProgressReader`가 담당한다(`progressOf`, MOM-0800·MOM-0887).
+  `projects.progress`에 저장된 값은 사용하지 않고,
   조회 시점마다 태스크 상태를 기준으로 계산하므로 DB에 저장된 `progress` 값은 조회에 사용하지 않는다.
   하지만 프로젝트 생성 API가 이 값을 입력받으므로(`MOM-0866`) 컬럼은 매핑하고 요청으로 전달받은 값을 저장한다.
 - 진행률은 `cancelled`를 제외한 태스크를 기준으로 계산하며, 정수 나눗셈을 사용해 소수점은 버린다.
@@ -211,7 +212,7 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   이렇게 하면 상태가 추가되더라도 별도 수정 없이 계산 대상에 포함된다.
 - 보드의 그룹, 노출 순서, 라벨은 화면 정책이므로 계속 mobile의 `BoardStatus`에서 관리한다. `BoardStatus`와
   수정 요청 검증(`@Pattern`)을 `TaskStatus`를 기준으로 생성하도록 개선하는 작업은 후속으로 진행한다.
-- 진행률은 `TaskReader.countByStatus` 한 번의 조회로 전체 태스크 수와 `done` 태스크 수를 함께 계산한다. 목록
+- 진행률은 task 저장소의 상태별 집계 한 번으로 전체 태스크 수와 `done` 태스크 수를 함께 계산한다. 목록
   조회와 동일한 조건(projectId, status, 소프트 삭제 제외)을 한 쿼리에 고정해 목록과 진행률이 항상 같은 기준을
   쓰게 하고, 개수만 필요하므로 본문과 정렬은 읽지 않는다. 두 값을 각각 조회하면 기준이 갈릴 수 있다
   (MOM-0779의 `material_count`와 같은 유형).
@@ -239,16 +240,30 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   호출하는 쪽에서 소속과 권한을 확인해 확정한 `workspaceId`를 전달받는다. 프로젝트를 생성할 때는 `workspace`
   모듈의 `LabelAllocator`를 사용해 `PRJ` 라벨을 발급한다. 프로젝트와 마일스톤의 수정·삭제 API는 아직 없다.
 
-내부는 도메인 하위 경계로 논리 분리했다(MOM-71).
+내부는 도메인 하위 경계로 논리 분리했다(MOM-71·MOM-0887). `:project` Gradle 모듈은 프로젝트 운영
+capability의 물리 경계로 유지하고, 배포 단위도 나누지 않는다.
 
-- 태스크(`task`)는 Spring Modulith nested 논리 모듈이고, 프로젝트 코어는 `internal`에 둔다.
-  공개 계약은 모듈 root의 public API 그대로다.
-- 하위 도메인마다 aggregate가 하나씩이고(`Project`, `Task`) 트랜잭션은 자기 aggregate 안에
-  닫힌다. 예외는 두 곳이고 방향이 서로 반대다. 하나는 project가 연 태스크 생성 트랜잭션에
-  workspace의 라벨 발급이 참여하는 것이고(위 workspace 절), 다른 하나는 `minsu`가 연 트랜잭션에서
-  `TaskDraftApplier`로 `Task`가 변경되는 것이다(위 `minsu` 절,
-  [ADR-0015](../adr/0015-minsu-async-task-draft-generation.md)가 소유한다). `Task`는 `Project`를
-  엔티티 연관이 아니라 projectId로만 참조한다.
+- 프로젝트 코어는 `internal`, 태스크는 `task`, 마일스톤은 `milestone`, blocker는 `blocker`에 둔다.
+  뒤의 세 패키지는 Spring Modulith nested application module이다. decision은 아직 구현이 없어 경계를
+  선점하지 않는다.
+- 다른 Gradle 모듈에는 project 모듈 root의 공개 계약만 노출한다. 엔티티·repository·구현 도구는 각
+  하위 경계 안에 package-private로 닫는다.
+- project core는 nested module을 참조하지 않는다. 진행률은 task가 `TaskProgressReader`로 제공하고,
+  task는 프로젝트 생존·workspace 조회에 `ProjectReader`, 마일스톤 소속 검증에 `MilestoneDirectory`를
+  사용한다. milestone은 기본 소유자 조회에 `ProjectOwnerReader`를 사용한다. task repository가
+  `Project`·`Milestone` 엔티티를 JPQL 문자열로 직접 조회하던 숨은 결합은 두 공개 계약으로 제거했다.
+- blocker는 workspace id를 직접 가진 읽기 모델이라 다른 project 하위 경계에 의존하지 않는다.
+- `HealthStatus`와 소유자 멤버십 검증은 project와 milestone의 구현 계약이다. 현재 저장값과 검증 동작은
+  같아도 변경 이유가 다르므로 각 하위 경계가 독립적으로 소유한다.
+- 마일스톤 workspace 목록은 `milestones`에 workspace id가 없어 project를 조인한다. snapshot 쿼리 예산
+  14회를 유지하기 위해 `MilestoneRepository`의 JPQL 조인을 persistence 예외로 허용한다. 엔티티 타입을
+  Java 코드로 공유하거나 쓰기 경계를 넘기는 예외는 아니며, 통합 테스트가 workspace 격리와 project
+  soft-delete 동작을 고정한다.
+- 하위 도메인마다 aggregate가 하나씩이고(`Project`, `Task`, `Milestone`, `Blocker`) 트랜잭션은 자기
+  aggregate 안에 닫힌다. 예외는 workspace 라벨 발급이 task/project 생성 트랜잭션에 참여하는 것과,
+  `minsu`가 연 트랜잭션에서 `TaskDraftApplier`로 `Task`를 변경하는 것이다(위 `minsu` 절,
+  [ADR-0015](../adr/0015-minsu-async-task-draft-generation.md)). 엔티티 간 참조는 JPA 연관이 아니라
+  식별자로 유지한다.
 
 ### outbox
 
@@ -546,8 +561,3 @@ retrieval projection schema ownership과는 분리한다. 레거시 `slackbot`�
 - `eval` — 오프라인 검색 평가 하네스
 - `demo` — 로컬 데모 시드
 - `platform` / `config` / `domain` / `bootstrap` / `testdb` — Spring 기본 인프라로 대체
-
-## 열린 항목
-
-- **`project` 하위 분리** (task/decision/blocker 별도 모듈화): 모델 언어와 변경 이유가
-  분리될 때 재검토.

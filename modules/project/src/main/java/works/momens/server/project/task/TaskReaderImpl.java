@@ -2,14 +2,13 @@ package works.momens.server.project.task;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.project.BoardTask;
+import works.momens.server.project.ProjectReader;
 import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
 import works.momens.server.project.WebTaskDetail;
@@ -19,6 +18,7 @@ import works.momens.server.project.WebTaskDetail;
 class TaskReaderImpl implements TaskReader {
 
   private final TaskRepository taskRepository;
+  private final ProjectReader projectReader;
 
   @Override
   @Transactional(readOnly = true)
@@ -28,13 +28,6 @@ class TaskReaderImpl implements TaskReader {
         .stream()
         .map(TaskReaderImpl::toBoardTask)
         .toList();
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public Map<String, Long> countByStatus(UUID projectId, Collection<String> statuses) {
-    return taskRepository.countByStatus(projectId, statuses).stream()
-        .collect(Collectors.toMap(StatusCount::status, StatusCount::count));
   }
 
   @Override
@@ -54,11 +47,11 @@ class TaskReaderImpl implements TaskReader {
   @Transactional(readOnly = true)
   public Optional<WebTaskDetail> findWebDetail(UUID taskId) {
     return taskRepository
-        .findWebDetailById(taskId)
+        .findByIdAndDeletedAtIsNull(taskId)
         .flatMap(
             task ->
-                taskRepository
-                    .findWebProjectWorkspaceIdByTaskId(taskId)
+                projectReader
+                    .workspaceIdOf(task.getProjectId())
                     .map(workspaceId -> toWebTaskDetail(task, workspaceId)));
   }
 

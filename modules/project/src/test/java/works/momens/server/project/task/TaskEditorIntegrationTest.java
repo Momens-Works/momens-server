@@ -11,11 +11,13 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.ProjectErrorCode;
+import works.momens.server.project.ProjectReader;
 import works.momens.server.project.ProjectSeedSql;
 import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskEditor;
@@ -34,6 +36,8 @@ import works.momens.server.project.UpdateTaskCommand.ChecklistItemEdit;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({JpaAuditingConfig.class, TaskEditorImpl.class, TaskReaderImpl.class})
 class TaskEditorIntegrationTest extends AbstractPostgresIntegrationTest {
+
+  @MockitoBean private ProjectReader projectReader;
 
   @Autowired private TaskEditor taskEditor;
   @Autowired private TaskReader taskReader;
