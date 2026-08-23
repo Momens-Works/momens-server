@@ -45,7 +45,9 @@ echo
 echo "== Sensitive-looking diff lines =="
 SENSITIVE_KEYS='password|passwd|secret|token|api[_-]?key|private[_-]?key|credential'
 SENSITIVE_CONFIG_KEY="([[:alnum:]]+[._-])*(${SENSITIVE_KEYS})([._-][[:alnum:]]+)*"
-SENSITIVE_LINE_PATTERN="(^\\+[[:space:]]*\"?${SENSITIVE_CONFIG_KEY}\"?[[:space:]]*(:[[:space:]]*[^[:space:]:].*|=[^=].*))|(^\\+.*(${SENSITIVE_KEYS})[[:alnum:]_-]*[[:space:]]*=[[:space:]]*['\"][^'\"]+['\"])|(^\\+.*BEGIN ((RSA|OPENSSH|EC|ENCRYPTED) )?PRIVATE KEY)"
+SENSITIVE_QUOTED_LITERAL="('[^']+'|\"[^\$\"][^\"]*\")"
+SENSITIVE_CONFIG_LITERAL="(${SENSITIVE_QUOTED_LITERAL}|[^\$[:space:]'\"=][^=]*)"
+SENSITIVE_LINE_PATTERN="(^\\+[[:space:]]*\"?${SENSITIVE_CONFIG_KEY}\"?[[:space:]]*[:=][[:space:]]*${SENSITIVE_CONFIG_LITERAL})|(^\\+.*(${SENSITIVE_KEYS})[[:alnum:]_-]*[[:space:]]*=[[:space:]]*${SENSITIVE_QUOTED_LITERAL})|(^\\+.*BEGIN ((RSA|OPENSSH|EC|ENCRYPTED) )?PRIVATE KEY)"
 git diff "${MERGE_BASE}" -- \
   ':!gradle/wrapper/gradle-wrapper.jar' \
   | grep -nEi "${SENSITIVE_LINE_PATTERN}" || true
