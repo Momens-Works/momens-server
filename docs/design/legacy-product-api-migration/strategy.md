@@ -281,40 +281,23 @@ API 구현 전체의 일률적인 선행 조건이 아니라 projection 대상 a
 
 ## prod 운영 준비 조건
 
-prod 배포 전에는 [prod 운영 준비 대장](../../prod-readiness-ledger.md)에서 해당 슬라이스와 활성화할
-capability에 필요한 조건을 확인한다. 대장은 다음 세 종류를 함께 관리한다.
+prod 배포 전에는 [prod 운영 준비 대장](../../prod-readiness-ledger.md)에서 다음 두 종류를 확인한다.
 
-- **스키마 반영**: 신규 객체의 prod 반영 위치·상태와 writer 호환성
 - **prod 필수 설정**: 기본값 없는 환경변수와 Secret·ConfigMap 주입 상태
 - **수기 prod 의무**: provider 등록, OAuth redirect URI, ADC·IAM, DNS·ingress·TLS, 배포 순서처럼
   코드로 완전히 검증할 수 없는 조건
 
-공유 DB를 사용하므로 일반적인 데이터 복사 migration은 필요하지 않다. 스키마 조건은 다음과 같다.
+스키마는 운영 준비 대장의 책임이 아니다. 소유권은
+[ADR-0019](../../adr/0019-prod-schema-ownership-transfer.md), 상시 규칙과 전환 중 의무는
+[데이터 규칙](../../rules/persistence.md), 부트스트랩 방식·롤백·실행 순서는
+[prod 스키마 주도권 이전 설계](../prod-schema-ownership-transfer.md)가 소유한다. 공유 DB를 사용하므로
+일반적인 데이터 복사 migration은 필요하지 않지만, 각 슬라이스는 필요한 마이그레이션 적용과 writer
+호환성을 `cutover_ready` 증거로 확인한다.
 
-- prod 스키마는 이 서버가 소유한다([ADR-0019](../../adr/0019-prod-schema-ownership-transfer.md)).
-  마이그레이션은 배포 때 Flyway가 직접 적용하고, 잘못된 마이그레이션은 그 시점에 Flyway가 막는다.
-  슬라이스마다 반영 위치를 정하거나 다른 저장소의 반영을 기다릴 일이 없다.
-- 부트스트랩(MOM-0909)이 prod에 적용되기 전까지는 prod Flyway가 꺼져 있고 `ddl-auto=validate`로만
-  확인한다. 그동안 추가하는 마이그레이션은 **부트스트랩의 실행 집합에 포함되어야 한다.**
-- 레거시가 만든 테이블을 기술하는 파일은 여전히 prod 실물과 갈릴 수 있다. 충실도 기준은
-  [데이터 규칙](../../rules/persistence.md)이 소유한다.
-
-스키마 release gate는 폐지했다. `main` 대상 PR에서 검사하는 것은 prod 필수 설정의 `required` 상태뿐이다.
-`ddl-auto=validate`는 기동 시 매핑된 엔티티 전체를 검증하므로 prod 필수 설정과 스키마는 여전히 해당
-릴리스의 전역 조건이다.
-
-수기 prod 의무는 자동 release gate 대상이 아니며 capability별로 확인 완료·비활성·적용 제외 상태와 근거를
-기록한다. 이관 원장의 **prod gate** 필드에는 슬라이스가 직접 요구하는 스키마·필수 설정·수기 의무와 적용
-범위를 기록하되, 릴리스 전체의 자동 게이트 충족 여부는 prod 운영 준비 대장에서 별도로 확인한다. 이 전역
-게이트 역시 로직 분석이나 구현의 일률적인 선행 조건이 아니라 prod 릴리스 시점의 조건이다.
-
-~~스키마 DDL 소유권을 신규 서버로 넘기는 시점은 모든 Product API 이관이 끝난 뒤 별도로 결정한다.~~
-**이 조항은 [ADR-0019](../../adr/0019-prod-schema-ownership-transfer.md)가 대체한다.** 이관 완료를
-기다리지 않고 주도권을 지금 서버로 옮긴다. 부트스트랩 방식·롤백·실행 순서는
-[prod 스키마 주도권 이전 설계](../prod-schema-ownership-transfer.md)가 소유한다.
-
-주도권 이전이 prod에 적용되면 이 절의 나머지 스키마 조건(반영 위치·상태 추적, 릴리스 게이트)도 함께
-효력을 잃는다. 적용 전까지는 그대로 유효하다.
+스키마 release gate는 폐지했다. 자동 release gate는 prod 필수 설정의 `required` 상태만 검사하고,
+수기 prod 의무는 자동으로 차단하지 않는다. 이관 원장의 **prod gate** 필드는 슬라이스가 직접 요구하는
+스키마·writer·projection, 필수 설정, 수기 의무와 적용 범위를 기록한다. 이 조건은 로직 분석이나 구현의
+일률적인 선행 조건이 아니라 해당 capability를 prod로 전환하기 위한 조건이다.
 
 ## 단계와 게이트
 
@@ -351,7 +334,7 @@ capability에 필요한 조건을 확인한다. 대장은 다음 세 종류를 �
 - 확정된 신규 웹 인증 계약 및 필요한 경우 세션 공존 방식 준비
 - aggregate 단일 writer 전환 계획
 - projection·webhook·MCP·background runtime 등 비-HTTP 경로 준비
-- prod 운영 준비 대장에서 해당 스키마·필수 설정·수기 의무의 상태와 확인 근거 검증
+- 스키마·writer·projection 증거와 prod 운영 준비 대장의 필수 설정·수기 의무를 각각 검증
 - rollback 호환성 검증
 
 완료 기준: 해당 prod gate가 충족됐고, 트래픽을 바꿔도 이중 write와 누락이 없으며 되돌릴 수 있다.
@@ -412,7 +395,7 @@ write 컷오버 전 다음을 확인한다.
 | auth/RBAC | 인증 수단과 권한 규칙 |
 | writer | 현재 writer, 목표 writer, 전환 단위 |
 | projection/external | worker, retrieval, provider, MCP 등 의존 |
-| prod gate | 슬라이스별 직접 의존성과 전역 release gate 확인 위치 |
+| prod gate | 슬라이스별 cutover 직접 의존성과 prod 필수 설정·수기 의무 확인 위치 |
 | client gate | FE·모바일·외부 provider 변경 |
 | rollback | 되돌릴 수 있는 범위와 제한 |
 | status | traced, contract_locked, implemented, cutover_ready, cutover, retired |
