@@ -34,9 +34,17 @@
   관리합니다. 첫 application event 도입 시 함께 추가합니다([아키텍처](architecture.md), [ADR-0001](../adr/0001-modular-monolith-rules.md)).
 - 운영(`prod`)에서는 레거시 `momens-api`와 **공유 DB를 함께 쓰는 전환기** 동안 Flyway를 끄고
   (`spring.flyway.enabled=false`) `ddl-auto=validate`로 매핑만 검증합니다(conformer). 공유 운영
-  스키마는 레거시가 단일 소유하며, 새 서버는 운영에서 스키마를 만들거나 바꾸지 않습니다. 진짜
+  스키마는 레거시가 소유하며, 새 서버는 운영에서 스키마를 만들거나 바꾸지 않습니다. 진짜
   신규 테이블은 별도 레거시 마이그레이션으로 추가합니다. `local`/`test`는 새 서버 Flyway가 그대로
   소유합니다(별도 DB라 충돌 없음).
+  - 공유 DB의 DDL writer는 레거시 하나가 아닙니다. `momens-worker`도 자기 전용 스키마를 위해
+    같은 러너로 마이그레이션을 적용합니다(`k8s`의 worker ConfigMap이 `MIGRATIONS_ENABLED=true`).
+
+> **이 절은 주도권 이전 중입니다.** prod 스키마 소유권을 이 서버로 옮기기로 정했습니다
+> ([ADR-0019](../adr/0019-prod-schema-ownership-transfer.md),
+> [설계](../design/prod-schema-ownership-transfer.md)). 부트스트랩이 prod에 적용되기 전까지는
+> **아래 규칙이 그대로 유효합니다** — 미반영 스키마가 prod에 나가면 애플리케이션이 기동하지 않으므로
+> 헤더와 릴리스 게이트가 계속 그것을 막습니다. 적용 이후 이 절과 헤더 표는 MOM-0910이 갱신합니다.
 
 ### prod 반영 헤더
 
