@@ -51,6 +51,7 @@ CI가 실제 Secret·ConfigMap의 존재나 값을 조회해 증명하지는 않
 
 | 의무 | 현재 상태 | 확인 근거·다음 행동 |
 | --- | --- | --- |
+| **MOM-0909 부트스트랩 적용 전 `main` 릴리스 금지** | `required` | 스키마 릴리스 게이트를 MOM-0910에서 폐지했습니다(교착 해소, [설계 6절](design/prod-schema-ownership-transfer.md)). 그 게이트가 막던 것 중 하나는 크로스 리포 의무가 아니라 **기동 실패**였고, 그 보호가 지금은 없습니다. 부트스트랩 적용 전에 `develop` → `main` 릴리스가 나가면 미반영 16건 때문에 `ddl-auto=validate`에서 기동에 실패하고, `startupProbe` 150초 뒤 `rollout status --timeout=300s`가 깨집니다. `deploy-service.sh`에 `rollout undo`가 없어 Ready 되지 못한 ReplicaSet이 수동 정리 전까지 남습니다. 사용자 영향은 없습니다(`replicas: 1` + `maxUnavailable=0`으로 옛 Pod 유지, FE 미cutover). **부트스트랩이 적용되면 이 행을 제거합니다.** |
 | MOM-0836 `users.email` UNIQUE 제거 | `required` | 서버 코드를 먼저 배포한 뒤 제약을 제거합니다. 선행 배포는 `MOM-0914`에서 `ON CONFLICT (email)`을 제거하는 작업입니다. 이후 웹 로그인 요청이 신규 서버로 전환되어 `momens-server`가 `users`에 쓰는 유일한 서버가 되고, `MOM-0908`에서 마이그레이션 소유 레포지토리가 정해지면 `MOM-0836`에서 제약을 제거합니다. 선행 배포와 제약 제거가 모두 완료되면 해당 행을 갱신합니다 |
 | Google OAuth redirect URI 등록 | `확인 필요` | Kubernetes 값은 `https://api.momens.works/api/auth/google/callback`입니다. Google Cloud 콘솔 등록 상태는 저장소에서 확인할 수 없습니다 |
 | 모바일·웹 client ID와 audiences 일치 | `확인 필요` | 실제 secret 값과 Google OAuth client ID 목록을 배포 전에 대조합니다 |
