@@ -532,12 +532,32 @@ MOM-0909가 요구하는 "prod와 같은 형상(레거시 러너가 만든 스�
 적는다. 우리 계획은 둘 다 돌리지 않고 **심어서** 그 제약을 우회하는 것이므로, 그 우회가 실제로 성립하는지는
 리허설로만 증명된다.
 
-리허설에서 함께 확인할 항목이다.
+### 리허설 결과 (MOM-0909, 2026-08-23)
 
-- 심은 24건(±보정)을 Flyway가 건너뛰는가
-- `outOfOrder` 없이는 실행 대상이 건너뛰어지는가 (2.4의 동작 재확인)
-- ConfigMap 환경변수 형태로 준 설정이 실제로 바인딩되는가 — 특히 `spring.flyway.out-of-order`
-- 실행 대상에 `DROP`이나 파괴적 `UPDATE`가 남아 있지 않은가
+레거시 마이그레이션 `000001`~`000019`를 빈 DB에 순서대로 적용해 prod 형상을 만들고(테이블 32개,
+`flyway_schema_history` 없음) 전 구간을 실측했다. Flyway는 앱과 같은 12.4.0 CLI를 썼다.
+
+| 단계 | 결과 |
+| --- | --- |
+| CLI와 앱의 체크섬이 같은가 | **공통 38건 전부 일치, 불일치 0건.** 앱이 만든 이력(`legacy-diff`의 `server-db`)과 대조했다 |
+| 이력 27건 INSERT | 성공. 최고 version `20260822000600` |
+| `outOfOrder` 없이 migrate | **거부.** *"Detected resolved migration not applied to database: 20260716091000. … To allow executing this migration, set `-outOfOrder=true`"* — 스키마는 하나도 바뀌지 않았다 |
+| `outOfOrder=true`로 migrate | **정확히 14건만 실행.** 심은 27건은 건너뛰고 실패 0건 |
+| 결과 스키마 | required 12개 테이블 전부 생성, `tasks`에 `role`·`origin_type`·`origin_signal_id`·`next_action` 추가, 레거시 이력 19건과 테이블 온전 |
+| 부트스트랩 후 `outOfOrder` 없이 재기동 | *"Schema is up to date. No migration necessary."* — **1회성으로 끄는 설계가 성립한다** |
+
+2.4의 동작 예측이 Flyway의 에러 메시지로 직접 확인됐고, 그 메시지가 해법까지 지목한다.
+
+### 아직 리허설로 닫지 못한 것
+
+- **DB role 권한.** 리허설 컨테이너는 superuser로 돌아 권한 문제를 재현하지 못한다. prod의
+  momens-server role이 `public` 스키마에 `CREATE` 권한을 갖는지, `tasks`를 `ALTER` 할 수 있는지
+  (= 소유 role의 멤버인지)는 **실제 prod에서만 확인된다.** `ALTER TABLE`은 GRANT 대상이 아니라 소유자
+  권한이라 별도 조치가 필요할 수 있다. **부트스트랩의 선행 조건이다.**
+- **ConfigMap 환경변수 바인딩.** 특히 `spring.flyway.out-of-order`는 대시 때문에 변환형이 애매하다.
+  CLI 리허설은 명령행 인자를 쓰므로 이 경로를 검증하지 못한다. 실제 배포 형태로 확인해야 한다.
+- **기존 데이터가 있어야 드러나는 실패.** 리허설 DB는 비어 있어 `SET NOT NULL`·CHECK 위반이 재현되지
+  않는다. 이 위험은 객체 대조로 닫았다(4절).
 
 ## 9. 남은 위험
 
