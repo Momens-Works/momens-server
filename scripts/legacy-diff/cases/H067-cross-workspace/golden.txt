@@ -1,0 +1,13 @@
+legacy_status: 400
+server_status: 400
+--- body ---
+@@ -1,3 +1,6 @@
+ {
+-  "error": "entities belong to different workspaces"
++  "error": {
++    "code": "CONTEXT_CROSS_WORKSPACE_LINK_NOT_ALLOWED",
++    "message": "서로 다른 워크스페이스의 대상은 연결할 수 없습니다."
++  }
+ }
+--- db ---
+동일
