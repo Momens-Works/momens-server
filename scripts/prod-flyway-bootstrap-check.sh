@@ -24,10 +24,12 @@ versions_in() {
     grep -oE '^[0-9]+' "$1" | sort -u
 }
 
+# 파일명 규약을 벗어난 파일은 버전을 못 뽑는다. sed -n 으로 흘려보내지 않고, 아래 개수 대조가
+# 잡도록 한다.
 repo_versions() {
     find "$repo_root" -type d \( -name build -o -name .git -o -name .gradle-work \) -prune -o \
         -path '*/src/main/resources/db/migration/V*.sql' -print \
-        | sed -E 's|.*/V([0-9]+)__.*|\1|' \
+        | sed -nE 's|.*/V([0-9]+)__.*|\1|p' \
         | sort -u
 }
 
@@ -47,6 +49,15 @@ main() {
         status=1
         echo "::error::심기와 실행 양쪽에 있는 마이그레이션이 있습니다."
         printf '%s\n' "$duplicate" | sed 's/^/  /'
+    fi
+
+    local files versions
+    files="$(find "$repo_root" -type d \( -name build -o -name .git -o -name .gradle-work \) -prune -o \
+        -path '*/src/main/resources/db/migration/*.sql' -print | wc -l | tr -d ' ')"
+    versions="$(repo_versions | grep -c .)"
+    if [[ "$files" -ne "$versions" ]]; then
+        status=1
+        echo "::error::파일명 규약(V<버전>__<설명>.sql)을 벗어난 마이그레이션이 있습니다. 파일 ${files}건, 버전 추출 ${versions}건."
     fi
 
     unclassified="$(comm -23 <(repo_versions) <(printf '%s\n' "$classified"))"
