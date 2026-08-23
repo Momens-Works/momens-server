@@ -183,6 +183,26 @@ class ConfirmedMemoryReaderIntegrationTest extends AbstractPostgresIntegrationTe
     assertThat(confirmedMemoryReader.listDetailsByWorkspaceId(UUID.randomUUID())).isEmpty();
   }
 
+  @Test
+  @DisplayName("메모리가 속한 워크스페이스 식별자를 반환한다")
+  void findWorkspaceIdReturnsWorkspaceOfMemory() {
+    Fixture fixture = new Fixture();
+    UUID memoryId = fixture.insertMemory("결제 재시도 정책", null, Instant.parse("2026-07-01T09:00:00Z"));
+
+    assertThat(confirmedMemoryReader.findWorkspaceId(memoryId)).contains(fixture.workspaceId);
+  }
+
+  @Test
+  @DisplayName("소프트 삭제되었거나 존재하지 않는 메모리는 빈 값을 반환한다")
+  void findWorkspaceIdIsEmptyForSoftDeletedOrUnknownMemory() {
+    Fixture fixture = new Fixture();
+    UUID deleted = fixture.insertMemory("삭제된 메모리", null, Instant.parse("2026-07-01T09:00:00Z"));
+    softDelete(deleted);
+
+    assertThat(confirmedMemoryReader.findWorkspaceId(deleted)).isEmpty();
+    assertThat(confirmedMemoryReader.findWorkspaceId(UUID.randomUUID())).isEmpty();
+  }
+
   /** 워크스페이스 하나와 그 안의 메모리를 다루는 테스트 픽스처입니다. */
   private final class Fixture {
 
