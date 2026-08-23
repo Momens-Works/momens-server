@@ -229,6 +229,10 @@ MOM-0909의 객체 대조에 값싼 힌트가 된다. **같은 종류는 헤더�
 빈 스크래치 DB에 Flyway를 그대로 돌려 전체를 적용시킨 뒤, 생성된 `flyway_schema_history`에서 해당
 행들을 그대로 뽑아 prod에 `INSERT` 한다. **체크섬을 직접 계산하지 않는다.**
 
+`--verify`는 대상 DB의 `flyway_schema_history`를 psql로 직접 읽는다. `flyway info -outputType=json`은
+**12.4.0 기준으로 `checksum` 필드를 내보내지 않는다**(실측 확인 — `version`·`state`·`installedOnUTC` 등만
+있다). 그 경로로 짜면 대조 대상이 0건이 되어 검증이 무력화된다.
+
 **산출 기준은 실제로 배포되는 커밋이다.** 미러는 지금도 계속 늘고 있으므로(2.4), 체크섬을 develop의
 임의 시점에서 뽑아 두면 그 뒤 머지되는 마이그레이션이 심기 집합에서 빠진다. 빠진 파일이 레거시 소유
 객체를 만드는 것이면 prod에서 실행돼 `already exists`로 죽는다. 따라서 **릴리스 대상 커밋(`main`의 그
