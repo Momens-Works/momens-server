@@ -13,7 +13,12 @@ git -C "${TEST_REPO}" commit -q --allow-empty -m "test base"
 {
   printf '%s\n' \
     'String csrfToken = csrfTokenRepository.load(request);' \
-    '// CSRF token: SameSite cookie policy'
+    '// CSRF token: SameSite cookie policy' \
+    'local base="$1" path="$2" token="$3" method="$4" body_file="$5"' \
+    'secret="${VAR}"' \
+    'secret: "${VAR}"' \
+    'token: "$1"' \
+    'secret: "hardcoded"'
   printf '%s = "%s"\n' 'token' 'hardcoded-secret'
   printf '%s=%s\n' 'DATABASE_PASSWORD' 'momens'
   printf '%s=%s\n' 'MOMENS_AUTH_JWT_SECRET' 'change-me'
@@ -38,6 +43,17 @@ if grep -Fq 'CSRF token: SameSite cookie policy' <<<"${OUTPUT}"; then
   exit 1
 fi
 
+for VARIABLE_REFERENCE in \
+  'local base="$1" path="$2" token="$3" method="$4" body_file="$5"' \
+  'secret="${VAR}"' \
+  'secret: "${VAR}"' \
+  'token: "$1"'; do
+  if grep -Fq "${VARIABLE_REFERENCE}" <<<"${OUTPUT}"; then
+    echo "error: shell variable reference was reported as a secret: ${VARIABLE_REFERENCE}" >&2
+    exit 1
+  fi
+done
+
 EXPECTED_LINE=$(printf '%s = "%s"' 'token' 'hardcoded-secret')
 if ! grep -Fq "${EXPECTED_LINE}" <<<"${OUTPUT}"; then
   echo "error: hardcoded token was not reported" >&2
@@ -49,6 +65,7 @@ for EXPECTED_LINE in \
   "$(printf '%s=%s' 'MOMENS_AUTH_JWT_SECRET' 'change-me')" \
   "$(printf '%s=%s' 'MOMENS_AUTH_GOOGLE_CLIENT_SECRET' 'change-me')" \
   "$(printf '%s=%s' 'POSTGRES_PASSWORD' 'momens')" \
+  'secret: "hardcoded"' \
   "$(printf '%s: %s' 'jwt-secret' 'test-only-abc')" \
   "$(printf '%s: %s' 'client-secret' 'test-web-client-secret')"; do
   if ! grep -Fq "${EXPECTED_LINE}" <<<"${OUTPUT}"; then
