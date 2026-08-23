@@ -343,11 +343,11 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H064 | Product JSON | `POST /tasks/:taskId/updates` | `task.CreateUpdate` | `TSK` | W | `implemented` (`MOM-0867`); worker task projector와 aggregate writer 단일화가 cutover gate |
 | H065 | Product JSON | `DELETE /tasks/:taskId/updates/:updateId` | `task.DeleteUpdate` | `TSK` | W | `implemented` (`MOM-0867`); soft delete. worker task projector와 aggregate writer 단일화가 cutover gate |
 | H066 | Product JSON | `POST /tasks/:taskId/blockers` | `blocker.CreateForTask` | `BLK` | W | `traced`; projection 동반 |
-| H067 | Product JSON | `POST /tasks/:taskId/memories/:memoryId` | `relation.LinkTaskMemory` | `CTX` | W | `traced`. 구현 `MOM-0868` |
-| H068 | Product JSON | `DELETE /tasks/:taskId/memories/:memoryId` | `relation.UnlinkTaskMemory` | `CTX` | W | `traced`; soft delete relation. 구현 `MOM-0868` |
-| H069 | Product JSON | `POST /tasks/:taskId/source-refs` | `relation.CreateTaskSourceRef` | `CTX` | W | `traced`; source-ref 생성과 relation 연결. 구현 `MOM-0868` |
-| H070 | Product JSON | `POST /tasks/:taskId/source-refs/:sourceRefId` | `relation.LinkTaskSourceRef` | `CTX` | W | `traced`. 구현 `MOM-0868` |
-| H071 | Product JSON | `DELETE /tasks/:taskId/source-refs/:sourceRefId` | `relation.UnlinkTaskSourceRef` | `CTX` | W | `traced`; soft delete relation. 구현 `MOM-0868` |
+| H067 | Product JSON | `POST /tasks/:taskId/memories/:memoryId` | `relation.LinkTaskMemory` | `CTX` | W | `implemented` (`MOM-0868`): target `POST /api/tasks/{taskId}/memories/{memoryId}`. 이미 연결되어 있으면 변경하지 않고 같은 응답을 반환한다. 두 대상이 서로 다른 워크스페이스에 속하면 400 `CONTEXT_CROSS_WORKSPACE_LINK_NOT_ALLOWED`로 응답한다. |
+| H068 | Product JSON | `DELETE /tasks/:taskId/memories/:memoryId` | `relation.UnlinkTaskMemory` | `CTX` | W | `implemented` (`MOM-0868`): target `DELETE /api/tasks/{taskId}/memories/{memoryId}`. 연결을 소프트 삭제한다. 해제할 연결이 없으면 404 `CONTEXT_LINK_NOT_FOUND`로 응답한다. 타깃 메모리가 존재하는지는 레거시와 동일하게 확인하지 않는다. |
+| H069 | Product JSON | `POST /tasks/:taskId/source-refs` | `relation.CreateTaskSourceRef` | `CTX` | W | `implemented` (`MOM-0868`): target `POST /api/tasks/{taskId}/source-refs`. source-ref 생성과 연결을 하나의 트랜잭션으로 처리한다. 레거시는 두 SQL 문을 트랜잭션 없이 실행한다. `content_hash`는 저장하지 않으며, 같은 주소를 두 번 첨부하면 레거시와 동일하게 행이 두 건 생성된다. |
+| H070 | Product JSON | `POST /tasks/:taskId/source-refs/:sourceRefId` | `relation.LinkTaskSourceRef` | `CTX` | W | `traced`: `MOM-0868` 범위에서 제외했다. 「웹 FE 사용 실태」 분류에서 웹 미호출이며, `momens-fe`의 `src/api/client.ts`에도 대응하는 메서드가 없다. 클라이언트가 소비할 일이 생기면 별도 이관 작업을 진행한다. |
+| H071 | Product JSON | `DELETE /tasks/:taskId/source-refs/:sourceRefId` | `relation.UnlinkTaskSourceRef` | `CTX` | W | `implemented` (`MOM-0868`): target `DELETE /api/tasks/{taskId}/source-refs/{sourceRefId}`. 연결만 소프트 삭제하고 source-ref 행은 삭제하지 않는다. H068과 같은 기준으로 해제 여부를 판정한다. |
 | H072 | Product JSON | `GET /tasks/:taskId/context` | `relation.TaskContext` | `CTX` | R | `implemented` (`MOM-0861`); memory·source-ref hydrate. 링크가 없을 때는 레거시 단건 응답의 `null` 대신 빈 배열로 정규화. hydrate는 대상 memory/source-ref의 workspace가 relation workspace와 같은지도 확인한다(레거시보다 방어적) |
 | H073 | Product JSON | `GET /decisions/:decisionId` | `decision.Get` | `DEC` | R | `traced`; 웹 미호출. 구현 작업 미생성 |
 | H074 | Product JSON | `PATCH /blockers/:blockerId/resolve` | `blocker.Resolve` | `BLK` | W | `traced`; projection 동반 |

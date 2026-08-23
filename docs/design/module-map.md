@@ -452,8 +452,10 @@ outbox_events insert 1건`)은 `SignalActionExecutor`가 소유하고, facade(`S
 - source connection lifecycle, source credentials custody
 - provider install/callback, sync states
 - source refs verify
-- dev 전용 `source_refs` 쓰기 public API `DevSourceRefWriter`(`@DevOnly`). `signal`의 dev Signal
-  생성 쓰기 경로가 호출자 트랜잭션에 합류시켜 사용한다([설계](signal-push-demo-design.md) 11.2절).
+- 운영 `source_refs` 쓰기 public API `SourceRefWriter`. 사용자가 태스크에 붙여넣은 주소를 source_ref
+  한 건으로 저장한다(`MOM-0868`).
+- dev 전용 `source_refs` 쓰기 public API `DevSourceRefWriter`(`@DevOnly`). `signal` 모듈의 dev
+  Signal 생성 경로에서 호출자의 트랜잭션에 참여시켜 사용한다([설계](signal-push-demo-design.md) 11.2절).
 
 외부 데이터 ingest·curation은 `momens-worker` 책임이다. `source` 모듈은 API 서버가 소유하는
 연결/토큰/참조 검증 계약만 담당한다.
@@ -466,10 +468,15 @@ outbox_events insert 1건`)은 `SignalActionExecutor`가 소유하고, facade(`S
 - task context API, memory linked-tasks reverse lookup
 - entity_relations
 
-여러 도메인을 가로지르는 얇은 연결 capability다. 도메인 정책을 소유하지 않고 연결 자체만 읽는다.
+여러 도메인에 걸쳐있는 얇은 연결 capability다. 도메인 정책을 소유하지 않고 연결에 대해서만 읽기 작업과
+쓰기 작업을 수행한다.
 
-현재 사실: `EntityRelationReader`가 태스크에 연결된 source_ref 식별자 목록과 개수를 돌려준다
-(`from_entity_type='TASK'`, `to_entity_type='SOURCE_OBJECT'`, `relation_type='LINKED_TO'`).
+현재 사실: `EntityRelationReader`는 태스크에 연결된 source_ref 식별자 목록과 개수를 반환하고,
+`EntityRelationWriter`는 연결을 생성하고(`MOM-0869`) 해제한다(`MOM-0868`). 연결 조건은
+`from_entity_type='TASK'`, `to_entity_type='SOURCE_OBJECT'`, `relation_type='LINKED_TO'`이며, 연결
+생성에 사용하는 값은 public API인 `EntityType`과 `RelationType`에 정의한다. 두 엔티티가 같은
+워크스페이스에 속하는지는 해당 모듈에서 확인하지 않는다. 다른 도메인의 워크스페이스를 조회하려면 해당
+모듈에 의존해야 하므로 조합을 담당하는 `web` 모듈에서 확인한다.
 식별자로 본문을 채우는 hydrate는 `source`의 public API로 소비하는 쪽이 한다. `entity_relations`는
 레거시가 소유하는 외부 테이블이라 읽기 전용이고, local/test는 미러를 쓴다([데이터](../rules/persistence.md)).
 
