@@ -29,6 +29,7 @@ import works.momens.server.project.BoardTask;
 import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.ProjectSnapshot;
+import works.momens.server.project.TaskProgressReader;
 import works.momens.server.project.TaskReader;
 import works.momens.server.signal.SignalDigestReader;
 import works.momens.server.signal.SignalListService;
@@ -49,6 +50,7 @@ class ProjectBriefServiceTest {
   @Mock private SignalListService signalListService;
   @Mock private SignalDigestReader signalDigestReader;
   @Mock private TaskReader taskReader;
+  @Mock private TaskProgressReader taskProgressReader;
   private ProjectBriefService projectBriefService;
 
   private static final UUID PROJECT_ID = UUID.randomUUID();
@@ -72,6 +74,7 @@ class ProjectBriefServiceTest {
             signalListService,
             signalDigestReader,
             taskReader,
+            taskProgressReader,
             new MobileClock(FIXED_CLOCK));
   }
 
@@ -102,7 +105,7 @@ class ProjectBriefServiceTest {
     UUID signalId = UUID.randomUUID();
     UUID taskId = UUID.randomUUID();
     when(projectReader.findSnapshot(PROJECT_ID)).thenReturn(Optional.of(snapshot));
-    when(projectReader.progressOf(PROJECT_ID)).thenReturn(OptionalInt.of(64));
+    when(taskProgressReader.progressOf(PROJECT_ID)).thenReturn(OptionalInt.of(64));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
     // change도 all 개수에 포함되고, 칩과 items에도 나온다.
     when(signalListService.countByCreatedRange(PROJECT_ID, CALLER_ID, TODAY_FROM, TODAY_TO))
@@ -126,7 +129,7 @@ class ProjectBriefServiceTest {
     MobileBrief brief = projectBriefService.getBrief(PROJECT_ID, CALLER_ID);
 
     assertThat(brief.project()).isEqualTo(snapshot);
-    // 진행률은 project 모듈이 계산한 값을 그대로 싣는다.
+    // 진행률은 project 모듈의 task 경계가 계산한 값을 그대로 싣는다.
     assertThat(brief.progress()).isEqualTo(64);
     // All이 맨 앞(전체 12), 나머지는 라벨 글자수 오름차순과 알파벳순(Risk, Change, Decision, Question).
     assertThat(brief.filters())
@@ -334,7 +337,7 @@ class ProjectBriefServiceTest {
 
   private void stubBriefBase() {
     when(projectReader.findSnapshot(PROJECT_ID)).thenReturn(Optional.of(snapshot()));
-    lenient().when(projectReader.progressOf(PROJECT_ID)).thenReturn(OptionalInt.of(64));
+    lenient().when(taskProgressReader.progressOf(PROJECT_ID)).thenReturn(OptionalInt.of(64));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
     lenient()
         .when(signalListService.countByCreatedRange(PROJECT_ID, CALLER_ID, TODAY_FROM, TODAY_TO))

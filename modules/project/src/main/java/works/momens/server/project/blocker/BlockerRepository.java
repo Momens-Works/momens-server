@@ -1,4 +1,4 @@
-package works.momens.server.project.internal;
+package works.momens.server.project.blocker;
 
 import java.util.List;
 import java.util.UUID;

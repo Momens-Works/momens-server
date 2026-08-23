@@ -36,7 +36,7 @@ class ProjectCreatorImpl implements ProjectCreator {
 
   private final ProjectRepository projectRepository;
   private final ProjectOwnerRepository projectOwnerRepository;
-  private final OwnerMembershipChecker ownerMembershipChecker;
+  private final ProjectOwnerMembershipChecker ownerMembershipChecker;
   private final LabelAllocator labelAllocator;
 
   @Override

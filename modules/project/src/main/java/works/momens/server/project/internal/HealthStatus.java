@@ -3,14 +3,12 @@ package works.momens.server.project.internal;
 import java.util.Optional;
 
 /**
- * 프로젝트와 마일스톤의 {@code health_status} 값입니다.
+ * 프로젝트의 {@code health_status} 값입니다.
  *
- * <p>저장할 수 있는 값은 {@code projects.health_status}와 {@code milestones.health_status}의 CHECK 제약에서 허용하는
- * 다섯 가지 값과 같습니다. 두 테이블의 허용값이 같고 레거시에서도 하나의 상수 집합을 함께 사용하므로 enum도 하나만 정의합니다. 허용값을 추가하거나 제거할 때는 두
- * 테이블의 마이그레이션과 이 enum을 함께 변경해야 합니다.
+ * <p>저장할 수 있는 값은 {@code projects.health_status}의 CHECK 제약에서 허용하는 다섯 가지 값과 같습니다. milestone도 현재 같은
+ * 문자열 집합을 사용하지만 별도 하위 도메인이므로 자기 경계 안에서 독립적으로 관리합니다.
  *
- * <p>기본값은 테이블마다 다릅니다. 프로젝트는 {@code open}, 마일스톤은 {@code planned}를 사용합니다. 기본값은 이 enum이 아니라 각 엔티티의
- * 생성자에서 결정합니다.
+ * <p>프로젝트 기본값은 {@code open}이며 엔티티 생성자에서 결정합니다.
  *
  * <p>enum 상수 이름과 DB 저장값이 다르므로 {@code value}를 별도로 관리합니다. {@code name()}을 저장값으로 사용하면 enum 상수 이름을 변경할
  * 때 DB에 저장되는 값도 함께 달라질 수 있습니다.

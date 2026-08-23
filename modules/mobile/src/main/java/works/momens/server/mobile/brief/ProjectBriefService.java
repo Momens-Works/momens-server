@@ -18,6 +18,7 @@ import works.momens.server.project.BoardTask;
 import works.momens.server.project.ProjectErrorCode;
 import works.momens.server.project.ProjectReader;
 import works.momens.server.project.ProjectSnapshot;
+import works.momens.server.project.TaskProgressReader;
 import works.momens.server.project.TaskReader;
 import works.momens.server.signal.SignalDigestReader;
 import works.momens.server.signal.SignalListService;
@@ -79,6 +80,7 @@ class ProjectBriefService {
   private final SignalListService signalListService;
   private final SignalDigestReader signalDigestReader;
   private final TaskReader taskReader;
+  private final TaskProgressReader taskProgressReader;
   private final MobileClock mobileClock;
 
   @Transactional(readOnly = true)
@@ -95,9 +97,9 @@ class ProjectBriefService {
       throw new BusinessException(
           CommonErrorCode.AUTH_FORBIDDEN, Map.of("project_id", projectId.toString()));
     }
-    // 진행률 계산 책임은 project 모듈에 있다. 여기서는 계산된 값을 그대로 사용한다.
+    // 진행률 계산 책임은 project Gradle 모듈 안의 task 경계에 있다. 여기서는 계산된 값을 그대로 사용한다.
     int progress =
-        projectReader
+        taskProgressReader
             .progressOf(projectId)
             .orElseThrow(
                 () ->

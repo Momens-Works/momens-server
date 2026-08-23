@@ -1,4 +1,4 @@
-package works.momens.server.project.internal;
+package works.momens.server.project.blocker;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

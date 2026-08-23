@@ -13,9 +13,11 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.BoardTask;
+import works.momens.server.project.ProjectReader;
 import works.momens.server.project.ProjectSeedSql;
 import works.momens.server.project.TaskDetail;
 import works.momens.server.project.TaskReader;
@@ -37,6 +39,7 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   @Autowired private TaskReader taskReader;
   @Autowired private TaskRepository taskRepository;
   @Autowired private TestEntityManager entityManager;
+  @MockitoBean private ProjectReader projectReader;
 
   @Test
   void listTasksByStatusReturnsOnlyGivenStatuses() {

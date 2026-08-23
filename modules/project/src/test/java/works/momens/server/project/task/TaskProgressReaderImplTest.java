@@ -1,15 +1,12 @@
-package works.momens.server.project.internal;
+package works.momens.server.project.task;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
@@ -19,7 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import works.momens.server.project.TaskReader;
+import works.momens.server.project.ProjectReader;
 import works.momens.server.project.TaskStatus;
 
 /**
@@ -30,27 +27,27 @@ import works.momens.server.project.TaskStatus;
  * 제약).
  */
 @ExtendWith(MockitoExtension.class)
-class ProjectReaderImplTest {
+class TaskProgressReaderImplTest {
 
   private static final UUID PROJECT_ID = UUID.randomUUID();
 
-  @Mock private ProjectRepository projectRepository;
-  @Mock private TaskReader taskReader;
-  @InjectMocks private ProjectReaderImpl projectReader;
+  @Mock private ProjectReader projectReader;
+  @Mock private TaskRepository taskRepository;
+  @InjectMocks private TaskProgressReaderImpl taskProgressReader;
 
   @Test
   void progressOfCountsDoneAgainstEveryStatusExceptCancelled() {
     liveProject();
-    when(taskReader.countByStatus(eq(PROJECT_ID), any())).thenReturn(Map.of());
+    when(taskRepository.countByStatus(eq(PROJECT_ID), any())).thenReturn(List.of());
 
-    projectReader.progressOf(PROJECT_ID);
+    taskProgressReader.progressOf(PROJECT_ID);
 
     // cancelled를 조회 대상에 넣지 않아서 분모에서 빠진다. 이 단언이 그 설계 의도를 고정한다.
     // 상태가 추가되면 PROGRESS_STATUSES도 함께 변경되어 이 테스트가 실패한다.
     // 새 상태가 계산 대상에서 빠지는 것을 바로 확인할 수 있으므로,
     // 분모에 포함할지 결정한 뒤 기대값을 수정한다.
     ArgumentCaptor<List<String>> statuses = ArgumentCaptor.captor();
-    verify(taskReader).countByStatus(eq(PROJECT_ID), statuses.capture());
+    verify(taskRepository).countByStatus(eq(PROJECT_ID), statuses.capture());
     assertThat(statuses.getValue()).containsExactly("backlog", "todo", "in_progress", "done");
     assertThat(statuses.getValue()).doesNotContain(TaskStatus.CANCELLED.value());
   }
@@ -60,7 +57,7 @@ class ProjectReaderImplTest {
     liveProject();
     stubTasks(2, 81);
 
-    assertThat(projectReader.progressOf(PROJECT_ID)).hasValue(2);
+    assertThat(taskProgressReader.progressOf(PROJECT_ID)).hasValue(2);
   }
 
   @Test
@@ -68,7 +65,7 @@ class ProjectReaderImplTest {
     liveProject();
     stubTasks(5, 0);
 
-    assertThat(projectReader.progressOf(PROJECT_ID)).hasValue(100);
+    assertThat(taskProgressReader.progressOf(PROJECT_ID)).hasValue(100);
   }
 
   @Test
@@ -77,39 +74,37 @@ class ProjectReaderImplTest {
     // 199/200은 99.5라 반올림하면 100이 된다. 미완료가 있는데 100을 내리지 않도록 버린다.
     stubTasks(199, 1);
 
-    assertThat(projectReader.progressOf(PROJECT_ID)).hasValue(99);
+    assertThat(taskProgressReader.progressOf(PROJECT_ID)).hasValue(99);
   }
 
   @Test
   void progressOfIsZeroForProjectWithoutTasks() {
     liveProject();
-    when(taskReader.countByStatus(eq(PROJECT_ID), any())).thenReturn(Map.of());
+    when(taskRepository.countByStatus(eq(PROJECT_ID), any())).thenReturn(List.of());
 
-    assertThat(projectReader.progressOf(PROJECT_ID)).hasValue(0);
+    assertThat(taskProgressReader.progressOf(PROJECT_ID)).hasValue(0);
   }
 
   @Test
   void progressOfIsEmptyForMissingProjectAndDoesNotReadTasks() {
-    when(projectRepository.findByIdAndDeletedAtIsNull(PROJECT_ID)).thenReturn(Optional.empty());
+    when(projectReader.workspaceIdOf(PROJECT_ID)).thenReturn(Optional.empty());
 
-    assertThat(projectReader.progressOf(PROJECT_ID)).isEqualTo(OptionalInt.empty());
-    verifyNoInteractions(taskReader);
+    assertThat(taskProgressReader.progressOf(PROJECT_ID)).isEqualTo(OptionalInt.empty());
   }
 
   private void liveProject() {
-    when(projectRepository.findByIdAndDeletedAtIsNull(PROJECT_ID))
-        .thenReturn(Optional.of(Project.builder().name("Q2 Activation Readiness").build()));
+    when(projectReader.workspaceIdOf(PROJECT_ID)).thenReturn(Optional.of(UUID.randomUUID()));
   }
 
   private void stubTasks(int done, int notDone) {
-    // 개수가 0인 상태는 집계 결과에 없다. countByStatus 계약과 같게 만든다.
-    Map<String, Long> counts = new HashMap<>();
+    // 개수가 0인 상태는 집계 결과에 없다. repository 계약과 같게 만든다.
+    List<StatusCount> counts = new java.util.ArrayList<>();
     if (done > 0) {
-      counts.put(TaskStatus.DONE.value(), (long) done);
+      counts.add(new StatusCount(TaskStatus.DONE.value(), done));
     }
     if (notDone > 0) {
-      counts.put(TaskStatus.TODO.value(), (long) notDone);
+      counts.add(new StatusCount(TaskStatus.TODO.value(), notDone));
     }
-    when(taskReader.countByStatus(eq(PROJECT_ID), any())).thenReturn(counts);
+    when(taskRepository.countByStatus(eq(PROJECT_ID), any())).thenReturn(counts);
   }
 }

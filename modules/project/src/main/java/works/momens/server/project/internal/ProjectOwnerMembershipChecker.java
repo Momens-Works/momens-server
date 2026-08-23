@@ -13,16 +13,15 @@ import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceMembership;
 
 /**
- * 프로젝트와 마일스톤을 생성할 때 소유자 목록을 검증하는 공통 도구입니다.
+ * 프로젝트를 생성할 때 소유자 목록을 검증합니다.
  *
- * <p>두 생성 경로에는 동일한 소유자 검증 규칙이 적용됩니다. 특히 중복된 사용자 식별자를 거부하는 동작은 코드만으로 의도를 파악하기 어렵습니다. 이 규칙을 두 구현에 나누어
- * 두면 한쪽만 변경되어도 차이를 발견하기 어려우므로 한곳에서 관리합니다.
+ * <p>milestone도 현재 같은 레거시 검증 규칙을 사용하지만 별도 하위 도메인이므로 자기 경계 안에서 독립적으로 관리합니다.
  *
  * <p>워크스페이스 존재 여부와 요청자의 권한은 확인하지 않습니다. 해당 검증은 {@code :web} 모듈에서 담당합니다.
  */
 @Component
 @RequiredArgsConstructor
-class OwnerMembershipChecker {
+class ProjectOwnerMembershipChecker {
 
   private static final String FIELD_OWNER_USER_IDS = "owner_user_ids";
 
