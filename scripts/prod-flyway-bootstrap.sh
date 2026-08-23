@@ -15,7 +15,7 @@
 #
 # 사용법:
 #   prod-flyway-bootstrap.sh --generate [출력파일]   심을 INSERT 문을 만든다
-#   FLYWAY_PASSWORD=... prod-flyway-bootstrap.sh --verify <JDBC URL> <user>
+#   PGPASSWORD=... prod-flyway-bootstrap.sh --verify <libpq URL>
 #                                                   기존 이력과 체크섬이 같은지 대조한다
 #
 # **산출 기준은 실제로 배포되는 커밋이다.** 미러성 파일은 계속 늘고 있으므로, 릴리스 대상 커밋을
@@ -217,13 +217,18 @@ generate() {
 # 기존 Flyway 이력(dev 등)과 체크섬이 같은지 대조한다. CLI 와 앱이 같은 값을 내는지 확인하는
 # 용도이며, 다르면 부트스트랩 후 prod 가 checksum mismatch 로 기동에 실패한다.
 #
-# 비밀번호는 위치 인자가 아니라 FLYWAY_PASSWORD 환경변수로 받는다. 위치 인자는 ps 출력과 셸
-# 히스토리에 남는다.
+# 대상 DB 의 flyway_schema_history 를 psql 로 직접 읽는다. `flyway info -outputType=json` 은
+# 12.4.0 기준으로 checksum 필드를 내보내지 않아(실측 확인) 쓸 수 없다.
+#
+# 접속 정보는 libpq URL 로 받고 비밀번호는 PGPASSWORD 환경변수로 받는다. 위치 인자는 ps 출력과
+# 셸 히스토리에 남는다.
+#
+#   PGPASSWORD=... prod-flyway-bootstrap.sh --verify 'postgres://user@host:5432/db?sslmode=require'
 verify() {
-    local url="$1" user="$2" sql_dir count
+    local url="$1" sql_dir count
 
-    [[ -n "${FLYWAY_PASSWORD:-}" ]] || {
-        echo "FLYWAY_PASSWORD 환경변수가 필요합니다." >&2
+    [[ -n "${PGPASSWORD:-}" ]] || {
+        echo "PGPASSWORD 환경변수가 필요합니다." >&2
         return 2
     }
 
@@ -239,14 +244,17 @@ verify() {
                    where version is not null and checksum is not null" \
         | LC_ALL=C sort -t'|' -k1,1 > "$work_dir/cli.txt"
 
-    # jq 로 파싱한다. grep+paste 는 version 과 checksum 이 항상 쌍으로 이 순서로 나온다는 가정에
-    # 기대는데, checksum 이 없는 항목(BASELINE 등)이 하나라도 섞이면 짝이 밀려 조용히 틀린다.
-    docker run --rm -e FLYWAY_PASSWORD "flyway/flyway:$flyway_version" \
-        -url="$url" -user="$user" info -outputType=json \
-        | jq -r '.migrations[]
-                 | select(.version != null and .version != "" and .checksum != null)
-                 | "\(.version)|\(.checksum)"' \
+    docker run --rm -e PGPASSWORD pgvector/pgvector:pg16 \
+        psql "$url" -Atc "select version || '|' || checksum from flyway_schema_history
+                          where version is not null and checksum is not null" \
         | LC_ALL=C sort -t'|' -k1,1 > "$work_dir/target.txt"
+
+    local target_rows
+    target_rows="$(grep -c . "$work_dir/target.txt" || true)"
+    [[ "$target_rows" -gt 0 ]] || {
+        echo "대상 DB 에서 flyway_schema_history 를 읽지 못했습니다." >&2
+        return 1
+    }
 
     local mismatch only_cli only_target unverified_seeds failed=0
     mismatch="$(join -t'|' "$work_dir/cli.txt" "$work_dir/target.txt" \
@@ -264,8 +272,8 @@ verify() {
     # 일치"가 실제로 몇 건을 검증했는지 알 수 없다.
     only_cli="$(join -t'|' -v1 "$work_dir/cli.txt" "$work_dir/target.txt" | cut -d'|' -f1)"
     only_target="$(join -t'|' -v2 "$work_dir/cli.txt" "$work_dir/target.txt" | cut -d'|' -f1)"
-    [[ -n "$only_cli" ]] && { echo "대조 대상에 없어 검증되지 않음:" >&2; printf '%s\n' "$only_cli" | sed 's/^/  /' >&2; }
-    [[ -n "$only_target" ]] && { echo "이 리포에 없는데 대조 대상에는 있음:" >&2; printf '%s\n' "$only_target" | sed 's/^/  /' >&2; }
+    [[ -n "$only_cli" ]] && { echo "대상 DB 에 없어 검증되지 않음:" >&2; printf '%s\n' "$only_cli" | sed 's/^/  /' >&2; }
+    [[ -n "$only_target" ]] && { echo "이 리포에 없는데 대상 DB 에는 있음:" >&2; printf '%s\n' "$only_target" | sed 's/^/  /' >&2; }
 
     # 심기 목록에 든 항목이 검증되지 않았다면 그 체크섬이 prod 에 그대로 들어간다. 실패로 다룬다.
     unverified_seeds="$(comm -12 <(printf '%s\n' "$only_cli" | LC_ALL=C sort) \
@@ -274,7 +282,7 @@ verify() {
         failed=1
         echo "심기 목록에 있으나 검증되지 않은 항목입니다. 이 체크섬이 prod 로 들어갑니다:" >&2
         printf '%s\n' "$unverified_seeds" | sed 's/^/  /' >&2
-        echo "  대조 대상 DB 를 최신 마이그레이션까지 올린 뒤 다시 실행하세요." >&2
+        echo "  대상 DB 를 최신 마이그레이션까지 올린 뒤 다시 실행하세요." >&2
     fi
 
     [[ "$failed" -eq 0 ]] && echo "체크섬 전부 일치, 심기 목록 전건 검증됨" >&2
@@ -286,11 +294,11 @@ main() {
         --generate) shift; generate "${1:-}" ;;
         --verify)
             shift
-            [[ $# -eq 2 ]] || { echo "사용법: FLYWAY_PASSWORD=... $(basename "$0") --verify <JDBC URL> <user>" >&2; exit 2; }
-            verify "$1" "$2"
+            [[ $# -eq 1 ]] || { echo "사용법: PGPASSWORD=... $(basename "$0") --verify <libpq URL>" >&2; exit 2; }
+            verify "$1"
             ;;
         *)
-            echo "사용법: $(basename "$0") [--generate [출력파일] | --verify <JDBC URL> <user>]" >&2
+            echo "사용법: $(basename "$0") [--generate [출력파일] | --verify <libpq URL>]" >&2
             exit 2
             ;;
     esac
