@@ -34,9 +34,9 @@ import works.momens.server.minsu.draft.config.MinsuAsyncProperties;
 import works.momens.server.minsu.draft.generation.AsyncGenerationResult;
 import works.momens.server.minsu.draft.generation.GenerationOutcome;
 import works.momens.server.minsu.draft.json.MinsuJson;
-import works.momens.server.project.ApplyTaskDraftCommand;
-import works.momens.server.project.TaskDraftApplyResult;
-import works.momens.server.project.TaskDraftValues;
+import works.momens.server.project.task.ApplyTaskDraftCommand;
+import works.momens.server.project.task.TaskDraftApplyResult;
+import works.momens.server.project.task.TaskDraftValues;
 
 /**
  * claim·재시도·결과 기록을 실제 PostgreSQL로 검증한다(MOM-0819, 설계 7.1·8.2·8.5절).

@@ -17,9 +17,9 @@ import works.momens.server.minsu.Role;
 import works.momens.server.minsu.SignalTaskDraftGenerator;
 import works.momens.server.minsu.TaskDraft;
 import works.momens.server.outbox.OutboxAppender;
-import works.momens.server.project.CreateTaskCommand;
-import works.momens.server.project.CreatedTask;
-import works.momens.server.project.TaskCreator;
+import works.momens.server.project.task.CreateTaskCommand;
+import works.momens.server.project.task.CreatedTask;
+import works.momens.server.project.task.TaskCreator;
 import works.momens.server.signal.SignalActionResult;
 import works.momens.server.signal.SignalReader;
 

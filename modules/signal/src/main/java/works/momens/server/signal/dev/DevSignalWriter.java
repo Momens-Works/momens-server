@@ -14,8 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.config.DevOnly;
 import works.momens.server.outbox.OutboxAppender;
-import works.momens.server.project.ProjectErrorCode;
-import works.momens.server.project.ProjectReader;
+import works.momens.server.project.core.ProjectErrorCode;
+import works.momens.server.project.core.ProjectReader;
 import works.momens.server.signal.dev.dto.request.CreateDevSignalRequest;
 import works.momens.server.source.DevSourceRefWriter;
 

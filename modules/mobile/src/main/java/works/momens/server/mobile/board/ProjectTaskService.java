@@ -16,16 +16,17 @@ import works.momens.server.context.EntityRelationReader;
 import works.momens.server.minsu.DraftStatus;
 import works.momens.server.minsu.TaskDraftStatusReader;
 import works.momens.server.mobile.MobilePriority;
-import works.momens.server.project.BoardTask;
-import works.momens.server.project.CreateTaskCommand;
-import works.momens.server.project.CreatedTask;
-import works.momens.server.project.ProjectErrorCode;
-import works.momens.server.project.ProjectReader;
-import works.momens.server.project.TaskCreator;
-import works.momens.server.project.TaskDetail;
-import works.momens.server.project.TaskEditor;
-import works.momens.server.project.TaskReader;
-import works.momens.server.project.UpdateTaskCommand;
+import works.momens.server.project.core.ProjectErrorCode;
+import works.momens.server.project.core.ProjectReader;
+import works.momens.server.project.task.BoardTask;
+import works.momens.server.project.task.CreateTaskCommand;
+import works.momens.server.project.task.CreatedTask;
+import works.momens.server.project.task.TaskCreator;
+import works.momens.server.project.task.TaskDetail;
+import works.momens.server.project.task.TaskEditor;
+import works.momens.server.project.task.TaskErrorCode;
+import works.momens.server.project.task.TaskReader;
+import works.momens.server.project.task.UpdateTaskCommand;
 import works.momens.server.source.SourceRefReader;
 import works.momens.server.source.SourceRefView;
 import works.momens.server.user.UserProfile;
@@ -112,7 +113,7 @@ class ProjectTaskService {
             .orElseThrow(
                 () ->
                     new BusinessException(
-                        ProjectErrorCode.TASK_NOT_FOUND, Map.of("task_id", taskId.toString())));
+                        TaskErrorCode.TASK_NOT_FOUND, Map.of("task_id", taskId.toString())));
     return new MobileTaskDetailView(draftStatus, toMobileDetail(detail));
   }
 
@@ -156,7 +157,7 @@ class ProjectTaskService {
             .orElseThrow(
                 () ->
                     new BusinessException(
-                        ProjectErrorCode.TASK_NOT_FOUND, Map.of("task_id", taskId.toString())));
+                        TaskErrorCode.TASK_NOT_FOUND, Map.of("task_id", taskId.toString())));
     if (!workspaceAccess.isMember(workspaceId, userId)) {
       throw new BusinessException(
           CommonErrorCode.AUTH_FORBIDDEN, Map.of("task_id", taskId.toString()));

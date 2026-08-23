@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import works.momens.server.notification.fcm.FcmClient;
 import works.momens.server.notification.fcm.PushMessage;
 import works.momens.server.outbox.OutboxEventReader;
-import works.momens.server.project.ProjectReader;
+import works.momens.server.project.core.ProjectReader;
 import works.momens.server.signal.SignalReader;
 
 /**

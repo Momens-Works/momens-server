@@ -13,7 +13,8 @@ import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.mobile.board.dto.request.CreateTaskRequest;
 import works.momens.server.mobile.board.dto.response.TaskBoardResponse;
 import works.momens.server.mobile.board.dto.response.TaskCreateResponse;
-import works.momens.server.project.ProjectErrorCode;
+import works.momens.server.project.core.ProjectErrorCode;
+import works.momens.server.project.task.TaskErrorCode;
 
 /**
  * {@code /api/mobile/projects/{projectId}/tasks} OpenAPI 문서. Swagger 애너테이션을 컨트롤러 구현과
@@ -34,7 +35,7 @@ interface ProjectTaskControllerDocs {
       responseCode = "200",
       description = "보드 조회 성공. 다섯 그룹을 항상 포함하고, 비어 있으면 tasks는 빈 배열입니다.",
       content = @Content(schema = @Schema(implementation = TaskBoardResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, CommonErrorCode.class})
+  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
   TaskBoardResponse getBoard(
       @Parameter(description = "project 식별자") UUID projectId, Principal principal);
 
@@ -46,7 +47,7 @@ interface ProjectTaskControllerDocs {
       responseCode = "201",
       description = "생성 성공",
       content = @Content(schema = @Schema(implementation = TaskCreateResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, CommonErrorCode.class})
+  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
   TaskCreateResponse createTask(
       @Parameter(description = "project 식별자") UUID projectId,
       CreateTaskRequest request,

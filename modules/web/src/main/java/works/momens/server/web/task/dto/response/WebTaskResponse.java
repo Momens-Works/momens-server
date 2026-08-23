@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
-import works.momens.server.project.WebTaskDetail;
+import works.momens.server.project.task.WebTaskDetail;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "웹 태스크")

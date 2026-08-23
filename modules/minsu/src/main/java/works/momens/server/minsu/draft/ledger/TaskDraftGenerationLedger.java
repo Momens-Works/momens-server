@@ -17,10 +17,10 @@ import works.momens.server.minsu.draft.config.MinsuAsyncProperties.Execution;
 import works.momens.server.minsu.draft.generation.AsyncGenerationResult;
 import works.momens.server.minsu.draft.json.MinsuJson;
 import works.momens.server.outbox.OutboxAppender;
-import works.momens.server.project.ApplyTaskDraftCommand;
-import works.momens.server.project.TaskDraftApplier;
-import works.momens.server.project.TaskDraftApplyResult;
-import works.momens.server.project.TaskDraftValues;
+import works.momens.server.project.task.ApplyTaskDraftCommand;
+import works.momens.server.project.task.TaskDraftApplier;
+import works.momens.server.project.task.TaskDraftApplyResult;
+import works.momens.server.project.task.TaskDraftValues;
 
 /**
  * claim과 결과 기록 트랜잭션(docs/design/minsu-async-task-draft-design.md 7.1·8.2·8.5절).

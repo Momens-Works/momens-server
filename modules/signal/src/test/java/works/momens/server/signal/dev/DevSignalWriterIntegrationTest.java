@@ -26,7 +26,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.outbox.OutboxAppender;
-import works.momens.server.project.ProjectReader;
+import works.momens.server.project.core.ProjectReader;
 import works.momens.server.signal.dev.dto.request.CreateDevSignalRequest;
 import works.momens.server.source.DevSourceRefWriter;
 

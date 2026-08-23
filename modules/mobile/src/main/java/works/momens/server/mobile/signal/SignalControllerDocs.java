@@ -15,7 +15,8 @@ import works.momens.server.mobile.signal.dto.response.ConvertToTaskResponse;
 import works.momens.server.mobile.signal.dto.response.DismissResponse;
 import works.momens.server.mobile.signal.dto.response.SignalDetailResponse;
 import works.momens.server.mobile.signal.dto.response.SignalListResponse;
-import works.momens.server.project.ProjectErrorCode;
+import works.momens.server.project.core.ProjectErrorCode;
+import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.signal.SignalErrorCode;
 
 /**
@@ -36,7 +37,7 @@ interface SignalControllerDocs {
       responseCode = "200",
       description = "미처리 시그널 목록. 없으면 signals는 빈 배열입니다.",
       content = @Content(schema = @Schema(implementation = SignalListResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, CommonErrorCode.class})
+  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
   SignalListResponse listSignals(
       @Parameter(description = "project 식별자") UUID projectId, Principal principal);
 

@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.UUID;
 import works.momens.server.mobile.board.MobileTaskDetail;
-import works.momens.server.project.TaskDetail;
+import works.momens.server.project.task.TaskDetail;
 
 /**
  * {@code PATCH /api/mobile/tasks/{taskId}/checklist-items/{itemId}} 응답. 응답 형식은

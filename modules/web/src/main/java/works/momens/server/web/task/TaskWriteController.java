@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.CurrentUser;
-import works.momens.server.project.TaskUpdateDetail;
+import works.momens.server.project.task.TaskUpdateDetail;
 import works.momens.server.web.dto.response.WebMessageResponse;
 import works.momens.server.web.task.dto.request.CreateTaskUpdateRequest;
 import works.momens.server.web.task.dto.request.CreateWebTaskRequest;

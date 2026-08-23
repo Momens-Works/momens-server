@@ -18,8 +18,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
-import works.momens.server.project.ProjectErrorCode;
-import works.momens.server.project.ProjectReader;
+import works.momens.server.project.core.ProjectErrorCode;
+import works.momens.server.project.core.ProjectReader;
 import works.momens.server.signal.SignalDigestReader;
 import works.momens.server.workspace.WorkspaceAccess;
 

@@ -13,8 +13,8 @@ import works.momens.server.context.EntityType;
 import works.momens.server.context.RelationType;
 import works.momens.server.memory.ConfirmedMemoryReader;
 import works.momens.server.memory.MemoryErrorCode;
-import works.momens.server.project.ProjectErrorCode;
-import works.momens.server.project.TaskReader;
+import works.momens.server.project.task.TaskErrorCode;
+import works.momens.server.project.task.TaskReader;
 import works.momens.server.source.SourceRefWriter;
 import works.momens.server.web.WorkspaceAccessChecker;
 import works.momens.server.workspace.WorkspaceRole;
@@ -94,7 +94,7 @@ class TaskLinkService {
         .orElseThrow(
             () ->
                 new BusinessException(
-                    ProjectErrorCode.TASK_NOT_FOUND, Map.of("task_id", taskId.toString())))
+                    TaskErrorCode.TASK_NOT_FOUND, Map.of("task_id", taskId.toString())))
         .workspaceId();
   }
 
