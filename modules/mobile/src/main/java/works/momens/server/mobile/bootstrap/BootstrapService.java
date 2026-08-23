@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.mobile.bootstrap.BootstrapContext.AccessibleProject;
-import works.momens.server.project.ProjectReader;
+import works.momens.server.project.core.ProjectReader;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 import works.momens.server.workspace.UserWorkspaceMembership;

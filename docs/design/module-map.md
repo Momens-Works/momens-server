@@ -243,11 +243,14 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 내부는 도메인 하위 경계로 논리 분리했다(MOM-71·MOM-0887). `:project` Gradle 모듈은 프로젝트 운영
 capability의 물리 경계로 유지하고, 배포 단위도 나누지 않는다.
 
-- 프로젝트 코어는 `internal`, 태스크는 `task`, 마일스톤은 `milestone`, blocker는 `blocker`에 둔다.
-  뒤의 세 패키지는 Spring Modulith nested application module이다. decision은 아직 구현이 없어 경계를
-  선점하지 않는다.
-- 다른 Gradle 모듈에는 project 모듈 root의 공개 계약만 노출한다. 엔티티·repository·구현 도구는 각
-  하위 경계 안에 package-private로 닫는다.
+- 프로젝트 코어는 `core`, 태스크는 `task`, 마일스톤은 `milestone`, blocker는 `blocker`에 두고 네
+  패키지를 Spring Modulith named interface로 선언한다. 다른 상위 모듈은 nested application module을
+  직접 참조할 수 없으므로 외부 공개 계약이 필요한 이 경계에는 nested module을 사용하지 않는다.
+  decision은 아직 구현이 없어 경계를 선점하지 않는다.
+- 각 nested root에는 해당 경계의 공개 계약만 두고 구현은 `core.internal`, `task.internal`,
+  `milestone.internal`, `blocker.internal`에 둔다. `works.momens.server.project` 최상위 패키지는
+  namespace와 application module 선언만 소유하며 production Java 타입을 두지 않는다. 다른 Gradle
+  모듈과 project 내부의 다른 하위 도메인도 필요한 named interface의 root API만 참조한다.
 - project core는 nested module을 참조하지 않는다. 진행률은 task가 `TaskProgressReader`로 제공하고,
   task는 프로젝트 생존·workspace 조회에 `ProjectReader`, 마일스톤 소속 검증에 `MilestoneDirectory`를
   사용한다. milestone은 기본 소유자 조회에 `ProjectOwnerReader`를 사용한다. task repository가

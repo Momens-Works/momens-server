@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
-import works.momens.server.project.MilestoneDetail;
+import works.momens.server.project.milestone.MilestoneDetail;
 
 @Schema(description = "웹 마일스톤 응답입니다. 필드 구성은 레거시 마일스톤 응답과 동일합니다.")
 @JsonInclude(JsonInclude.Include.NON_NULL)

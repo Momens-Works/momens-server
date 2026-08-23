@@ -7,7 +7,7 @@ import java.util.UUID;
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
 import works.momens.server.mobile.brief.MobileBrief;
-import works.momens.server.project.ProjectSnapshot;
+import works.momens.server.project.core.ProjectSnapshot;
 
 /**
  * {@code GET /api/mobile/projects/{projectId}/brief} 응답. 응답 형식은 docs/spec/mobile-api.md 브리프 절을

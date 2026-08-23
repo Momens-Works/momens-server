@@ -2,9 +2,9 @@ package works.momens.server.minsu.draft.ledger;
 
 import java.util.ArrayList;
 import java.util.List;
-import works.momens.server.project.ApplyTaskDraftCommand;
-import works.momens.server.project.TaskDraftApplier;
-import works.momens.server.project.TaskDraftApplyResult;
+import works.momens.server.project.task.ApplyTaskDraftCommand;
+import works.momens.server.project.task.TaskDraftApplier;
+import works.momens.server.project.task.TaskDraftApplyResult;
 
 /**
  * 반영 결과를 지정하고 호출을 기록하는 {@code project} 반영 API 대역.

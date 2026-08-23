@@ -12,12 +12,13 @@ import works.momens.server.context.EntityRelationReader;
 import works.momens.server.context.TaskContextLinks;
 import works.momens.server.memory.ConfirmedMemoryDetail;
 import works.momens.server.memory.ConfirmedMemoryReader;
-import works.momens.server.project.ProjectErrorCode;
-import works.momens.server.project.ProjectReader;
-import works.momens.server.project.TaskReader;
-import works.momens.server.project.TaskUpdateDetail;
-import works.momens.server.project.TaskUpdateReader;
-import works.momens.server.project.WebTaskDetail;
+import works.momens.server.project.core.ProjectErrorCode;
+import works.momens.server.project.core.ProjectReader;
+import works.momens.server.project.task.TaskErrorCode;
+import works.momens.server.project.task.TaskReader;
+import works.momens.server.project.task.TaskUpdateDetail;
+import works.momens.server.project.task.TaskUpdateReader;
+import works.momens.server.project.task.WebTaskDetail;
 import works.momens.server.source.LegacySourceRefDetail;
 import works.momens.server.source.SourceRefReader;
 import works.momens.server.workspace.WorkspaceAccess;
@@ -77,7 +78,7 @@ class TaskReadService {
         .orElseThrow(
             () ->
                 new BusinessException(
-                    ProjectErrorCode.TASK_NOT_FOUND, Map.of("task_id", taskId.toString())));
+                    TaskErrorCode.TASK_NOT_FOUND, Map.of("task_id", taskId.toString())));
   }
 
   private void requireMember(UUID workspaceId, UUID userId) {

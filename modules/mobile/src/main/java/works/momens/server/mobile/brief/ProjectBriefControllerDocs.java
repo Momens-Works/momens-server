@@ -12,7 +12,8 @@ import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.mobile.brief.dto.response.BriefResponse;
 import works.momens.server.mobile.brief.dto.response.BriefSignalSummaryPageResponse;
-import works.momens.server.project.ProjectErrorCode;
+import works.momens.server.project.core.ProjectErrorCode;
+import works.momens.server.project.task.TaskErrorCode;
 
 /**
  * {@code /api/mobile/projects/{projectId}/brief} OpenAPI 문서. Swagger 애너테이션을 컨트롤러 구현과
@@ -35,7 +36,7 @@ interface ProjectBriefControllerDocs {
       responseCode = "200",
       description = "브리프 조회 성공",
       content = @Content(schema = @Schema(implementation = BriefResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, CommonErrorCode.class})
+  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
   BriefResponse getBrief(
       @Parameter(description = "project 식별자") UUID projectId, Principal principal);
 
@@ -51,7 +52,7 @@ interface ProjectBriefControllerDocs {
       responseCode = "200",
       description = "페이지 조회 성공",
       content = @Content(schema = @Schema(implementation = BriefSignalSummaryPageResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, CommonErrorCode.class})
+  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
   BriefSignalSummaryPageResponse getSignalSummaryPage(
       @Parameter(description = "project 식별자") UUID projectId,
       @Parameter(

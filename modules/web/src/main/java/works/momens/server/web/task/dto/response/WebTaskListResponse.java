@@ -2,7 +2,7 @@ package works.momens.server.web.task.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
-import works.momens.server.project.WebTaskDetail;
+import works.momens.server.project.task.WebTaskDetail;
 
 @Schema(description = "프로젝트 태스크 목록 응답")
 public record WebTaskListResponse(

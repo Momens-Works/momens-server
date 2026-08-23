@@ -27,8 +27,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import works.momens.server.auth.AccessTokenTestFactory;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
-import works.momens.server.project.TaskEditor;
-import works.momens.server.project.UpdateTaskCommand;
+import works.momens.server.project.task.TaskEditor;
+import works.momens.server.project.task.UpdateTaskCommand;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 

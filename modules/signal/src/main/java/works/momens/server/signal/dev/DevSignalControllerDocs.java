@@ -11,7 +11,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
-import works.momens.server.project.ProjectErrorCode;
+import works.momens.server.project.core.ProjectErrorCode;
+import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.signal.dev.dto.request.CreateDevSignalRequest;
 import works.momens.server.signal.dev.dto.response.CreateDevSignalResponse;
 
@@ -35,7 +36,7 @@ interface DevSignalControllerDocs {
       responseCode = "201",
       description = "생성됨. 생성된 Signal 식별자를 반환합니다.",
       content = @Content(schema = @Schema(implementation = CreateDevSignalResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, CommonErrorCode.class})
+  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
   CreateDevSignalResponse createSignal(
       @Parameter(description = "project 식별자") UUID projectId,
       @RequestBody(

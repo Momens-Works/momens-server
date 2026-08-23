@@ -27,16 +27,17 @@ import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.context.EntityRelationReader;
 import works.momens.server.minsu.DraftStatus;
 import works.momens.server.minsu.TaskDraftStatusReader;
-import works.momens.server.project.BoardTask;
-import works.momens.server.project.CreateTaskCommand;
-import works.momens.server.project.CreatedTask;
-import works.momens.server.project.ProjectErrorCode;
-import works.momens.server.project.ProjectReader;
-import works.momens.server.project.TaskCreator;
-import works.momens.server.project.TaskDetail;
-import works.momens.server.project.TaskEditor;
-import works.momens.server.project.TaskReader;
-import works.momens.server.project.UpdateTaskCommand;
+import works.momens.server.project.core.ProjectErrorCode;
+import works.momens.server.project.core.ProjectReader;
+import works.momens.server.project.task.BoardTask;
+import works.momens.server.project.task.CreateTaskCommand;
+import works.momens.server.project.task.CreatedTask;
+import works.momens.server.project.task.TaskCreator;
+import works.momens.server.project.task.TaskDetail;
+import works.momens.server.project.task.TaskEditor;
+import works.momens.server.project.task.TaskErrorCode;
+import works.momens.server.project.task.TaskReader;
+import works.momens.server.project.task.UpdateTaskCommand;
 import works.momens.server.source.SourceRefReader;
 import works.momens.server.source.SourceRefView;
 import works.momens.server.user.UserProfile;
@@ -216,7 +217,7 @@ class ProjectTaskServiceTest {
     assertThatThrownBy(() -> projectTaskService.getTaskDetail(TASK_ID, CALLER_ID))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
-        .isEqualTo(ProjectErrorCode.TASK_NOT_FOUND);
+        .isEqualTo(TaskErrorCode.TASK_NOT_FOUND);
   }
 
   @Test
@@ -375,7 +376,7 @@ class ProjectTaskServiceTest {
                     TASK_ID, CALLER_ID, "제목", "pm", null, "medium", "todo", null, List.of()))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
-        .isEqualTo(ProjectErrorCode.TASK_NOT_FOUND);
+        .isEqualTo(TaskErrorCode.TASK_NOT_FOUND);
   }
 
   @Test
@@ -424,7 +425,7 @@ class ProjectTaskServiceTest {
                 projectTaskService.toggleChecklistItem(TASK_ID, CALLER_ID, UUID.randomUUID(), true))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
-        .isEqualTo(ProjectErrorCode.TASK_NOT_FOUND);
+        .isEqualTo(TaskErrorCode.TASK_NOT_FOUND);
   }
 
   @Test

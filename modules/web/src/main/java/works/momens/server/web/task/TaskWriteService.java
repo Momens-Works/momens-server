@@ -5,9 +5,9 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import works.momens.server.project.TaskUpdateDetail;
-import works.momens.server.project.WebTaskDetail;
-import works.momens.server.project.WebTaskWriter;
+import works.momens.server.project.task.TaskUpdateDetail;
+import works.momens.server.project.task.WebTaskDetail;
+import works.momens.server.project.task.WebTaskWriter;
 
 @Service
 @RequiredArgsConstructor

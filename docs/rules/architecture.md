@@ -75,9 +75,11 @@ Gradle 논리 경로는 `:user`, `:auth`처럼 평면으로 유지합니다.
 ## Spring Modulith 적용
 
 - `ApplicationModules.of(Application.class).verify()` 테스트를 두고 CI에 포함합니다.
-- 모듈 root package를 public API 영역으로 보고, 다른 모듈의 `internal` package 참조를 금지합니다.
-- root package 외 하위 package를 외부 모듈에 공개하지 않습니다. 공개가 필요하면
-  `NamedInterface` 도입을 검토합니다.
+- application module의 root package를 public API 영역으로 보고, 다른 모듈의 `internal` package
+  참조를 금지합니다.
+- application module root 외 하위 package를 외부 모듈에 공개하지 않습니다. 하나의 Gradle 모듈 안에서
+  하위 도메인별 공개 API package가 필요하면 `NamedInterface`를 사용합니다. nested application
+  module은 다른 상위 모듈이 직접 참조할 수 없으므로 외부 공개 API 분리 수단으로 사용하지 않습니다.
 - 모듈 간 event 협력에는 persisted event publication registry를 사용합니다(fire-and-forget
   아님). registry 인프라(events-jpa 의존성, `event_publication` Flyway 마이그레이션,
   completion 설정)는 첫 application event 도입 시 함께 추가합니다([데이터](persistence.md)).

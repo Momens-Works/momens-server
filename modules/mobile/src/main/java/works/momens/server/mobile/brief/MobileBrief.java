@@ -2,7 +2,7 @@ package works.momens.server.mobile.brief;
 
 import java.util.List;
 import java.util.UUID;
-import works.momens.server.project.ProjectSnapshot;
+import works.momens.server.project.core.ProjectSnapshot;
 
 /**
  * 브리프 화면에 필요한 정보를 모아 반환하는 조합 결과입니다. 프로젝트 스냅샷, 진행률, 시그널 요약(문단, 타입별 개수, 최신순 첫 페이지), 현재 우선순위를 담습니다.

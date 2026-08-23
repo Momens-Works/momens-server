@@ -12,7 +12,8 @@ import works.momens.server.common.api.ApiExceptions;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.context.ContextErrorCode;
 import works.momens.server.memory.MemoryErrorCode;
-import works.momens.server.project.ProjectErrorCode;
+import works.momens.server.project.core.ProjectErrorCode;
+import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.web.dto.response.WebMessageResponse;
 import works.momens.server.web.task.dto.request.CreateTaskSourceRefRequest;
 import works.momens.server.web.task.dto.response.CreateTaskSourceRefResponse;
@@ -31,6 +32,7 @@ interface TaskLinkControllerDocs {
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
   @ApiExceptions({
     ProjectErrorCode.class,
+    TaskErrorCode.class,
     MemoryErrorCode.class,
     ContextErrorCode.class,
     CommonErrorCode.class
@@ -48,7 +50,12 @@ interface TaskLinkControllerDocs {
       responseCode = "200",
       description = "해제 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, ContextErrorCode.class, CommonErrorCode.class})
+  @ApiExceptions({
+    ProjectErrorCode.class,
+    TaskErrorCode.class,
+    ContextErrorCode.class,
+    CommonErrorCode.class
+  })
   WebMessageResponse unlinkTaskMemory(
       @Parameter(description = "태스크 식별자") UUID taskId,
       @Parameter(description = "메모리 식별자") UUID memoryId,
@@ -63,7 +70,7 @@ interface TaskLinkControllerDocs {
       responseCode = "201",
       description = "생성 성공",
       content = @Content(schema = @Schema(implementation = CreateTaskSourceRefResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, CommonErrorCode.class})
+  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
   CreateTaskSourceRefResponse createTaskSourceRef(
       @Parameter(description = "태스크 식별자") UUID taskId,
       CreateTaskSourceRefRequest request,
@@ -77,7 +84,12 @@ interface TaskLinkControllerDocs {
       responseCode = "200",
       description = "해제 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, ContextErrorCode.class, CommonErrorCode.class})
+  @ApiExceptions({
+    ProjectErrorCode.class,
+    TaskErrorCode.class,
+    ContextErrorCode.class,
+    CommonErrorCode.class
+  })
   WebMessageResponse unlinkTaskSourceRef(
       @Parameter(description = "태스크 식별자") UUID taskId,
       @Parameter(description = "source-ref 식별자") UUID sourceRefId,

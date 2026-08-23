@@ -3,7 +3,7 @@ package works.momens.server.mobile.board;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import works.momens.server.project.TaskDetail;
+import works.momens.server.project.task.TaskDetail;
 
 /**
  * 모바일 태스크 상세 조합 결과.

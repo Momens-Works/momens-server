@@ -29,8 +29,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import works.momens.server.project.TaskUpdateDetail;
-import works.momens.server.project.WebTaskDetail;
+import works.momens.server.project.task.TaskUpdateDetail;
+import works.momens.server.project.task.WebTaskDetail;
 
 @WebMvcTest(TaskWriteController.class)
 @AutoConfigureMockMvc(addFilters = false)

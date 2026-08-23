@@ -22,7 +22,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import works.momens.server.project.ProjectSnapshot;
+import works.momens.server.project.core.ProjectSnapshot;
 
 /**
  * 컨트롤러가 경로 변수와 쿼리 파라미터, Principal을 조합 서비스에 그대로 전달하고 명세(docs/spec/mobile-api.md)의 snake_case 응답

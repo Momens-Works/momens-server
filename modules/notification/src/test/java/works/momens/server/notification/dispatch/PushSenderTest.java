@@ -26,8 +26,8 @@ import works.momens.server.notification.fcm.FcmClient.FcmSendResult;
 import works.momens.server.notification.fcm.PushMessage;
 import works.momens.server.outbox.OutboxEventReader;
 import works.momens.server.outbox.OutboxEventView;
-import works.momens.server.project.ProjectReader;
-import works.momens.server.project.ProjectSnapshot;
+import works.momens.server.project.core.ProjectReader;
+import works.momens.server.project.core.ProjectSnapshot;
 import works.momens.server.signal.SignalReader;
 
 /** 발송 패스의 event 단위 hydrate, push 문구·data payload 계약(7절), hydrate 실패 종결을 검증합니다. */
