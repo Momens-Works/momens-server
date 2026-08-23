@@ -43,6 +43,12 @@ class TaskReaderImpl implements TaskReader {
     return taskRepository.findWorkspaceIdById(taskId);
   }
 
+  /**
+   * 웹 상세 조회입니다. 소프트 삭제된 태스크와 소속 프로젝트를 모두 제외합니다.
+   *
+   * <p>응답의 workspace는 태스크가 가진 값이 아니라 소속 프로젝트의 workspace를 기준으로 합니다. 레거시 웹 상세가 프로젝트를 조인해 workspace를
+   * 판정하므로 인가 기준도 같은 값을 씁니다.
+   */
   @Override
   @Transactional(readOnly = true)
   public Optional<WebTaskDetail> findWebDetail(UUID taskId) {
