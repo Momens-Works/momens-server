@@ -24,3 +24,4 @@
 | [0016](0016-user-identity-key-google-sub.md) | 사용자 신원 식별 키를 이메일에서 Google `sub`으로 전환 | Accepted |
 | [0017](0017-transitional-legacy-session-token-acceptance.md) | 전환기 레거시 `session_token` 한시 수용 | Accepted ([0003](0003-auth-session-transport-model.md)의 한시적 예외) |
 | [0018](0018-transitional-legacy-acceptance-of-new-access-token.md) | 전환기 레거시의 신규 access token 수용 | Accepted ([0003](0003-auth-session-transport-model.md)의 한시적 예외, [0017](0017-transitional-legacy-session-token-acceptance.md)의 반대 방향) |
+| [0019](0019-prod-schema-ownership-transfer.md) | prod 스키마 주도권을 서버로 이전 | Accepted |
