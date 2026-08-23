@@ -102,8 +102,8 @@ rg --files ../momens-api/cmd
   schema·enum·relation·projection과 호환된다는 증거가 있기 전까지 writer rollback을 보장하지 않는다.
 - aggregate별 writer는 한 시점에 하나만 둔다. REST, MCP tool, Slack action, webhook,
   background runtime을 함께 계산한다.
-- prod schema와 설정의 전역 release gate는 [prod 운영 준비 대장](../../prod-readiness-ledger.md)에서
-  확인한다. 이 게이트는 trace·local/dev 구현의 선행 조건이 아니다.
+- 자동 release gate는 [prod 운영 준비 대장](../../prod-readiness-ledger.md)의 prod 필수 설정만
+  검사한다. 스키마·writer·projection은 aggregate별 `cutover_ready` 증거다.
 
 ## 웹 FE 사용 실태
 
@@ -225,7 +225,7 @@ handler/service/repository를 뜻한다.
 | `SNP` | Product JSON 기본 규칙, workspace membership | read-only 합성; 여러 aggregate·relation 조회 | read routing rollback 가능. 응답 필드별 target owner와 N+1/latency 계약을 먼저 고정. `MOM-0848` 후속 |
 | `PRJ` | Product JSON 기본 규칙과 legacy 세션. H038·H047은 member, H037·H048~H049는 workspace admin/owner | `projects`, `project_owners`; projection 없음. 워크스페이스 생성(H019)도 `projects`와 `project_owners`에 쓴다. | `MOM-0845`와 legacy 전용 field/owner/progress 정책 확인. read routing rollback, write rollback 미확정 |
 | `MIL` | Product JSON 기본 규칙, project workspace membership | `milestones`, `milestone_owners`; projection 없음 | target entity와 read 기반 구현 완료(`MOM-0858`), endpoint는 없음. `milestones`에 `workspace_id`가 없어 조회가 `projects`를 조인하고, 소유 모듈이 `project`인 이유도 이것이다. read routing rollback, write rollback 미확정 |
-| `TSK` | Product JSON 기본 규칙, project workspace membership | 현재 legacy REST·MCP·Slack writer가 `tasks`, `task_updates`를 변경. target에는 모바일 생성·수정·체크리스트, Signal 전환, Minsu background draft 반영 writer가 구현되어 같은 `tasks`를 사용하며 task write는 retrieval projection 동반 | `MOM-0773`, `MOM-0840` prod schema, worker outbox consumer와 task projector가 `cutover_ready` gate. target writer의 prod 활성화 증거는 없으며 aggregate 전체를 한 번에 전환. write rollback 미확정 |
+| `TSK` | Product JSON 기본 규칙, project workspace membership | 현재 legacy REST·MCP·Slack writer가 `tasks`, `task_updates`를 변경. target에는 모바일 생성·수정·체크리스트, Signal 전환, Minsu background draft 반영 writer가 구현되어 같은 `tasks`를 사용하며 task write는 retrieval projection 동반 | `MOM-0773`, worker outbox consumer와 task projector가 `cutover_ready` gate. target writer의 prod 활성화 증거는 없으며 aggregate 전체를 한 번에 전환. write rollback 미확정 |
 | `DEC` | Product JSON 기본 규칙, project workspace membership | `decisions`; write는 retrieval projection 동반 | 전용 legacy test가 없어 characterization 우선. worker decision projector가 write gate |
 | `BLK` | Product JSON 기본 규칙과 legacy 세션. H039·H059·H066·H074는 member, H075 삭제는 admin/owner | `blockers`; write는 retrieval projection 동반 | 전용 legacy test가 없어 characterization 우선. worker blocker projector가 write gate |
 | `SRC` | Product JSON 또는 provider callback 계약. H040·H076·H081·H096은 member, H041·H077~H080은 admin/owner, H082 callback은 공개 transport + signed state | source connection/credential/sync state/source-ref writer; GitHub·Slack·Notion·Figma | provider redirect URI·secret·webhook·worker 호환 필요. `MOM-0774`가 source_ref 관계 계약에 영향 |
@@ -262,7 +262,7 @@ retrieval에는 해당 테이블을 참조하는 코드가 없다.
 `momens-server`에는 모바일 수동 생성·수정·체크리스트 변경, Signal의 convert-to-task, Minsu
 background draft 반영이 구현되어 있다. 이 경로들은 prod에서 활성화되면 레거시가 소유한 같은
 `tasks` aggregate를 변경한다. 다만 코드 존재는 `implemented` 증거일 뿐 현재 prod writer라는
-증거가 아니며, `MOM-0840`의 task 관련 prod schema도 아직 release gate로 남아 있다.
+증거가 아니다.
 
 따라서 `users`의 ADR-0016 예외를 `tasks`에 확장하지 않는다. target writer를 활성화하기 전 prod
 schema·routing·실제 client traffic을 확인하고, legacy REST·MCP·Slack writer를 포함한 aggregate
@@ -382,7 +382,7 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 
 | Profile | contract·auth/RBAC | legacy trace·schema·test | target·writer/projection/external | prod/client gate | rollback |
 | --- | --- | --- | --- | --- | --- |
-| `N-MIG` | 프로세스 startup에서 SQL 파일을 lexical order로 실행하고 파일별 transaction·version row·advisory lock을 보장. 최종 사용자 auth는 N/A, 배포 runtime의 migration DB 권한이 실행 권한 | `bootstrap/app.go` → `platform/db/migrations.go` → `migrations/*.sql`; `schema_migrations`; `platform/db/migrations_integration_test.go` | local/test는 target module Flyway, prod DDL writer는 부트스트랩까지 `momens-api`; 최종 owner는 momens-server로 확정(ADR-0019) | prod는 legacy migration owner와 [prod 운영 준비 대장](../../prod-readiness-ledger.md) 확인. 외부 client gate는 N/A, deploy/startup gate만 존재 | 실패한 파일 transaction은 rollback되지만 이미 적용된 이전 파일의 down migration은 없음. 배포 rollback과 schema rollback을 분리하고 객체별 보상 절차 없이는 retire 금지 |
+| `N-MIG` | 프로세스 startup에서 SQL 파일을 lexical order로 실행하고 파일별 transaction·version row·advisory lock을 보장. 최종 사용자 auth는 N/A, 배포 runtime의 migration DB 권한이 실행 권한 | `bootstrap/app.go` → `platform/db/migrations.go` → `migrations/*.sql`; `schema_migrations`; `platform/db/migrations_integration_test.go` | local/test는 target module Flyway, prod DDL writer는 부트스트랩까지 `momens-api`; 최종 owner는 momens-server로 확정(ADR-0019) | prod DDL 소유권·부트스트랩은 [ADR-0019](../../adr/0019-prod-schema-ownership-transfer.md)와 [주도권 이전 설계](../prod-schema-ownership-transfer.md), 부트스트랩 전 수기 릴리스 의무는 [prod 운영 준비 대장](../../prod-readiness-ledger.md)에서 확인. 외부 client gate는 N/A, deploy/startup gate만 존재 | 실패한 파일 transaction은 rollback되지만 이미 적용된 이전 파일의 down migration은 없음. 배포 rollback과 schema rollback을 분리하고 객체별 보상 절차 없이는 retire 금지 |
 | `N-BACKFILL` | startup goroutine이 live row의 NULL `search_tokens`를 batch로 채우며 조건부 UPDATE로 재실행·경합에 안전. 최종 사용자 auth는 N/A, runtime DB 권한으로 실행 | `bootstrap/app.go` → `retrieval/backfill.go`·`tokenizer.go`; `retrieval_documents.search_tokens`; `retrieval/backfill_test.go`, `retrieval/tokenizer_test.go` | `retrieval_documents.search_tokens` writer; target `momens-worker`/retrieval projection owner 미결, 외부 gateway 없음 | prod gate는 owner·재처리 계약과 NULL backlog 관측. client gate는 N/A | goroutine을 중단해 rollback하며 이미 계산된 파생 token은 유지 가능. tokenizer 계약이 바뀌면 전체 재계산 절차가 필요 |
 | `N-EMBED` | startup 뒤 즉시 stale row를 drain하고 ticker로 반복. text race guard와 model/dimension 검증을 사용. 최종 사용자 auth는 N/A, Vertex ADC와 runtime DB 권한으로 실행 | `bootstrap/app.go` → `retrieval/embedder.go` → `platform/llm/embeddings.go`; `retrieval_documents.embedding`, `embedding_model`, `text_hash`; `retrieval/embedder_test.go`, `platform/llm/embeddings_test.go` | embedding writer, Vertex AI; target `momens-worker`/retrieval owner 미결 | prod gate는 owner 단일화, model·dimension·ADC·비용·지연·중복 실행 관측. client gate는 N/A | loop를 끄고 lexical 검색으로 후퇴하며 기존 vector는 유지. owner/model 전환 시 stale 판정과 재embedding 가능성을 확인 |
 | `N-SLK` | H013의 Slack signature·retry·3초 ack 계약을 공유하고 app mention을 goroutine에서 answer/post. Slack 서명과 구성된 bot identity가 권한 경계 | `slackbot/handler.go` → `answerAndPost`, `grounded.go`, `action.go` → `minsu/*`; `slackbot/handler_test.go`, `grounded_test.go`, `action_test.go` | Slack API·retrieval·Vertex, action이면 task writer; target `minsu` + `project` public API | signing secret·bot identity·event URL·timeout·실패 관측과 task projection 준비. Slack event URL이 client gate | event URL을 legacy로 되돌리고 신규 유입을 중단. 현재 child goroutine drain 관리가 없으므로 최대 answer/post 시간의 in-flight 유실 허용 여부와 Slack retry를 runbook에 명시 |
@@ -471,5 +471,5 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 6. `[Docs] 레거시 offline CLI disposition 결정`
    - N006~N008 유지·이동·폐기와 실행 주체 확정
 
-기존 작업은 새로 만들지 않는다. `MOM-0773`, `MOM-0774`, `MOM-0840`, `MOM-0845`를 해당 gate에서
+기존 작업은 새로 만들지 않는다. `MOM-0773`, `MOM-0774`, `MOM-0845`, `MOM-0909`를 해당 gate에서
 참조한다.
