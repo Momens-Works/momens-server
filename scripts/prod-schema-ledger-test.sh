@@ -95,51 +95,30 @@ if ! check_config_release >/dev/null 2>&1; then
     exit 1
 fi
 
+# 마커 쌍 검증. 스키마 생성 구간이 폐지된 뒤(ADR-0019) 이 함수를 쓰는 곳은 선언 구간뿐이므로
+# 선언 마커로 검사한다.
 cat > "$repo_root/$ledger_doc" <<EOF
 # fixture
-$schema_end
+$config_end
 manual
-$schema_begin
+$config_begin
 tail
 EOF
-if check_marker_pair "$schema_begin" "$schema_end" "test" >/dev/null 2>&1; then
+if check_marker_pair "$config_begin" "$config_end" "test" >/dev/null 2>&1; then
     echo "역순 마커를 허용했습니다." >&2
     exit 1
 fi
 
 cat > "$repo_root/$ledger_doc" <<EOF
 # fixture
-$schema_begin
-old
-$schema_end
+$config_begin
+one
+$config_end
 manual
+$config_end
 EOF
-chmod 0644 "$repo_root/$ledger_doc"
-render_schema_section() {
-    printf '%s\n' "new"
-}
-write_schema_section "unused"
-
-expected_ledger="$(cat <<EOF
-# fixture
-$schema_begin
-new
-$schema_end
-manual
-EOF
-)"
-actual_ledger="$(cat "$repo_root/$ledger_doc")"
-if [[ "$actual_ledger" != "$expected_ledger" ]]; then
-    echo "스키마 생성 구간 교체 실패" >&2
-    exit 1
-fi
-
-case "$(uname -s)" in
-    Darwin) ledger_mode="$(stat -f '%Lp' "$repo_root/$ledger_doc")" ;;
-    *) ledger_mode="$(stat -c '%a' "$repo_root/$ledger_doc")" ;;
-esac
-if [[ "$ledger_mode" != "644" ]]; then
-    echo "대장 파일 권한이 바뀌었습니다: $ledger_mode" >&2
+if check_marker_pair "$config_begin" "$config_end" "test" >/dev/null 2>&1; then
+    echo "중복 마커를 허용했습니다." >&2
     exit 1
 fi
 
