@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import works.momens.server.project.core.ProjectDetail;
 
 /**
  * 웹 응답이 요구하는 마일스톤 한 건의 조회 결과.
