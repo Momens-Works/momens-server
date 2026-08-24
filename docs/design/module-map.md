@@ -477,8 +477,10 @@ outbox_events insert 1건`)은 `SignalActionExecutor`가 소유하고, facade(`S
 생성에 사용하는 값은 public API인 `EntityType`과 `RelationType`에 정의한다. 두 엔티티가 같은
 워크스페이스에 속하는지는 해당 모듈에서 확인하지 않는다. 다른 도메인의 워크스페이스를 조회하려면 해당
 모듈에 의존해야 하므로 조합을 담당하는 `web` 모듈에서 확인한다.
-식별자로 본문을 채우는 hydrate는 `source`의 public API로 소비하는 쪽이 한다. `entity_relations`는
-레거시가 소유하는 외부 테이블이라 읽기 전용이고, local/test는 미러를 쓴다([데이터](../rules/persistence.md)).
+식별자로 본문을 채우는 hydrate는 `source`의 public API로 소비하는 쪽이 한다. `entity_relations` 스키마는
+[ADR-0019](../adr/0019-prod-schema-ownership-transfer.md)에 따라 momens-server가 소유합니다. 운영 환경의 테이블은
+레거시가 생성했으므로, 이 레포지토리의 `V20260715100000` 마이그레이션은 부트스트랩에서 실행하지 않고
+Flyway 이력에만 기록합니다([데이터](../rules/persistence.md)).
 
 ### retrieval
 
