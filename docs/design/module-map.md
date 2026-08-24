@@ -490,6 +490,18 @@ outbox_events insert 1건`)은 `SignalActionExecutor`가 소유하고, facade(`S
 외부 데이터 ingest·curation은 `momens-worker` 책임이다. `source` 모듈은 API 서버가 소유하는
 연결/토큰/참조 검증 계약만 담당한다.
 
+내부는 변경 이유로 두 nested 논리 모듈로 나눈다(MOM-0887). `connection`은 소스 연동
+(`source_connections`)과 자격 증명(`source_credentials`), 그리고 연동을 만드는 provider OAuth
+설치 흐름을 함께 소유한다. 자격 증명이 OAuth 콜백에서만 만들어지고 갱신되므로 둘을 같은 경계에 둔다.
+`ref`는 source-ref(`source_refs`)의 저장·조회·검증을 소유하고, 연동 없이 붙여넣은 주소도 다루므로
+`connection`에 의존하지 않는다. 두 경계 사이에는 코드 참조가 없다.
+
+`signal`과 같은 방식으로 공개 계약은 모듈 root에 두고 구현만 nested 패키지에 은닉한다. 다른 상위
+모듈은 nested application module을 참조할 수 없으므로 이 배치가 성립한다. `connection` 아래
+`oauth` 서브패키지는 provider 규격·토큰 취급이라는 별도 관심사라 유지하며, Java package-private이
+서브패키지까지 뻗지 않아 연동 엔티티·리포지토리는 부득이 public으로 남는다(`mobile`의 `dto`
+서브패키지와 같은 제약). OAuth 콜백 컨트롤러는 `presentation`에 그대로 둔다.
+
 ### context
 
 엔티티 간 연결과 context bundle을 담당한다.
