@@ -14,10 +14,19 @@ import java.util.Map;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springdoc.core.providers.ObjectMapperProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+// 이 클래스의 빈은 전부 springdoc 이 켜져 있을 때만 의미가 있고, modelResolver 는 springdoc
+// 자동설정이 만드는 ObjectMapperProvider 를 주입받는다. prod 는 springdoc.api-docs.enabled=false 라
+// 그 빈이 없어 조건 없이 등록하면 컨텍스트 생성이 실패한다(MOM-0924). 같은 키로 클래스째 끄면
+// 문서 설정과 문서 활성 여부가 한 스위치를 공유한다. 기본값이 켜짐이라 local·test 는 그대로다.
+@ConditionalOnProperty(
+    name = "springdoc.api-docs.enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 @Configuration
 @EnableConfigurationProperties(OpenApiProperties.class)
 public class OpenApiConfig {
