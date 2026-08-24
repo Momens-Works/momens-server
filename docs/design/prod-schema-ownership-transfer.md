@@ -576,12 +576,43 @@ MOM-0908 (이 문서 + ADR-0019)
 
      ```bash
      ./gradlew :app:bootJar
-     docker run -d --name verify-db -e POSTGRES_DB=verifydb -e POSTGRES_USER=momens \
-       -e POSTGRES_PASSWORD=momens -p 127.0.0.1:15498:5432 pgvector/pgvector:pg16
-     # bootJar를 이 DB로 기동해 flyway_schema_history를 채운 뒤 종료
+
+     docker run -d --name verify-db \
+       -e POSTGRES_DB=verifydb -e POSTGRES_USER=momens -e POSTGRES_PASSWORD=momens \
+       -p 127.0.0.1:15498:5432 pgvector/pgvector:pg16
+     until docker exec verify-db pg_isready -U momens -d verifydb >/dev/null 2>&1; do sleep 1; done
+
+     # prod 프로필은 flyway.enabled=false 라 SPRING_FLYWAY_ENABLED 로 켠다. auth 값은 @NotBlank
+     # 검증만 통과하면 되므로 더미다 — 이 DB는 체크섬 산출에만 쓰고 버린다.
+     SPRING_PROFILES_ACTIVE=prod \
+     SPRING_FLYWAY_ENABLED=true \
+     DATABASE_URL='jdbc:postgresql://127.0.0.1:15498/verifydb' \
+     DATABASE_USERNAME=momens DATABASE_PASSWORD=momens \
+     MOMENS_AUTH_JWT_SECRET="$(printf '0%.0s' {1..64})" \
+     MOMENS_AUTH_GOOGLE_CLIENT_ID=dummy MOMENS_AUTH_GOOGLE_CLIENT_SECRET=dummy \
+     MOMENS_AUTH_GOOGLE_AUDIENCES=dummy \
+     MOMENS_AUTH_GOOGLE_REDIRECT_URI='http://localhost:8080/api/auth/google/callback' \
+     MOMENS_AUTH_WEB_SUCCESS_REDIRECT_URI='http://localhost/' \
+     MOMENS_AUTH_WEB_FAILURE_REDIRECT_URI='http://localhost/login' \
+     CORS_ALLOWED_ORIGINS='http://localhost' SERVER_PORT=18096 \
+       java -jar app/build/libs/app-0.1.0-SNAPSHOT.jar &
+
+     # 이력이 리포의 마이그레이션 수만큼 찰 때까지 기다린 뒤 앱을 내린다. 기동 완료까지 갈
+     # 필요는 없다 — 체크섬은 Flyway 가 이력을 쓰는 시점에 확정된다.
+     expected="$(find . -path '*/src/main/resources/db/migration/V*.sql' \
+       -not -path '*/build/*' | wc -l | tr -d ' ')"
+     until [ "$(docker exec verify-db psql -U momens -d verifydb -tAc \
+       'select count(*) from flyway_schema_history' 2>/dev/null)" = "$expected" ]; do sleep 2; done
+     pkill -f 'app-0.1.0-SNAPSHOT.jar'
+
      PGPASSWORD=momens scripts/prod-flyway-bootstrap.sh --verify \
        'postgresql://momens@127.0.0.1:15498/verifydb'
+
+     docker rm -f verify-db
      ```
+
+     `--verify` 의 psql 은 컨테이너에서 돌므로 URL 의 loopback 호스트를 `host.docker.internal`
+     로 바꿔 접속한다. 위 주소를 그대로 넣으면 된다.
 
      `scripts/legacy-diff`의 `server-db`도 `run.sh`가 bootJar를 띄우므로 같은 조건을 만족하지만,
      레거시 이미지 빌드와 계약 케이스까지 도는 무거운 경로다. 조건을 만족하는 최단 경로를 쓴다.
