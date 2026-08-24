@@ -226,7 +226,7 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   (`task_open_questions`)과 다음행동(`tasks.next_action`)도 이 모듈이 소유하지만, 완료기준과 달리
   이 서버에 쓰기 경로가 없어 읽기 전용으로 매핑한다(MOM-0788). 민수 구현 전에는 같은 backing
   계약을 따르는 fixture가 채운다(ADR-0011). 조회 public API는
-  `TaskReader`(listTasksByStatus, countByStatus, findDetail)와 `BoardTask`, `TaskDetail`이고, 어떤 상태를
+  `TaskReader`(listTasksByStatus, findDetail)와 `BoardTask`, `TaskDetail`이고, 어떤 상태를
   보일지와 표기 매핑은 표면이 정한다. `BoardTask`는 표면이 생성 시각 기준으로 다시 정렬할 수
   있게 createdAt을 포함한다(MOM-67). 생성 public API는 `TaskCreator`(create)이고, 생성 시
   workspace의 `LabelAllocator`로 MOM 라벨을 발급한다.
@@ -247,11 +247,11 @@ capability의 물리 경계로 유지하고, 배포 단위도 나누지 않는�
   패키지를 Spring Modulith named interface로 선언한다. 다른 상위 모듈은 nested application module을
   직접 참조할 수 없으므로 외부 공개 계약이 필요한 이 경계에는 nested module을 사용하지 않는다.
   decision은 아직 구현이 없어 경계를 선점하지 않는다.
-- 각 nested root에는 해당 경계의 공개 계약만 두고 구현은 `core.internal`, `task.internal`,
+- 각 하위 도메인 root에는 해당 경계의 공개 계약만 두고 구현은 `core.internal`, `task.internal`,
   `milestone.internal`, `blocker.internal`에 둔다. `works.momens.server.project` 최상위 패키지는
   namespace와 application module 선언만 소유하며 production Java 타입을 두지 않는다. 다른 Gradle
   모듈과 project 내부의 다른 하위 도메인도 필요한 named interface의 root API만 참조한다.
-- project core는 nested module을 참조하지 않는다. 진행률은 task가 `TaskProgressReader`로 제공하고,
+- project core는 다른 하위 도메인을 참조하지 않는다. 진행률은 task가 `TaskProgressReader`로 제공하고,
   task는 프로젝트 생존·workspace 조회에 `ProjectReader`, 마일스톤 소속 검증에 `MilestoneDirectory`를
   사용한다. milestone은 기본 소유자 조회에 `ProjectOwnerReader`를 사용한다. task repository가
   `Project`·`Milestone` 엔티티를 JPQL 문자열로 직접 조회하던 숨은 결합은 두 공개 계약으로 제거했다.
@@ -349,8 +349,8 @@ dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패
 - 기본 크기는 20이다(MOM-0798에서 3에서 변경). 현재 우선순위(진행 중인 `todo`와 `in_progress`만 대상,
   `priority` 내림차순, 생성일 오름차순, 상위 4개)와 시그널 타입 라벨은 브리프 조합 규칙이므로
   `SignalTypeLabel`, `MobilePriority`, 조합 서비스에서 관리한다(MOM-67).
-- 진행률은 `ProjectReader.progressOf`가 반환한 값을 그대로 사용한다. 조합 서비스는 계산에 관여하지 않으며,
-  진행률 계산 규칙은 project 모듈에서 관리한다(MOM-0800).
+- 진행률은 `TaskProgressReader.progressOf`가 반환한 값을 그대로 사용한다. 조합 서비스는 계산에 관여하지
+  않으며, 진행률 계산 규칙은 project Gradle 모듈 안의 task 경계에서 관리한다(MOM-0800·MOM-0887).
 - `GET /api/mobile/tasks/{taskId}`: project의 태스크 상세(`TaskReader.findDetail`)와 workspace
   멤버십(태스크가 속한 workspace 기준), user 프로필(담당자 이름)을 조합한다. purpose 개명
   (도메인 description), priority 매핑, 빈 값 고정(open_questions는 빈 배열, next_action은 null)은
