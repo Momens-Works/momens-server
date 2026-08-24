@@ -341,7 +341,7 @@ read 기반과 담당 작업은 다음과 같다.
 | `members` | `:workspace` | `MOM-0864` 선행 또는 `MOM-0862`에서 추가 | `users` 조인 필요. 4.4 정렬 고정 |
 | `projects` | `:project` | `MOM-0857` | 웹 컬럼·`project_owners` 매핑. `progress`는 4.3의 예외대로 제외 |
 | `milestones` | `:project` | `MOM-0858` | **`owner_user_ids` 폴백이 project와 다름**(2.3). `[]`가 아니라 **키 생략**으로 폴백한다 |
-| `tasks` | `:project`의 nested `task` | `MOM-0861` | |
+| `tasks` | `:project`의 `task` 하위 경계 | `MOM-0861` | |
 | `blockers` | `:project` | `MOM-0859` | soft-delete 컬럼 없음 |
 | `memory_candidates` | `:memory` | `MOM-0860` | `importance` 정렬, soft-delete 컬럼 없음 |
 | `memories` | `:memory` | `MOM-0860` | 넓은 투영. `task_contexts`도 같은 read 기반을 쓴다 |

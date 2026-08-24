@@ -1,5 +1,7 @@
 package works.momens.server.project.milestone;
 
+import works.momens.server.project.core.ProjectCreator;
+
 /**
  * {@code project} 모듈의 마일스톤 생성 public API입니다.
  *

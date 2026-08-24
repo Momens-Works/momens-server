@@ -225,7 +225,7 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   없이 Task를 통해서만 접근한다(prod 공유 스키마 반영은 컷오버 때 조율). 민수 산출물인 열린질문
   (`task_open_questions`)과 다음행동(`tasks.next_action`)도 이 모듈이 소유하지만, 완료기준과 달리
   이 서버에 쓰기 경로가 없어 읽기 전용으로 매핑한다(MOM-0788). 민수 구현 전에는 같은 backing
-  계약을 따르는 fixture가 채운다(ADR-0011). 조회 public API는
+  계약을 따르는 fixture가 채운다(ADR-0011). 모바일 보드·상세 조회 public API는
   `TaskReader`(listTasksByStatus, findDetail)와 `BoardTask`, `TaskDetail`이고, 어떤 상태를
   보일지와 표기 매핑은 표면이 정한다. `BoardTask`는 표면이 생성 시각 기준으로 다시 정렬할 수
   있게 createdAt을 포함한다(MOM-67). 생성 public API는 `TaskCreator`(create)이고, 생성 시
@@ -372,8 +372,9 @@ dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패
   모듈에 두고 해당 도메인의 public API에 위임한다.
 
 내부는 화면(entry point) 단위로 논리 분리한다(MOM-0799). `bootstrap`·`roster`·`board`·`brief`·
-`signal`·`pushdevice`는 각각 Spring Modulith nested 논리 모듈이고, `workspace`/`project`/`signal`의 nested
-분리(MOM-70·MOM-71·MOM-65)와 달리 aggregate가 아니라 화면 단위 조합 슬라이스다. 다른 모듈에 공개할
+`signal`·`pushdevice`는 각각 Spring Modulith nested 논리 모듈이고, `workspace`/`signal`의 nested
+분리(MOM-70·MOM-65)나 `project`의 하위 도메인 분리(MOM-71·MOM-0887)와 달리 aggregate가 아니라 화면 단위
+조합 슬라이스다. 다른 모듈에 공개할
 계약이 없으므로 각 nested 패키지는 Controller·Docs·조합 서비스·DTO를 한곳에 모은다. 조합 서비스처럼
 같은 nested 패키지 안에서만 쓰는 타입은 package-private으로 닫아 두고, `dto` 서브패키지가 참조하는
 타입은 Java package-private이 서브패키지까지 뻗지 않아 부득이 public으로 남긴다. 모듈 root에는 두
@@ -384,8 +385,8 @@ dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패
 - `roster` — `GET /api/mobile/projects/{projectId}/members`. `workspace`의 멤버십, `user`의 프로필
   결합과 헷갈리지 않도록 `members`가 아닌 `roster`로 이름 붙였다.
 - `board` — 태스크 보드·생성(`/api/mobile/projects/{projectId}/tasks`)과 태스크 상세·수정·완료기준
-  토글(`/api/mobile/tasks/{taskId}` 계열). `project`가 Task aggregate를 소유하는 nested `task`
-  모듈과 이름이 겹치지 않도록 화면 이름을 따 `board`로 붙였다. priority 저장값 해석(`MobilePriority`)은
+  토글(`/api/mobile/tasks/{taskId}` 계열). `project`가 Task aggregate를 소유하는 `task` 하위 경계와
+  이름이 겹치지 않도록 화면 이름을 따 `board`로 붙였다. priority 저장값 해석(`MobilePriority`)은
   `brief`와 공유해 모듈 root에 둔다.
 - `brief` — `GET /api/mobile/projects/{projectId}/brief`, `.../brief/signal-summary`.
 - `signal` — Signal 목록·상세·action 컨트롤러. 위임 전용이라 조합 서비스가 없다.
@@ -451,7 +452,7 @@ MOM-0887에서 다른 표면과 같은 형태로 맞췄다.
 [ADR-0007](../adr/0007-signal-backing-and-module-boundary.md)에 기록한다.
 
 내부는 도메인 하위 경계로 논리 분리한다(MOM-65). Signal 조회(`query`)와 action(`action`)은 각각
-Spring Modulith nested 논리 모듈이고, `project`의 `task`와 같은 방식을 따른다: 공개 계약(조회는
+Spring Modulith nested 논리 모듈이고, `source`의 `connection`·`ref`와 같은 방식을 따른다: 공개 계약(조회는
 `SignalListService`·`SignalDetailService`·`SignalReader` 인터페이스와 `SignalDetail`·
 `SignalSummary`, `SignalSummaryPage`, `SignalSnapshot` 레코드, action은 `SignalActionService`
 인터페이스와 `SignalActionResult` 레코드)는 모듈 root에 두고, 구현체(`*Impl`)와
@@ -459,8 +460,9 @@ Spring Modulith nested 논리 모듈이고, `project`의 `task`와 같은 방식
 root의 타입(`SignalErrorCode` 등)을 참조하는 것은 단방향(query/action → root)이라 순환이 아니다 —
 모듈 root(공개 계약)가 nested 모듈의 구현 타입을 직접 참조하는 반대 방향의 의존이 생겼을 때만
 Modulith가 순환으로 판정한다. action은 query가 공개한 `SignalReader`로 Signal 스냅샷을 읽고,
-convert-to-task는 `project`의 `TaskCreator.create`/`TaskReader.findDetail`(둘 다 root-to-root,
-다른 top-level 모듈 참조라 표준 방향)을 쓴다. convert-to-task 트랜잭션(`tasks insert +
+convert-to-task는 `project`의 `TaskCreator.create`/`TaskReader.findDetail`(둘 다 다른 top-level 모듈의
+공개 계약 참조라 표준 방향이다. MOM-0887 이후 두 타입은 `project` root가 아니라 `project.task` named
+interface에 있다)을 쓴다. convert-to-task 트랜잭션(`tasks insert +
 signal_actions insert + outbox_events insert 2건`)과 dismiss 트랜잭션(`signal_actions insert +
 outbox_events insert 1건`)은 `SignalActionExecutor`가 소유하고, facade(`SignalActionServiceImpl`)와
 빈을 분리해 멱등·충돌 정책과 원자 쓰기를 나눈다. outbox 이벤트 insert는 `outbox` 모듈의

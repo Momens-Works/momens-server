@@ -13,8 +13,8 @@ import java.util.UUID;
  * 때문입니다. 값은 모두 레거시가 저장한 것을 그대로 읽으며 파생 정책이 없습니다.
  *
  * <p>{@code progress}는 담지 않습니다. 레거시 응답에는 항상 실리지만 웹이 그 값을 읽지 않고 태스크에서 직접 계산하며(momens-fe의 {@code
- * mapProject}가 이 필드를 매핑하지 않습니다), 이 서버도 저장값을 쓰지 않기로 했습니다(ADR-0013). 진행률이 필요한 소비자가 생기면 {@link
- * TaskProgressReader#progressOf(UUID)}를 씁니다.
+ * mapProject}가 이 필드를 매핑하지 않습니다), 이 서버도 저장값을 쓰지 않기로 했습니다(ADR-0013). 진행률이 필요한 소비자가 생기면 task 경계의
+ * {@code TaskProgressReader.progressOf}를 씁니다.
  *
  * <p>{@code deletedAt}도 담지 않습니다. 조회가 소프트 삭제된 project를 제외하므로 항상 비어 있습니다.
  *
