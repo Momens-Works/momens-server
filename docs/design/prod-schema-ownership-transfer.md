@@ -569,9 +569,22 @@ MOM-0908 (이 문서 + ADR-0019)
    한다 — 대조되지 못한 항목이 남으면 그 체크섬이 검증 없이 prod로 들어간다.
    - **대조 대상은 dev가 아니다.** dev는 `main` 릴리스로만 전진하는데 부트스트랩 전까지 릴리스를
      내지 않으므로 최신 마이그레이션이 없고, `--verify`가 구조적으로 실패한다.
-   - **`scripts/legacy-diff`의 `server-db`를 릴리스 대상 커밋으로 만들어 대조한다.** `run.sh`가
-     bootJar를 띄우므로 그 이력은 **앱의 Flyway가 만든 것**이다. 이것이 요점이다 — 스크래치 DB를
-     CLI로 만들어 대조하면 CLI끼리 비교하는 순환이 된다
+   - **대조 대상의 이력은 앱의 Flyway가 만든 것이어야 한다.** 이것이 요점이다 — 스크래치 DB를
+     CLI로 만들어 대조하면 CLI끼리 비교하는 순환이 된다.
+   - **릴리스 대상 커밋의 bootJar를 빈 PostgreSQL에 직접 띄워 만든다.** 빈 DB에 앱을 붙이면
+     Flyway가 전건을 적용하며 이력을 남기고, 그것이 대조 대상이다.
+
+     ```bash
+     ./gradlew :app:bootJar
+     docker run -d --name verify-db -e POSTGRES_DB=verifydb -e POSTGRES_USER=momens \
+       -e POSTGRES_PASSWORD=momens -p 127.0.0.1:15498:5432 pgvector/pgvector:pg16
+     # bootJar를 이 DB로 기동해 flyway_schema_history를 채운 뒤 종료
+     PGPASSWORD=momens scripts/prod-flyway-bootstrap.sh --verify \
+       'postgresql://momens@127.0.0.1:15498/verifydb'
+     ```
+
+     `scripts/legacy-diff`의 `server-db`도 `run.sh`가 bootJar를 띄우므로 같은 조건을 만족하지만,
+     레거시 이미지 빌드와 계약 케이스까지 도는 무거운 경로다. 조건을 만족하는 최단 경로를 쓴다.
 2. 같은 커밋에서 `--generate`로 INSERT 문을 만든다
 3. prod에 `flyway_schema_history` INSERT (단일 트랜잭션)
 4. **`k8s` 토글 PR 머지**
