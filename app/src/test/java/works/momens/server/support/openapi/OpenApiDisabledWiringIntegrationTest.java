@@ -26,5 +26,7 @@ class OpenApiDisabledWiringIntegrationTest extends AbstractPostgresIntegrationTe
   void dropsOpenApiConfigWhenApiDocsDisabled() {
     assertThat(context.containsBean("openAPI")).isFalse();
     assertThat(context.containsBean("modelResolver")).isFalse();
+    assertThat(context.containsBean("swaggerOperationCustomizer")).isFalse();
+    assertThat(context.containsBean("nullableAsTypeCustomizer")).isFalse();
   }
 }
