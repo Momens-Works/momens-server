@@ -247,9 +247,20 @@ verify() {
                    where version is not null and checksum is not null" \
         | LC_ALL=C sort -t'|' -k1,1 > "$work_dir/cli.txt"
 
+    # psql 은 컨테이너에서 돈다. 대상이 호스트에 published 된 포트(legacy-diff 의 server-db 는
+    # 127.0.0.1:15434)면 URL 의 loopback 이 그 컨테이너 자신을 가리켜 connection refused 가 난다.
+    # host-gateway 를 심고 loopback 호스트만 바꿔 넘긴다. 원격 DB URL 은 그대로 통과한다.
+    local psql_url="$url"
+    case "$url" in
+        *//*127.0.0.1[:/]*|*//*localhost[:/]*|*@127.0.0.1[:/]*|*@localhost[:/]*)
+            psql_url="${url//127.0.0.1/host.docker.internal}"
+            psql_url="${psql_url//localhost/host.docker.internal}"
+            ;;
+    esac
+
     # set -e 와 pipefail 때문에 psql 실패가 여기서 즉사하면 아래 안내에 도달하지 못한다.
-    docker run --rm -e PGPASSWORD pgvector/pgvector:pg16 \
-        psql "$url" -Atc "select version || '|' || checksum from flyway_schema_history
+    docker run --rm --add-host=host.docker.internal:host-gateway -e PGPASSWORD pgvector/pgvector:pg16 \
+        psql "$psql_url" -Atc "select version || '|' || checksum from flyway_schema_history
                           where version is not null and checksum is not null" \
         > "$work_dir/target.raw" 2>"$work_dir/target.err" || true
     LC_ALL=C sort -t'|' -k1,1 "$work_dir/target.raw" > "$work_dir/target.txt" 2>/dev/null || true
