@@ -396,6 +396,18 @@ dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패
   정책을 소유하는 `auth`의 public API(`MobileAuthService`)에 위임만 하는 얇은 표면이라 조합 서비스가
   없다(MOM-0852).
 
+### web
+
+레거시 웹 클라이언트가 호출하는 Product API 표면이다. `mobile`과 같은 자리의 얇은 orchestration
+모듈이고, 도메인 정책을 소유하지 않는다. endpoint별 계약은 `docs/spec/`가 소유한다.
+
+내부는 표면 단위로 논리 분리한다. `auth`·`workspace`·`user`·`project`·`task`·`memory`·`source`는
+각각 Spring Modulith nested 논리 모듈이고, `mobile`과 같이 aggregate가 아니라 화면·자원 단위
+슬라이스다. 다른 모듈에 공개할 계약이 없으므로 각 nested 패키지가 Controller·Docs·조합 서비스·DTO를
+한곳에 모은다. 모듈 root에는 둘 이상이 공유하는 것만 남긴다(`WorkspaceAccessChecker`,
+`dto/response`의 공용 응답). `memory`와 `source`는 패키지만 있고 nested 선언이 빠져 있었는데
+MOM-0887에서 다른 표면과 같은 형태로 맞췄다.
+
 ### signal
 
 모바일 Signal 원본과 사용자 처리 흐름을 담당한다.
