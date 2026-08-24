@@ -217,6 +217,58 @@ generate() {
     return 0
 }
 
+# psql 은 컨테이너에서 돈다. 대상이 호스트에 published 된 포트(legacy-diff 의 server-db 는
+# 127.0.0.1:15434)면 URL 의 loopback 이 그 컨테이너 자신을 가리켜 connection refused 가 난다.
+# host-gateway 를 심고 **authority 의 host 자리만** 바꾼다. 사용자·포트·DB 이름·쿼리는 원문
+# 그대로 둔다 — DB 이름이 `localhost` 이거나 호스트가 `notlocalhost` 인 경우까지 바뀌면 안 된다.
+#
+# libpq URI(`scheme://[user[:pw]@]host[:port][/db][?params]`)만 다룬다. `host=... port=...`
+# 키워드 형식은 손대지 않고 그대로 넘긴다.
+rewrite_loopback_host() {
+    local url="$1"
+
+    case "$url" in
+        *://*) ;;
+        *) printf '%s' "$url"; return 0 ;;
+    esac
+
+    local scheme rest authority tail userinfo hostport host port before_slash before_query
+    scheme="${url%%://*}"
+    rest="${url#*://}"
+
+    # authority 는 첫 `/` 또는 `?` 앞까지다. 둘 중 먼저 오는 쪽을 쓴다.
+    before_slash="${rest%%/*}"
+    before_query="${rest%%\?*}"
+    authority="$before_slash"
+    [[ ${#before_query} -lt ${#authority} ]] && authority="$before_query"
+    tail="${rest:${#authority}}"
+
+    userinfo=""
+    case "$authority" in
+        *@*) userinfo="${authority%@*}@"; hostport="${authority##*@}" ;;
+        *) hostport="$authority" ;;
+    esac
+
+    port=""
+    case "$hostport" in
+        \[*\]*) host="${hostport%%\]*}]"; port="${hostport#"$host"}" ;;
+        *:*) host="${hostport%%:*}"; port=":${hostport#*:}" ;;
+        *) host="$hostport" ;;
+    esac
+
+    case "$host" in
+        localhost|127.0.0.1|'[::1]') host="host.docker.internal" ;;
+    esac
+
+    printf '%s://%s%s%s%s' "$scheme" "$userinfo" "$host" "$port" "$tail"
+}
+
+# 테스트가 가짜 러너로 갈아끼울 수 있도록 실행을 분리한다(PSQL_RUNNER).
+docker_psql() {
+    docker run --rm --add-host=host.docker.internal:host-gateway -e PGPASSWORD \
+        pgvector/pgvector:pg16 psql "$1" -Atc "$2"
+}
+
 # 기존 Flyway 이력(dev 등)과 체크섬이 같은지 대조한다. CLI 와 앱이 같은 값을 내는지 확인하는
 # 용도이며, 다르면 부트스트랩 후 prod 가 checksum mismatch 로 기동에 실패한다.
 #
@@ -247,26 +299,30 @@ verify() {
                    where version is not null and checksum is not null" \
         | LC_ALL=C sort -t'|' -k1,1 > "$work_dir/cli.txt"
 
-    # psql 은 컨테이너에서 돈다. 대상이 호스트에 published 된 포트(legacy-diff 의 server-db 는
-    # 127.0.0.1:15434)면 URL 의 loopback 이 그 컨테이너 자신을 가리켜 connection refused 가 난다.
-    # host-gateway 를 심고 loopback 호스트만 바꿔 넘긴다. 원격 DB URL 은 그대로 통과한다.
-    local psql_url="$url"
-    case "$url" in
-        *//*127.0.0.1[:/]*|*//*localhost[:/]*|*@127.0.0.1[:/]*|*@localhost[:/]*)
-            psql_url="${url//127.0.0.1/host.docker.internal}"
-            psql_url="${psql_url//localhost/host.docker.internal}"
-            ;;
-    esac
+    local psql_url psql_status=0
+    psql_url="$(rewrite_loopback_host "$url")"
 
     # set -e 와 pipefail 때문에 psql 실패가 여기서 즉사하면 아래 안내에 도달하지 못한다.
-    docker run --rm --add-host=host.docker.internal:host-gateway -e PGPASSWORD pgvector/pgvector:pg16 \
-        psql "$psql_url" -Atc "select version || '|' || checksum from flyway_schema_history
-                          where version is not null and checksum is not null" \
-        > "$work_dir/target.raw" 2>"$work_dir/target.err" || true
-    LC_ALL=C sort -t'|' -k1,1 "$work_dir/target.raw" > "$work_dir/target.txt" 2>/dev/null || true
+    # 대신 종료 코드를 받아 두고 직접 판정한다. psql 이 일부 행을 낸 뒤 끊겨도 부분 결과를
+    # 정상 조회로 다루지 않는다.
+    ${PSQL_RUNNER:-docker_psql} "$psql_url" \
+        "select version || '|' || checksum from flyway_schema_history
+         where version is not null and checksum is not null" \
+        > "$work_dir/target.raw" 2>"$work_dir/target.err" || psql_status=$?
+
+    if [[ "$psql_status" -ne 0 ]]; then
+        echo "대상 DB 조회가 실패했습니다(psql 종료 코드 $psql_status). 부분 결과는 쓰지 않습니다." >&2
+        [[ -s "$work_dir/target.err" ]] && sed 's/^/  /' "$work_dir/target.err" >&2
+        return 1
+    fi
+
+    LC_ALL=C sort -t'|' -k1,1 "$work_dir/target.raw" > "$work_dir/target.txt" || {
+        echo "대상 DB 조회 결과를 정렬하지 못했습니다." >&2
+        return 1
+    }
 
     local target_rows
-    target_rows="$(grep -c . "$work_dir/target.txt" 2>/dev/null || true)"
+    target_rows="$(grep -c . "$work_dir/target.txt" || true)"
     [[ "$target_rows" -gt 0 ]] || {
         echo "대상 DB 에서 flyway_schema_history 를 읽지 못했습니다." >&2
         [[ -s "$work_dir/target.err" ]] && sed 's/^/  /' "$work_dir/target.err" >&2
@@ -321,4 +377,7 @@ main() {
     esac
 }
 
-main "$@"
+# 테스트가 함수만 가져다 쓸 수 있도록 직접 실행일 때만 돈다.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
