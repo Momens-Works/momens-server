@@ -55,6 +55,7 @@ scripts/prod-twin/rehearse.sh lock  # 하나만
 | `no-references` | `users` 에 `REFERENCES` 를 주지 않으면 |
 | `no-set-option` | 창구가 `momens_server` 로 `SET ROLE` 할 수 없으면 |
 | `no-search-path` | `extensions` 스키마가 `momens_server` 에게 안 보이면 |
+| `bulk-ownership` | 레거시 테이블 20개를 한 번에 넘기면 (ADR-0019 최종 상태) |
 | `ownership-reverted` | 부트스트랩 성공 후 `tasks` 소유권을 되돌리면 |
 | `history-owner` | `postgres` 세션으로 심을 때 — 소유권 이전 줄이 있을 때와 없을 때 |
 | `lock` | 레거시가 `tasks` 를 ACCESS EXCLUSIVE 로 잡고 있으면 |
