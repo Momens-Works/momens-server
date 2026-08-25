@@ -18,6 +18,7 @@
 #   no-ownership   tasks 소유권 이전 생략
 #   no-references  users REFERENCES 권한 누락
 #   no-set-option  창구가 momens_server 로 SET ROLE 할 수 없음
+#   no-search-path 확장 스키마가 search_path 에 없음
 #   ownership-reverted  부트스트랩 성공 후 tasks 소유권을 되돌릴 때
 #   history-owner  이력 테이블을 postgres 가 만든 경우
 #   lock           레거시가 tasks 를 ACCESS EXCLUSIVE 로 잡고 있는 경우
@@ -76,6 +77,8 @@ reset_db() {
     docker exec -i "$container" psql -U postgres -d postgres -q -Atc \
         "REVOKE momens_server FROM sb_postgres" >/dev/null 2>&1
     docker exec -i "$container" psql -U postgres -d postgres -q -Atc \
+        "ALTER ROLE momens_server RESET search_path" >/dev/null 2>&1
+    docker exec -i "$container" psql -U postgres -d postgres -q -Atc \
         "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='$db'" >/dev/null 2>&1
     docker exec -i "$container" psql -U postgres -d postgres -q -v ON_ERROR_STOP=1 -Atc \
         "DROP DATABASE IF EXISTS $db" >/dev/null
@@ -118,10 +121,26 @@ prereq_operator_set_role() {
     root "GRANT momens_server TO sb_postgres WITH SET TRUE" >/dev/null
 }
 
+prereq_extensions_search_path() {
+    # 실행 집합 2건(V20260810090000, V20260823110000)이 스키마 한정 없이 uuid_generate_v4() 를
+    # 쓴다. Supabase 는 uuid-ossp 를 extensions 스키마에 두는데 momens_server 의 search_path 에는
+    # 그것이 없다(prod 실측: pg_db_role_setting 에 항목 없음 → 서버 기본값 "$user", public).
+    #
+    # **둘 다 필요하다.** USAGE 가 없으면 search_path 에 넣어도 이름 해석에서 스키마가 보이지
+    # 않고, search_path 가 없으면 USAGE 가 있어도 한정 없는 호출이 해석되지 않는다. 쌍둥이에서
+    # (a) search_path 만 → 실패, (b) 둘 다 → 성공, (c) USAGE 만 → 실패로 확인했다.
+    #
+    # 마이그레이션 파일을 extensions.uuid_generate_v4() 로 고치는 길은 없다 — 두 파일 모두
+    # local·dev 이력에 체크섬이 박혀 있어 고치면 그 환경들이 checksum mismatch 로 죽는다.
+    root "GRANT USAGE ON SCHEMA extensions TO momens_server" >/dev/null
+    root 'ALTER ROLE momens_server SET search_path = "$user", public, extensions' >/dev/null
+}
+
 grant_ddl_prerequisites() {
     prereq_tasks_ownership
     prereq_users_references
     prereq_operator_set_role
+    prereq_extensions_search_path
 }
 
 app_log=""
@@ -340,6 +359,10 @@ scenario_no_references() {
     reset_db
     prereq_tasks_ownership
     prereq_operator_set_role
+    # V20260810090000 은 uuid_generate_v4() 도 쓴다. search_path 선행 조건이 없으면 그쪽에 먼저
+    # 걸려 이 시나리오가 보려는 증상이 아니게 된다. 두 실패가 같은 파일에 있다는 뜻이기도 하다 —
+    # prod 에서 search_path 를 고치면 그 다음에 REFERENCES 가 드러난다.
+    prereq_extensions_search_path
     step "users REFERENCES: $(root "select has_table_privilege('momens_server','users','REFERENCES')")"
 
     # 심기가 조용히 실패하면 앱이 42건을 처음부터 실행해 엉뚱한 이유로 죽는다. 그러면 이
@@ -409,6 +432,36 @@ scenario_history_owner() {
     if [[ "$result" == started ]]; then ok "postgres 로 심어도 momens_server 가 끝까지 돈다"
     else bad "기동 실패 ($result)"; grep -ioE "permission denied for table [a-z_]+" "$app_log" | head -3 | sed 's/^/         /'; fi
     step "이력 총 $(server "select count(*) from flyway_schema_history") 행, 실패 $(server "select count(*) from flyway_schema_history where not success") 건"
+    stop_app
+}
+
+scenario_no_search_path() {
+    say "no-search-path — momens_server 가 extensions 를 못 보는 경우"
+    step "Supabase 는 uuid-ossp 를 extensions 에 두는데 momens_server 의 search_path 에는 없다."
+    reset_db
+    prereq_tasks_ownership
+    prereq_users_references
+    prereq_operator_set_role
+    step "search_path: $(server 'show search_path')  ·  extensions USAGE: $(root "select has_schema_privilege('momens_server','extensions','USAGE')")"
+
+    expect "심기 성공" "COMMIT" "$(op_file "$bootstrap_sql")"
+
+    start_app "$toggles $lock_opt"
+    local result; result="$(await_app 180)"
+    if [[ "$result" == started ]]; then bad "기동에 성공했습니다. extensions 없이 통과하면 안 됩니다"
+    else ok "기동 실패 ($result)"; fi
+    expect "uuid_generate_v4() does not exist" "function uuid_generate_v4() does not exist" "$(cat "$app_log")"
+    step "죽은 위치: $(grep -oE 'V20260810090000__[a-z_]+\.sql' "$app_log" | head -1)"
+    step "실패 후 새 테이블: $(server "select count(*) from pg_tables where tablename in ('signals','outbox_events','user_identities')") 개 (group=true 면 0)"
+    stop_app
+
+    say "no-search-path — 처방 두 줄을 주면"
+    prereq_extensions_search_path
+    step "search_path: $(server 'show search_path')  ·  uuid_generate_v4(): $(server 'select uuid_generate_v4()' | tail -1)"
+    start_app "$toggles $lock_opt"
+    result="$(await_app 180)"
+    if [[ "$result" == started ]]; then ok "USAGE + search_path 둘 다 있어야 통과한다"
+    else bad "기동 실패 ($result)"; fi
     stop_app
 }
 
@@ -533,6 +586,7 @@ case "${1:-all}" in
     no-ownership)  scenario_no_ownership ;;
     no-references) scenario_no_references ;;
     no-set-option) scenario_no_set_option ;;
+    no-search-path) scenario_no_search_path ;;
     ownership-reverted) scenario_ownership_reverted ;;
     history-owner) scenario_history_owner ;;
     lock)          scenario_lock ;;
@@ -542,6 +596,7 @@ case "${1:-all}" in
         scenario_no_ownership
         scenario_no_references
         scenario_no_set_option
+        scenario_no_search_path
         scenario_ownership_reverted
         scenario_history_owner
         scenario_lock

@@ -674,23 +674,45 @@ MOM-0908 (이 문서 + ADR-0019)
    앞의 INSERT 까지 통째로 롤백돼 `flyway_schema_history` 자체가 남지 않는다 — 실패로서는
    깨끗하지만 절차가 그 자리에서 멈춘다. **(3)을 관리자가 적용하지 않을 거라면 대안은 (4)단계의
    `ALTER TABLE flyway_schema_history OWNER TO momens_server` 를 관리자가 직접 실행하는 것이다.**
-3.5. **prod에서 두 가지를 관측한다.** 재현이 어려운 축이지만 관측은 쿼리 한 번이고, "재현하지 못해
-   남겨 둔 것"과 "없다는 것을 확인하고 닫은 것"은 다르다.
+3.5. **Supabase 고유 형상은 관측했고, 그 결과가 선행 조건 하나를 더 만들었다.** (2026-08-25 실측)
+
+   | 관측 | 결과 |
+   | --- | --- |
+   | `pg_event_trigger` | **6개.** `supabase_admin` 소유, 전부 활성. `ddl_command_end` 4 + `sql_drop` 2 |
+   | `postgres`의 `search_path` | `"$user", public, extensions` |
+   | `momens_server`의 `search_path` | **`pg_db_role_setting`에 항목 없음** → 서버 기본값 `"$user", public` |
+   | `uuid-ossp` 설치 스키마 | **`extensions`** (`vector`는 `public`, `pgcrypto`·`pg_stat_statements`는 `extensions`) |
+
+   event trigger 넷은 우리 `CREATE TABLE`·`ALTER TABLE` 매 문장마다 발화하지만, 쌍둥이에 같은
+   형상을 넣고 돌린 결과 부트스트랩에 영향이 없었다. `sql_drop` 둘은 실행 집합에 `DROP`이 하나도
+   없어(7절 원칙) 발화하지 않는다.
+
+   `search_path`는 다르다. **실행 집합 2건이 스키마 한정 없이 `uuid_generate_v4()`를 쓴다.**
+
+   - `V20260810090000__create_user_identities.sql`
+   - `V20260823110000__prod_bootstrap_task_role_and_checklist.sql`
+
+   `uuid-ossp`가 `extensions`에 있고 `momens_server`가 그것을 보지 못하므로 **이대로면
+   `function uuid_generate_v4() does not exist`(SQL State 42883)로 죽는다.** 쌍둥이에 prod 형상을
+   넣자 정확히 그 지점에서 재현됐다.
+
+   레거시가 지금 정상 동작하는 것은 반증이 아니다. 레거시는 `postgres`로 접속하고 그 role은
+   `search_path`에 `extensions`를 갖는다. 기존 테이블의 `DEFAULT uuid_generate_v4()`도 생성 시점에
+   OID로 굳어 있어 런타임에는 아무 신호가 없다 — **DDL 시점에만 터진다.**
+
+   마이그레이션 파일을 `extensions.uuid_generate_v4()`로 고치는 길은 없다. 두 파일 모두 local·dev
+   이력에 체크섬이 박혀 있어 고치면 그 환경들이 checksum mismatch로 죽는다. 레버는 role이다.
 
    ```sql
-   -- event trigger 가 있으면 실행 집합의 CREATE TABLE 12건이 그것을 탄다.
-   SELECT evtname, evtevent, evtenabled, evtowner::regrole
-     FROM pg_event_trigger ORDER BY evtname;
-
-   -- role 단위 search_path 가 걸려 있으면 생성물의 SET LOCAL search_path = public 과
-   -- 상호작용한다. 확장 스키마(extensions, graphql)가 끼는 경우가 그렇다.
-   SELECT rolname, rolconfig FROM pg_roles
-    WHERE rolname IN ('postgres', 'momens_server', 'anon', 'authenticated', 'service_role');
+   -- (4) 확장 스키마를 momens_server 에게 보이게 한다. **둘 다 필요하다.**
+   --     USAGE 가 없으면 search_path 에 넣어도 이름 해석에서 스키마가 보이지 않고,
+   --     search_path 가 없으면 USAGE 가 있어도 한정 없는 호출이 해석되지 않는다.
+   GRANT USAGE ON SCHEMA extensions TO momens_server;
+   ALTER ROLE momens_server SET search_path = "$user", public, extensions;
    ```
 
-   **`pg_event_trigger`가 비고 `rolconfig`에 `search_path`가 없으면 이 축은 닫힌다.** 쌍둥이의
-   해당 값이 그 상태이므로(0건 / 전부 없음) 리허설 결과가 그대로 유효하다. prod에 무언가 있으면
-   그때 재현 여부를 판단한다.
+   두 실패가 같은 파일(`V20260810090000`)에 있다는 점을 짚어 둔다. `search_path`를 고치면 그
+   다음에 (2)의 `REFERENCES`가 드러난다 — 한 번에 하나씩 나오므로 셋을 함께 적용한다.
 
 4. prod에 `flyway_schema_history` INSERT (단일 트랜잭션). 창구는 Supabase SQL Editor이고 그것은
    `postgres` 세션이다.
@@ -784,7 +806,7 @@ PostgreSQL 17 · 레거시 `000001`~`000019` · Supabase role 형상(`anon`·`au
 public 테이블의 소유자) · 비-superuser 무소유 `momens_server` · `tasks` 10만 행. 앱은 릴리스와 같은 prod 프로필 bootJar이고 토글은 ConfigMap이 넣을 환경변수
 형태로 준다.
 
-#### 계획을 고친 발견 세 가지
+#### 계획을 고친 발견 네 가지
 
 **1. `tasks` 소유권만으로는 부족하다 — `users`에 `REFERENCES`가 필요하다.**
 
@@ -831,13 +853,22 @@ grantee=sb_postgres  admin=true  inherit=false  set=false
 없으면 **둘 다 안 된다.** 8절 3단계에 `GRANT momens_server TO postgres WITH SET TRUE`를 세 번째
 선행 조건으로 넣었다.
 
+**4. `momens_server`는 `extensions` 스키마를 보지 못한다.**
+
+첫 쌍둥이는 레거시 마이그레이션이 만든 그대로 확장이 `public`에 있었다. prod는 Supabase가
+`uuid-ossp`를 `extensions`에 미리 깔아 둔 상태여서 레거시의 `CREATE EXTENSION IF NOT EXISTS`가
+no-op이었다. 그 차이가 실행 집합 2건을 죽인다. 상세와 처방은 8절 3.5단계에 있다.
+
+**이 축은 "재현이 어려우니 남겨 둔다"로 끝날 뻔했다.** 관측 쿼리 두 개로 형상을 받아 쌍둥이에
+넣었더니 블로커가 나왔다. 재현하지 못해 남겨 두는 것과, 관측해서 닫는 것은 다르다.
+
 #### 권한 표면은 이 둘로 닫혔다
 
 같은 유형('DML도 소유권도 아닌 제3의 권한')의 누락이 더 있는지 실행 집합 14건을 전수로 봤다
 (별도 세션의 독립 대조로도 같은 결과).
 
-(아래는 *마이그레이션이 요구하는 객체 권한*의 표면이다. 발견 3의 `SET ROLE`은 객체 권한이 아니라
-운영자 세션의 role 권한이라 별개 축이다.)
+(아래는 *마이그레이션이 요구하는 객체 권한*의 표면이다. 발견 3의 `SET ROLE`과 발견 4의
+`search_path`는 객체 권한이 아니라 role 설정이라 별개 축이다.)
 
 - FK 참조 대상은 정확히 `tasks`와 `users` 둘뿐이다.
 - 기존 객체를 건드리는 동작은 `tasks`의 `ALTER`뿐이다.
@@ -855,6 +886,7 @@ grantee=sb_postgres  admin=true  inherit=false  set=false
 | **no-ownership** `tasks` 소유권 이전 생략 | `must be owner of table tasks`로 기동 실패. 새 테이블 0개 |
 | **no-references** `users` `REFERENCES` 누락 | `permission denied for table users`로 기동 실패. 새 테이블 0개 |
 | **no-set-option** 창구가 `momens_server`로 `SET ROLE` 불가 | 심기가 `must be able to SET ROLE`로 실패. 단일 트랜잭션이라 `flyway_schema_history`가 아예 남지 않음 |
+| **no-search-path** `momens_server`가 `extensions`를 못 봄 | `function uuid_generate_v4() does not exist`로 `V20260810090000`에서 실패. `USAGE`와 `search_path` **둘 다** 줘야 통과 |
 | **ownership-reverted** 부트스트랩 성공 후 `tasks` 소유권 원복 | `momens_server`의 DML이 소유권을 따라 사라짐. 조회는 `permission denied for table tasks`인데 **기동은 성공한다** — `validate`가 DML 권한을 보지 않는다. 재발급하면 복구 |
 | **history-owner (a)** 소유권 이전 줄을 뺀 채 심음 | `permission denied for table flyway_schema_history`로 기동 실패 |
 | **history-owner (b)** 생성물 그대로 비-superuser 창구로 심음 | 소유자 `momens_server`, 앱이 42건을 끝까지 돌고 기동 성공 |
@@ -930,9 +962,8 @@ grantee=sb_postgres  admin=true  inherit=false  set=false
   위 결과의 일부가 무효가 되고 절차를 고쳐야 한다.
 - **배포 기전.** `k8s` ConfigMap → 롤아웃 경로는 `momens-k8s-dev`의 dev 클러스터에서 별도 컨펌 후
   확인한다.
-- **Supabase 고유 형상.** event trigger와 role 단위 `search_path`는 재현하지 않았다. 다만 재현
-  대신 **관측으로 닫을 수 있고**, 8절 3.5단계가 그 쿼리를 절차에 넣었다. 둘 다 비어 있으면 이 축은
-  닫힌다.
+~~**Supabase 고유 형상.**~~ **닫혔다.** 관측 결과 event trigger 6개와 확장 스키마 분리가 있었고,
+둘 다 쌍둥이에 넣어 재현했다(8절 3.5단계). event trigger는 무해했고, 확장 스키마는 블로커였다.
 
 #### 곁가지 관측 — Data API와 새 테이블
 
@@ -961,6 +992,7 @@ Supabase는 `ALTER DEFAULT PRIVILEGES FOR ROLE postgres`로 **`postgres`가 만�
 | 이력 테이블 소유자가 `momens_server`가 아니게 된다 | 다음 기동이 `permission denied`로 죽고 심기 시점에는 신호가 없다. `--generate` 생성물이 트랜잭션 안에서 소유권을 넘기고, `prod-flyway-bootstrap-verify-test.sh`가 그 줄을 지킨다 |
 | `tasks` 소유권을 되돌리며 DML 재발급을 잊는다 | 기동이 성공해 배포에서 잡히지 않고 첫 요청에서 끊긴다. 7절에 재발급 한 줄을 절차로 적었다 |
 | Data API 소비자가 서버 소유 테이블을 읽고 있다 | 새 12개 테이블은 `momens_server` 소유라 `anon`·`authenticated`에 권한이 붙지 않는다. 소비자 목록은 MOM-0925에서 확인 중이다 |
+| 확장이 `public`이 아닌 스키마에 있다 | `uuid-ossp`가 `extensions`에 있고 실행 집합 2건이 한정 없이 호출한다. 8절 3.5단계의 `USAGE` + `search_path` 두 줄로 닫는다. 파일 수정은 체크섬 때문에 불가능하다 |
 | 접속이 트랜잭션 pooler다 | 세션 단위 잠금과 `init-sqls`가 성립하지 않는다. 쌍둥이가 재현하지 못하는 축이며 관리자 회신이 선행 조건이다 |
 
 ## 관련 문서
