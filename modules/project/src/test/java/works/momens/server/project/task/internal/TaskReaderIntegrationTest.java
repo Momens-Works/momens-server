@@ -21,6 +21,7 @@ import works.momens.server.project.core.ProjectReader;
 import works.momens.server.project.task.BoardTask;
 import works.momens.server.project.task.TaskDetail;
 import works.momens.server.project.task.TaskReader;
+import works.momens.server.project.task.TaskScope;
 
 /**
  * task 조회 public API 검증.
@@ -242,6 +243,20 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
 
     assertThat(taskReader.findDetail(deleted)).isEmpty();
     assertThat(taskReader.findDetail(UUID.randomUUID())).isEmpty();
+  }
+
+  @Test
+  void findScopeReturnsTaskOwnershipAndExcludesSoftDeletedTask() {
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "scope-owner@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "scope");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
+    UUID live = saveTask(workspaceId, projectId, "살아있는 태스크", "todo", "medium", "pm");
+    UUID deleted = saveTask(workspaceId, projectId, "삭제된 태스크", "todo", "medium", "pm");
+    softDelete(deleted);
+
+    assertThat(taskReader.findScope(live)).contains(new TaskScope(workspaceId, projectId));
+    assertThat(taskReader.findScope(deleted)).isEmpty();
+    assertThat(taskReader.findScope(UUID.randomUUID())).isEmpty();
   }
 
   @Test

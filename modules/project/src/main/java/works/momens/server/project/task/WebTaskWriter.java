@@ -1,7 +1,6 @@
 package works.momens.server.project.task;
 
 import java.time.LocalDate;
-import java.util.Map;
 import java.util.UUID;
 
 /** 웹 Product API의 레거시 task write public API입니다. */
@@ -37,9 +36,4 @@ public interface WebTaskWriter {
       boolean dueDateSet);
 
   void delete(UUID taskId, UUID userId);
-
-  TaskUpdateDetail createUpdate(
-      UUID taskId, UUID userId, String body, String kind, Map<String, Object> metadata);
-
-  void deleteUpdate(UUID taskId, UUID updateId, UUID userId);
 }

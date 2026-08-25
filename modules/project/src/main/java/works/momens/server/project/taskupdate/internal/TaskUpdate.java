@@ -1,4 +1,4 @@
-package works.momens.server.project.task.internal;
+package works.momens.server.project.taskupdate.internal;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import works.momens.server.common.persistence.BaseEntity;
-import works.momens.server.project.task.TaskUpdateDetail;
+import works.momens.server.project.taskupdate.TaskUpdateDetail;
 
 /** 레거시 task_updates 매핑입니다. */
 @Getter

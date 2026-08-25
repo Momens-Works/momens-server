@@ -15,7 +15,6 @@ import works.momens.server.project.core.ProjectErrorCode;
 import works.momens.server.project.core.ProjectReader;
 import works.momens.server.project.milestone.MilestoneDirectory;
 import works.momens.server.project.task.TaskErrorCode;
-import works.momens.server.project.task.TaskUpdateDetail;
 import works.momens.server.project.task.WebTaskDetail;
 import works.momens.server.project.task.WebTaskWriter;
 import works.momens.server.workspace.LabelAllocator;
@@ -28,7 +27,6 @@ class WebTaskWriterImpl implements WebTaskWriter {
   private static final String EVENT_TASK_CREATED = "task.created";
 
   private final TaskRepository taskRepository;
-  private final TaskUpdateRepository taskUpdateRepository;
   private final ProjectReader projectReader;
   private final MilestoneDirectory milestoneDirectory;
   private final WorkspaceAccess workspaceAccess;
@@ -140,44 +138,6 @@ class WebTaskWriterImpl implements WebTaskWriter {
     task.delete();
   }
 
-  @Override
-  @Transactional
-  public TaskUpdateDetail createUpdate(
-      UUID taskId, UUID userId, String body, String kind, Map<String, Object> metadata) {
-    Task task = requireTask(taskId);
-    requireMember(task.getWorkspaceId(), userId);
-    if (body == null || body.trim().isEmpty()) {
-      throw validation("body");
-    }
-    String normalizedKind = normalizeTaskUpdateKind(kind);
-    TaskUpdate update =
-        TaskUpdate.create(
-            task.getWorkspaceId(),
-            task.getProjectId(),
-            taskId,
-            userId,
-            body.trim(),
-            normalizedKind,
-            metadata);
-    taskUpdateRepository.save(update);
-    return update.toDetail();
-  }
-
-  @Override
-  @Transactional
-  public void deleteUpdate(UUID taskId, UUID updateId, UUID userId) {
-    Task task = requireTask(taskId);
-    requireMember(task.getWorkspaceId(), userId);
-    TaskUpdate update =
-        taskUpdateRepository
-            .findByIdAndTaskIdAndDeletedAtIsNull(updateId, taskId)
-            .orElseThrow(this::taskNotFound);
-    if (!userId.equals(update.getAuthorId())) {
-      throw new BusinessException(CommonErrorCode.AUTH_FORBIDDEN);
-    }
-    update.delete();
-  }
-
   private void validateReferences(
       UUID workspaceId, UUID projectId, UUID milestoneId, UUID assigneeId) {
     if (milestoneId != null && !milestoneDirectory.existsInProject(milestoneId, projectId)) {
@@ -232,15 +192,6 @@ class WebTaskWriterImpl implements WebTaskWriter {
       case "low", "high", "urgent" -> normalized;
       case "medium", "med" -> "medium";
       default -> throw validation("priority");
-    };
-  }
-
-  private static String normalizeTaskUpdateKind(String value) {
-    String normalized = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
-    return switch (normalized) {
-      case "", "comment" -> "comment";
-      case "update" -> "update";
-      default -> throw validation("kind");
     };
   }
 

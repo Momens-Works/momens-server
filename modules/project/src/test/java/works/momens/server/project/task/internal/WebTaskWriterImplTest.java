@@ -31,7 +31,6 @@ class WebTaskWriterImplTest {
   private final UUID projectId = UUID.randomUUID();
   private final UUID userId = UUID.randomUUID();
   @Mock private TaskRepository taskRepository;
-  @Mock private TaskUpdateRepository taskUpdateRepository;
   @Mock private ProjectReader projectReader;
   @Mock private MilestoneDirectory milestoneDirectory;
   @Mock private WorkspaceAccess workspaceAccess;
@@ -113,21 +112,5 @@ class WebTaskWriterImplTest {
                     null,
                     false))
         .isInstanceOf(BusinessException.class);
-  }
-
-  @Test
-  @DisplayName("태스크 업데이트 kind는 공백과 대소문자를 정규화한다")
-  void normalizesTaskUpdateKind() {
-    Task task =
-        Task.web(workspaceId, projectId, "MOM-867", "기존", null, "todo", "high", null, null, null);
-    when(taskRepository.findByIdAndDeletedAtIsNull(task.getId())).thenReturn(Optional.of(task));
-    when(workspaceAccess.isMember(workspaceId, userId)).thenReturn(true);
-
-    writer.createUpdate(task.getId(), userId, " 내용 ", " Comment ", Map.of());
-
-    ArgumentCaptor<TaskUpdate> update = ArgumentCaptor.forClass(TaskUpdate.class);
-    verify(taskUpdateRepository).save(update.capture());
-    assertThat(update.getValue().getBody()).isEqualTo("내용");
-    assertThat(update.getValue().getKind()).isEqualTo("comment");
   }
 }

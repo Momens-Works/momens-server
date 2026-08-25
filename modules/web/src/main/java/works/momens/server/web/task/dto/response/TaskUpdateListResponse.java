@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import works.momens.server.project.task.TaskUpdateDetail;
+import works.momens.server.project.taskupdate.TaskUpdateDetail;
 
 @Schema(description = "태스크 업데이트 목록 응답")
 public record TaskUpdateListResponse(

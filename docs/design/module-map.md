@@ -243,18 +243,20 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 내부는 도메인 하위 경계로 논리 분리했다(MOM-71·MOM-0887). `:project` Gradle 모듈은 프로젝트 운영
 capability의 물리 경계로 유지하고, 배포 단위도 나누지 않는다.
 
-- 프로젝트 코어는 `core`, 태스크는 `task`, 마일스톤은 `milestone`, blocker는 `blocker`에 두고 네
+- 프로젝트 코어는 `core`, 태스크는 `task`, 태스크 업데이트는 `taskupdate`, 마일스톤은 `milestone`, blocker는 `blocker`에 두고 다섯
   패키지를 Spring Modulith named interface로 선언한다. 다른 상위 모듈은 nested application module을
   직접 참조할 수 없으므로 외부 공개 계약이 필요한 이 경계에는 nested module을 사용하지 않는다.
   decision은 아직 구현이 없어 경계를 선점하지 않는다.
 - 각 하위 도메인 root에는 해당 경계의 공개 계약만 두고 구현은 `core.internal`, `task.internal`,
-  `milestone.internal`, `blocker.internal`에 둔다. `works.momens.server.project` 최상위 패키지는
+  `taskupdate.internal`, `milestone.internal`, `blocker.internal`에 둔다. `works.momens.server.project` 최상위 패키지는
   namespace와 application module 선언만 소유하며 production Java 타입을 두지 않는다. 다른 Gradle
   모듈과 project 내부의 다른 하위 도메인도 필요한 named interface의 root API만 참조한다.
 - project core는 다른 하위 도메인을 참조하지 않는다. 진행률은 task가 `TaskProgressReader`로 제공하고,
   task는 프로젝트 생존·workspace 조회에 `ProjectReader`, 마일스톤 소속 검증에 `MilestoneDirectory`를
   사용한다. milestone은 기본 소유자 조회에 `ProjectOwnerReader`를 사용한다. task repository가
   `Project`·`Milestone` 엔티티를 JPQL 문자열로 직접 조회하던 숨은 결합은 두 공개 계약으로 제거했다.
+- taskupdate는 task의 `TaskReader.findScope`로 workspace·project 소속을 얻고, task 내부 저장소를 직접
+  참조하지 않는다. 허용 방향은 `taskupdate → task`이며 task는 taskupdate를 참조하지 않는다.
 - blocker는 workspace id를 직접 가진 읽기 모델이라 다른 project 하위 경계에 의존하지 않는다.
 - `HealthStatus`와 소유자 멤버십 검증은 project와 milestone의 구현 계약이다. 현재 저장값과 검증 동작은
   같아도 변경 이유가 다르므로 각 하위 경계가 독립적으로 소유한다.
@@ -262,7 +264,7 @@ capability의 물리 경계로 유지하고, 배포 단위도 나누지 않는�
   14회를 유지하기 위해 `MilestoneRepository`의 JPQL 조인을 persistence 예외로 허용한다. 엔티티 타입을
   Java 코드로 공유하거나 쓰기 경계를 넘기는 예외는 아니며, 통합 테스트가 workspace 격리와 project
   soft-delete 동작을 고정한다.
-- 하위 도메인마다 aggregate가 하나씩이고(`Project`, `Task`, `Milestone`, `Blocker`) 트랜잭션은 자기
+- 하위 도메인마다 aggregate가 하나씩이고(`Project`, `Task`, `TaskUpdate`, `Milestone`, `Blocker`) 트랜잭션은 자기
   aggregate 안에 닫힌다. 예외는 workspace 라벨 발급이 task/project 생성 트랜잭션에 참여하는 것과,
   `minsu`가 연 트랜잭션에서 `TaskDraftApplier`로 `Task`를 변경하는 것이다(위 `minsu` 절,
   [ADR-0015](../adr/0015-minsu-async-task-draft-generation.md)). 엔티티 간 참조는 JPA 연관이 아니라
