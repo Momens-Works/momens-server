@@ -24,10 +24,9 @@ superuser · 빈 DB · 무트래픽** 이라 prod 와 네 가지가 동시에 �
 운영 창구를 비-superuser 로 두는 것이 특히 중요합니다. superuser 는 `ALTER TABLE ... OWNER TO` 의
 `SET ROLE` 검사를 통째로 건너뛰므로, superuser 로 리허설하면 prod 에서만 터지는 실패를 놓칩니다.
 
-재현하지 않는 것이 하나 있습니다. **pooler** 입니다. prod 접속이 direct 인지 트랜잭션
-pooler(`:6543`)인지 관리자 회신 대기 중이고, 이 쌍둥이는 direct 를 전제합니다. 회신이 pooler 로
-오면 Flyway 의 세션 단위 잠금과 `init-sqls` 가 성립하지 않아 여기서 얻은 결과의 일부가
-무효가 됩니다.
+이 쌍둥이는 direct 접속을 전제합니다. prod DB 포트가 `5432` 로 확인돼(2026-08-26) 세션이
+유지되므로 그 전제가 맞습니다. 접속 정보를 교체할 때 트랜잭션 pooler(`:6543`) 주소로 바뀌면
+Flyway 의 세션 단위 잠금과 `init-sqls` 가 성립하지 않아 여기서 얻은 락 결과가 무효가 됩니다.
 
 ## 쓰는 법
 

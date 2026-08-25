@@ -1002,9 +1002,9 @@ ADR-0019가 정한 최종 상태는 서버가 prod 스키마를 소유하는 것
 
 남은 것 둘은 로컬에서 닫히지 않는다.
 
-- **pooler 여부.** prod 접속이 direct인지 트랜잭션 pooler(`:6543`)인지 관리자 회신 대기 중이다.
-  쌍둥이는 direct를 전제한다. pooler라면 Flyway의 세션 단위 잠금과 `init-sqls`가 성립하지 않아
-  위 결과의 일부가 무효가 되고 절차를 고쳐야 한다.
+~~**pooler 여부.**~~ **닫혔다** (2026-08-26 관리자 확인). DB 포트가 `5432`다 — 트랜잭션
+  pooler(`:6543`)가 아니므로 세션이 유지되고, Flyway의 세션 단위 advisory lock과 `init-sqls`가
+  성립한다. 쌍둥이가 전제한 direct 조건이 맞았고 락 측정값이 그대로 유효하다.
 - **배포 기전.** `k8s` ConfigMap → 롤아웃 경로는 `momens-k8s-dev`의 dev 클러스터에서 별도 컨펌 후
   확인한다.
 ~~**Supabase 고유 형상.**~~ **닫혔다.** 관측 결과 event trigger 6개와 확장 스키마 분리가 있었고,
@@ -1038,7 +1038,7 @@ Supabase는 `ALTER DEFAULT PRIVILEGES FOR ROLE postgres`로 **`postgres`가 만�
 | `tasks` 소유권을 되돌리며 DML 재발급을 잊는다 | 기동이 성공해 배포에서 잡히지 않고 첫 요청에서 끊긴다. 7절에 재발급 한 줄을 절차로 적었다 |
 | Data API 소비자가 서버 소유 테이블을 읽고 있다 | 새 12개 테이블은 `momens_server` 소유라 `anon`·`authenticated`에 권한이 붙지 않는다. 소비자 목록은 MOM-0925에서 확인 중이다 |
 | 확장이 `public`이 아닌 스키마에 있다 | `uuid-ossp`가 `extensions`에 있고 실행 집합 2건이 한정 없이 호출한다. 8절 3.5단계의 `USAGE` + `search_path` 두 줄로 닫는다. 파일 수정은 체크섬 때문에 불가능하다 |
-| 접속이 트랜잭션 pooler다 | 세션 단위 잠금과 `init-sqls`가 성립하지 않는다. 쌍둥이가 재현하지 못하는 축이며 관리자 회신이 선행 조건이다 |
+| 접속이 트랜잭션 pooler다 | 해소. 포트가 `5432`라 세션이 유지된다(2026-08-26 확인). 접속 정보를 교체할 때 pooler 주소로 바뀌지 않도록 주의한다 |
 
 ## 관련 문서
 
