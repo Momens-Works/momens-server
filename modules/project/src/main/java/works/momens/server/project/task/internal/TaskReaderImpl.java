@@ -11,6 +11,7 @@ import works.momens.server.project.core.ProjectReader;
 import works.momens.server.project.task.BoardTask;
 import works.momens.server.project.task.TaskDetail;
 import works.momens.server.project.task.TaskReader;
+import works.momens.server.project.task.TaskScope;
 import works.momens.server.project.task.WebTaskDetail;
 
 @Service
@@ -41,6 +42,14 @@ class TaskReaderImpl implements TaskReader {
   @Transactional(readOnly = true)
   public Optional<UUID> workspaceIdOf(UUID taskId) {
     return taskRepository.findWorkspaceIdById(taskId);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<TaskScope> findScope(UUID taskId) {
+    return taskRepository
+        .findByIdAndDeletedAtIsNull(taskId)
+        .map(task -> new TaskScope(task.getWorkspaceId(), task.getProjectId()));
   }
 
   /**

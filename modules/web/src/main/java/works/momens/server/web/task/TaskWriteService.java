@@ -5,14 +5,16 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import works.momens.server.project.task.TaskUpdateDetail;
 import works.momens.server.project.task.WebTaskDetail;
 import works.momens.server.project.task.WebTaskWriter;
+import works.momens.server.project.taskupdate.TaskUpdateDetail;
+import works.momens.server.project.taskupdate.TaskUpdateWriter;
 
 @Service
 @RequiredArgsConstructor
 class TaskWriteService {
   private final WebTaskWriter webTaskWriter;
+  private final TaskUpdateWriter taskUpdateWriter;
 
   WebTaskDetail create(
       UUID projectId,
@@ -70,10 +72,10 @@ class TaskWriteService {
 
   TaskUpdateDetail createUpdate(
       UUID taskId, UUID userId, String body, String kind, Map<String, Object> metadata) {
-    return webTaskWriter.createUpdate(taskId, userId, body, kind, metadata);
+    return taskUpdateWriter.create(taskId, userId, body, kind, metadata);
   }
 
   void deleteUpdate(UUID taskId, UUID updateId, UUID userId) {
-    webTaskWriter.deleteUpdate(taskId, updateId, userId);
+    taskUpdateWriter.delete(taskId, updateId, userId);
   }
 }

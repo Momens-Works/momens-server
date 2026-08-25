@@ -31,6 +31,12 @@ public interface TaskReader {
    */
   Optional<UUID> workspaceIdOf(UUID taskId);
 
+  /**
+   * 태스크가 속한 workspace와 project를 조회합니다. 다른 하위 도메인이 태스크 내부 저장소를 참조하지 않고 소속만 확인할 때 사용합니다. 소프트 삭제된 태스크는
+   * 빈 값으로 취급합니다.
+   */
+  Optional<TaskScope> findScope(UUID taskId);
+
   /** 웹 레거시 응답 폭의 태스크 한 건을 조회합니다. */
   Optional<WebTaskDetail> findWebDetail(UUID taskId);
 
