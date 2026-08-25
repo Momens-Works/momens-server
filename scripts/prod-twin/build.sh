@@ -40,7 +40,7 @@ psql_root() { docker exec -i "$container" psql -U postgres -d "${2:-postgres}" -
     exit 1
 }
 
-echo "== 1/5 PostgreSQL 17 컨테이너 =="
+echo "== 1/6 PostgreSQL 17 컨테이너 =="
 docker rm -f "$container" >/dev/null 2>&1 || true
 docker run -d --name "$container" \
     -e POSTGRES_DB=postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
@@ -53,7 +53,7 @@ echo "   $(psql_root 'select version()' | cut -d, -f1)"
 
 psql_root "CREATE DATABASE $base_db"
 
-echo "== 2/5 레거시 마이그레이션 =="
+echo "== 2/6 레거시 마이그레이션 =="
 # 레거시 러너(internal/platform/db/migrations.go)를 그대로 흉내낸다. 파일 하나가 자기
 # 트랜잭션 안에서 돌고 schema_migrations 행과 함께 커밋된다. version 은 확장자를 뗀 파일명이다.
 psql_root "CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -78,7 +78,7 @@ echo "   $count 건 적용, 테이블 $(psql_root "select count(*) from pg_table
 [[ "$(psql_root "select count(*) from pg_tables where schemaname='public' and tablename='flyway_schema_history'" "$base_db")" == "0" ]] \
     || { echo "flyway_schema_history 가 이미 있습니다. prod 형상이 아닙니다." >&2; exit 1; }
 
-echo "== 3/5 role =="
+echo "== 3/6 role =="
 docker exec -i "$container" psql -U postgres -d "$base_db" -q -v ON_ERROR_STOP=1 < "$here/roles.sql"
 echo "   anon / authenticated / service_role / momens_server"
 
@@ -96,11 +96,16 @@ echo "   레거시 테이블 중 엔티티가 매핑하는 것 $overlap 개 / DM
 [[ "$overlap" -eq $((granted + 1)) ]] \
     || echo "   주의: 차이가 tasks 한 개가 아닙니다. roles.sql 의 GRANT 목록을 확인하세요." >&2
 
-echo "== 4/5 합성 데이터 =="
+echo "== 4/6 Supabase 고유 형상 =="
+# 확장 스키마 분리와 event trigger. 레거시 마이그레이션만으로는 재현되지 않는다.
+docker exec -i "$container" psql -U postgres -d "$base_db" -q -v ON_ERROR_STOP=1 < "$here/supabase-shape.sql"
+echo "   uuid-ossp → $(psql_root "select n.nspname from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'uuid-ossp'" "$base_db") · event trigger $(psql_root 'select count(*) from pg_event_trigger' "$base_db") 개"
+
+echo "== 5/6 합성 데이터 =="
 docker exec -i "$container" psql -U postgres -d "$base_db" -q -v ON_ERROR_STOP=1 < "$here/data.sql"
 echo "   tasks $(psql_root 'select count(*) from tasks' "$base_db") 행"
 
-echo "== 5/5 완료 =="
+echo "== 6/6 완료 =="
 psql_root "ALTER DATABASE $base_db WITH IS_TEMPLATE true" >/dev/null
 cat <<MSG
 

@@ -18,6 +18,8 @@ superuser · 빈 DB · 무트래픽** 이라 prod 와 네 가지가 동시에 �
 | `tasks` 소유권 | 접속 role 이 소유 | **`postgres` 소유** — 이전이 선행 조건 |
 | 데이터 | 없음 | **`tasks` 10 만 행** |
 | 락 경합 | 없음 | **시나리오가 ACCESS EXCLUSIVE 를 건다** |
+| 확장 스키마 | `public` | **`extensions`** — Supabase 가 `uuid-ossp` 를 두는 곳 |
+| event trigger | 없음 | **6 개** — `supabase_admin` 소유, 매 DDL 마다 발화 |
 
 운영 창구를 비-superuser 로 두는 것이 특히 중요합니다. superuser 는 `ALTER TABLE ... OWNER TO` 의
 `SET ROLE` 검사를 통째로 건너뛰므로, superuser 로 리허설하면 prod 에서만 터지는 실패를 놓칩니다.
@@ -52,6 +54,7 @@ scripts/prod-twin/rehearse.sh lock  # 하나만
 | `no-ownership` | `tasks` 소유권 이전을 생략하면 |
 | `no-references` | `users` 에 `REFERENCES` 를 주지 않으면 |
 | `no-set-option` | 창구가 `momens_server` 로 `SET ROLE` 할 수 없으면 |
+| `no-search-path` | `extensions` 스키마가 `momens_server` 에게 안 보이면 |
 | `ownership-reverted` | 부트스트랩 성공 후 `tasks` 소유권을 되돌리면 |
 | `history-owner` | `postgres` 세션으로 심을 때 — 소유권 이전 줄이 있을 때와 없을 때 |
 | `lock` | 레거시가 `tasks` 를 ACCESS EXCLUSIVE 로 잡고 있으면 |
@@ -69,7 +72,8 @@ scripts/prod-twin/rehearse.sh lock  # 하나만
 
 | 파일 | 내용 |
 | --- | --- |
-| `build.sh` | 컨테이너 · 레거시 마이그레이션 · role · 데이터 |
+| `build.sh` | 컨테이너 · 레거시 마이그레이션 · role · Supabase 형상 · 데이터 |
 | `roles.sql` | prod 에서 실측한 role 형상 |
+| `supabase-shape.sql` | 확장 스키마 분리와 event trigger. 레거시 마이그레이션이 재현하지 않는 것 |
 | `data.sql` | 합성 데이터. prod 덤프를 가져오지 않습니다 |
 | `rehearse.sh` | 시나리오 |
