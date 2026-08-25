@@ -541,18 +541,19 @@ fix-forward가 기본인 이유는 **부트스트랩 중 사용자 영향이 0**
 역스크립트를 준비하는 방식(roll-backward)은 택하지 않았다. 스크립트 자체가 `DROP`문 덩어리라 사고 시
 손실이 더 크고, 되돌려서 얻는 것이 "레거시가 안 쓰는 빈 테이블이 사라지는 것"뿐이다.
 
-### `tasks` 소유권을 되돌린다면 DML GRANT를 함께 재발급한다
+### 소유권을 되돌린다면 DML GRANT를 함께 재발급한다
 
-**되돌리는 경우가 위 표에 없어서 따로 적는다.** 관리자가 `tasks` 소유권 이전을 나중에 되돌리기로
-하면 — 부트스트랩 실패와 무관한 이유로도 그럴 수 있다 — 그 `ALTER TABLE` 한 줄이 `momens_server`의
-`tasks` DML을 함께 가져간다.
+**되돌리는 경우가 위 표에 없어서 따로 적는다.** 소유권 이전을 나중에 되돌리기로 하면 — 부트스트랩
+실패와 무관한 이유로도 그럴 수 있다 — 그 `ALTER TABLE`이 `momens_server`의 DML을 함께 가져간다.
+8절 3단계에서 20개를 넘겼으므로 되돌릴 때도 20개 전부에 재발급이 필요하다.
 
 ```sql
-ALTER TABLE tasks OWNER TO postgres;
-GRANT SELECT, INSERT, UPDATE, DELETE ON tasks TO momens_server;  -- 이 줄이 없으면 서비스가 끊긴다
+-- 넘긴 것과 대칭이어야 한다. 한 테이블이라도 재발급이 빠지면 그 테이블에서 서비스가 끊긴다.
+ALTER TABLE <t> OWNER TO postgres;
+GRANT SELECT, INSERT, UPDATE, DELETE ON <t> TO momens_server;
 ```
 
-8절 3단계의 (0)을 미리 넣어도 소용없다. `ALTER TABLE ... OWNER TO`는 현재 소유자를 grantee로 하는
+미리 GRANT를 넣어 두어도 소용없다. `ALTER TABLE ... OWNER TO`는 현재 소유자를 grantee로 하는
 ACL 항목을 새 소유자로 옮기므로, `momens_server`가 소유자가 되는 순간 그 GRANT는 소유자 항목에
 흡수되고 소유권이 떠날 때 함께 떠난다. 제3자가 부여한 항목도 마찬가지다 — 쌍둥이에서 ACL을 직접
 보며 확인했다.
@@ -640,44 +641,50 @@ MOM-0908 (이 문서 + ADR-0019)
 3. **DDL 선행 조건 세 가지를 관리자가 적용한다.** 하나라도 없으면 부트스트랩이 죽는다. 쌍둥이
    리허설이 각각을 실패로 재현했다(아래 "쌍둥이 리허설").
 
-   **순서가 있다.** (1)이 (3)에 의존한다 — 비-superuser 창구는 대상 role 로 `SET ROLE` 할 수
-   있어야 소유권을 넘길 수 있다.
+   **소유권을 20개 일괄로 넘긴다.** 애초에 필요한 것은 `tasks` 하나였지만, ADR-0019가 정한 최종
+   상태가 "서버가 prod 스키마를 소유한다"이고 `ALTER TABLE`은 GRANT 체계 밖이라 앞으로 레거시
+   테이블을 건드리는 마이그레이션이 나올 때마다 같은 요청이 반복된다. 관리자 왕복이 이 작업의
+   병목이었으므로 최종 상태를 한 번에 받는다.
+
+   대상과 제외 근거는 `scripts/prod-ownership-transfer-tables.txt`에 있다. **서버가 마이그레이션
+   파일을 갖는 레거시 테이블 20개**이고, `schema_migrations`(레거시 러너의 이력)·retrieval·
+   MCP OAuth 테이블은 제외한다. 실행 집합이 만드는 12개는 서버가 직접 만들므로 자동으로 서버
+   소유가 된다.
 
    ```sql
-   -- (3) 창구가 momens_server 로 SET ROLE 할 수 있게 한다. 아래 ALTER TABLE 두 곳이 여기에
-   --     의존한다 — (1)의 tasks 소유권 이전과 4단계 심기 SQL 의 이력 테이블 소유권 이전이다.
+   -- (1) 창구가 momens_server 로 SET ROLE 할 수 있게 한다. **가장 먼저 실행한다** — 아래
+   --     소유권 이전과 4단계 심기 SQL 의 이력 테이블 소유권 이전이 둘 다 여기에 의존한다.
    --     Supabase 의 postgres 는 superuser 가 아니고, 비-superuser 가
    --     `ALTER TABLE ... OWNER TO X` 를 하려면 X 로 SET ROLE 할 수 있어야 한다.
-   --     **이 명령 자체가 momens_server 에 대한 ADMIN OPTION 을 요구한다** — 아래 참조.
    GRANT momens_server TO postgres WITH SET TRUE;
 
-   -- (0) tasks 의 런타임 DML. 관리자가 실행한 GRANT 18 건은 tasks 를 의도적으로 뺐다 —
-   --     소유권을 넘기면 소유자로서 DML 이 따라온다는 판단이었다. 그래서 지금 momens_server 는
-   --     tasks 에 아무 권한이 없고, 소유권 이전이 무산되면 부트스트랩과 무관하게 서비스가
-   --     tasks 를 못 읽는다. **소유권 이전보다 먼저** 실행한다 — 이전 뒤에는 창구가 소유자가
-   --     아니라 GRANT OPTION 이 없다.
-   GRANT SELECT, INSERT, UPDATE, DELETE ON tasks TO momens_server;
+   -- (2) 소유권 일괄 이전. scripts/prod-ownership-transfer.sh --generate 로 만든다.
+   --     생성물은 이전과 `GRANT ... TO postgres` 재발급을 짝으로 묶고 전체를 한 트랜잭션에
+   --     담는다 — 이유는 아래 참조.
 
-   -- (1) 실행 집합이 tasks 를 ALTER 한다. ALTER TABLE 은 GRANT 대상이 아니라 소유자 권한이다.
-   ALTER TABLE tasks OWNER TO momens_server;
-   GRANT SELECT, INSERT, UPDATE, DELETE ON tasks TO postgres;  -- 소유자가 바뀌며 사라진 권한
-
-   -- (2) V20260810090000 이 user_identities 를 만들며 users(id) 를 참조한다. FK 를 거는 쪽은
-   --     참조당하는 테이블에 REFERENCES 가 필요하고, 이것은 DML 권한에 포함되지 않는다.
-   --     소유권까지는 필요 없다.
-   GRANT REFERENCES ON users TO momens_server;
-
-   -- (4) 확장 스키마 접근. 상세는 3.5 단계에 있다. 둘 다 필요하다.
+   -- (3) 확장 스키마 접근. 상세는 3.5 단계에 있다. 둘 다 필요하다.
    GRANT USAGE ON SCHEMA extensions TO momens_server;
    ALTER ROLE momens_server SET search_path = "$user", public, extensions;
    ```
 
-   **(3)에는 전제가 하나 더 있다.** `GRANT <role>` 은 그 role 에 대한 `ADMIN OPTION` 을 요구한다.
-   `postgres`가 `CREATEROLE`로 `momens_server`를 직접 만들었다면 PG16+에서 자동으로 `ADMIN OPTION`
-   이 붙으므로 (3)이 통과한다. 다른 role(예: `supabase_admin`)이 만들었다면 통과하지 못한다.
+   **(2)가 앞선 개별 요청 둘을 흡수한다.** `tasks` 소유권은 물론이고, `users`의 `REFERENCES`도
+   소유자가 되면서 불필요해진다. 쌍둥이의 `bulk-ownership` 시나리오가 이 상태에서 부트스트랩이
+   끝까지 도는 것을 확인한다.
+
+   **재발급이 짝으로 붙어야 하는 이유.** `ALTER TABLE ... OWNER TO`는 이전 소유자를 grantee로 하는
+   ACL 항목을 새 소유자로 옮긴다. 그래서 소유권을 넘기는 순간 `postgres`가 그 테이블의 권한을
+   잃는다. **레거시가 `postgres`로 접속하고 지금 실제 트래픽을 받는 쪽이 레거시다** — 재발급 누락은
+   곧 레거시 장애다. `anon`·`authenticated` 등 다른 role은 grantee가 다르므로 영향이 없다(쌍둥이
+   확인).
+
+   **`GRANT ALL PRIVILEGES`는 대안이 아니다.** 7개 권한을 전부 줘도 `must be owner of table`이
+   난다. `ALTER TABLE`은 GRANT로 도달할 수 없다 — 쌍둥이가 그것부터 확인한다.
+
+   **(1)에는 전제가 하나 더 있다.** `GRANT <role>`은 그 role에 대한 `ADMIN OPTION`을 요구한다.
+   `postgres`가 `CREATEROLE`로 `momens_server`를 직접 만들었다면 PG16+에서 자동으로 붙는다.
 
    ```sql
-   -- (3) 이 통과할지 미리 본다. postgres 가 admin_option = true 로 나와야 한다.
+   -- (1) 이 통과할지 미리 본다. postgres 가 admin_option = true 로 나와야 한다.
    SELECT r.rolname AS member, m.admin_option, m.inherit_option, m.set_option
      FROM pg_auth_members m
      JOIN pg_roles r ON r.oid = m.member
@@ -685,16 +692,14 @@ MOM-0908 (이 문서 + ADR-0019)
     WHERE g.rolname = 'momens_server';
    ```
 
-   `permission denied to grant role "momens_server"`가 나면 `ADMIN OPTION`을 가진 role이
-   (3)을 대신 실행하거나, (1)과 4단계의 두 `ALTER TABLE ... OWNER TO`를 직접 실행해야 한다.
+   prod 실측(2026-08-25): `postgres`가 `admin_option = true`, `set_option = false`. (1)이 통과하고,
+   `set_option = false`가 소유권 이전이 막히던 원인이다.
 
-   **(0)은 소유권 이전을 견디지 못한다.** `ALTER TABLE ... OWNER TO`는 현재 소유자를 grantee 로
-   하는 ACL 항목을 새 소유자로 옮기므로, `momens_server`가 소유자가 되는 순간 이 GRANT 는 소유자
-   항목에 흡수되고 **나중에 소유권을 되돌리면 함께 떠난다.** 제3자가 부여해도 같다(쌍둥이에서
-   확인). 따라서 (0)이 막는 것은 "이전이 무산되는 경우"이고, "나중에 되돌리는 경우"는 7절 롤백
-   절차가 막는다.
+   **소유권을 되돌린다면 DML 재발급이 함께 가야 한다.** `ALTER TABLE ... OWNER TO`가 소유자를
+   grantee로 하는 ACL을 함께 가져가므로, 사전 GRANT로는 막을 수 없다(제3자가 부여해도 같다 —
+   쌍둥이 확인). 20개를 되돌린다면 20개 전부에 재발급이 필요하다. 7절에 절차로 적었다.
 
-   (3)이 없으면 심기가 `must be able to SET ROLE "momens_server"` 로 죽는다. 단일 트랜잭션이라
+   (1)이 없으면 소유권 이전과 심기가 둘 다 `must be able to SET ROLE "momens_server"` 로 죽는다. 단일 트랜잭션이라
    앞의 INSERT 까지 통째로 롤백돼 `flyway_schema_history` 자체가 남지 않는다 — 실패로서는
    깨끗하지만 절차가 그 자리에서 멈춘다. **(3)을 관리자가 적용하지 않을 거라면 대안은 (4)단계의
    `ALTER TABLE flyway_schema_history OWNER TO momens_server` 를 관리자가 직접 실행하는 것이다.**
@@ -830,7 +835,7 @@ PostgreSQL 17 · 레거시 `000001`~`000019` · Supabase role 형상(`anon`·`au
 public 테이블의 소유자) · 비-superuser 무소유 `momens_server` · `tasks` 10만 행. 앱은 릴리스와 같은 prod 프로필 bootJar이고 토글은 ConfigMap이 넣을 환경변수
 형태로 준다.
 
-#### 계획을 고친 발견 네 가지
+#### 계획을 고친 발견 다섯 가지
 
 **1. `tasks` 소유권만으로는 부족하다 — `users`에 `REFERENCES`가 필요하다.**
 
@@ -886,6 +891,21 @@ no-op이었다. 그 차이가 실행 집합 2건을 죽인다. 상세와 처방�
 **이 축은 "재현이 어려우니 남겨 둔다"로 끝날 뻔했다.** 관측 쿼리 두 개로 형상을 받아 쌍둥이에
 넣었더니 블로커가 나왔다. 재현하지 못해 남겨 두는 것과, 관측해서 닫는 것은 다르다.
 
+**5. 개별 요청을 반복하는 대신 최종 상태를 한 번에 받는다.**
+
+발견 1~4는 전부 "관리자에게 한 줄 더 요청"으로 끝났고, 매 왕복마다 다음 블로커가 드러났다. 관리자
+왕복이 이 작업의 병목이었다.
+
+ADR-0019가 정한 최종 상태는 서버가 prod 스키마를 소유하는 것이다. `ALTER TABLE`이 GRANT 체계 밖에
+있으므로 **앞으로 레거시 테이블을 건드리는 마이그레이션이 나올 때마다 같은 요청이 반복된다.**
+그래서 소유권 20개를 일괄로 넘기는 쪽으로 바꿨다(8절 3단계).
+
+부수 효과가 둘이다. 발견 2의 `users` `REFERENCES`가 소유권에 흡수돼 **선행 조건이 오히려 줄고**,
+레거시의 DDL 동결이 물리적으로 강제된다 — 9절이 "강제 수단 없음"으로 남겨 둔 위험이다.
+
+대가는 폭발 반경이다. 소유권 이전은 이전 소유자의 권한을 가져가고 레거시는 `postgres`로 접속한다.
+생성 스크립트가 이전과 재발급을 짝으로 묶어 한 트랜잭션에 담는 것이 그 대응이다.
+
 #### 권한 표면은 이 둘로 닫혔다
 
 같은 유형('DML도 소유권도 아닌 제3의 권한')의 누락이 더 있는지 실행 집합 14건을 전수로 봤다
@@ -910,6 +930,7 @@ no-op이었다. 그 차이가 실행 집합 2건을 죽인다. 상세와 처방�
 | **no-ownership** `tasks` 소유권 이전 생략 | `must be owner of table tasks`로 기동 실패. 새 테이블 0개 |
 | **no-references** `users` `REFERENCES` 누락 | `permission denied for table users`로 기동 실패. 새 테이블 0개 |
 | **no-set-option** 창구가 `momens_server`로 `SET ROLE` 불가 | 심기가 `must be able to SET ROLE`로 실패. 단일 트랜잭션이라 `flyway_schema_history`가 아예 남지 않음 |
+| **bulk-ownership** 레거시 테이블 20개 일괄 이전 | `GRANT ALL PRIVILEGES`로도 `ALTER`는 불가. 이전 후 20개 전부 서버 소유이고 레거시(`postgres`)가 전부 읽고 쓴다. `anon` 영향 없음. `schema_migrations`는 레거시 소유로 유지. 그 상태에서 부트스트랩 42건 완주 |
 | **no-search-path** `momens_server`가 `extensions`를 못 봄 | `function uuid_generate_v4() does not exist`로 `V20260810090000`에서 실패. `USAGE`와 `search_path` **둘 다** 줘야 통과 |
 | **ownership-reverted** 부트스트랩 성공 후 `tasks` 소유권 원복 | `momens_server`의 DML이 소유권을 따라 사라짐. 조회는 `permission denied for table tasks`인데 **기동은 성공한다** — `validate`가 DML 권한을 보지 않는다. 재발급하면 복구 |
 | **history-owner (a)** 소유권 이전 줄을 뺀 채 심음 | `permission denied for table flyway_schema_history`로 기동 실패 |

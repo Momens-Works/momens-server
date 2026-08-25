@@ -19,6 +19,7 @@
 #   no-references  users REFERENCES 권한 누락
 #   no-set-option  창구가 momens_server 로 SET ROLE 할 수 없음
 #   no-search-path 확장 스키마가 search_path 에 없음
+#   bulk-ownership 레거시 테이블 20개를 한 번에 넘길 때
 #   ownership-reverted  부트스트랩 성공 후 tasks 소유권을 되돌릴 때
 #   history-owner  이력 테이블을 postgres 가 만든 경우
 #   lock           레거시가 tasks 를 ACCESS EXCLUSIVE 로 잡고 있는 경우
@@ -446,6 +447,58 @@ scenario_history_owner() {
     stop_app
 }
 
+scenario_bulk_ownership() {
+    say "bulk-ownership — 레거시 테이블 20개를 한 번에 넘기면"
+    step "ADR-0019 의 최종 상태다. ALTER TABLE 은 GRANT 로 얻을 수 없어 소유권 말고 길이 없다."
+    reset_db
+    prereq_operator_set_role
+    prereq_extensions_search_path
+
+    local own_sql="$work/ownership.sql"
+    "$repo_root/scripts/prod-ownership-transfer.sh" --generate "$own_sql" 2>/dev/null
+
+    # GRANT ALL 로는 ALTER 가 안 된다는 것을 먼저 못박는다. 이것이 소유권이 필요한 이유다.
+    root "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO momens_server" >/dev/null
+    expect "GRANT ALL 로도 ALTER 는 안 된다" "must be owner of table tasks" \
+           "$(server "ALTER TABLE tasks ADD COLUMN twin_probe TEXT")"
+    root "REVOKE ALL ON ALL TABLES IN SCHEMA public FROM momens_server" >/dev/null
+    # prod 형상(18건 DML, tasks 제외)으로 되돌린다.
+    docker exec -i "$container" psql -U postgres -d "$db" -q -v ON_ERROR_STOP=1 \
+        -c "$(grep -A8 'GRANT SELECT, INSERT, UPDATE, DELETE ON' "$here/roles.sql" | tail -n +1 | head -7)" >/dev/null 2>&1
+
+    expect "일괄 이전 성공" "COMMIT" "$(op_file "$own_sql")"
+    step "momens_server 소유 테이블: $(root "select count(*) from pg_tables where schemaname='public' and tableowner='momens_server'") 개"
+    step "schema_migrations 소유자: $(root "select tableowner from pg_tables where tablename='schema_migrations'") (레거시 이력, 넘기면 안 된다)"
+
+    # 요점. 이전 소유자가 권한을 잃으면 레거시가 끊긴다.
+    local orphan; orphan="$(root "select coalesce(string_agg(tablename, ' '), '(없음)')
+        from pg_tables where schemaname='public' and tableowner='momens_server'
+          and not has_table_privilege('sb_postgres', schemaname||'.'||tablename, 'SELECT')")"
+    if [[ "$orphan" == "(없음)" ]]; then ok "레거시가 20개를 전부 읽는다"
+    else bad "레거시가 못 읽는 테이블이 있습니다: $orphan"; fi
+
+    orphan="$(root "select coalesce(string_agg(tablename, ' '), '(없음)')
+        from pg_tables where schemaname='public' and tableowner='momens_server'
+          and not has_table_privilege('sb_postgres', schemaname||'.'||tablename, 'UPDATE')")"
+    [[ "$orphan" == "(없음)" ]] && ok "레거시가 20개를 전부 쓴다" || bad "레거시가 못 쓰는 테이블: $orphan"
+
+    step "anon 의 tasks SELECT: $(root "select has_table_privilege('anon','tasks','SELECT')") (영향 없어야 한다)"
+    expect "momens_server 가 이제 ALTER 할 수 있다" "ALTER TABLE" \
+           "$(server "ALTER TABLE milestones ADD COLUMN twin_probe TEXT")"
+    server "ALTER TABLE milestones DROP COLUMN twin_probe" >/dev/null
+
+    say "bulk-ownership — 그 상태에서 부트스트랩이 도는가"
+    step "users 소유자가 momens_server 라 REFERENCES GRANT 가 필요 없어진다"
+    step "users REFERENCES 명시 권한: $(root "select has_table_privilege('momens_server','users','REFERENCES')") (소유자라 t)"
+    expect "심기 성공" "COMMIT" "$(op_file "$bootstrap_sql")"
+    start_app "$toggles $lock_opt"
+    local result; result="$(await_app 180)"
+    if [[ "$result" == started ]]; then ok "선행 조건이 소유권 하나로 줄어든다"
+    else bad "기동 실패 ($result)"; grep -ioE "permission denied for [a-z ]+[a-z_]+|must be owner of table [a-z_]+" "$app_log" | head -3 | sed 's/^/         /'; fi
+    step "이력 총 $(server "select count(*) from flyway_schema_history") 행, 실패 $(server "select count(*) from flyway_schema_history where not success") 건"
+    stop_app
+}
+
 scenario_no_search_path() {
     say "no-search-path — momens_server 가 extensions 를 못 보는 경우"
     step "Supabase 는 uuid-ossp 를 extensions 에 두는데 momens_server 의 search_path 에는 없다."
@@ -597,6 +650,7 @@ case "${1:-all}" in
     no-ownership)  scenario_no_ownership ;;
     no-references) scenario_no_references ;;
     no-set-option) scenario_no_set_option ;;
+    bulk-ownership) scenario_bulk_ownership ;;
     no-search-path) scenario_no_search_path ;;
     ownership-reverted) scenario_ownership_reverted ;;
     history-owner) scenario_history_owner ;;
@@ -608,6 +662,7 @@ case "${1:-all}" in
         scenario_no_references
         scenario_no_set_option
         scenario_no_search_path
+        scenario_bulk_ownership
         scenario_ownership_reverted
         scenario_history_owner
         scenario_lock
