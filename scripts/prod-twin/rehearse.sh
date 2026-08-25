@@ -99,13 +99,17 @@ prereq_tasks_ownership() {
     # 소유자를 grantee 로 하는 ACL 항목을 새 소유자로 옮기므로, momens_server 가 소유자가 되는
     # 순간 이 항목은 소유자 항목에 흡수되고 나중에 소유권을 되돌리면 함께 떠난다
     # (ownership-reverted 시나리오). 되돌릴 때 다시 부여하는 것이 롤백 절차의 몫이다.
-    root "GRANT SELECT, INSERT, UPDATE, DELETE ON tasks TO momens_server" >/dev/null
+    op "GRANT SELECT, INSERT, UPDATE, DELETE ON tasks TO momens_server" >/dev/null
 
     # 실행 집합이 tasks 를 ALTER 한다. ALTER TABLE 은 GRANT 대상이 아니라 소유자 권한이라
     # 소유권 이전 말고 다른 길이 없다. 소유자가 바뀌면 레거시(창구 role)의 DML 이 사라지므로
     # 되돌려준다.
-    root "ALTER TABLE tasks OWNER TO momens_server" >/dev/null
-    root "GRANT SELECT, INSERT, UPDATE, DELETE ON tasks TO sb_postgres" >/dev/null
+    #
+    # **창구 role 로 실행한다.** 관리자가 쓰는 것이 SQL Editor = 비-superuser 세션이기 때문이다.
+    # 그래서 이 명령은 prereq_operator_set_role 에 의존한다 — 비-superuser 는 대상 role 로
+    # SET ROLE 할 수 있어야 소유권을 넘길 수 있다. superuser 로 돌리면 그 의존이 감춰진다.
+    op "ALTER TABLE tasks OWNER TO momens_server" >/dev/null
+    op "GRANT SELECT, INSERT, UPDATE, DELETE ON tasks TO sb_postgres" >/dev/null
 }
 
 prereq_users_references() {
@@ -136,10 +140,11 @@ prereq_extensions_search_path() {
     root 'ALTER ROLE momens_server SET search_path = "$user", public, extensions' >/dev/null
 }
 
+# **순서가 있다.** prereq_tasks_ownership 이 prereq_operator_set_role 에 의존한다.
 grant_ddl_prerequisites() {
+    prereq_operator_set_role
     prereq_tasks_ownership
     prereq_users_references
-    prereq_operator_set_role
     prereq_extensions_search_path
 }
 
@@ -335,8 +340,8 @@ scenario_baseline() {
 scenario_no_ownership() {
     say "no-ownership — 소유권 이전 생략"
     reset_db
-    prereq_users_references
     prereq_operator_set_role
+    prereq_users_references
     step "tasks 소유자: $(root "select tableowner from pg_tables where tablename='tasks'") (이전하지 않음)"
 
     local out
@@ -357,8 +362,8 @@ scenario_no_references() {
     say "no-references — tasks 소유권만 넘기고 users REFERENCES 를 빠뜨린 경우"
     step "지금까지의 계획이 정확히 이 상태였다"
     reset_db
-    prereq_tasks_ownership
     prereq_operator_set_role
+    prereq_tasks_ownership
     # V20260810090000 은 uuid_generate_v4() 도 쓴다. search_path 선행 조건이 없으면 그쪽에 먼저
     # 걸려 이 시나리오가 보려는 증상이 아니게 된다. 두 실패가 같은 파일에 있다는 뜻이기도 하다 —
     # prod 에서 search_path 를 고치면 그 다음에 REFERENCES 가 드러난다.
@@ -384,10 +389,16 @@ scenario_no_set_option() {
     step "심기 SQL 이 이력 테이블 소유권을 넘기는데, 비-superuser 는 대상 role 로 SET ROLE 할 수"
     step "있어야 그게 된다. CREATEROLE 의 자동 멤버십은 set=false 라 쓸 수 없다."
     reset_db
-    prereq_tasks_ownership
     prereq_users_references
     step "창구가 momens_server 로 SET ROLE 가능: $(root "select pg_has_role('sb_postgres','momens_server','USAGE')")"
 
+    # 이 능력이 없으면 **선행 조건의 소유권 이전부터** 막힌다. 심기까지 가지도 못한다.
+    expect "tasks 소유권 이전이 먼저 막힌다" "must be able to SET ROLE" \
+           "$(op "ALTER TABLE tasks OWNER TO momens_server")"
+    step "tasks 소유자: $(root "select tableowner from pg_tables where tablename='tasks'") (그대로)"
+
+    # 소유권을 관리자가 다른 경로로 넘겼다고 가정해도 심기가 같은 이유로 막힌다.
+    root "ALTER TABLE tasks OWNER TO momens_server" >/dev/null
     local out; out="$(op_file "$bootstrap_sql")"
     if grep -qF "COMMIT" <<<"$out"; then bad "심기에 성공했습니다. SET 능력 없이 통과하면 안 됩니다"
     else ok "심기 실패"; fi
@@ -439,9 +450,9 @@ scenario_no_search_path() {
     say "no-search-path — momens_server 가 extensions 를 못 보는 경우"
     step "Supabase 는 uuid-ossp 를 extensions 에 두는데 momens_server 의 search_path 에는 없다."
     reset_db
+    prereq_operator_set_role
     prereq_tasks_ownership
     prereq_users_references
-    prereq_operator_set_role
     step "search_path: $(server 'show search_path')  ·  extensions USAGE: $(root "select has_schema_privilege('momens_server','extensions','USAGE')")"
 
     expect "심기 성공" "COMMIT" "$(op_file "$bootstrap_sql")"
