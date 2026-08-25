@@ -541,6 +541,26 @@ fix-forward가 기본인 이유는 **부트스트랩 중 사용자 영향이 0**
 역스크립트를 준비하는 방식(roll-backward)은 택하지 않았다. 스크립트 자체가 `DROP`문 덩어리라 사고 시
 손실이 더 크고, 되돌려서 얻는 것이 "레거시가 안 쓰는 빈 테이블이 사라지는 것"뿐이다.
 
+### `tasks` 소유권을 되돌린다면 DML GRANT를 함께 재발급한다
+
+**되돌리는 경우가 위 표에 없어서 따로 적는다.** 관리자가 `tasks` 소유권 이전을 나중에 되돌리기로
+하면 — 부트스트랩 실패와 무관한 이유로도 그럴 수 있다 — 그 `ALTER TABLE` 한 줄이 `momens_server`의
+`tasks` DML을 함께 가져간다.
+
+```sql
+ALTER TABLE tasks OWNER TO postgres;
+GRANT SELECT, INSERT, UPDATE, DELETE ON tasks TO momens_server;  -- 이 줄이 없으면 서비스가 끊긴다
+```
+
+8절 3단계의 (0)을 미리 넣어도 소용없다. `ALTER TABLE ... OWNER TO`는 현재 소유자를 grantee로 하는
+ACL 항목을 새 소유자로 옮기므로, `momens_server`가 소유자가 되는 순간 그 GRANT는 소유자 항목에
+흡수되고 소유권이 떠날 때 함께 떠난다. 제3자가 부여한 항목도 마찬가지다 — 쌍둥이에서 ACL을 직접
+보며 확인했다.
+
+**이 손실은 배포에서 잡히지 않는다.** `ddl-auto=validate`는 카탈로그만 보고 DML 권한을 보지 않아
+**기동이 성공한다.** 끊기는 것은 첫 요청이다. 쌍둥이의 `ownership-reverted` 시나리오가 이 성질을
+그대로 재현한다.
+
 ### 롤백 절차보다 우선하는 원칙
 
 **부트스트랩 실행 집합에는 `DROP`과 파괴적 `UPDATE`가 하나도 없어야 한다.** 2.8의 `DROP TABLE task_roles`
@@ -617,13 +637,88 @@ MOM-0908 (이 문서 + ADR-0019)
      `scripts/legacy-diff`의 `server-db`도 `run.sh`가 bootJar를 띄우므로 같은 조건을 만족하지만,
      레거시 이미지 빌드와 계약 케이스까지 도는 무거운 경로다. 조건을 만족하는 최단 경로를 쓴다.
 2. 같은 커밋에서 `--generate`로 INSERT 문을 만든다
-3. prod에 `flyway_schema_history` INSERT (단일 트랜잭션)
-4. **`k8s` 토글 PR 머지**
-5. `Deploy momens-server` 워크플로를 dispatch. `deploy-service.sh`가 이미지 변경 없이도
+3. **DDL 선행 조건 세 가지를 관리자가 적용한다.** 하나라도 없으면 부트스트랩이 죽는다. 쌍둥이
+   리허설이 각각을 실패로 재현했다(아래 "쌍둥이 리허설").
+
+   ```sql
+   -- (0) tasks 의 런타임 DML. 관리자가 실행한 GRANT 18 건은 tasks 를 의도적으로 뺐다 —
+   --     소유권을 넘기면 소유자로서 DML 이 따라온다는 판단이었다. 그래서 지금 momens_server 는
+   --     tasks 에 아무 권한이 없고, 소유권 이전이 무산되면 부트스트랩과 무관하게 서비스가
+   --     tasks 를 못 읽는다. **소유권 이전보다 먼저** 실행한다 — 이전 뒤에는 창구가 소유자가
+   --     아니라 GRANT OPTION 이 없다.
+   GRANT SELECT, INSERT, UPDATE, DELETE ON tasks TO momens_server;
+
+   -- (1) 실행 집합이 tasks 를 ALTER 한다. ALTER TABLE 은 GRANT 대상이 아니라 소유자 권한이다.
+   ALTER TABLE tasks OWNER TO momens_server;
+   GRANT SELECT, INSERT, UPDATE, DELETE ON tasks TO postgres;  -- 소유자가 바뀌며 사라진 권한
+
+   -- (2) V20260810090000 이 user_identities 를 만들며 users(id) 를 참조한다. FK 를 거는 쪽은
+   --     참조당하는 테이블에 REFERENCES 가 필요하고, 이것은 DML 권한에 포함되지 않는다.
+   --     소유권까지는 필요 없다.
+   GRANT REFERENCES ON users TO momens_server;
+
+   -- (3) 심기 SQL 이 이력 테이블 소유권을 momens_server 로 넘긴다(4단계). Supabase 의
+   --     postgres 는 superuser 가 아니고, 비-superuser 가 ALTER TABLE ... OWNER TO X 를
+   --     하려면 X 로 SET ROLE 할 수 있어야 한다. CREATEROLE 이 만든 role 의 자동 멤버십은
+   --     admin=true, inherit=false, set=false 라 이 용도로 쓸 수 없다.
+   GRANT momens_server TO postgres WITH SET TRUE;
+   ```
+
+   **(0)은 소유권 이전을 견디지 못한다.** `ALTER TABLE ... OWNER TO`는 현재 소유자를 grantee 로
+   하는 ACL 항목을 새 소유자로 옮기므로, `momens_server`가 소유자가 되는 순간 이 GRANT 는 소유자
+   항목에 흡수되고 **나중에 소유권을 되돌리면 함께 떠난다.** 제3자가 부여해도 같다(쌍둥이에서
+   확인). 따라서 (0)이 막는 것은 "이전이 무산되는 경우"이고, "나중에 되돌리는 경우"는 7절 롤백
+   절차가 막는다.
+
+   (3)이 없으면 심기가 `must be able to SET ROLE "momens_server"` 로 죽는다. 단일 트랜잭션이라
+   앞의 INSERT 까지 통째로 롤백돼 `flyway_schema_history` 자체가 남지 않는다 — 실패로서는
+   깨끗하지만 절차가 그 자리에서 멈춘다. **(3)을 관리자가 적용하지 않을 거라면 대안은 (4)단계의
+   `ALTER TABLE flyway_schema_history OWNER TO momens_server` 를 관리자가 직접 실행하는 것이다.**
+3.5. **prod에서 두 가지를 관측한다.** 재현이 어려운 축이지만 관측은 쿼리 한 번이고, "재현하지 못해
+   남겨 둔 것"과 "없다는 것을 확인하고 닫은 것"은 다르다.
+
+   ```sql
+   -- event trigger 가 있으면 실행 집합의 CREATE TABLE 12건이 그것을 탄다.
+   SELECT evtname, evtevent, evtenabled, evtowner::regrole
+     FROM pg_event_trigger ORDER BY evtname;
+
+   -- role 단위 search_path 가 걸려 있으면 생성물의 SET LOCAL search_path = public 과
+   -- 상호작용한다. 확장 스키마(extensions, graphql)가 끼는 경우가 그렇다.
+   SELECT rolname, rolconfig FROM pg_roles
+    WHERE rolname IN ('postgres', 'momens_server', 'anon', 'authenticated', 'service_role');
+   ```
+
+   **`pg_event_trigger`가 비고 `rolconfig`에 `search_path`가 없으면 이 축은 닫힌다.** 쌍둥이의
+   해당 값이 그 상태이므로(0건 / 전부 없음) 리허설 결과가 그대로 유효하다. prod에 무언가 있으면
+   그때 재현 여부를 판단한다.
+
+4. prod에 `flyway_schema_history` INSERT (단일 트랜잭션). 창구는 Supabase SQL Editor이고 그것은
+   `postgres` 세션이다.
+
+   **완성된 이력 테이블의 소유자는 `momens_server`여야 한다.** Postgres에서는 테이블을 만든 role이
+   소유자가 되므로, `postgres` 세션이 그냥 만들면 `momens_server`가 그 테이블에 아무 권한도 갖지
+   못하고 다음 기동이 `permission denied for table flyway_schema_history`로 죽는다. 심기 시점에는
+   아무 신호가 없다 — 심기는 성공한다.
+
+   `momens_server`로 psql 세션을 여는 선택지는 없다. 그 비밀번호는 무작위로 생성해 `ALTER ROLE`과
+   GitHub Secret에만 넣었고 GitHub은 시크릿을 다시 보여주지 않으므로 **지금 그 값을 아는 사람이
+   없다.** `SET ROLE momens_server`는 `postgres`가 그 role의 멤버여야 성립하는데 확인되지 않았다.
+
+   그래서 **`--generate` 생성물이 트랜잭션 안에서 소유권을 넘긴다.**
+
+   ```sql
+   ALTER TABLE flyway_schema_history OWNER TO momens_server;
+   ```
+
+   절차 문서에만 적지 않고 생성물이 직접 갖게 한 이유는 `V20260823100000`이 심기 목록에서 빠졌던
+   것과 같은 유형이기 때문이다. `scripts/prod-flyway-bootstrap-verify-test.sh`가 생성물에 이 줄이
+   있는지, `BEGIN` 안에 있는지, `CREATE TABLE` 뒤인지를 검사한다.
+5. **`k8s` 토글 PR 머지**
+6. `Deploy momens-server` 워크플로를 dispatch. `deploy-service.sh`가 이미지 변경 없이도
    `rollout restart`를 걸어 ConfigMap 변경이 반영된다
-6. 기동과 스키마 확인
-7. `out-of-order`와 `group`을 제거하는 PR 머지 후 다시 dispatch
-8. 후속 PR로 `application-prod.yml`을 `flyway.enabled: true`로 정본화하고 ConfigMap 오버라이드 제거
+7. 기동과 스키마 확인
+8. `out-of-order`와 `group`을 제거하는 PR 머지 후 다시 dispatch
+9. 후속 PR로 `application-prod.yml`을 `flyway.enabled: true`로 정본화하고 ConfigMap 오버라이드 제거
 
 #### 토글은 수기 변경이 아니라 커밋이어야 한다
 
@@ -635,7 +730,7 @@ ConfigMap 키는 **다음 배포에서 지워진다.** 토글은 `k8s` 리포에
 쥔다. 문제는 그 `repository_dispatch`를 보내는 것이 **momens-server의 `main` push**라는 점이다.
 토글을 미리 머지해 두면 시딩 전에 나가는 무관한 릴리스가 그것을 적용해 버린다.
 
-그래서 **토글 PR은 시딩(2단계)이 끝난 뒤에 머지한다.** 그때까지 draft로 둔다.
+그래서 **토글 PR은 시딩(4단계)이 끝난 뒤에 머지한다.** 그때까지 draft로 둔다.
 
 ### 배포 리포(`k8s`)도 함께 바꿔야 한다
 
@@ -643,7 +738,7 @@ ConfigMap 키는 **다음 배포에서 지워진다.** 토글은 `k8s` 리포에
 
 - `manifests/apps/momens-server/deployment.yaml` — DB env 주석의 *"read/validate only in prod: Flyway
   disabled, Hibernate ddl-auto=validate; schema is owned by legacy momens-api"* 가 사실과 어긋나게 된다.
-- `manifests/apps/momens-server/configmap.yaml` — 위 2단계 토글이 들어가고 5단계에서 일부 빠진다.
+- `manifests/apps/momens-server/configmap.yaml` — 위 5단계 토글이 들어가고 8단계에서 일부 빠진다.
 - `docs/secrets.md` — *"`ENV=production` also defaults the worker's `MIGRATIONS_ENABLED` to false so the
   API stays the single migration owner on the shared database"* 는 이미 worker ConfigMap과 어긋나 있고
   (2.1절), 주도권 이전으로 두 번째로 틀리게 된다.
@@ -678,20 +773,176 @@ MOM-0909가 요구하는 "prod와 같은 형상(레거시 러너가 만든 스�
 
 2.4의 동작 예측이 Flyway의 에러 메시지로 직접 확인됐고, 그 메시지가 해법까지 지목한다.
 
-### 아직 리허설로 닫지 못한 것
+### 쌍둥이 리허설 (MOM-0909, 2026-08-25)
 
-- **DB role 권한.** 리허설 컨테이너는 superuser로 돌아 권한 문제를 재현하지 못한다. prod의
-  momens-server role이 `public` 스키마에 `CREATE` 권한을 갖는지, `tasks`를 `ALTER` 할 수 있는지
-  (= 소유 role의 멤버인지)는 **실제 prod에서만 확인된다.** `ALTER TABLE`은 GRANT 대상이 아니라 소유자
-  권한이라 별도 조치가 필요할 수 있다. **부트스트랩의 선행 조건이다.**
-- **ConfigMap 환경변수 바인딩.** `spring.flyway.out-of-order`·`group`·`init-sqls`는 대시가 있거나
-  값에 공백이 있어 전달 형태가 애매하다. CLI 리허설은 명령행 인자를 쓰므로 이 경로를 검증하지 못한다.
-  **실제 배포 형태로 세 값이 모두 적용되는지 확인해야 한다.** 특히 `lock_timeout`은 적용되지 않아도
-  조용히 넘어가므로, 적용 여부를 기동 로그나 `pg_settings`로 직접 확인한다.
-- **레거시 트래픽과의 락 경합.** 리허설 DB는 비어 있고 동시 접속이 없어 `tasks`
-  `ACCESS EXCLUSIVE` 대기를 재현하지 못한다. `lock_timeout`이 그 대비책이다.
-- **기존 데이터가 있어야 드러나는 실패.** 리허설 DB는 비어 있어 `SET NOT NULL`·CHECK 위반이 재현되지
-  않는다. 이 위험은 객체 대조로 닫았다(4절).
+위 리허설은 `legacy-db`에서 돌았는데 그 DB는 **pg16 · superuser · 빈 DB · 무트래픽**이라 prod와
+네 가지가 동시에 달랐다. 그래서 재현할 수 없는 축이 남았고, 그것을 닫기 위해 prod와 같은 형상을
+로컬에 세웠다. 구축과 시나리오는 [`scripts/prod-twin`](../../scripts/prod-twin/README.md)이다.
+
+PostgreSQL 17 · 레거시 `000001`~`000019` · Supabase role 형상(`anon`·`authenticated`·
+`service_role` + `ALTER DEFAULT PRIVILEGES`) · **비-superuser 창구 role**(SQL Editor 대역이자
+public 테이블의 소유자) · 비-superuser 무소유 `momens_server` · `tasks` 10만 행. 앱은 릴리스와 같은 prod 프로필 bootJar이고 토글은 ConfigMap이 넣을 환경변수
+형태로 준다.
+
+#### 계획을 고친 발견 세 가지
+
+**1. `tasks` 소유권만으로는 부족하다 — `users`에 `REFERENCES`가 필요하다.**
+
+`tasks` 소유권을 넘긴 정상 경로가 `permission denied for table users`로 죽었다. 죽은 위치는
+`V20260810090000__create_user_identities.sql`이고, 이 파일이 `users(id)`를 참조하는 FK를 건다.
+FK를 거는 쪽은 참조당하는 테이블에 `REFERENCES` 권한이 필요한데 이것은
+`SELECT`/`INSERT`/`UPDATE`/`DELETE`에 포함되지 않는 **별개 권한**이다. 관리자가 마친 조치는 DML
+GRANT뿐이었다.
+
+실행 집합 전체의 FK 대상은 `tasks`와 `users` 둘뿐이고, `tasks`는 소유권 이전으로 이미 해결된다.
+따라서 추가로 필요한 것은 `GRANT REFERENCES ON users TO momens_server` 한 줄이다 — 소유권 이전은
+필요 없다는 것도 쌍둥이에서 확인했다.
+
+**2. 이력 테이블의 소유자가 `momens_server`여야 한다.**
+
+부트스트랩 SQL이 `flyway_schema_history`를 만들고, Postgres에서는 만든 role이 소유자가 된다.
+`postgres`로 실행하면 `momens_server`가 그 테이블에 아무 권한도 갖지 못하고 다음 기동이
+`permission denied for table flyway_schema_history`로 죽는다. **Supabase SQL Editor는 `postgres`
+세션이므로 가장 자연스러운 경로가 곧 틀린 경로다.**
+
+`momens_server`로 psql을 여는 것으로는 해결되지 않는다 — 그 비밀번호를 아는 사람이 없다(8절
+4단계). 그래서 **`--generate` 생성물이 트랜잭션 안에서 소유권을 넘기도록** 고쳤고,
+`prod-flyway-bootstrap-verify-test.sh`가 그 줄의 존재·위치를 검사한다. 쌍둥이의
+`history-owner` 시나리오가 양쪽을 확인한다 — 줄이 없으면 죽고, 생성물 그대로 `postgres`로 심으면
+`momens_server`가 42건을 끝까지 돈다.
+
+**3. Supabase 의 `postgres`는 superuser가 아니고, 그래서 소유권 이전이 공짜가 아니다.**
+
+첫 쌍둥이는 컨테이너의 부트스트랩 `postgres`(superuser)로 운영자 조작을 흉내냈다. superuser는
+`ALTER TABLE ... OWNER TO`의 SET ROLE 검사를 통째로 건너뛰므로 **위 두 발견의 처방이 무비판적으로
+통과했다.** 실제 Supabase의 `postgres`는 superuser가 아니다(기존 20개 테이블의 소유자가 그것이라는
+실측과도 일치한다).
+
+그래서 창구 대역을 `NOSUPERUSER CREATEROLE`인 별도 role로 바꾸고 public의 테이블 소유권을 그쪽으로
+옮겨 다시 쟀다. 결과는 **비-superuser는 대상 role로 `SET ROLE`할 수 있어야 소유권을 넘길 수 있다**는
+것이고, PG16+에서 `CREATEROLE` role이 만든 role의 자동 멤버십은 그 용도에 못 미친다.
+
+```
+grantee=sb_postgres  admin=true  inherit=false  set=false
+→ ALTER TABLE t OWNER TO app  →  ERROR: must be able to SET ROLE "app"
+```
+
+`SET ROLE momens_server`가 되는지 불확실하다고 본 것과 같은 뿌리다. 둘 다 같은 멤버십에 달려 있고,
+없으면 **둘 다 안 된다.** 8절 3단계에 `GRANT momens_server TO postgres WITH SET TRUE`를 세 번째
+선행 조건으로 넣었다.
+
+#### 권한 표면은 이 둘로 닫혔다
+
+같은 유형('DML도 소유권도 아닌 제3의 권한')의 누락이 더 있는지 실행 집합 14건을 전수로 봤다
+(별도 세션의 독립 대조로도 같은 결과).
+
+(아래는 *마이그레이션이 요구하는 객체 권한*의 표면이다. 발견 3의 `SET ROLE`은 객체 권한이 아니라
+운영자 세션의 role 권한이라 별개 축이다.)
+
+- FK 참조 대상은 정확히 `tasks`와 `users` 둘뿐이다.
+- 기존 객체를 건드리는 동작은 `tasks`의 `ALTER`뿐이다.
+- `signals`·`signal_evidence`·`outbox_events`·`task_open_questions`에 대한 `CREATE INDEX`와
+  `ALTER`는 전부 실행 집합이 스스로 만드는 테이블이라 `momens_server` 소유다.
+
+**세 번째는 없다.**
+
+#### 실측 결과
+
+| 시나리오 | 결과 |
+| --- | --- |
+| **baseline** 선행 조건 → 심기 28행 → 부트스트랩 → `validate` 기동 | 이력 42행 = 심기 28 + 실행 14, 실패 0. `tasks`에 `role`·`origin_type`·`next_action` 셋 다, `tasks_role_check`는 `tasks`에 귀속, `task_roles`는 생성되지 않음, 기존 10만 행 온전 |
+| **baseline** 토글 없이 재기동 | `is up to date. No migration necessary` — 1회성으로 끄는 설계가 PG17·비-superuser에서도 성립한다 |
+| **no-ownership** `tasks` 소유권 이전 생략 | `must be owner of table tasks`로 기동 실패. 새 테이블 0개 |
+| **no-references** `users` `REFERENCES` 누락 | `permission denied for table users`로 기동 실패. 새 테이블 0개 |
+| **no-set-option** 창구가 `momens_server`로 `SET ROLE` 불가 | 심기가 `must be able to SET ROLE`로 실패. 단일 트랜잭션이라 `flyway_schema_history`가 아예 남지 않음 |
+| **ownership-reverted** 부트스트랩 성공 후 `tasks` 소유권 원복 | `momens_server`의 DML이 소유권을 따라 사라짐. 조회는 `permission denied for table tasks`인데 **기동은 성공한다** — `validate`가 DML 권한을 보지 않는다. 재발급하면 복구 |
+| **history-owner (a)** 소유권 이전 줄을 뺀 채 심음 | `permission denied for table flyway_schema_history`로 기동 실패 |
+| **history-owner (b)** 생성물 그대로 비-superuser 창구로 심음 | 소유자 `momens_server`, 앱이 42건을 끝까지 돌고 기동 성공 |
+| **lock** 레거시가 `tasks`를 60초간 ACCESS EXCLUSIVE로 점유 | `canceling statement due to lock timeout`으로 포기. 락이 풀릴 때까지 기다리지 않았다. 새 테이블 0개. 구간은 아래에 분해했다 |
+| **checksum** 심은 체크섬 하나를 +1 | `checksum mismatch`로 기동 실패, 스키마 무변경. `--verify`가 해당 version을 이름으로 지목 |
+
+`group=true` 덕분에 **모든 실패 경로에서 스키마가 하나도 바뀌지 않았다.** 실행 집합 14건이 한
+트랜잭션이라 중간에 죽으면 통째로 롤백된다. 롤백 절차(7절)가 실제로 필요해지는 구간이 좁다.
+
+#### 락 구간의 실제 상한
+
+락은 방향이 둘이고 창구에서 잡을 예산이 다르다. 둘 다 실측했다.
+
+**우리가 막히는 쪽** — 레거시가 `tasks`를 이미 잡고 있을 때.
+
+| 구간 | 값 |
+| --- | --- |
+| 첫 로그 → Flyway가 DB를 잡음 | 3.8초 (JVM + Spring 컨텍스트) |
+| DB를 잡음 → 포기 | **5.4초** ← 절차에 적을 값 |
+| 프로세스 전체 (wall-clock) | 11초 |
+| `lock_timeout` 소진 횟수 | **1회** |
+
+`lock_timeout`이 한 번만 소진되는 이유가 `group=true`에 있다. 실행 집합 14건이 한 트랜잭션이라
+`tasks`를 처음 건드리는 `V20260714091000`에서 막히면 5초 뒤 트랜잭션 전체가 abort하고 두 번째
+시도가 없다. **따라서 상한은 `lock_timeout` × 1이지 × 5(=`tasks`를 건드리는 문장 수)가 아니다.**
+프로세스 wall-clock 11초에는 JVM 기동·종료가 섞여 있으므로 예산 산정에 쓰면 과대평가가 된다.
+
+**레거시가 막히는 쪽** — 우리가 락을 잡는 데 성공했을 때. `tasks`에 200ms 간격으로 짧은
+`UPDATE`를 던지는 세션을 띄우고 각 문장의 소요를 쟀다. `pg_locks`를 폴링해 재지 않는다 —
+왕복이 폴링 간격보다 커서 표본이 한두 개밖에 잡히지 않고, 그러면 구간 길이를 말할 수 없다.
+
+**쌍둥이의 `tasks`는 10만 행이고 prod의 `tasks`는 10만 행을 넘지 않는다(TL 확인).** 따라서 아래
+값은 "10만 행 기준 추정"이 아니라 **상한**이다.
+
+| 실행 | 최장 문장 | 100ms 초과 문장 |
+| --- | --- | --- |
+| 1회차 | 342 ms | 1 |
+| 2회차 | 316 ms | 1 |
+| 3회차 | 161 ms | 1 |
+
+**막히는 것은 언제나 정확히 한 문장이고 0.2~0.4초다.** `tasks`에 거는 `ADD COLUMN`은 PG11+에서
+메타데이터 조작이라 볼륨과 무관하고, `tasks_role_check`·`tasks_origin_signal_check`의 검증
+스캔만 전체를 훑는데 10만 행에서 그 정도다. 락은 첫 `ALTER`부터 커밋까지 유지되지만 그 뒤에
+남은 것이 전부 신규 테이블 `CREATE`라 짧다.
+
+즉 **레거시 트래픽의 실제 영향은 1초 미만의 지연 한 번**이고, 잡아야 할 창구는 그것이 아니라
+우리가 실패했을 때의 재시도 여지다.
+
+#### 규모가 커져도 마이그레이션 파일은 레버가 아니다
+
+이 값이 문제가 될 만큼 `tasks`가 커진 상황을 가정하면, 교과서적 처방은 CHECK 제약을
+`ADD CONSTRAINT ... NOT VALID`로 걸고 `VALIDATE CONSTRAINT`를 따로 돌려 ACCESS EXCLUSIVE 보유를
+거의 없애는 것이다. **그러나 그 처방을 이 두 파일에 적용할 수 없다.**
+
+`V20260714091000`과 `V20260823110000`은 이미 local·dev의 `flyway_schema_history`에 체크섬이
+박혀 있다. 파일을 고치면 그 환경들이 checksum mismatch로 기동에 실패한다. 손댈 수 있는 것은
+파일이 아니라 **새 version의 보정 마이그레이션**이고, 그것도 제약이 이미 걸린 뒤에는 의미가 없다.
+
+정리하면 이 구간의 레버는 마이그레이션 파일이 아니라 **창구 선택**(트래픽이 적은 시각)과
+`lock_timeout`이다. 다음 사람이 파일을 고치려 들지 않도록 적어 둔다.
+
+#### 닫힌 축과 남은 축
+
+닫힌 것: **PG17**(레거시 19건·Flyway 42건 모두 적용됨) · **`momens_server` role**(비-superuser
+무소유로 전 구간 통과) · **`tasks` 소유권**(필요함을 실패로 확인) · **실제 데이터**(10만 행에서
+제약 위반 없음, 행 손실 없음) · **락 경합**(양방향 모두 측정됐다. 우리가 막히면 `lock_timeout` 1회
+소진으로 5.4초, 레거시가 막히면 1초 미만 한 문장. 그동안 "틀려도 조용한" 축이었다) · **실패 복구**(전 실패 경로에서 스키마 무변경).
+
+남은 것 둘은 로컬에서 닫히지 않는다.
+
+- **pooler 여부.** prod 접속이 direct인지 트랜잭션 pooler(`:6543`)인지 관리자 회신 대기 중이다.
+  쌍둥이는 direct를 전제한다. pooler라면 Flyway의 세션 단위 잠금과 `init-sqls`가 성립하지 않아
+  위 결과의 일부가 무효가 되고 절차를 고쳐야 한다.
+- **배포 기전.** `k8s` ConfigMap → 롤아웃 경로는 `momens-k8s-dev`의 dev 클러스터에서 별도 컨펌 후
+  확인한다.
+- **Supabase 고유 형상.** event trigger와 role 단위 `search_path`는 재현하지 않았다. 다만 재현
+  대신 **관측으로 닫을 수 있고**, 8절 3.5단계가 그 쿼리를 절차에 넣었다. 둘 다 비어 있으면 이 축은
+  닫힌다.
+
+#### 곁가지 관측 — Data API와 새 테이블
+
+Supabase는 `ALTER DEFAULT PRIVILEGES FOR ROLE postgres`로 **`postgres`가 만드는** 테이블에
+`anon`·`authenticated`·`service_role` 권한을 자동으로 붙인다(MOM-0925가 관측한 노출의 기전이다).
+부트스트랩이 만드는 12개 테이블의 소유자는 `postgres`가 아니라 `momens_server`이므로 **여기에
+걸리지 않는다.** 쌍둥이에서 `has_table_privilege('anon', 'signals', 'SELECT')`가 `false`로 나온다.
+
+노출 면에서는 개선이지만, Data API로 서버 소유 테이블을 읽는 소비자가 있다면 부트스트랩 시점에
+조용히 끊긴다. 소비자 목록은 관리자 회신 대기 중이다(MOM-0925).
 
 ## 9. 남은 위험
 
@@ -706,10 +957,16 @@ MOM-0909가 요구하는 "prod와 같은 형상(레거시 러너가 만든 스�
 | 리포 설정과 prod 실제 설정이 어긋난 채 방치된다 | 8절 6단계(정본화 PR)를 부트스트랩과 같은 스프린트에서 닫는다. ConfigMap 오버라이드는 임시 상태다 |
 | ConfigMap 환경변수가 바인딩되지 않는다 | `spring.flyway.out-of-order`는 대시 때문에 변환형이 애매하다. 시스템 프로퍼티로 주고 리허설에서 확인한다 |
 | 롤아웃 실패 후 정리가 안 된 채 남는다 | `deploy-service.sh`에 `rollout undo`가 없다. 수동 정리 단계를 절차에 명시한다 |
+| DDL 선행 조건이 빠진 채 전환한다 | 쌍둥이 리허설이 `tasks` 소유권 · `users` `REFERENCES` · 창구의 `SET ROLE` 능력 세 가지를 각각 실패로 재현했다. 8절 3단계가 SQL로 적는다 |
+| 이력 테이블 소유자가 `momens_server`가 아니게 된다 | 다음 기동이 `permission denied`로 죽고 심기 시점에는 신호가 없다. `--generate` 생성물이 트랜잭션 안에서 소유권을 넘기고, `prod-flyway-bootstrap-verify-test.sh`가 그 줄을 지킨다 |
+| `tasks` 소유권을 되돌리며 DML 재발급을 잊는다 | 기동이 성공해 배포에서 잡히지 않고 첫 요청에서 끊긴다. 7절에 재발급 한 줄을 절차로 적었다 |
+| Data API 소비자가 서버 소유 테이블을 읽고 있다 | 새 12개 테이블은 `momens_server` 소유라 `anon`·`authenticated`에 권한이 붙지 않는다. 소비자 목록은 MOM-0925에서 확인 중이다 |
+| 접속이 트랜잭션 pooler다 | 세션 단위 잠금과 `init-sqls`가 성립하지 않는다. 쌍둥이가 재현하지 못하는 축이며 관리자 회신이 선행 조건이다 |
 
 ## 관련 문서
 
 - [ADR-0019 prod 스키마 주도권을 서버로 이전](../adr/0019-prod-schema-ownership-transfer.md)
+- [prod 쌍둥이 리허설 환경](../../scripts/prod-twin/README.md)
 - [데이터 규칙](../rules/persistence.md)
 - [prod 운영 준비 대장](../prod-readiness-ledger.md)
 - [레거시 Product API 이관 전략](legacy-product-api-migration/strategy.md)

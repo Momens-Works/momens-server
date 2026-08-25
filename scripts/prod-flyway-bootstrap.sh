@@ -6,6 +6,9 @@
 # `relation already exists` 로 죽지 않도록 `flyway_schema_history` 에 적용 기록을 미리 심는다.
 # 이 스크립트는 그 INSERT 문을 만든다. 적용은 사람이 한다.
 #
+# 생성물은 이력 테이블의 소유권을 momens_server 로 넘기는 줄을 포함한다. 절차 문서에만 적으면
+# 빠지는 유형이라 생성물이 직접 갖게 했다.
+#
 # 체크섬을 직접 계산하지 않는다. 빈 스크래치 DB 에 Flyway 를 그대로 돌려 나온 값을 복사한다.
 # Flyway 는 매 기동 시 파일을 다시 해싱해 이 값과 대조하고 다르면 checksum mismatch 로 기동을
 # 거부하므로, CRC32 를 재구현하면 어긋났을 때 원인 추적이 어렵다.
@@ -35,6 +38,11 @@ seed_manifest="$repo_root/scripts/prod-flyway-bootstrap-seed.txt"
 # 확인:
 #   ./gradlew -q :app:dependencies --configuration runtimeClasspath | grep flyway-core
 flyway_version="12.4.0"
+
+# prod 에서 앱이 접속하는 DB role. 생성물이 이력 테이블의 소유권을 이 role 로 넘긴다 — 이유는
+# 아래 OWNER TO 줄의 주석에 있다. 값이 바뀌면 여기만 고친다.
+prod_role="momens_server"
+
 scratch_container="momens-flyway-bootstrap-scratch"
 scratch_db="scratch"
 scratch_user="momens"
@@ -101,6 +109,59 @@ run_flyway_migrate() {
 
 scratch_query() {
     docker exec "$scratch_container" psql -U "$scratch_user" -d "$scratch_db" -Atc "$1"
+}
+
+# 생성물의 DDL 머리말. INSERT 앞에 오는 전부다. 회귀 테스트가 이 함수만 따로 부를 수 있도록
+# generate 에서 분리해 뒀다 — 머리말을 확인하려고 docker 와 스크래치 DB 를 띄우게 하면 테스트가
+# 무거워져 결국 돌지 않는다.
+bootstrap_ddl_preamble() {
+    echo "-- prod flyway_schema_history 부트스트랩 (MOM-0909)"
+    echo "-- 생성: $(date -u +%Y-%m-%dT%H:%M:%SZ) · 기준 커밋: $(git -C "$repo_root" rev-parse HEAD)"
+    echo "-- Flyway CLI $flyway_version 이 빈 스크래치 DB 에서 계산한 체크섬이다."
+    echo "--"
+    echo "-- 적용 전 확인: 이 DB 에 flyway_schema_history 가 없어야 한다."
+    echo "-- 실패하면 DROP TABLE flyway_schema_history 로 완전히 되돌릴 수 있다(설계 7절)."
+    echo ""
+    echo "BEGIN;"
+    echo ""
+    echo "-- 대상 스키마를 고정한다. 운영자 세션의 search_path 가 public 이 아니면 엉뚱한"
+    echo "-- 스키마에 이력이 생기고, 실패가 아니라 성공으로 보인다."
+    echo "SET LOCAL search_path = public;"
+    echo ""
+    echo "-- 선행 조건을 주석이 아니라 assert 로 건다. 아래 CREATE TABLE 이 IF NOT EXISTS 라"
+    echo "-- 이미 이력이 있는 DB 에서도 통과해 버리기 때문이다."
+    echo "DO \$\$"
+    echo "BEGIN"
+    echo "    IF EXISTS (SELECT 1 FROM pg_tables"
+    echo "                WHERE schemaname = 'public' AND tablename = 'flyway_schema_history') THEN"
+    echo "        RAISE EXCEPTION 'flyway_schema_history 가 이미 있습니다. 부트스트랩 대상이 아닙니다.';"
+    echo "    END IF;"
+    echo "END \$\$;"
+    echo ""
+    echo "CREATE TABLE IF NOT EXISTS flyway_schema_history ("
+    echo "    installed_rank INTEGER NOT NULL,"
+    echo "    version VARCHAR(50),"
+    echo "    description VARCHAR(200) NOT NULL,"
+    echo "    type VARCHAR(20) NOT NULL,"
+    echo "    script VARCHAR(1000) NOT NULL,"
+    echo "    checksum INTEGER,"
+    echo "    installed_by VARCHAR(100) NOT NULL,"
+    echo "    installed_on TIMESTAMP NOT NULL DEFAULT now(),"
+    echo "    execution_time INTEGER NOT NULL,"
+    echo "    success BOOLEAN NOT NULL,"
+    echo "    CONSTRAINT flyway_schema_history_pk PRIMARY KEY (installed_rank)"
+    echo ");"
+    echo "CREATE INDEX IF NOT EXISTS flyway_schema_history_s_idx ON flyway_schema_history (success);"
+    echo ""
+    echo "-- 이력 테이블을 만든 role 이 소유자가 된다. 이 SQL 을 실행하는 창구는 Supabase SQL"
+    echo "-- Editor 이고 그것은 postgres 세션이므로, 이 줄이 없으면 소유자가 postgres 가 되고"
+    echo "-- 앱이 접속하는 role($prod_role)은 이력 테이블에 아무 권한도 갖지 못한다. 다음 기동이"
+    echo "-- permission denied for table flyway_schema_history 로 죽는다."
+    echo "--"
+    echo "-- SET ROLE 로 갈아타는 방법도 있으나 postgres 가 그 role 의 멤버여야 성립한다."
+    echo "-- 소유권 이전은 그 전제 없이 postgres 권한만으로 된다."
+    echo "ALTER TABLE flyway_schema_history OWNER TO $prod_role;"
+    echo ""
 }
 
 generate() {
@@ -170,44 +231,7 @@ generate() {
     echo "INSERT ${inserted}행 (심기 목록과 일치)" >&2
 
     {
-        echo "-- prod flyway_schema_history 부트스트랩 (MOM-0909)"
-        echo "-- 생성: $(date -u +%Y-%m-%dT%H:%M:%SZ) · 기준 커밋: $(git -C "$repo_root" rev-parse HEAD)"
-        echo "-- Flyway CLI $flyway_version 이 빈 스크래치 DB 에서 계산한 체크섬이다."
-        echo "--"
-        echo "-- 적용 전 확인: 이 DB 에 flyway_schema_history 가 없어야 한다."
-        echo "-- 실패하면 DROP TABLE flyway_schema_history 로 완전히 되돌릴 수 있다(설계 7절)."
-        echo ""
-        echo "BEGIN;"
-        echo ""
-        echo "-- 대상 스키마를 고정한다. 운영자 세션의 search_path 가 public 이 아니면 엉뚱한"
-        echo "-- 스키마에 이력이 생기고, 실패가 아니라 성공으로 보인다."
-        echo "SET LOCAL search_path = public;"
-        echo ""
-        echo "-- 선행 조건을 주석이 아니라 assert 로 건다. 아래 CREATE TABLE 이 IF NOT EXISTS 라"
-        echo "-- 이미 이력이 있는 DB 에서도 통과해 버리기 때문이다."
-        echo "DO \$\$"
-        echo "BEGIN"
-        echo "    IF EXISTS (SELECT 1 FROM pg_tables"
-        echo "                WHERE schemaname = 'public' AND tablename = 'flyway_schema_history') THEN"
-        echo "        RAISE EXCEPTION 'flyway_schema_history 가 이미 있습니다. 부트스트랩 대상이 아닙니다.';"
-        echo "    END IF;"
-        echo "END \$\$;"
-        echo ""
-        echo "CREATE TABLE IF NOT EXISTS flyway_schema_history ("
-        echo "    installed_rank INTEGER NOT NULL,"
-        echo "    version VARCHAR(50),"
-        echo "    description VARCHAR(200) NOT NULL,"
-        echo "    type VARCHAR(20) NOT NULL,"
-        echo "    script VARCHAR(1000) NOT NULL,"
-        echo "    checksum INTEGER,"
-        echo "    installed_by VARCHAR(100) NOT NULL,"
-        echo "    installed_on TIMESTAMP NOT NULL DEFAULT now(),"
-        echo "    execution_time INTEGER NOT NULL,"
-        echo "    success BOOLEAN NOT NULL,"
-        echo "    CONSTRAINT flyway_schema_history_pk PRIMARY KEY (installed_rank)"
-        echo ");"
-        echo "CREATE INDEX IF NOT EXISTS flyway_schema_history_s_idx ON flyway_schema_history (success);"
-        echo ""
+        bootstrap_ddl_preamble
         printf '%s\n' "$rows"
         echo ""
         echo "COMMIT;"

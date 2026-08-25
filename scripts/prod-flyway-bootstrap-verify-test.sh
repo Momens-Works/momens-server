@@ -8,6 +8,8 @@
 #    바꿔 엉뚱한 대상을 검증하거나, 검증 대상에 접속하지 못한다.
 # 2. psql 이 부분 출력 뒤 실패했을 때 그 결과를 정상 조회로 다루지 않는다. 심기 목록은 별도
 #    검사(unverified_seeds)가 지키지만, 끊긴 조회를 성공으로 보고하면 진단이 어긋난다.
+# 3. --generate 의 생성물이 이력 테이블 소유권을 momens_server 로 넘긴다. 이 줄이 빠지면 심기는
+#    성공하고 다음 기동이 permission denied 로 죽는다 — 심기 시점에는 아무 신호가 없다.
 
 set -euo pipefail
 
@@ -78,6 +80,32 @@ elif ! grep -q "부분 결과는 쓰지 않습니다" "$partial_out"; then
     failures=$((failures + 1))
     echo "FAIL  psql 실패를 알리는 메시지가 없습니다." >&2
     sed 's/^/  /' "$partial_out" >&2
+fi
+
+# --- 생성물이 이력 테이블 소유권을 넘긴다 ---
+# 이력 테이블을 만든 role 이 소유자가 된다. 실행 창구인 Supabase SQL Editor 는 postgres 세션이라,
+# 이 줄이 빠지면 momens_server 가 이력 테이블에 아무 권한도 갖지 못하고 다음 기동이
+# permission denied 로 죽는다. 절차 문서에만 적으면 빠지는 유형이라 생성물에 넣었고, 빠졌는지를
+# 여기서 본다.
+preamble="$(bootstrap_ddl_preamble)"
+
+if ! grep -q '^ALTER TABLE flyway_schema_history OWNER TO momens_server;$' <<<"$preamble"; then
+    failures=$((failures + 1))
+    echo "FAIL  생성물에 이력 테이블 소유권 이전이 없습니다." >&2
+fi
+
+# 트랜잭션 밖으로 나가면 앞의 INSERT 만 롤백되고 소유권만 남는 상태가 가능하다.
+if ! awk '/^BEGIN;$/ { inside = 1 } /^ALTER TABLE flyway_schema_history OWNER TO/ { found = inside }
+          END { exit !found }' <<<"$preamble"; then
+    failures=$((failures + 1))
+    echo "FAIL  소유권 이전이 BEGIN 안에 있지 않습니다." >&2
+fi
+
+# 소유권 이전은 CREATE TABLE 뒤여야 한다.
+if ! awk '/^CREATE TABLE IF NOT EXISTS flyway_schema_history/ { created = 1 }
+          /^ALTER TABLE flyway_schema_history OWNER TO/ { exit !created }' <<<"$preamble"; then
+    failures=$((failures + 1))
+    echo "FAIL  소유권 이전이 CREATE TABLE 보다 앞에 있습니다." >&2
 fi
 
 if [[ "$failures" -ne 0 ]]; then
