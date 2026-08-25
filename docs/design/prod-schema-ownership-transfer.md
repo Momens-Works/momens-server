@@ -640,7 +640,17 @@ MOM-0908 (이 문서 + ADR-0019)
 3. **DDL 선행 조건 세 가지를 관리자가 적용한다.** 하나라도 없으면 부트스트랩이 죽는다. 쌍둥이
    리허설이 각각을 실패로 재현했다(아래 "쌍둥이 리허설").
 
+   **순서가 있다.** (1)이 (3)에 의존한다 — 비-superuser 창구는 대상 role 로 `SET ROLE` 할 수
+   있어야 소유권을 넘길 수 있다.
+
    ```sql
+   -- (3) 창구가 momens_server 로 SET ROLE 할 수 있게 한다. 아래 ALTER TABLE 두 곳이 여기에
+   --     의존한다 — (1)의 tasks 소유권 이전과 4단계 심기 SQL 의 이력 테이블 소유권 이전이다.
+   --     Supabase 의 postgres 는 superuser 가 아니고, 비-superuser 가
+   --     `ALTER TABLE ... OWNER TO X` 를 하려면 X 로 SET ROLE 할 수 있어야 한다.
+   --     **이 명령 자체가 momens_server 에 대한 ADMIN OPTION 을 요구한다** — 아래 참조.
+   GRANT momens_server TO postgres WITH SET TRUE;
+
    -- (0) tasks 의 런타임 DML. 관리자가 실행한 GRANT 18 건은 tasks 를 의도적으로 뺐다 —
    --     소유권을 넘기면 소유자로서 DML 이 따라온다는 판단이었다. 그래서 지금 momens_server 는
    --     tasks 에 아무 권한이 없고, 소유권 이전이 무산되면 부트스트랩과 무관하게 서비스가
@@ -657,12 +667,26 @@ MOM-0908 (이 문서 + ADR-0019)
    --     소유권까지는 필요 없다.
    GRANT REFERENCES ON users TO momens_server;
 
-   -- (3) 심기 SQL 이 이력 테이블 소유권을 momens_server 로 넘긴다(4단계). Supabase 의
-   --     postgres 는 superuser 가 아니고, 비-superuser 가 ALTER TABLE ... OWNER TO X 를
-   --     하려면 X 로 SET ROLE 할 수 있어야 한다. CREATEROLE 이 만든 role 의 자동 멤버십은
-   --     admin=true, inherit=false, set=false 라 이 용도로 쓸 수 없다.
-   GRANT momens_server TO postgres WITH SET TRUE;
+   -- (4) 확장 스키마 접근. 상세는 3.5 단계에 있다. 둘 다 필요하다.
+   GRANT USAGE ON SCHEMA extensions TO momens_server;
+   ALTER ROLE momens_server SET search_path = "$user", public, extensions;
    ```
+
+   **(3)에는 전제가 하나 더 있다.** `GRANT <role>` 은 그 role 에 대한 `ADMIN OPTION` 을 요구한다.
+   `postgres`가 `CREATEROLE`로 `momens_server`를 직접 만들었다면 PG16+에서 자동으로 `ADMIN OPTION`
+   이 붙으므로 (3)이 통과한다. 다른 role(예: `supabase_admin`)이 만들었다면 통과하지 못한다.
+
+   ```sql
+   -- (3) 이 통과할지 미리 본다. postgres 가 admin_option = true 로 나와야 한다.
+   SELECT r.rolname AS member, m.admin_option, m.inherit_option, m.set_option
+     FROM pg_auth_members m
+     JOIN pg_roles r ON r.oid = m.member
+     JOIN pg_roles g ON g.oid = m.roleid
+    WHERE g.rolname = 'momens_server';
+   ```
+
+   `permission denied to grant role "momens_server"`가 나면 `ADMIN OPTION`을 가진 role이
+   (3)을 대신 실행하거나, (1)과 4단계의 두 `ALTER TABLE ... OWNER TO`를 직접 실행해야 한다.
 
    **(0)은 소유권 이전을 견디지 못한다.** `ALTER TABLE ... OWNER TO`는 현재 소유자를 grantee 로
    하는 ACL 항목을 새 소유자로 옮기므로, `momens_server`가 소유자가 되는 순간 이 GRANT 는 소유자
