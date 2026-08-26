@@ -121,9 +121,17 @@ prereq_users_references() {
 }
 
 prereq_operator_set_role() {
-    # 심기 SQL 이 이력 테이블 소유권을 momens_server 로 넘긴다. 비-superuser 창구가 그러려면
-    # 그 role 로 SET ROLE 할 수 있어야 한다. CREATEROLE 의 자동 멤버십은 set=false 라 안 된다.
+    # 소유권 이전에 필요하다. 비-superuser 창구가 `ALTER TABLE ... OWNER TO X` 를 하려면 X 로
+    # SET ROLE 할 수 있어야 하고, CREATEROLE 의 자동 멤버십은 set=false 라 안 된다.
+    #
+    # **운영은 이전이 끝나면 이 능력을 다시 끈다**(관리자 2026-08-27 조치). 그래서 심기 SQL 은
+    # 이력 테이블 소유권을 넘기지 않고 DML 만 부여한다 — Flyway 가 그것으로 충분하다.
     root "GRANT momens_server TO sb_postgres WITH SET TRUE" >/dev/null
+}
+
+# 소유권 이전이 끝나면 창구의 SET 능력을 다시 끈다. 심기가 그 상태에서도 성립하는지가 확인 대상이다.
+prereq_revoke_operator_set_role() {
+    root "GRANT momens_server TO sb_postgres WITH SET FALSE" >/dev/null
 }
 
 prereq_extensions_search_path() {
@@ -147,6 +155,7 @@ grant_ddl_prerequisites() {
     prereq_tasks_ownership
     prereq_users_references
     prereq_extensions_search_path
+    prereq_revoke_operator_set_role
 }
 
 app_log=""
@@ -387,61 +396,68 @@ scenario_no_references() {
 
 scenario_no_set_option() {
     say "no-set-option — 창구가 momens_server 로 SET ROLE 할 수 없는 경우"
-    step "심기 SQL 이 이력 테이블 소유권을 넘기는데, 비-superuser 는 대상 role 로 SET ROLE 할 수"
-    step "있어야 그게 된다. CREATEROLE 의 자동 멤버십은 set=false 라 쓸 수 없다."
+    step "비-superuser 는 대상 role 로 SET ROLE 할 수 있어야 소유권을 넘길 수 있다."
+    step "CREATEROLE 의 자동 멤버십은 set=false 라 쓸 수 없다."
     reset_db
     prereq_users_references
+    prereq_extensions_search_path
     step "창구가 momens_server 로 SET ROLE 가능: $(root "select pg_has_role('sb_postgres','momens_server','USAGE')")"
 
-    # 이 능력이 없으면 **선행 조건의 소유권 이전부터** 막힌다. 심기까지 가지도 못한다.
-    expect "tasks 소유권 이전이 먼저 막힌다" "must be able to SET ROLE" \
+    expect "소유권 이전이 막힌다" "must be able to SET ROLE" \
            "$(op "ALTER TABLE tasks OWNER TO momens_server")"
     step "tasks 소유자: $(root "select tableowner from pg_tables where tablename='tasks'") (그대로)"
 
-    # 소유권을 관리자가 다른 경로로 넘겼다고 가정해도 심기가 같은 이유로 막힌다.
+    # **심기는 이 능력에 의존하지 않는다.** 생성물이 이력 테이블 소유권을 넘기지 않고 DML 만
+    # 부여하기 때문이다. 운영이 소유권 이전 직후 SET 능력을 다시 끄므로 이 독립성이 필요하다.
     root "ALTER TABLE tasks OWNER TO momens_server" >/dev/null
-    local out; out="$(op_file "$bootstrap_sql")"
-    if grep -qF "COMMIT" <<<"$out"; then bad "심기에 성공했습니다. SET 능력 없이 통과하면 안 됩니다"
-    else ok "심기 실패"; fi
-    expect "must be able to SET ROLE" "must be able to SET ROLE" "$out"
+    root "GRANT SELECT, INSERT, UPDATE, DELETE ON tasks TO sb_postgres" >/dev/null
+    expect "심기는 SET 능력 없이도 된다" "COMMIT" "$(op_file "$bootstrap_sql")"
 
-    # 단일 트랜잭션이라 앞의 INSERT 까지 통째로 롤백된다. 반쯤 심긴 상태가 남지 않는 것이 요점이다.
-    step "flyway_schema_history 존재: $(root "select count(*) from pg_tables where tablename='flyway_schema_history'") (0 이어야 한다)"
+    start_app "$toggles $lock_opt"
+    local result; result="$(await_app 180)"
+    if [[ "$result" == started ]]; then ok "부트스트랩도 SET 능력 없이 완주한다"
+    else bad "기동 실패 ($result)"; grep -ioE "permission denied for table [a-z_]+|must be [a-z ]+" "$app_log" | head -3 | sed 's/^/         /'; fi
+    stop_app
 }
 
-scenario_history_owner() {
-    say "history-owner — postgres 세션으로 심는 경우"
-    step "실행 창구는 Supabase SQL Editor = postgres 세션이다. momens_server 로 psql 을 여는"
-    step "선택지는 없다 — 그 비밀번호는 생성 후 GitHub Secret 에만 들어갔고 아무도 모른다."
-    step "그래서 생성물이 트랜잭션 안에서 소유권을 넘긴다."
+scenario_history_grant() {
+    say "history-grant — 이력 테이블 권한을 어떻게 주는가"
+    step "창구는 postgres 세션이고, 소유권 이전이 끝나면 SET 능력을 다시 끈다(운영 기본값)."
+    step "그 상태에서 심기 SQL 이 성립해야 한다."
 
-    say "history-owner (a) — 소유권 이전 줄이 없으면"
+    say "history-grant (a) — 권한을 아예 주지 않으면"
     reset_db
     grant_ddl_prerequisites
-    grep -v '^ALTER TABLE flyway_schema_history OWNER TO' "$bootstrap_sql" > "$work/nowner.sql"
-    op_file "$work/nowner.sql" >/dev/null 2>&1
+    grep -v '^GRANT SELECT, INSERT, UPDATE, DELETE ON flyway_schema_history' "$bootstrap_sql" \
+        > "$work/nogrant.sql"
+    op_file "$work/nogrant.sql" >/dev/null 2>&1
     step "flyway_schema_history 소유자: $(root "select tableowner from pg_tables where tablename='flyway_schema_history'")"
     step "momens_server 의 INSERT 권한: $(root "select has_table_privilege('momens_server','flyway_schema_history','INSERT')")"
 
     start_app "$toggles $lock_opt"
     local result; result="$(await_app 180)"
-    if [[ "$result" == started ]]; then bad "기동에 성공했습니다. 소유권 없이 통과하면 안 됩니다"
+    if [[ "$result" == started ]]; then bad "기동에 성공했습니다. 권한 없이 통과하면 안 됩니다"
     else ok "기동 실패 ($result)"; fi
     expect "permission denied for table flyway_schema_history" \
            "permission denied for table flyway_schema_history" "$(cat "$app_log")"
     stop_app
 
-    say "history-owner (b) — 생성물 그대로 postgres 로 심으면"
+    say "history-grant (b) — 소유권 이전으로 주려 하면"
     reset_db
     grant_ddl_prerequisites
-    local out
-    out="$(op_file "$bootstrap_sql")"
-    expect "심기 성공" "COMMIT" "$out"
-    step "flyway_schema_history 소유자: $(root "select tableowner from pg_tables where tablename='flyway_schema_history'")"
+    sed 's#^GRANT SELECT, INSERT, UPDATE, DELETE ON flyway_schema_history TO momens_server;#ALTER TABLE flyway_schema_history OWNER TO momens_server;#' \
+        "$bootstrap_sql" > "$work/owner.sql"
+    expect "SET 능력이 꺼져 있어 심기가 막힌다" "must be able to SET ROLE" "$(op_file "$work/owner.sql")"
+    step "flyway_schema_history 존재: $(root "select count(*) from pg_tables where tablename='flyway_schema_history'") (트랜잭션 롤백)"
 
+    say "history-grant (c) — 생성물 그대로 (DML 부여)"
+    reset_db
+    grant_ddl_prerequisites
+    expect "심기 성공" "COMMIT" "$(op_file "$bootstrap_sql")"
+    step "소유자: $(root "select tableowner from pg_tables where tablename='flyway_schema_history'") · momens_server INSERT: $(root "select has_table_privilege('momens_server','flyway_schema_history','INSERT')")"
     start_app "$toggles $lock_opt"
     result="$(await_app 180)"
-    if [[ "$result" == started ]]; then ok "postgres 로 심어도 momens_server 가 끝까지 돈다"
+    if [[ "$result" == started ]]; then ok "소유권 없이 DML 만으로 Flyway 가 끝까지 돈다"
     else bad "기동 실패 ($result)"; grep -ioE "permission denied for table [a-z_]+" "$app_log" | head -3 | sed 's/^/         /'; fi
     step "이력 총 $(server "select count(*) from flyway_schema_history") 행, 실패 $(server "select count(*) from flyway_schema_history where not success") 건"
     stop_app
@@ -462,9 +478,6 @@ scenario_bulk_ownership() {
     expect "GRANT ALL 로도 ALTER 는 안 된다" "must be owner of table tasks" \
            "$(server "ALTER TABLE tasks ADD COLUMN twin_probe TEXT")"
     root "REVOKE ALL ON ALL TABLES IN SCHEMA public FROM momens_server" >/dev/null
-    # prod 형상(18건 DML, tasks 제외)으로 되돌린다.
-    docker exec -i "$container" psql -U postgres -d "$db" -q -v ON_ERROR_STOP=1 \
-        -c "$(grep -A8 'GRANT SELECT, INSERT, UPDATE, DELETE ON' "$here/roles.sql" | tail -n +1 | head -7)" >/dev/null 2>&1
 
     expect "일괄 이전 성공" "COMMIT" "$(op_file "$own_sql")"
     step "momens_server 소유 테이블: $(root "select count(*) from pg_tables where schemaname='public' and tableowner='momens_server'") 개"
@@ -474,8 +487,7 @@ scenario_bulk_ownership() {
     local orphan; orphan="$(root "select coalesce(string_agg(tablename, ' '), '(없음)')
         from pg_tables where schemaname='public' and tableowner='momens_server'
           and not has_table_privilege('sb_postgres', schemaname||'.'||tablename, 'SELECT')")"
-    if [[ "$orphan" == "(없음)" ]]; then ok "레거시가 20개를 전부 읽는다"
-    else bad "레거시가 못 읽는 테이블이 있습니다: $orphan"; fi
+    [[ "$orphan" == "(없음)" ]] && ok "레거시가 20개를 전부 읽는다" || bad "레거시가 못 읽는 테이블: $orphan"
 
     orphan="$(root "select coalesce(string_agg(tablename, ' '), '(없음)')
         from pg_tables where schemaname='public' and tableowner='momens_server'
@@ -489,7 +501,8 @@ scenario_bulk_ownership() {
 
     say "bulk-ownership — 그 상태에서 부트스트랩이 도는가"
     step "users 소유자가 momens_server 라 REFERENCES GRANT 가 필요 없어진다"
-    step "users REFERENCES 명시 권한: $(root "select has_table_privilege('momens_server','users','REFERENCES')") (소유자라 t)"
+    prereq_revoke_operator_set_role
+    step "SET 능력을 다시 끈 뒤 진행한다(운영 기본값)"
     expect "심기 성공" "COMMIT" "$(op_file "$bootstrap_sql")"
     start_app "$toggles $lock_opt"
     local result; result="$(await_app 180)"
@@ -653,7 +666,7 @@ case "${1:-all}" in
     bulk-ownership) scenario_bulk_ownership ;;
     no-search-path) scenario_no_search_path ;;
     ownership-reverted) scenario_ownership_reverted ;;
-    history-owner) scenario_history_owner ;;
+    history-grant) scenario_history_grant ;;
     lock)          scenario_lock ;;
     checksum)      scenario_checksum ;;
     all)
@@ -664,7 +677,7 @@ case "${1:-all}" in
         scenario_no_search_path
         scenario_bulk_ownership
         scenario_ownership_reverted
-        scenario_history_owner
+        scenario_history_grant
         scenario_lock
         scenario_checksum
         ;;

@@ -125,6 +125,25 @@ checksum 때문에 고치지 않으니 그 주석을 보고 되돌아가지 않�
   실배포에서 Flyway가 `relation already exists`로 죽습니다(`entity_relations`, MOM-0795).
   `local`/`test`는 매번 빈 DB라 이 충돌이 재현되지 않으므로 대상 환경을 착수 시점에 확인합니다.
 
+### prod에서 공유 테이블을 새로 만들 때는 GRANT를 함께 씁니다
+
+prod 스키마 주도권이 서버로 넘어오면서(ADR-0019) `public`의 테이블 20개가 `momens_server` 소유가
+됐고, **서버가 앞으로 만드는 테이블도 `momens_server` 소유입니다.** 관리자가 걸어 둔 기본 권한은
+그 테이블들에 `postgres`의 **`SELECT`만** 부여합니다(2026-08-27).
+
+`postgres`는 레거시 API·worker·retrieval이 함께 쓰는 계정입니다. 따라서 **다른 서비스가 쓰기까지
+해야 하는 테이블을 새로 만든다면 그 마이그레이션이 `GRANT`를 직접 써야 합니다.**
+
+```sql
+CREATE TABLE some_shared_table (...);
+GRANT SELECT, INSERT, UPDATE, DELETE ON some_shared_table TO postgres;
+```
+
+빠뜨리면 그 서비스가 런타임에 `permission denied`로 끊깁니다. **배포에서 잡히지 않습니다** —
+`ddl-auto: validate`는 카탈로그만 보고 DML 권한을 보지 않습니다.
+
+서버만 쓰는 테이블에는 쓰지 않습니다. 기본 `SELECT`로 충분합니다.
+
 ## 시간 · 식별자
 
 레거시 `momens-api` 스키마와 호환을 유지합니다.

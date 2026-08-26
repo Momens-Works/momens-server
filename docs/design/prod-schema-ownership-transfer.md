@@ -653,9 +653,12 @@ MOM-0908 (이 문서 + ADR-0019)
 
    ```sql
    -- (1) 창구가 momens_server 로 SET ROLE 할 수 있게 한다. **가장 먼저 실행한다** — 아래
-   --     소유권 이전과 4단계 심기 SQL 의 이력 테이블 소유권 이전이 둘 다 여기에 의존한다.
-   --     Supabase 의 postgres 는 superuser 가 아니고, 비-superuser 가
-   --     `ALTER TABLE ... OWNER TO X` 를 하려면 X 로 SET ROLE 할 수 있어야 한다.
+   --     소유권 이전이 여기에 의존한다. Supabase 의 postgres 는 superuser 가 아니고,
+   --     비-superuser 가 `ALTER TABLE ... OWNER TO X` 를 하려면 X 로 SET ROLE 할 수 있어야 한다.
+   --
+   --     **이전이 끝나면 다시 끈다** — GRANT momens_server TO postgres WITH SET FALSE.
+   --     상시로 두면 창구 세션이 언제든 서버 role 로 갈아탈 수 있는 통로가 남는다. 4단계 심기가
+   --     이 능력에 의존하지 않도록 만든 이유이기도 하다.
    GRANT momens_server TO postgres WITH SET TRUE;
 
    -- (2) 소유권 일괄 이전. scripts/prod-ownership-transfer.sh --generate 로 만든다.
@@ -746,24 +749,30 @@ MOM-0908 (이 문서 + ADR-0019)
 4. prod에 `flyway_schema_history` INSERT (단일 트랜잭션). 창구는 Supabase SQL Editor이고 그것은
    `postgres` 세션이다.
 
-   **완성된 이력 테이블의 소유자는 `momens_server`여야 한다.** Postgres에서는 테이블을 만든 role이
-   소유자가 되므로, `postgres` 세션이 그냥 만들면 `momens_server`가 그 테이블에 아무 권한도 갖지
-   못하고 다음 기동이 `permission denied for table flyway_schema_history`로 죽는다. 심기 시점에는
-   아무 신호가 없다 — 심기는 성공한다.
+   **`momens_server`가 이력 테이블에 DML을 가져야 한다.** 이력 테이블을 만든 role이 소유자가 되고,
+   `postgres` 세션이 만들면 `momens_server`는 아무 권한도 갖지 못해 다음 기동이
+   `permission denied for table flyway_schema_history`로 죽는다. 심기 시점에는 신호가 없다 —
+   심기는 성공한다.
 
-   `momens_server`로 psql 세션을 여는 선택지는 없다. 그 비밀번호는 무작위로 생성해 `ALTER ROLE`과
-   GitHub Secret에만 넣었고 GitHub은 시크릿을 다시 보여주지 않으므로 **지금 그 값을 아는 사람이
-   없다.** `SET ROLE momens_server`는 `postgres`가 그 role의 멤버여야 성립하는데 확인되지 않았다.
-
-   그래서 **`--generate` 생성물이 트랜잭션 안에서 소유권을 넘긴다.**
+   **소유권을 넘기지 않고 DML만 준다.** `--generate` 생성물이 트랜잭션 안에서 그렇게 한다.
 
    ```sql
-   ALTER TABLE flyway_schema_history OWNER TO momens_server;
+   GRANT SELECT, INSERT, UPDATE, DELETE ON flyway_schema_history TO momens_server;
    ```
 
-   절차 문서에만 적지 않고 생성물이 직접 갖게 한 이유는 `V20260823100000`이 심기 목록에서 빠졌던
-   것과 같은 유형이기 때문이다. `scripts/prod-flyway-bootstrap-verify-test.sh`가 생성물에 이 줄이
-   있는지, `BEGIN` 안에 있는지, `CREATE TABLE` 뒤인지를 검사한다.
+   소유권 이전이 아닌 이유는 3단계의 SET 능력이 **일회성이기 때문이다.** 관리자는 소유권 일괄
+   이전 직후 `GRANT momens_server TO postgres WITH SET FALSE`로 그 능력을 다시 끈다(2026-08-27
+   조치). 그 상태에서 `ALTER TABLE flyway_schema_history OWNER TO`는
+   `must be able to SET ROLE`로 죽고 트랜잭션이 통째로 롤백된다. DML만 부여하면 SET 능력과
+   무관하게 성립하고, Flyway는 이력 테이블에 DML만 하므로(잠금은 세션 advisory lock을 쓴다)
+   그것으로 충분하다 — 쌍둥이의 `history-grant` 시나리오가 셋을 나란히 확인한다.
+
+   `prod-flyway-bootstrap-verify-test.sh`가 생성물에 이 줄이 있는지, `BEGIN` 안에 있는지,
+   `CREATE TABLE` 뒤인지, 그리고 소유권 이전으로 되돌아가지 않았는지를 검사한다.
+
+   > Flyway 메이저 업그레이드가 이력 테이블 구조를 바꾸면 `ALTER`가 필요해져 소유권 문제가 다시
+   > 생긴다. 그때는 업그레이드 절차가 소유권 이전을 함께 다뤄야 한다.
+
 5. **`k8s` 토글 PR 머지**
 6. `Deploy momens-server` 워크플로를 dispatch. `deploy-service.sh`가 이미지 변경 없이도
    `rollout restart`를 걸어 ConfigMap 변경이 반영된다
@@ -849,7 +858,7 @@ GRANT뿐이었다.
 따라서 추가로 필요한 것은 `GRANT REFERENCES ON users TO momens_server` 한 줄이다 — 소유권 이전은
 필요 없다는 것도 쌍둥이에서 확인했다.
 
-**2. 이력 테이블의 소유자가 `momens_server`여야 한다.**
+**2. `momens_server`가 이력 테이블에 DML을 가져야 한다.**
 
 부트스트랩 SQL이 `flyway_schema_history`를 만들고, Postgres에서는 만든 role이 소유자가 된다.
 `postgres`로 실행하면 `momens_server`가 그 테이블에 아무 권한도 갖지 못하고 다음 기동이
@@ -857,10 +866,10 @@ GRANT뿐이었다.
 세션이므로 가장 자연스러운 경로가 곧 틀린 경로다.**
 
 `momens_server`로 psql을 여는 것으로는 해결되지 않는다 — 그 비밀번호를 아는 사람이 없다(8절
-4단계). 그래서 **`--generate` 생성물이 트랜잭션 안에서 소유권을 넘기도록** 고쳤고,
-`prod-flyway-bootstrap-verify-test.sh`가 그 줄의 존재·위치를 검사한다. 쌍둥이의
-`history-owner` 시나리오가 양쪽을 확인한다 — 줄이 없으면 죽고, 생성물 그대로 `postgres`로 심으면
-`momens_server`가 42건을 끝까지 돈다.
+4단계). **`--generate` 생성물이 트랜잭션 안에서 DML을 부여한다.** 처음에는 소유권 이전으로 썼으나,
+운영이 소유권 일괄 이전 직후 SET 능력을 다시 끄기 때문에 그 방식이 성립하지 않는다(8절 4단계).
+Flyway는 이력 테이블에 DML만 하므로 소유권이 필요 없다는 것을 쌍둥이의 `history-grant` 시나리오가
+확인한다.
 
 **3. Supabase 의 `postgres`는 superuser가 아니고, 그래서 소유권 이전이 공짜가 아니다.**
 
@@ -933,8 +942,9 @@ ADR-0019가 정한 최종 상태는 서버가 prod 스키마를 소유하는 것
 | **bulk-ownership** 레거시 테이블 20개 일괄 이전 | `GRANT ALL PRIVILEGES`로도 `ALTER`는 불가. 이전 후 20개 전부 서버 소유이고 레거시(`postgres`)가 전부 읽고 쓴다. `anon` 영향 없음. `schema_migrations`는 레거시 소유로 유지. 그 상태에서 부트스트랩 42건 완주 |
 | **no-search-path** `momens_server`가 `extensions`를 못 봄 | `function uuid_generate_v4() does not exist`로 `V20260810090000`에서 실패. `USAGE`와 `search_path` **둘 다** 줘야 통과 |
 | **ownership-reverted** 부트스트랩 성공 후 `tasks` 소유권 원복 | `momens_server`의 DML이 소유권을 따라 사라짐. 조회는 `permission denied for table tasks`인데 **기동은 성공한다** — `validate`가 DML 권한을 보지 않는다. 재발급하면 복구 |
-| **history-owner (a)** 소유권 이전 줄을 뺀 채 심음 | `permission denied for table flyway_schema_history`로 기동 실패 |
-| **history-owner (b)** 생성물 그대로 비-superuser 창구로 심음 | 소유자 `momens_server`, 앱이 42건을 끝까지 돌고 기동 성공 |
+| **history-grant (a)** 이력 테이블 권한을 주지 않음 | `permission denied for table flyway_schema_history`로 기동 실패 |
+| **history-grant (b)** DML 대신 소유권 이전으로 주려 함 | SET 능력이 꺼져 있어 `must be able to SET ROLE`로 심기 실패, 트랜잭션 롤백 |
+| **history-grant (c)** 생성물 그대로 (DML 부여) | 이력 테이블 소유자는 `postgres` 그대로, 앱이 42건을 끝까지 돌고 기동 성공 |
 | **lock** 레거시가 `tasks`를 60초간 ACCESS EXCLUSIVE로 점유 | `canceling statement due to lock timeout`으로 포기. 락이 풀릴 때까지 기다리지 않았다. 새 테이블 0개. 구간은 아래에 분해했다 |
 | **checksum** 심은 체크섬 하나를 +1 | `checksum mismatch`로 기동 실패, 스키마 무변경. `--verify`가 해당 version을 이름으로 지목 |
 
