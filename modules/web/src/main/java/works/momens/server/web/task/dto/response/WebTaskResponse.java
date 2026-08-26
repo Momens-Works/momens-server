@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
-import works.momens.server.project.task.WebTaskDetail;
+import works.momens.server.project.task.TaskSnapshot;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "웹 태스크")
@@ -22,7 +22,7 @@ public record WebTaskResponse(
     @Schema(description = "마감일", example = "2026-08-31", nullable = true) LocalDate dueDate,
     @Schema(description = "생성 시각(UTC)", example = "2026-08-20T00:00:00Z") Instant createdAt,
     @Schema(description = "수정 시각(UTC)", example = "2026-08-20T00:00:00Z") Instant updatedAt) {
-  public static WebTaskResponse from(WebTaskDetail task) {
+  public static WebTaskResponse from(TaskSnapshot task) {
     return new WebTaskResponse(
         task.id(),
         task.projectId(),

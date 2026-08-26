@@ -16,12 +16,11 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Immutable;
 import works.momens.server.common.persistence.BaseEntity;
-import works.momens.server.project.task.TaskOrigin;
+import works.momens.server.project.task.CreateTaskCommand;
 import works.momens.server.project.task.UpdateTaskCommand;
 
 /**
@@ -114,58 +113,24 @@ class Task extends BaseEntity {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
-  @Builder
-  private Task(
-      UUID workspaceId,
-      UUID projectId,
-      String label,
-      String title,
-      String status,
-      String priority,
-      String role,
-      TaskOrigin origin,
-      UUID originSignalId) {
-    this.workspaceId = workspaceId;
-    this.projectId = projectId;
+  private Task(CreateTaskCommand command, String label) {
+    this.workspaceId = command.workspaceId();
+    this.projectId = command.projectId();
     this.label = label;
-    this.title = title;
-    // INSERT 시 엔티티 값이 DB DEFAULT 보다 우선하므로, 레거시 기본값을 앱 생성에서도 보장한다.
-    this.status = status != null ? status : "backlog";
-    this.priority = priority != null ? priority : "medium";
-    this.role = role;
-    // origin을 안 넘기는 호출부(기존 테스트 등)는 manual로 본다. CreateTaskCommand는 origin을
-    // 생성 시점에 이미 강제하므로, 여기 기본값은 origin을 모르는 호출부를 위한 안전망이다.
-    this.originType = origin != null ? origin.value() : TaskOrigin.MANUAL.value();
-    this.originSignalId = originSignalId;
+    this.title = command.title();
+    this.description = command.description();
+    this.status = command.status();
+    this.priority = command.priority() != null ? command.priority() : "medium";
+    this.role = command.role();
+    this.milestoneId = command.milestoneId();
+    this.assigneeId = command.assigneeId();
+    this.dueDate = command.dueDate();
+    this.originType = command.origin().value();
+    this.originSignalId = command.originSignalId();
   }
 
-  static Task web(
-      UUID workspaceId,
-      UUID projectId,
-      String label,
-      String title,
-      String description,
-      String status,
-      String priority,
-      UUID milestoneId,
-      UUID assigneeId,
-      LocalDate dueDate) {
-    Task task =
-        Task.builder()
-            .workspaceId(workspaceId)
-            .projectId(projectId)
-            .label(label)
-            .title(title)
-            .status(status == null || status.isBlank() ? "backlog" : status)
-            .priority(priority == null || priority.isBlank() ? "medium" : priority)
-            .role(null)
-            .origin(TaskOrigin.MANUAL)
-            .build();
-    task.description = description == null || description.isEmpty() ? null : description;
-    task.milestoneId = milestoneId;
-    task.assigneeId = assigneeId;
-    task.dueDate = dueDate;
-    return task;
+  static Task create(CreateTaskCommand command, String label) {
+    return new Task(command, label);
   }
 
   void patch(
@@ -251,7 +216,7 @@ class Task extends BaseEntity {
    * 목록에 없는 기존 항목은 컬렉션에서 빠지면서 orphanRemoval로 삭제됩니다. 리스트 순서가 그대로 저장 순서라, 각 항목의 position을 목록 인덱스대로 새로
    * 부여합니다.
    *
-   * <p>존재하지 않는 id를 거부하는 검증은 이 메서드를 부르는 {@code TaskEditor}가 먼저 합니다. 토글의 없는 항목 처리와 같은 계층에 두어, 엔티티는
+   * <p>존재하지 않는 id를 거부하는 검증은 이 메서드를 부르는 {@code TaskWriter}가 먼저 합니다. 토글의 없는 항목 처리와 같은 계층에 두어, 엔티티는
    * 검증한 입력을 저장만 합니다.
    *
    * <p>{@code @OrderBy}는 조회 정렬만 하므로 순서(position)는 여기서 목록 인덱스대로 0부터 연속으로 직접 부여합니다.

@@ -1,22 +1,38 @@
 package works.momens.server.web.task;
 
 import java.time.LocalDate;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import works.momens.server.project.task.WebTaskDetail;
-import works.momens.server.project.task.WebTaskWriter;
+import org.springframework.transaction.annotation.Transactional;
+import works.momens.server.common.api.BusinessException;
+import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.project.core.ProjectErrorCode;
+import works.momens.server.project.core.ProjectReader;
+import works.momens.server.project.task.CreateTaskCommand;
+import works.momens.server.project.task.PatchTaskCommand;
+import works.momens.server.project.task.TaskErrorCode;
+import works.momens.server.project.task.TaskOrigin;
+import works.momens.server.project.task.TaskReader;
+import works.momens.server.project.task.TaskSnapshot;
+import works.momens.server.project.task.TaskWriter;
 import works.momens.server.project.taskupdate.TaskUpdateDetail;
 import works.momens.server.project.taskupdate.TaskUpdateWriter;
+import works.momens.server.workspace.WorkspaceAccess;
 
 @Service
 @RequiredArgsConstructor
 class TaskWriteService {
-  private final WebTaskWriter webTaskWriter;
+  private final TaskWriter taskWriter;
+  private final TaskReader taskReader;
+  private final ProjectReader projectReader;
+  private final WorkspaceAccess workspaceAccess;
   private final TaskUpdateWriter taskUpdateWriter;
 
-  WebTaskDetail create(
+  @Transactional
+  TaskSnapshot create(
       UUID projectId,
       UUID userId,
       String title,
@@ -26,11 +42,29 @@ class TaskWriteService {
       String priority,
       UUID assigneeId,
       LocalDate dueDate) {
-    return webTaskWriter.create(
-        projectId, userId, title, description, status, milestoneId, priority, assigneeId, dueDate);
+    UUID workspaceId = requireProject(projectId);
+    requireMember(workspaceId, userId);
+    if (title == null || title.isBlank()) {
+      throw validation("title");
+    }
+    return taskWriter.create(
+        new CreateTaskCommand(
+            projectId,
+            workspaceId,
+            title,
+            description == null || description.isEmpty() ? null : description,
+            normalizeStatus(status, true),
+            null,
+            normalizePriority(priority, true),
+            milestoneId,
+            assigneeId,
+            dueDate,
+            TaskOrigin.MANUAL,
+            null));
   }
 
-  WebTaskDetail update(
+  @Transactional
+  TaskSnapshot update(
       UUID taskId,
       UUID userId,
       String title,
@@ -47,27 +81,42 @@ class TaskWriteService {
       boolean assigneeSet,
       LocalDate dueDate,
       boolean dueDateSet) {
-    return webTaskWriter.update(
-        taskId,
-        userId,
-        title,
-        titleSet,
-        description,
-        descriptionSet,
-        status,
-        statusSet,
-        priority,
-        prioritySet,
-        milestoneId,
-        milestoneSet,
-        assigneeId,
-        assigneeSet,
-        dueDate,
-        dueDateSet);
+    requireTaskMember(taskId, userId);
+    if (titleSet && title == null) {
+      throw validation("title");
+    }
+    if (statusSet && status == null) {
+      throw validation("status");
+    }
+    if (prioritySet && priority == null) {
+      throw validation("priority");
+    }
+    boolean effectiveTitleSet = titleSet && !title.isEmpty();
+    boolean effectiveStatusSet = statusSet && !status.isEmpty();
+    boolean effectivePrioritySet = prioritySet && !priority.isEmpty();
+    return taskWriter.patch(
+        new PatchTaskCommand(
+            taskId,
+            title,
+            effectiveTitleSet,
+            description,
+            descriptionSet,
+            effectiveStatusSet ? normalizeStatus(status, false) : status,
+            effectiveStatusSet,
+            effectivePrioritySet ? normalizePriority(priority, false) : priority,
+            effectivePrioritySet,
+            milestoneId,
+            milestoneSet,
+            assigneeId,
+            assigneeSet,
+            dueDate,
+            dueDateSet));
   }
 
+  @Transactional
   void delete(UUID taskId, UUID userId) {
-    webTaskWriter.delete(taskId, userId);
+    requireTaskMember(taskId, userId);
+    taskWriter.delete(taskId);
   }
 
   TaskUpdateDetail createUpdate(
@@ -77,5 +126,55 @@ class TaskWriteService {
 
   void deleteUpdate(UUID taskId, UUID updateId, UUID userId) {
     taskUpdateWriter.delete(taskId, updateId, userId);
+  }
+
+  private UUID requireProject(UUID projectId) {
+    return projectReader
+        .workspaceIdOf(projectId)
+        .orElseThrow(() -> new BusinessException(ProjectErrorCode.PROJECT_NOT_FOUND));
+  }
+
+  private void requireTaskMember(UUID taskId, UUID userId) {
+    UUID workspaceId =
+        taskReader
+            .findScope(taskId)
+            .orElseThrow(() -> new BusinessException(TaskErrorCode.TASK_NOT_FOUND))
+            .workspaceId();
+    requireMember(workspaceId, userId);
+  }
+
+  private void requireMember(UUID workspaceId, UUID userId) {
+    if (!workspaceAccess.isMember(workspaceId, userId)) {
+      throw new BusinessException(
+          CommonErrorCode.AUTH_FORBIDDEN, Map.of("workspace_id", workspaceId.toString()));
+    }
+  }
+
+  private static String normalizeStatus(String value, boolean allowDefault) {
+    String normalized = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    if (normalized.isEmpty() && allowDefault) {
+      return "backlog";
+    }
+    return switch (normalized) {
+      case "backlog", "todo", "done", "cancelled" -> normalized;
+      case "in_progress", "progress", "in-progress" -> "in_progress";
+      default -> throw validation("status");
+    };
+  }
+
+  private static String normalizePriority(String value, boolean allowDefault) {
+    String normalized = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    if (normalized.isEmpty() && allowDefault) {
+      return "medium";
+    }
+    return switch (normalized) {
+      case "low", "high", "urgent" -> normalized;
+      case "medium", "med" -> "medium";
+      default -> throw validation("priority");
+    };
+  }
+
+  private static BusinessException validation(String field) {
+    return new BusinessException(CommonErrorCode.COMMON_VALIDATION_FAILED, Map.of("field", field));
   }
 }

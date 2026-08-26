@@ -24,7 +24,7 @@ import works.momens.server.project.core.ProjectDetailReader;
 import works.momens.server.project.milestone.MilestoneDetail;
 import works.momens.server.project.milestone.MilestoneReader;
 import works.momens.server.project.task.TaskReader;
-import works.momens.server.project.task.WebTaskDetail;
+import works.momens.server.project.task.TaskSnapshot;
 import works.momens.server.source.LegacySourceRefDetail;
 import works.momens.server.source.SourceRefReader;
 import works.momens.server.web.workspace.dto.response.WorkspaceSnapshotResponse;
@@ -61,7 +61,7 @@ class WorkspaceSnapshotService {
     List<WorkspaceMemberView> members = workspaceMemberListService.list(workspaceId, userId);
     List<ProjectDetail> projects = projectDetailReader.listDetailsByWorkspaceId(workspaceId);
     List<MilestoneDetail> milestones = milestoneReader.listDetailsByWorkspaceId(workspaceId);
-    List<WebTaskDetail> tasks = taskReader.listWebDetailsByWorkspaceId(workspaceId);
+    List<TaskSnapshot> tasks = taskReader.listSnapshotsByWorkspaceId(workspaceId);
     List<BlockerDetail> blockers = blockerReader.listDetailsByWorkspaceId(workspaceId);
     List<MemoryCandidateDetail> candidates =
         memoryCandidateReader.listDetailsByWorkspaceId(workspaceId);
@@ -70,7 +70,7 @@ class WorkspaceSnapshotService {
 
     Map<UUID, TaskContextLinks> linksByTaskId =
         entityRelationReader.findTaskContextLinks(
-            workspaceId, tasks.stream().map(WebTaskDetail::id).toList());
+            workspaceId, tasks.stream().map(TaskSnapshot::id).toList());
     LinkedHashSet<UUID> memoryIds = new LinkedHashSet<>();
     LinkedHashSet<UUID> sourceRefIds = new LinkedHashSet<>();
     linksByTaskId

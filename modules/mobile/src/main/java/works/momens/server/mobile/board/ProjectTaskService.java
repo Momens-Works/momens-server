@@ -20,12 +20,11 @@ import works.momens.server.project.core.ProjectErrorCode;
 import works.momens.server.project.core.ProjectReader;
 import works.momens.server.project.task.BoardTask;
 import works.momens.server.project.task.CreateTaskCommand;
-import works.momens.server.project.task.CreatedTask;
-import works.momens.server.project.task.TaskCreator;
 import works.momens.server.project.task.TaskDetail;
-import works.momens.server.project.task.TaskEditor;
 import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.project.task.TaskReader;
+import works.momens.server.project.task.TaskSnapshot;
+import works.momens.server.project.task.TaskWriter;
 import works.momens.server.project.task.UpdateTaskCommand;
 import works.momens.server.source.SourceRefReader;
 import works.momens.server.source.SourceRefView;
@@ -56,8 +55,7 @@ class ProjectTaskService {
   private final ProjectReader projectReader;
   private final WorkspaceAccess workspaceAccess;
   private final TaskReader taskReader;
-  private final TaskCreator taskCreator;
-  private final TaskEditor taskEditor;
+  private final TaskWriter taskWriter;
   private final UserService userService;
   private final EntityRelationReader entityRelationReader;
   private final SourceRefReader sourceRefReader;
@@ -85,10 +83,10 @@ class ProjectTaskService {
   }
 
   @Transactional
-  public CreatedTask createTask(
+  public TaskSnapshot createTask(
       UUID projectId, UUID userId, String title, String role, String priority) {
     UUID workspaceId = requireProjectMember(projectId, userId);
-    return taskCreator.create(
+    return taskWriter.create(
         CreateTaskCommand.manual(projectId, workspaceId, title, role, priority));
   }
 
@@ -137,7 +135,7 @@ class ProjectTaskService {
                         edit.id(), edit.title(), edit.completed()))
             .toList();
     // 저장만 하고 상세는 반환하지 않는다. 저장 후 최신 상태는 클라이언트가 상세 조회로 다시 읽는다.
-    taskEditor.update(
+    taskWriter.update(
         new UpdateTaskCommand(taskId, title, role, assigneeId, priority, status, purpose, items));
   }
 
@@ -145,15 +143,16 @@ class ProjectTaskService {
   public MobileTaskDetail toggleChecklistItem(
       UUID taskId, UUID userId, UUID itemId, boolean completed) {
     requireTaskMember(taskId, userId);
-    TaskDetail updated = taskEditor.toggleChecklistItem(taskId, itemId, completed);
+    TaskDetail updated = taskWriter.toggleChecklistItem(taskId, itemId, completed);
     return toMobileDetail(updated);
   }
 
   private void requireTaskMember(UUID taskId, UUID userId) {
-    // 수정 전에는 상세 전체를 읽을 필요가 없어 workspace만 조회해 멤버십을 확인한다.
+    // 수정 전에는 상세 전체를 읽을 필요가 없어 소속 projection만 조회해 멤버십을 확인한다.
     UUID workspaceId =
         taskReader
-            .workspaceIdOf(taskId)
+            .findScope(taskId)
+            .map(scope -> scope.workspaceId())
             .orElseThrow(
                 () ->
                     new BusinessException(

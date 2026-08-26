@@ -1,12 +1,13 @@
 package works.momens.server.project.task;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
  * 태스크 생성 입력.
  *
- * <p>{@code workspaceId}는 호출하는 쪽(mobile)이 권한 검사 단계에서 이미 확정한 값을 넘깁니다. {@code role}과 {@code priority}
- * 검증은 표면(mobile)이 하고, 이 모듈은 저장과 라벨 발급을 책임집니다.
+ * <p>{@code workspaceId}는 호출하는 표면이 권한 검사 단계에서 이미 확정한 값을 넘깁니다. status·priority 별칭 같은 입력 정규화는 표면이
+ * 끝내고, 이 모듈은 참조 유효성 검사와 저장 및 라벨 발급을 책임집니다.
  *
  * <p>{@code origin}은 사람이 직접 만든 태스크({@link TaskOrigin#MANUAL})와 Signal을 수용해 만든 태스크({@link
  * TaskOrigin#SIGNAL})를 구분합니다(CO-6). {@code SIGNAL}은 {@code originSignalId}가 반드시 있어야 하고, {@code
@@ -16,8 +17,13 @@ public record CreateTaskCommand(
     UUID projectId,
     UUID workspaceId,
     String title,
+    String description,
+    String status,
     String role,
     String priority,
+    UUID milestoneId,
+    UUID assigneeId,
+    LocalDate dueDate,
     TaskOrigin origin,
     UUID originSignalId) {
 
@@ -37,12 +43,34 @@ public record CreateTaskCommand(
   public static CreateTaskCommand manual(
       UUID projectId, UUID workspaceId, String title, String role, String priority) {
     return new CreateTaskCommand(
-        projectId, workspaceId, title, role, priority, TaskOrigin.MANUAL, null);
+        projectId,
+        workspaceId,
+        title,
+        null,
+        "todo",
+        role,
+        priority,
+        null,
+        null,
+        null,
+        TaskOrigin.MANUAL,
+        null);
   }
 
   public static CreateTaskCommand fromSignal(
       UUID projectId, UUID workspaceId, String title, String role, String priority, UUID signalId) {
     return new CreateTaskCommand(
-        projectId, workspaceId, title, role, priority, TaskOrigin.SIGNAL, signalId);
+        projectId,
+        workspaceId,
+        title,
+        null,
+        "todo",
+        role,
+        priority,
+        null,
+        null,
+        null,
+        TaskOrigin.SIGNAL,
+        signalId);
   }
 }

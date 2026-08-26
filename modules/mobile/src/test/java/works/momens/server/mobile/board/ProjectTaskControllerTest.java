@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.security.Principal;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import works.momens.server.project.task.CreatedTask;
+import works.momens.server.project.task.TaskSnapshot;
 
 /**
  * 컨트롤러가 경로 변수와 요청 body, Principal을 조합 서비스에 전달하고 명세의 snake_case 응답 형식을 내는지 검증합니다. 검증 실패의 에러 응답 형식은
@@ -73,7 +74,22 @@ class ProjectTaskControllerTest {
   void createTaskReturnsCreatedTask() throws Exception {
     UUID taskId = UUID.randomUUID();
     when(projectTaskService.createTask(eq(PROJECT_ID), eq(USER_ID), eq("제목"), any(), eq("medium")))
-        .thenReturn(new CreatedTask(taskId, PROJECT_ID, "제목", "pm", "medium", "todo"));
+        .thenReturn(
+            new TaskSnapshot(
+                taskId,
+                UUID.randomUUID(),
+                PROJECT_ID,
+                null,
+                "MOM-0001",
+                "제목",
+                null,
+                "todo",
+                "medium",
+                "pm",
+                null,
+                null,
+                Instant.EPOCH,
+                Instant.EPOCH));
 
     mockMvc
         .perform(

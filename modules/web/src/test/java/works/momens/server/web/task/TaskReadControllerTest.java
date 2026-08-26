@@ -20,7 +20,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import works.momens.server.project.task.WebTaskDetail;
+import works.momens.server.project.task.TaskSnapshot;
 
 @WebMvcTest(TaskReadController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -51,8 +51,8 @@ class TaskReadControllerTest {
         .andExpect(jsonPath("$.created_at").value("2026-08-20T00:00:00Z"));
   }
 
-  private static WebTaskDetail task() {
-    return new WebTaskDetail(
+  private static TaskSnapshot task() {
+    return new TaskSnapshot(
         TASK_ID,
         UUID.fromString("31d9e9fe-f43b-4097-a88e-dc19f0a5b025"),
         UUID.fromString("39d9e9fe-f43b-4097-a88e-dc19f0a5b025"),
@@ -62,6 +62,7 @@ class TaskReadControllerTest {
         null,
         "todo",
         "medium",
+        null,
         null,
         LocalDate.parse("2026-08-31"),
         Instant.parse("2026-08-20T00:00:00Z"),

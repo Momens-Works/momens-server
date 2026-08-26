@@ -16,7 +16,7 @@ import works.momens.server.project.core.ProjectErrorCode;
 import works.momens.server.project.core.ProjectReader;
 import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.project.task.TaskReader;
-import works.momens.server.project.task.WebTaskDetail;
+import works.momens.server.project.task.TaskSnapshot;
 import works.momens.server.project.taskupdate.TaskUpdateDetail;
 import works.momens.server.project.taskupdate.TaskUpdateReader;
 import works.momens.server.source.LegacySourceRefDetail;
@@ -35,7 +35,7 @@ class TaskReadService {
   private final WorkspaceAccess workspaceAccess;
 
   @Transactional(readOnly = true)
-  public List<WebTaskDetail> list(UUID projectId, UUID userId) {
+  public List<TaskSnapshot> list(UUID projectId, UUID userId) {
     UUID workspaceId =
         projectReader
             .workspaceIdOf(projectId)
@@ -45,25 +45,25 @@ class TaskReadService {
                         ProjectErrorCode.PROJECT_NOT_FOUND,
                         Map.of("project_id", projectId.toString())));
     requireMember(workspaceId, userId);
-    return taskReader.listWebDetailsByProjectId(projectId);
+    return taskReader.listSnapshotsByProjectId(projectId);
   }
 
   @Transactional(readOnly = true)
-  public WebTaskDetail get(UUID taskId, UUID userId) {
-    WebTaskDetail task = requireTask(taskId);
+  public TaskSnapshot get(UUID taskId, UUID userId) {
+    TaskSnapshot task = requireTask(taskId);
     requireMember(task.workspaceId(), userId);
     return task;
   }
 
   @Transactional(readOnly = true)
   public List<TaskUpdateDetail> updates(UUID taskId, UUID userId) {
-    WebTaskDetail task = get(taskId, userId);
+    TaskSnapshot task = get(taskId, userId);
     return taskUpdateReader.listByTaskId(task.id());
   }
 
   @Transactional(readOnly = true)
   public TaskContext context(UUID taskId, UUID userId) {
-    WebTaskDetail task = get(taskId, userId);
+    TaskSnapshot task = get(taskId, userId);
     TaskContextLinks links =
         entityRelationReader.findTaskContextLinks(task.workspaceId(), task.id());
     return new TaskContext(
@@ -72,9 +72,9 @@ class TaskReadService {
         sourceRefReader.findLegacyDetailsByIds(task.workspaceId(), links.sourceRefIds()));
   }
 
-  private WebTaskDetail requireTask(UUID taskId) {
+  private TaskSnapshot requireTask(UUID taskId) {
     return taskReader
-        .findWebDetail(taskId)
+        .findSnapshot(taskId)
         .orElseThrow(
             () ->
                 new BusinessException(

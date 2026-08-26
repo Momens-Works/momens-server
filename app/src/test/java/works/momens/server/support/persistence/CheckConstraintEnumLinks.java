@@ -169,7 +169,9 @@ final class CheckConstraintEnumLinks {
               "status",
               "SourceInstallerImpl이 저장하는 ACTIVE와 PENDING만 상수로 선언합니다"),
           new ColumnWithoutEnum(
-              "task_updates", "kind", "WebTaskWriterImpl의 switch가 두 값을 처리하며 값 집합을 나타내는 enum은 없습니다"),
+              "task_updates",
+              "kind",
+              "TaskUpdateWriterImpl의 switch가 두 값을 처리하며 값 집합을 나타내는 enum은 없습니다"),
           new ColumnWithoutEnum(
               "user_identities", "provider", "허용 값이 하나이므로 UserService.PROVIDER_GOOGLE 상수로만 관리합니다"));
 

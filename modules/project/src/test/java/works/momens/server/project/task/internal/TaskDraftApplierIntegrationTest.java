@@ -16,6 +16,7 @@ import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.ProjectSeedSql;
 import works.momens.server.project.task.ApplyTaskDraftCommand;
+import works.momens.server.project.task.CreateTaskCommand;
 import works.momens.server.project.task.TaskDraftApplier;
 import works.momens.server.project.task.TaskDraftApplyResult;
 import works.momens.server.project.task.TaskDraftValues;
@@ -137,14 +138,8 @@ class TaskDraftApplierIntegrationTest extends AbstractPostgresIntegrationTest {
     UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
     Task task =
         taskRepository.saveAndFlush(
-            Task.builder()
-                .workspaceId(workspaceId)
-                .projectId(projectId)
-                .title("초기 제목")
-                .status("todo")
-                .priority("medium")
-                .role("pm")
-                .build());
+            Task.create(
+                CreateTaskCommand.manual(projectId, workspaceId, "초기 제목", "pm", "medium"), null));
     // description은 builder에 없어 수정 경로로 채운다. 반영이 건드리지 않는 필드를 확인하려면 값이 있어야 한다.
     task.update("초기 제목", "pm", "medium", "todo", "초기 목적", null);
     entityManager.flush();
