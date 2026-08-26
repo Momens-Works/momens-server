@@ -39,8 +39,8 @@ seed_manifest="$repo_root/scripts/prod-flyway-bootstrap-seed.txt"
 #   ./gradlew -q :app:dependencies --configuration runtimeClasspath | grep flyway-core
 flyway_version="12.4.0"
 
-# prod 에서 앱이 접속하는 DB role. 생성물이 이력 테이블의 소유권을 이 role 로 넘긴다 — 이유는
-# 아래 OWNER TO 줄의 주석에 있다. 값이 바뀌면 여기만 고친다.
+# prod 에서 앱이 접속하는 DB role. 생성물이 이력 테이블의 DML 을 이 role 에 부여한다 — 이유는
+# 아래 GRANT 줄의 주석에 있다. 값이 바뀌면 여기만 고친다.
 prod_role="momens_server"
 
 scratch_container="momens-flyway-bootstrap-scratch"
