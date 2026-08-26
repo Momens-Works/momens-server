@@ -19,4 +19,17 @@ public record PatchTaskCommand(
     UUID assigneeId,
     boolean assigneeSet,
     LocalDate dueDate,
-    boolean dueDateSet) {}
+    boolean dueDateSet) {
+
+  public PatchTaskCommand {
+    if (titleSet && title == null) {
+      throw new IllegalArgumentException("titleSet이면 title이 필요합니다.");
+    }
+    if (statusSet && status == null) {
+      throw new IllegalArgumentException("statusSet이면 status가 필요합니다.");
+    }
+    if (prioritySet && priority == null) {
+      throw new IllegalArgumentException("prioritySet이면 priority가 필요합니다.");
+    }
+  }
+}

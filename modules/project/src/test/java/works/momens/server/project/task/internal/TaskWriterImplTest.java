@@ -1,13 +1,16 @@
 package works.momens.server.project.task.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,12 +18,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import works.momens.server.common.api.BusinessException;
+import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.outbox.OutboxAppender;
 import works.momens.server.project.milestone.MilestoneDirectory;
 import works.momens.server.project.task.CreateTaskCommand;
 import works.momens.server.project.task.PatchTaskCommand;
 import works.momens.server.project.task.TaskOrigin;
 import works.momens.server.project.task.TaskSnapshot;
+import works.momens.server.project.task.UpdateTaskCommand;
 import works.momens.server.workspace.LabelAllocator;
 import works.momens.server.workspace.WorkspaceAccess;
 
@@ -151,5 +157,26 @@ class TaskWriterImplTest {
     assertThat(task.getDescription()).isEqualTo("설명");
     assertThat(task.getStatus()).isEqualTo("done");
     assertThat(task.getPriority()).isEqualTo("high");
+  }
+
+  @Test
+  void updateRejectsChangedAssigneeWhoIsNotWorkspaceMember() {
+    UUID projectId = UUID.randomUUID();
+    UUID workspaceId = UUID.randomUUID();
+    UUID assigneeId = UUID.randomUUID();
+    Task task =
+        Task.create(
+            CreateTaskCommand.manual(projectId, workspaceId, "기존", "pm", "high"), "MOM-0004");
+    when(taskRepository.findByIdAndDeletedAtIsNull(task.getId())).thenReturn(Optional.of(task));
+    when(workspaceAccess.isMember(workspaceId, assigneeId)).thenReturn(false);
+
+    assertThatThrownBy(
+            () ->
+                taskWriter.update(
+                    new UpdateTaskCommand(
+                        task.getId(), "새 제목", "pm", assigneeId, "high", "todo", null, List.of())))
+        .isInstanceOf(BusinessException.class)
+        .extracting(exception -> ((BusinessException) exception).getErrorCode())
+        .isEqualTo(CommonErrorCode.COMMON_VALIDATION_FAILED);
   }
 }

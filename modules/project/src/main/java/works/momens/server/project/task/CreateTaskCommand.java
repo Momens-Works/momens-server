@@ -28,6 +28,9 @@ public record CreateTaskCommand(
     UUID originSignalId) {
 
   public CreateTaskCommand {
+    if (status == null || status.isBlank()) {
+      throw new IllegalArgumentException("status는 필수입니다.");
+    }
     if (origin == null) {
       throw new IllegalArgumentException("origin은 필수입니다.");
     }
