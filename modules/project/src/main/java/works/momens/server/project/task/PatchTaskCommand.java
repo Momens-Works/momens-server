@@ -25,7 +25,7 @@ public record PatchTaskCommand(
     if (titleSet && title == null) {
       throw new IllegalArgumentException("titleSet이면 title이 필요합니다.");
     }
-    if (statusSet && status == null) {
+    if (statusSet && (status == null || status.isBlank())) {
       throw new IllegalArgumentException("statusSet이면 status가 필요합니다.");
     }
     if (prioritySet && priority == null) {
