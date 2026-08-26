@@ -12,7 +12,7 @@ import works.momens.server.project.task.BoardTask;
 import works.momens.server.project.task.TaskDetail;
 import works.momens.server.project.task.TaskReader;
 import works.momens.server.project.task.TaskScope;
-import works.momens.server.project.task.WebTaskDetail;
+import works.momens.server.project.task.TaskSnapshot;
 
 @Service
 @RequiredArgsConstructor
@@ -40,16 +40,8 @@ class TaskReaderImpl implements TaskReader {
 
   @Override
   @Transactional(readOnly = true)
-  public Optional<UUID> workspaceIdOf(UUID taskId) {
-    return taskRepository.findWorkspaceIdById(taskId);
-  }
-
-  @Override
-  @Transactional(readOnly = true)
   public Optional<TaskScope> findScope(UUID taskId) {
-    return taskRepository
-        .findByIdAndDeletedAtIsNull(taskId)
-        .map(task -> new TaskScope(task.getWorkspaceId(), task.getProjectId()));
+    return taskRepository.findScopeById(taskId);
   }
 
   /**
@@ -60,31 +52,31 @@ class TaskReaderImpl implements TaskReader {
    */
   @Override
   @Transactional(readOnly = true)
-  public Optional<WebTaskDetail> findWebDetail(UUID taskId) {
+  public Optional<TaskSnapshot> findSnapshot(UUID taskId) {
     return taskRepository
         .findByIdAndDeletedAtIsNull(taskId)
         .flatMap(
             task ->
                 projectReader
                     .workspaceIdOf(task.getProjectId())
-                    .map(workspaceId -> toWebTaskDetail(task, workspaceId)));
+                    .map(workspaceId -> TaskSnapshotMapper.toSnapshot(task, workspaceId)));
   }
 
   @Override
   @Transactional(readOnly = true)
-  public List<WebTaskDetail> listWebDetailsByProjectId(UUID projectId) {
+  public List<TaskSnapshot> listSnapshotsByProjectId(UUID projectId) {
     return taskRepository.findByProjectIdAndDeletedAtIsNullOrderByCreatedAtDesc(projectId).stream()
-        .map(TaskReaderImpl::toWebTaskDetail)
+        .map(TaskSnapshotMapper::toSnapshot)
         .toList();
   }
 
   @Override
   @Transactional(readOnly = true)
-  public List<WebTaskDetail> listWebDetailsByWorkspaceId(UUID workspaceId) {
+  public List<TaskSnapshot> listSnapshotsByWorkspaceId(UUID workspaceId) {
     return taskRepository
         .findByWorkspaceIdAndDeletedAtIsNullOrderByCreatedAtDesc(workspaceId)
         .stream()
-        .map(TaskReaderImpl::toWebTaskDetail)
+        .map(TaskSnapshotMapper::toSnapshot)
         .toList();
   }
 
@@ -96,26 +88,5 @@ class TaskReaderImpl implements TaskReader {
         task.getPriority(),
         task.getRole(),
         task.getCreatedAt());
-  }
-
-  private static WebTaskDetail toWebTaskDetail(Task task) {
-    return toWebTaskDetail(task, task.getWorkspaceId());
-  }
-
-  private static WebTaskDetail toWebTaskDetail(Task task, UUID workspaceId) {
-    return new WebTaskDetail(
-        task.getId(),
-        workspaceId,
-        task.getProjectId(),
-        task.getMilestoneId(),
-        task.getLabel(),
-        task.getTitle(),
-        task.getDescription(),
-        task.getStatus(),
-        task.getPriority(),
-        task.getAssigneeId(),
-        task.getDueDate(),
-        task.getCreatedAt(),
-        task.getUpdatedAt());
   }
 }

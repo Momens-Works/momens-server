@@ -2,7 +2,7 @@ package works.momens.server.mobile.board.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;
-import works.momens.server.project.task.CreatedTask;
+import works.momens.server.project.task.TaskSnapshot;
 
 /** {@code POST /api/mobile/projects/{projectId}/tasks} 응답. 생성된 태스크를 {@code task} 아래에 담습니다. */
 @Schema(description = "태스크 생성 응답")
@@ -17,7 +17,7 @@ public record TaskCreateResponse(@Schema(description = "생성된 태스크") Ta
       @Schema(description = "우선순위. low/medium/high", example = "medium") String priority,
       @Schema(description = "상태", example = "todo") String status) {}
 
-  public static TaskCreateResponse from(CreatedTask created) {
+  public static TaskCreateResponse from(TaskSnapshot created) {
     return new TaskCreateResponse(
         new TaskResponse(
             created.id(),

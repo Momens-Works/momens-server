@@ -26,7 +26,7 @@ import works.momens.server.project.task.TaskReader;
  * 호출하는 쪽이 확정해서 workspace id 목록으로 넘기는 계약이므로, 여기서는 id 목록을 직접 만들어 project 쪽 규칙만 검증합니다.
  *
  * <p>{@code TaskReader}는 mock을 사용합니다. 구현체가 task 하위 모듈의 package-private이라 이 슬라이스 테스트에서 구성할 수 없습니다(라벨
- * 발급 때문에 {@code TaskCreatorImplTest}와 같은 제약이 있습니다).
+ * 발급 때문에 {@code TaskWriterImplTest}와 같은 제약이 있습니다).
  *
  * <p>진행률 계산은 {@code ProjectReaderImplTest}에서 단위 테스트로 검증하고, 실제 태스크 조회까지 포함한 동작은 애플리케이션 통합 테스트에서
  * 검증합니다.

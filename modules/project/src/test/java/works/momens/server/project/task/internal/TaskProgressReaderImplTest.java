@@ -23,7 +23,7 @@ import works.momens.server.project.task.TaskStatus;
  * 진행률 계산 규칙 검증.
  *
  * <p>DB 없이 계산 규칙(분모에 드는 상태, 소수점 버림, 없는 project 처리)만 확인합니다. 실제 태스크 조회까지 포함한 동작은 app 통합테스트에서 전체 컨텍스트로
- * 검증합니다. task 조회 구현이 package-private라 project 슬라이스에서 조립하기 어렵기 때문입니다({@code TaskCreatorImplTest}와 같은
+ * 검증합니다. task 조회 구현이 package-private라 project 슬라이스에서 조립하기 어렵기 때문입니다({@code TaskWriterImplTest}와 같은
  * 제약).
  */
 @ExtendWith(MockitoExtension.class)

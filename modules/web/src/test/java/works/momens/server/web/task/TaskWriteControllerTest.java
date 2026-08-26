@@ -29,7 +29,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import works.momens.server.project.task.WebTaskDetail;
+import works.momens.server.project.task.TaskSnapshot;
 import works.momens.server.project.taskupdate.TaskUpdateDetail;
 
 @WebMvcTest(TaskWriteController.class)
@@ -151,8 +151,8 @@ class TaskWriteControllerTest {
     verify(taskWriteService).deleteUpdate(TASK_ID, UPDATE_ID, USER_ID);
   }
 
-  private static WebTaskDetail task() {
-    return new WebTaskDetail(
+  private static TaskSnapshot task() {
+    return new TaskSnapshot(
         TASK_ID,
         UUID.randomUUID(),
         PROJECT_ID,
@@ -162,6 +162,7 @@ class TaskWriteControllerTest {
         null,
         "backlog",
         "medium",
+        null,
         null,
         LocalDate.parse("2026-08-31"),
         Instant.parse("2026-08-21T00:00:00Z"),

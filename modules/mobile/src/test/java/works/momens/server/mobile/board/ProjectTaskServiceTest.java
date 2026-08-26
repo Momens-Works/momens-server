@@ -31,12 +31,12 @@ import works.momens.server.project.core.ProjectErrorCode;
 import works.momens.server.project.core.ProjectReader;
 import works.momens.server.project.task.BoardTask;
 import works.momens.server.project.task.CreateTaskCommand;
-import works.momens.server.project.task.CreatedTask;
-import works.momens.server.project.task.TaskCreator;
 import works.momens.server.project.task.TaskDetail;
-import works.momens.server.project.task.TaskEditor;
 import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.project.task.TaskReader;
+import works.momens.server.project.task.TaskScope;
+import works.momens.server.project.task.TaskSnapshot;
+import works.momens.server.project.task.TaskWriter;
 import works.momens.server.project.task.UpdateTaskCommand;
 import works.momens.server.source.SourceRefReader;
 import works.momens.server.source.SourceRefView;
@@ -54,8 +54,7 @@ class ProjectTaskServiceTest {
   @Mock private ProjectReader projectReader;
   @Mock private WorkspaceAccess workspaceAccess;
   @Mock private TaskReader taskReader;
-  @Mock private TaskCreator taskCreator;
-  @Mock private TaskEditor taskEditor;
+  @Mock private TaskWriter taskWriter;
   @Mock private UserService userService;
   @Mock private EntityRelationReader entityRelationReader;
   @Mock private SourceRefReader sourceRefReader;
@@ -182,14 +181,13 @@ class ProjectTaskServiceTest {
   @Test
   void createTaskPassesCommandThroughToCreator() {
     stubMember();
-    CreatedTask created =
-        new CreatedTask(UUID.randomUUID(), PROJECT_ID, "제목", "pm", "high", "todo");
-    when(taskCreator.create(any())).thenReturn(created);
+    TaskSnapshot created = snapshot(UUID.randomUUID(), "제목", "pm", "high", "todo");
+    when(taskWriter.create(any())).thenReturn(created);
 
-    CreatedTask result = projectTaskService.createTask(PROJECT_ID, CALLER_ID, "제목", "pm", "high");
+    TaskSnapshot result = projectTaskService.createTask(PROJECT_ID, CALLER_ID, "제목", "pm", "high");
 
     ArgumentCaptor<CreateTaskCommand> captor = ArgumentCaptor.forClass(CreateTaskCommand.class);
-    org.mockito.Mockito.verify(taskCreator).create(captor.capture());
+    org.mockito.Mockito.verify(taskWriter).create(captor.capture());
     CreateTaskCommand command = captor.getValue();
     assertThat(command.projectId()).isEqualTo(PROJECT_ID);
     assertThat(command.workspaceId()).isEqualTo(WORKSPACE_ID);
@@ -212,7 +210,7 @@ class ProjectTaskServiceTest {
 
   @Test
   void getTaskDetailThrowsTaskNotFoundWhenTaskMissing() {
-    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.empty());
+    when(taskReader.findScope(TASK_ID)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> projectTaskService.getTaskDetail(TASK_ID, CALLER_ID))
         .isInstanceOf(BusinessException.class)
@@ -222,7 +220,8 @@ class ProjectTaskServiceTest {
 
   @Test
   void getTaskDetailThrowsForbiddenForNonMemberOfTaskWorkspace() {
-    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
+    when(taskReader.findScope(TASK_ID))
+        .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(false);
 
     assertThatThrownBy(() -> projectTaskService.getTaskDetail(TASK_ID, CALLER_ID))
@@ -237,7 +236,8 @@ class ProjectTaskServiceTest {
   @Test
   void getTaskDetailReadsLedgerBeforeTask() {
     when(taskDraftStatusReader.statusOf(TASK_ID)).thenReturn(DraftStatus.GENERATING);
-    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
+    when(taskReader.findScope(TASK_ID))
+        .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
     when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
 
@@ -255,7 +255,8 @@ class ProjectTaskServiceTest {
   void getTaskDetailReturnsReadyWhenTaskHasNoLedgerRow() {
     // 비동기 도입 이전·비활성·Signal을 거치지 않은 task가 여기 해당한다(설계 7.1절).
     when(taskDraftStatusReader.statusOf(TASK_ID)).thenReturn(DraftStatus.READY);
-    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
+    when(taskReader.findScope(TASK_ID))
+        .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
     when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
 
@@ -266,7 +267,8 @@ class ProjectTaskServiceTest {
   @Test
   void getTaskDetailJoinsAssigneeProfileAndMapsUrgentToHigh() {
     UUID assigneeId = UUID.randomUUID();
-    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
+    when(taskReader.findScope(TASK_ID))
+        .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
     when(taskReader.findDetail(TASK_ID))
         .thenReturn(
             Optional.of(
@@ -292,7 +294,8 @@ class ProjectTaskServiceTest {
 
   @Test
   void getTaskDetailReturnsNullAssigneeAndPurposeWhenUnset() {
-    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
+    when(taskReader.findScope(TASK_ID))
+        .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
     when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
 
@@ -309,7 +312,8 @@ class ProjectTaskServiceTest {
   @Test
   void getTaskDetailPassesMinsuFieldsThroughUnchanged() {
     UUID questionId = UUID.randomUUID();
-    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
+    when(taskReader.findScope(TASK_ID))
+        .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
     when(taskReader.findDetail(TASK_ID))
         .thenReturn(
             Optional.of(
@@ -334,7 +338,8 @@ class ProjectTaskServiceTest {
     UUID figma = UUID.randomUUID();
     UUID slack = UUID.randomUUID();
     UUID gone = UUID.randomUUID();
-    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
+    when(taskReader.findScope(TASK_ID))
+        .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
     when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
     when(entityRelationReader.findLinkedSourceRefIds(WORKSPACE_ID, List.of(TASK_ID)))
@@ -368,7 +373,7 @@ class ProjectTaskServiceTest {
 
   @Test
   void updateTaskThrowsTaskNotFoundWhenTaskMissing() {
-    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.empty());
+    when(taskReader.findScope(TASK_ID)).thenReturn(Optional.empty());
 
     assertThatThrownBy(
             () ->
@@ -381,7 +386,8 @@ class ProjectTaskServiceTest {
 
   @Test
   void updateTaskThrowsForbiddenWhenCallerIsNotMember() {
-    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
+    when(taskReader.findScope(TASK_ID))
+        .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(false);
 
     assertThatThrownBy(
@@ -395,7 +401,8 @@ class ProjectTaskServiceTest {
 
   @Test
   void updateTaskSendsFullEditableStateToEditor() {
-    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
+    when(taskReader.findScope(TASK_ID))
+        .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
     List<ChecklistEdit> items = List.of(new ChecklistEdit(null, "A", true));
 
@@ -403,7 +410,7 @@ class ProjectTaskServiceTest {
         TASK_ID, CALLER_ID, "제목", "backend", null, "high", "in_progress", "수정한 목적", items);
 
     ArgumentCaptor<UpdateTaskCommand> captor = ArgumentCaptor.forClass(UpdateTaskCommand.class);
-    org.mockito.Mockito.verify(taskEditor).update(captor.capture());
+    org.mockito.Mockito.verify(taskWriter).update(captor.capture());
     UpdateTaskCommand command = captor.getValue();
     assertThat(command.taskId()).isEqualTo(TASK_ID);
     assertThat(command.title()).isEqualTo("제목");
@@ -418,7 +425,7 @@ class ProjectTaskServiceTest {
 
   @Test
   void toggleChecklistItemThrowsTaskNotFoundWhenTaskMissing() {
-    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.empty());
+    when(taskReader.findScope(TASK_ID)).thenReturn(Optional.empty());
 
     assertThatThrownBy(
             () ->
@@ -431,9 +438,10 @@ class ProjectTaskServiceTest {
   @Test
   void toggleChecklistItemPassesThroughToEditor() {
     UUID itemId = UUID.randomUUID();
-    when(taskReader.workspaceIdOf(TASK_ID)).thenReturn(Optional.of(WORKSPACE_ID));
+    when(taskReader.findScope(TASK_ID))
+        .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
-    when(taskEditor.toggleChecklistItem(TASK_ID, itemId, true))
+    when(taskWriter.toggleChecklistItem(TASK_ID, itemId, true))
         .thenReturn(
             detail(null, null, List.of(new TaskDetail.ChecklistItem(itemId, "완료기준", true))));
 
@@ -469,6 +477,25 @@ class ProjectTaskServiceTest {
         checklistItems,
         openQuestions,
         nextAction);
+  }
+
+  private static TaskSnapshot snapshot(
+      UUID id, String title, String role, String priority, String status) {
+    return new TaskSnapshot(
+        id,
+        WORKSPACE_ID,
+        PROJECT_ID,
+        null,
+        "MOM-0001",
+        title,
+        null,
+        status,
+        priority,
+        role,
+        null,
+        null,
+        CREATED_AT,
+        CREATED_AT);
   }
 
   private static UserProfile profile(UUID id, String name) {

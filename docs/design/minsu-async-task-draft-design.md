@@ -388,7 +388,7 @@ workspace 데이터 안의 복제다.
 
 **`minsu`가 별도 생성 원장 테이블을 소유하고, `tasks`에는 확정된 결과만 반영한다.**
 
-`tasks`에 상태 컬럼을 얹는 안은 채택하지 않았다. `tasks`는 사용자가 `TaskEditor.update`로
+`tasks`에 상태 컬럼을 얹는 안은 채택하지 않았다. `tasks`는 사용자가 `TaskWriter.update`로
 편집하는 테이블이라 AI 갱신과 사용자 수정이 같은 row에서 경합하고, 원장을 `tasks`에 두면
 생성 상태의 소유가 `project`로 넘어가 모듈 경계가 흐려진다.
 
@@ -639,7 +639,7 @@ snapshot을 고정하므로 **순서만으로는 정합성이 보장되지 않�
 
 ### 8.1 사용자 수정과 AI 결과의 경합
 
-**사용자 수정이 항상 우선한다.** convert 직후 사용자가 `TaskEditor.update`로 제목을 고쳤는데
+**사용자 수정이 항상 우선한다.** convert 직후 사용자가 `TaskWriter.update`로 제목을 고쳤는데
 뒤늦게 도착한 AI 결과가 이를 덮으면 사용자가 명시적으로 한 편집이 사라진다.
 
 판정은 **조건부 UPDATE(compare-and-set)** 로 한다. 반영 시점에 `tasks`의 title/role/priority가
@@ -1155,7 +1155,7 @@ provider 호출 여부만 제어한다. 세 축으로 나눈다.
 
    - 같은 transaction manager를 쓰고 기본 `PROPAGATION_REQUIRED`로 참여한다. 반영 API에
      `@Transactional`을 붙이는 것 자체는 문제가 아니다. 기본 전파가 이미 참여이고 현재
-     `TaskEditorImpl.update`도 같은 방식이다.
+     `TaskWriterImpl.update`도 같은 방식이다.
    - `REQUIRES_NEW`, 별도 transaction manager, 명시적 조기 commit은 금지한다.
    - CAS가 0건이거나 원장의 token·deadline 조건 갱신이 0건이면 예외 없이 커밋하지 않고 전체를
      롤백한다. task만 바뀌고 원장이 남는 상태를 만들지 않는다.

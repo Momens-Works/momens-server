@@ -19,6 +19,7 @@ import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.ProjectSeedSql;
 import works.momens.server.project.core.ProjectReader;
 import works.momens.server.project.task.BoardTask;
+import works.momens.server.project.task.CreateTaskCommand;
 import works.momens.server.project.task.TaskDetail;
 import works.momens.server.project.task.TaskReader;
 import works.momens.server.project.task.TaskScope;
@@ -292,14 +293,21 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
       UUID workspaceId, UUID projectId, String title, String status, String priority, String role) {
     return taskRepository
         .saveAndFlush(
-            Task.builder()
-                .workspaceId(workspaceId)
-                .projectId(projectId)
-                .title(title)
-                .status(status)
-                .priority(priority)
-                .role(role)
-                .build())
+            Task.create(
+                new CreateTaskCommand(
+                    projectId,
+                    workspaceId,
+                    title,
+                    null,
+                    status,
+                    role,
+                    priority,
+                    null,
+                    null,
+                    null,
+                    works.momens.server.project.task.TaskOrigin.MANUAL,
+                    null),
+                null))
         .getId();
   }
 

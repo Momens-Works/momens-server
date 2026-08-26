@@ -11,7 +11,7 @@ import works.momens.server.memory.MemoryCandidateDetail;
 import works.momens.server.project.blocker.BlockerDetail;
 import works.momens.server.project.core.ProjectDetail;
 import works.momens.server.project.milestone.MilestoneDetail;
-import works.momens.server.project.task.WebTaskDetail;
+import works.momens.server.project.task.TaskSnapshot;
 import works.momens.server.source.LegacySourceRefDetail;
 import works.momens.server.web.workspace.WorkspaceMemberView;
 import works.momens.server.workspace.WorkspaceDetail;
@@ -33,7 +33,7 @@ public record WorkspaceSnapshotResponse(
       List<WorkspaceMemberView> members,
       List<ProjectDetail> projects,
       List<MilestoneDetail> milestones,
-      List<WebTaskDetail> tasks,
+      List<TaskSnapshot> tasks,
       List<BlockerDetail> blockers,
       List<MemoryCandidateDetail> candidates,
       List<ConfirmedMemoryDetail> memories,
@@ -138,7 +138,7 @@ public record WorkspaceSnapshotResponse(
       LocalDate dueDate,
       Instant createdAt,
       Instant updatedAt) {
-    static SnapshotTaskResponse from(WebTaskDetail task) {
+    static SnapshotTaskResponse from(TaskSnapshot task) {
       return new SnapshotTaskResponse(
           task.id(),
           task.projectId(),

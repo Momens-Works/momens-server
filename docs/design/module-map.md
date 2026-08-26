@@ -228,8 +228,9 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   계약을 따르는 fixture가 채운다(ADR-0011). 모바일 보드·상세 조회 public API는
   `TaskReader`(listTasksByStatus, findDetail)와 `BoardTask`, `TaskDetail`이고, 어떤 상태를
   보일지와 표기 매핑은 표면이 정한다. `BoardTask`는 표면이 생성 시각 기준으로 다시 정렬할 수
-  있게 createdAt을 포함한다(MOM-67). 생성 public API는 `TaskCreator`(create)이고, 생성 시
-  workspace의 `LabelAllocator`로 MOM 라벨을 발급한다.
+  있게 createdAt을 포함한다(MOM-67). 쓰기 public API는 `TaskWriter` 하나이며, 표면별 생성 정책은
+  `CreateTaskCommand`로 전달한다. 생성 시 workspace의 `LabelAllocator`로 MOM 라벨을 발급한다.
+  태스크 소속 확인은 `TaskReader.findScope`가 workspaceId와 projectId만 projection한다(MOM-0923).
 - project 목록 조회는 호출하는 쪽이 멤버십 조회(`WorkspaceAccess.listUserMemberships`)로
   확정한 workspace id 목록을 받아 자기 테이블에서 조회한다. 멤버십을 이 모듈이 다시 읽지
   않아서 호출 쪽 멤버십 스냅샷과 목록 기준이 항상 같다. 접근 범위(멤버십)는 여전히 호출 쪽이
@@ -462,7 +463,7 @@ Spring Modulith nested 논리 모듈이고, `source`의 `connection`·`ref`와 �
 root의 타입(`SignalErrorCode` 등)을 참조하는 것은 단방향(query/action → root)이라 순환이 아니다 —
 모듈 root(공개 계약)가 nested 모듈의 구현 타입을 직접 참조하는 반대 방향의 의존이 생겼을 때만
 Modulith가 순환으로 판정한다. action은 query가 공개한 `SignalReader`로 Signal 스냅샷을 읽고,
-convert-to-task는 `project`의 `TaskCreator.create`/`TaskReader.findDetail`(둘 다 다른 top-level 모듈의
+convert-to-task는 `project`의 `TaskWriter.create`/`TaskReader.findDetail`(둘 다 다른 top-level 모듈의
 공개 계약 참조라 표준 방향이다. MOM-0887 이후 두 타입은 `project` root가 아니라 `project.task` named
 interface에 있다)을 쓴다. convert-to-task 트랜잭션(`tasks insert +
 signal_actions insert + outbox_events insert 2건`)과 dismiss 트랜잭션(`signal_actions insert +

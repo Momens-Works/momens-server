@@ -84,7 +84,7 @@ convert-to-task
 mobile
   → signal
       → minsu (public SignalTaskDraftGenerator)
-      → project (TaskCreator/TaskReader)
+      → project (TaskWriter/TaskReader)
       → workspace
       → outbox
 

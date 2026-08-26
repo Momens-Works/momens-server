@@ -24,9 +24,14 @@ interface TaskRepository extends JpaRepository<Task, UUID> {
   @Query("select t from Task t where t.id = :taskId and t.deletedAt is null")
   Optional<Task> lockByIdAndDeletedAtIsNull(UUID taskId);
 
-  /** 멤버십 확인용 workspace id 조회. 태스크 본문을 읽지 않고 workspace만 가져옵니다. 소프트 삭제된 태스크는 제외합니다. */
-  @Query("select t.workspaceId from Task t where t.id = :taskId and t.deletedAt is null")
-  Optional<UUID> findWorkspaceIdById(UUID taskId);
+  /** 소속 확인용 projection 조회. 태스크 본문을 읽지 않고 workspace와 project만 가져옵니다. */
+  @Query(
+      """
+      select new works.momens.server.project.task.TaskScope(t.workspaceId, t.projectId)
+      from Task t
+      where t.id = :taskId and t.deletedAt is null
+      """)
+  Optional<works.momens.server.project.task.TaskScope> findScopeById(UUID taskId);
 
   /**
    * 보드용 조회. 주어진 상태의 소프트 삭제되지 않은 태스크를 생성 시각 내림차순으로, 같은 시각은 id 내림차순으로 정렬합니다. id 보조 정렬은 같은 마이크로초 생성 행의

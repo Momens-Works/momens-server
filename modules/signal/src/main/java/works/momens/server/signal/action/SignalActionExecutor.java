@@ -11,8 +11,8 @@ import works.momens.server.minsu.SignalTaskDraftGenerator;
 import works.momens.server.minsu.TaskDraft;
 import works.momens.server.outbox.OutboxAppender;
 import works.momens.server.project.task.CreateTaskCommand;
-import works.momens.server.project.task.CreatedTask;
-import works.momens.server.project.task.TaskCreator;
+import works.momens.server.project.task.TaskSnapshot;
+import works.momens.server.project.task.TaskWriter;
 import works.momens.server.signal.SignalActionResult;
 import works.momens.server.signal.SignalReader;
 
@@ -38,7 +38,7 @@ class SignalActionExecutor {
   private static final String EVENT_SIGNAL_DISMISSED = "signal.dismissed";
 
   private final SignalActionRepository signalActionRepository;
-  private final TaskCreator taskCreator;
+  private final TaskWriter taskWriter;
   private final OutboxAppender outboxAppender;
   private final SignalTaskDraftGenerator taskDraftGenerator;
 
@@ -46,8 +46,8 @@ class SignalActionExecutor {
   SignalActionResult convert(
       SignalReader.Snapshot signal, UUID userId, PreparedTaskDraft prepared) {
     TaskDraft draft = prepared.draft();
-    CreatedTask created =
-        taskCreator.create(
+    TaskSnapshot created =
+        taskWriter.create(
             CreateTaskCommand.fromSignal(
                 signal.projectId(),
                 signal.workspaceId(),
