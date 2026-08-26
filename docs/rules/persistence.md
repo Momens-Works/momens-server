@@ -144,6 +144,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON some_shared_table TO postgres;
 
 서버만 쓰는 테이블에는 쓰지 않습니다. 기본 `SELECT`로 충분합니다.
 
+부트스트랩이 만드는 12개 테이블 중 어디에 이 GRANT가 필요한지는 MOM-0936이 판정합니다
+(최소 `outbox_events` — ADR-0009상 worker가 `signal.created`를 발행합니다).
+
 ## 시간 · 식별자
 
 레거시 `momens-api` 스키마와 호환을 유지합니다.
