@@ -6,7 +6,7 @@
 # `relation already exists` 로 죽지 않도록 `flyway_schema_history` 에 적용 기록을 미리 심는다.
 # 이 스크립트는 그 INSERT 문을 만든다. 적용은 사람이 한다.
 #
-# 생성물은 이력 테이블의 소유권을 momens_server 로 넘기는 줄을 포함한다. 절차 문서에만 적으면
+# 생성물은 이력 테이블에 momens_server 의 DML 을 부여하는 줄을 포함한다. 절차 문서에만 적으면
 # 빠지는 유형이라 생성물이 직접 갖게 했다.
 #
 # 체크섬을 직접 계산하지 않는다. 빈 스크래치 DB 에 Flyway 를 그대로 돌려 나온 값을 복사한다.
@@ -154,13 +154,18 @@ bootstrap_ddl_preamble() {
     echo "CREATE INDEX IF NOT EXISTS flyway_schema_history_s_idx ON flyway_schema_history (success);"
     echo ""
     echo "-- 이력 테이블을 만든 role 이 소유자가 된다. 이 SQL 을 실행하는 창구는 Supabase SQL"
-    echo "-- Editor 이고 그것은 postgres 세션이므로, 이 줄이 없으면 소유자가 postgres 가 되고"
-    echo "-- 앱이 접속하는 role($prod_role)은 이력 테이블에 아무 권한도 갖지 못한다. 다음 기동이"
-    echo "-- permission denied for table flyway_schema_history 로 죽는다."
+    echo "-- Editor 이고 그것은 postgres 세션이므로, 이 줄이 없으면 앱이 접속하는 role($prod_role)이"
+    echo "-- 이력 테이블에 아무 권한도 갖지 못하고 다음 기동이"
+    echo "-- permission denied for table flyway_schema_history 로 죽는다. 심기 시점에는 신호가 없다."
     echo "--"
-    echo "-- SET ROLE 로 갈아타는 방법도 있으나 postgres 가 그 role 의 멤버여야 성립한다."
-    echo "-- 소유권 이전은 그 전제 없이 postgres 권한만으로 된다."
-    echo "ALTER TABLE flyway_schema_history OWNER TO $prod_role;"
+    echo "-- 소유권을 넘기지 않고 DML 만 준다. Flyway 는 이력 테이블에 DML 만 하고(잠금은 세션"
+    echo "-- advisory lock 을 쓴다) 소유자 권한을 요구하지 않는 것을 리허설로 확인했다."
+    echo "-- 소유권 이전이었다면 postgres 가 $prod_role 로 SET ROLE 할 수 있어야 하는데, 그 능력은"
+    echo "-- 소유권 일괄 이전 직후 다시 꺼 두는 것이 운영 기본값이다."
+    echo "--"
+    echo "-- 주의: Flyway 메이저 업그레이드가 이력 테이블 구조를 바꾸면 ALTER 가 필요해져 소유권"
+    echo "-- 문제가 다시 생긴다. 그때는 업그레이드 절차가 소유권 이전을 함께 다뤄야 한다."
+    echo "GRANT SELECT, INSERT, UPDATE, DELETE ON flyway_schema_history TO $prod_role;"
     echo ""
 }
 

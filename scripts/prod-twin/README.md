@@ -56,7 +56,7 @@ scripts/prod-twin/rehearse.sh lock  # 하나만
 | `no-search-path` | `extensions` 스키마가 `momens_server` 에게 안 보이면 |
 | `bulk-ownership` | 레거시 테이블 20개를 한 번에 넘기면 (ADR-0019 최종 상태) |
 | `ownership-reverted` | 부트스트랩 성공 후 `tasks` 소유권을 되돌리면 |
-| `history-owner` | `postgres` 세션으로 심을 때 — 소유권 이전 줄이 있을 때와 없을 때 |
+| `history-grant` | 이력 테이블 권한 — 없을 때 / 소유권 이전일 때 / DML 부여일 때 |
 | `lock` | 레거시가 `tasks` 를 ACCESS EXCLUSIVE 로 잡고 있으면 |
 | `checksum` | 심은 체크섬 하나가 파일과 다르면 |
 
