@@ -88,6 +88,35 @@ class TaskWriterIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  void updateAllowsUnchangedAssigneeWhoLeftWorkspace() {
+    Fixture fixture = newTask();
+    UUID assigneeId = ProjectSeedSql.insertUser(entityManager, "former-assignee@momens.works");
+    entityManager
+        .getEntityManager()
+        .createNativeQuery("UPDATE tasks SET assignee_id = ?1 WHERE id = ?2")
+        .setParameter(1, assigneeId)
+        .setParameter(2, fixture.taskId())
+        .executeUpdate();
+    entityManager.clear();
+    when(workspaceAccess.isMember(fixture.workspaceId(), assigneeId)).thenReturn(false);
+
+    TaskDetail updated =
+        taskWriter.update(
+            command(
+                fixture.taskId(),
+                "제목 수정",
+                "pm",
+                assigneeId,
+                "medium",
+                "todo",
+                "수정한 목적",
+                List.of()));
+
+    assertThat(updated.title()).isEqualTo("제목 수정");
+    assertThat(updated.assigneeId()).isEqualTo(assigneeId);
+  }
+
+  @Test
   void updateClearsAssigneeWhenAssigneeIdIsNull() {
     Fixture fixture = newTask();
     UUID assigneeId = ProjectSeedSql.insertUser(entityManager, "clear@momens.works");

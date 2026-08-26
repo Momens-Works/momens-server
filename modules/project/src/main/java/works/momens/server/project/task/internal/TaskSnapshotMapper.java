@@ -6,11 +6,15 @@ final class TaskSnapshotMapper {
 
   private TaskSnapshotMapper() {}
 
-  static TaskSnapshot toSnapshot(Task task) {
+  static TaskSnapshot toTaskWorkspaceSnapshot(Task task) {
     return toSnapshot(task, task.getWorkspaceId());
   }
 
-  static TaskSnapshot toSnapshot(Task task, java.util.UUID workspaceId) {
+  static TaskSnapshot toProjectWorkspaceSnapshot(Task task, java.util.UUID workspaceId) {
+    return toSnapshot(task, workspaceId);
+  }
+
+  private static TaskSnapshot toSnapshot(Task task, java.util.UUID workspaceId) {
     return new TaskSnapshot(
         task.getId(),
         workspaceId,

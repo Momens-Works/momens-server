@@ -59,14 +59,16 @@ class TaskReaderImpl implements TaskReader {
             task ->
                 projectReader
                     .workspaceIdOf(task.getProjectId())
-                    .map(workspaceId -> TaskSnapshotMapper.toSnapshot(task, workspaceId)));
+                    .map(
+                        workspaceId ->
+                            TaskSnapshotMapper.toProjectWorkspaceSnapshot(task, workspaceId)));
   }
 
   @Override
   @Transactional(readOnly = true)
   public List<TaskSnapshot> listSnapshotsByProjectId(UUID projectId) {
     return taskRepository.findByProjectIdAndDeletedAtIsNullOrderByCreatedAtDesc(projectId).stream()
-        .map(TaskSnapshotMapper::toSnapshot)
+        .map(TaskSnapshotMapper::toTaskWorkspaceSnapshot)
         .toList();
   }
 
@@ -76,7 +78,7 @@ class TaskReaderImpl implements TaskReader {
     return taskRepository
         .findByWorkspaceIdAndDeletedAtIsNullOrderByCreatedAtDesc(workspaceId)
         .stream()
-        .map(TaskSnapshotMapper::toSnapshot)
+        .map(TaskSnapshotMapper::toTaskWorkspaceSnapshot)
         .toList();
   }
 

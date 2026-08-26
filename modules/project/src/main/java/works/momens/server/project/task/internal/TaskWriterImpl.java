@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -45,14 +46,17 @@ class TaskWriterImpl implements TaskWriter {
     Task task = Task.create(command, label);
     taskRepository.save(task);
     appendCreatedEvent(task);
-    return TaskSnapshotMapper.toSnapshot(task);
+    return TaskSnapshotMapper.toTaskWorkspaceSnapshot(task);
   }
 
   @Override
   @Transactional
   public TaskDetail update(UpdateTaskCommand command) {
     Task task = findTask(command.taskId());
-    validateReferences(task.getWorkspaceId(), task.getProjectId(), null, command.assigneeId());
+    // 모바일은 편집 상태 전체를 보내므로, 기존 담당자는 재검증하지 않고 새 담당자만 검증한다.
+    if (!Objects.equals(task.getAssigneeId(), command.assigneeId())) {
+      validateReferences(task.getWorkspaceId(), task.getProjectId(), null, command.assigneeId());
+    }
     task.update(
         command.title(),
         command.role(),
@@ -91,7 +95,7 @@ class TaskWriterImpl implements TaskWriter {
         command.assigneeSet(),
         command.dueDate(),
         command.dueDateSet());
-    return TaskSnapshotMapper.toSnapshot(task);
+    return TaskSnapshotMapper.toTaskWorkspaceSnapshot(task);
   }
 
   @Override
