@@ -20,6 +20,8 @@ class TaskCommandTest {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> patchCommand("제목", false, null, true, "medium", false));
     assertThatIllegalArgumentException()
+        .isThrownBy(() -> patchCommand("제목", false, " ", true, "medium", false));
+    assertThatIllegalArgumentException()
         .isThrownBy(() -> patchCommand("제목", false, "todo", false, null, true));
   }
 
