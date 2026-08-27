@@ -87,19 +87,27 @@ echo "   anon / authenticated / service_role / momens_server"
 mapped="$(grep -rhoE '@Table\(\s*name\s*=\s*"[a-z_]+"' --include='*.java' "$repo_root/modules" "$repo_root/app" 2>/dev/null \
     | grep -oE '"[a-z_]+"' | tr -d '"' | sort -u)"
 existing="$(psql_root "select tablename from pg_tables where schemaname='public'" "$base_db" | sort)"
-overlap="$(comm -12 <(printf '%s\n' "$mapped") <(printf '%s\n' "$existing") | grep -c .)"
-granted="$(psql_root "select count(distinct table_name) from information_schema.table_privileges
-                      where grantee='momens_server' and privilege_type='SELECT'" "$base_db")"
+overlap="$(comm -12 <(printf '%s\n' "$mapped") <(printf '%s\n' "$existing"))"
+granted="$(psql_root "select distinct table_name from information_schema.table_privileges
+                      where grantee='momens_server' and privilege_type='SELECT'" "$base_db" | sort)"
+
 # prod 는 `tasks` 를 의도적으로 빼고 18 개를 GRANT 했다(소유권 이전으로 대체하려던 판단).
-# 쌍둥이도 그 형상을 그대로 재현하므로 한 개가 비는 것이 정상이다.
-echo "   레거시 테이블 중 엔티티가 매핑하는 것 $overlap 개 / DML GRANT $granted 개 (tasks 제외)"
-# 어긋난 채로 twin_base 를 만들면 이후 리허설이 prod 와 다른 role 형상에서 돌고, 그 결과를
-# 그대로 믿게 된다. 이 쌍둥이가 존재하는 이유가 정확히 그 실패(superuser 리허설의 거짓 통과)라
-# 경고로 넘기지 않는다.
-[[ "$overlap" -eq $((granted + 1)) ]] || {
-    echo "GRANT 대상 차이가 tasks 한 개가 아닙니다. roles.sql 의 GRANT 목록을 확인하세요." >&2
+# 쌍둥이도 그 형상을 그대로 재현하므로 기대 집합은 overlap 에서 tasks 를 뺀 것이다.
+expected="$(printf '%s\n' "$overlap" | grep -vx 'tasks')"
+echo "   레거시 테이블 중 엔티티가 매핑하는 것 $(printf '%s\n' "$overlap" | grep -c .) 개 / DML GRANT $(printf '%s\n' "$granted" | grep -c .) 개 (tasks 제외)"
+
+# 개수가 아니라 이름으로 본다. 개수만 보면 기대한 것 하나가 빠지고 예상 밖 하나가 들어와도
+# 통과한다. 어긋난 채로 twin_base 를 만들면 이후 리허설이 prod 와 다른 role 형상에서 돌고 그
+# 결과를 그대로 믿게 된다 — 이 쌍둥이가 존재하는 이유가 정확히 그 실패(superuser 리허설의
+# 거짓 통과)라 경고로 넘기지 않는다.
+missing="$(comm -23 <(printf '%s\n' "$expected") <(printf '%s\n' "$granted"))"
+unexpected="$(comm -13 <(printf '%s\n' "$expected") <(printf '%s\n' "$granted"))"
+if [[ -n "$missing" || -n "$unexpected" ]]; then
+    [[ -n "$missing" ]] && echo "GRANT 가 빠진 테이블: $(echo $missing)" >&2
+    [[ -n "$unexpected" ]] && echo "예상 밖에 GRANT 된 테이블: $(echo $unexpected)" >&2
+    echo "roles.sql 의 GRANT 목록을 확인하세요." >&2
     exit 1
-}
+fi
 
 echo "== 4/6 Supabase 고유 형상 =="
 # 확장 스키마 분리와 event trigger. 레거시 마이그레이션만으로는 재현되지 않는다.
