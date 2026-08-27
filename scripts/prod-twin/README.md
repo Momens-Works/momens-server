@@ -19,7 +19,7 @@ superuser · 빈 DB · 무트래픽** 이라 prod 와 네 가지가 동시에 �
 | 데이터 | 없음 | **`tasks` 10 만 행** |
 | 락 경합 | 없음 | **시나리오가 ACCESS EXCLUSIVE 를 건다** |
 | 확장 스키마 | `public` | **`extensions`** — Supabase 가 `uuid-ossp` 를 두는 곳 |
-| event trigger | 없음 | **6 개** — `supabase_admin` 소유, 매 DDL 마다 발화 |
+| event trigger | 없음 | **6 개** — 매 DDL 마다 발화 (prod 는 `supabase_admin` 소유, 쌍둥이는 `postgres` 로 축약) |
 
 운영 창구를 비-superuser 로 두는 것이 특히 중요합니다. superuser 는 `ALTER TABLE ... OWNER TO` 의
 `SET ROLE` 검사를 통째로 건너뛰므로, superuser 로 리허설하면 prod 에서만 터지는 실패를 놓칩니다.
