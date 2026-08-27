@@ -1,0 +1,51 @@
+name: OpenAPI change notification
+
+# OpenAPI 스냅샷이 변경된 PR이 머지될 때만 실행한다. 이 저장소는 rebase merge를 사용하므로
+# push를 기준으로 실행하면 여러 커밋이 한 번에 반영될 때 비교 범위가 모호해진다.
+# 또한 push 이벤트에서는 PR 번호와 링크를 확인할 수 없다.
+on:
+  pull_request:
+    types: [closed]
+    paths:
+      - docs/spec/openapi.json
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    # 머지되지 않은 상태로 닫힌 PR은 계약을 변경하지 않으므로 실행하지 않는다.
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # base와 head 시점의 파일을 git show로 가져와야 하므로 Git 전체 이력이 필요하다.
+          # 현재 .git 디렉터리 크기는 16MB로 작고, 이 워크플로는 스냅샷을 변경한 PR에서만 실행된다.
+          fetch-depth: 0
+
+      - name: Extract snapshots
+        # merge_commit_sha는 사용하지 않는다. PR이 닫힌 시점에 어떤 값이 제공되는지 웹훅 문서에 명시되어
+        # 있지 않기 때문이다. base.sha와 head.sha는 PR이 열려 있는 동안 정해지며 머지 방식의 영향을 받지 않는다.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # 스냅샷을 처음 추가한 PR은 base 시점에 파일이 없다. 이 경우 빈 문서를 사용해 모든 항목을 추가된 변경으로 판정한다.
+          git show "$BASE_SHA:docs/spec/openapi.json" > "$RUNNER_TEMP/base.json" 2>/dev/null \
+            || printf '%s\n' '{"openapi":"3.1.0","info":{"title":"momens-server","version":"v1"},"paths":{}}' \
+                 > "$RUNNER_TEMP/base.json"
+          git show "$HEAD_SHA:docs/spec/openapi.json" > "$RUNNER_TEMP/head.json"
+
+      - name: Notify OpenAPI contract change
+        # PR 제목은 신뢰할 수 없는 입력이므로 환경 변수로만 전달하고 스크립트에 직접 삽입하지 않는다.
+        # 웹훅 URL이 없으면 스크립트는 메시지를 전송하지 않고 본문만 출력한다. 따라서 알림 채널이
+        # 정해지기 전에도 이 워크플로를 머지할 수 있다.
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_API_CHANGE_WEBHOOK_URL }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: ./scripts/openapi-change-notify.sh "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/head.json"
