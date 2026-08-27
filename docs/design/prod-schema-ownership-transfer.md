@@ -586,6 +586,32 @@ MOM-0908 (이 문서 + ADR-0019)
 리포 쪽 변경이 위험하지 않은 이유는 `application-prod.yml`이 계속 `flyway.enabled: false`이기 때문이다.
 릴리스가 나가도 prod 동작은 바뀌지 않는다. **실제 전환은 릴리스가 아니라 아래 운영 조작이 일으킨다.**
 
+0. **DB 접속 정보를 Supabase로 교체한다. 아래 어느 단계보다 먼저다.**
+
+   `MOMENS_SERVER_DATABASE_URL`·`_USERNAME`·`_PASSWORD`(`k8s` 리포의 GitHub Secret)가 아직 옛
+   Neon을 가리킨다. **이 상태로 진행하면 소유권 이전과 심기는 Supabase에서 일어나고 Pod는
+   Neon에 접속한다.** 토글이 켜지는 순간 Flyway가 이력이 없는 Neon에서 42건을 처음부터
+   실행하려 하고, Supabase에는 새 12개 테이블이 생기지 않는다. 어느 쪽도 의도한 결과가 아니다.
+
+   **주소는 direct여야 하고, 판별은 포트가 아니라 host로 한다.** Supabase의 session pooler도
+   `5432`를 쓴다(`aws-0-<region>.pooler.supabase.com`, username에 `.<ref>` 접미사). direct는
+   `db.<ref>.supabase.co`다. 치명적인 것은 transaction pooler(`:6543`)이고 그것은 포트로
+   배제되지만, 어느 쪽인지는 host를 봐야 안다.
+
+   ```
+   jdbc:postgresql://db.<ref>.supabase.co:5432/postgres?sslmode=require
+   ```
+
+   **교체 후 앱 자격증명으로 대상을 확인하기 전에는 토글을 켜지 않는다.**
+
+   ```sql
+   SELECT current_database(), current_user, inet_server_addr(), inet_server_port();
+   SELECT count(*) FROM schema_migrations;              -- > 0 (레거시가 마이그레이션한 그 DB)
+   SELECT to_regclass('public.flyway_schema_history');  -- 심기 전이면 NULL
+   ```
+
+   `docs/prod-readiness-ledger.md`의 수기 의무가 이 단계를 추적한다.
+
 1. **릴리스 대상 커밋**을 체크아웃해 `--verify`로 체크섬을 대조한다. 심기 목록 전건이 검증돼야
    한다 — 대조되지 못한 항목이 남으면 그 체크섬이 검증 없이 prod로 들어간다.
    - **대조 대상은 dev가 아니다.** dev는 `main` 릴리스로만 전진하는데 부트스트랩 전까지 릴리스를
@@ -722,8 +748,7 @@ MOM-0908 (이 문서 + ADR-0019)
    영향을 받지 않는다 — 생성물이 이력 테이블에 DML 만 부여하고 소유권을 넘기지 않기 때문이다
    (4단계). 쌍둥이의 `no-set-option` 이 셋을 나란히 확인한다: 소유권 이전은 막히고, 심기는
    되고, 부트스트랩도 완주한다. 다만 소유권이 없으면 그 뒤 실행 집합이 `must be owner of
-   table tasks` 로 죽으므로 절차는 결국 그 자리에서 멈춘다. **(3)을 관리자가 적용하지 않을 거라면 대안은 (4)단계의
-   `ALTER TABLE flyway_schema_history OWNER TO momens_server` 를 관리자가 직접 실행하는 것이다.**
+   table tasks` 로 죽으므로 절차는 결국 그 자리에서 멈춘다.
 3.5. **Supabase 고유 형상은 관측했고, 그 결과가 선행 조건 하나를 더 만들었다.** (2026-08-25 실측)
 
    | 관측 | 결과 |
@@ -997,9 +1022,14 @@ ADR-0019가 정한 최종 상태는 서버가 prod 스키마를 소유하는 것
 
 | 구간 | 값 |
 | --- | --- |
-| 첫 로그 → Flyway가 DB를 잡음 | 3.8초 (JVM + Spring 컨텍스트) |
-| DB를 잡음 → 포기 | **5.4초** ← 절차에 적을 값 |
-| 프로세스 전체 (wall-clock) | 11초 |
+| 첫 로그 → Flyway가 DB를 잡음 | 2.9~3.8초 (JVM + Spring 컨텍스트) |
+| DB를 잡음 → 포기 | **5.3~5.8초** ← 절차에 적을 값 |
+| 프로세스 전체 (wall-clock) | 10~11초 |
+
+값이 흔들리는 것은 JVM 기동과 트랜잭션 abort 처리가 매 실행 같지 않기 때문이다. **하네스가
+강제하는 상한은 8.0초**(`rehearse.sh`의 `lock_held_max`)이고, 위는 그 아래에서 관측된
+범위다. 절차 예산은 관측값이 아니라 그 상한으로 잡는다 — 관측값을 상한으로 쓰면 다음 실행이
+0.1초 느려졌을 때 근거가 무너진다.
 | `lock_timeout` 소진 횟수 | **1회** |
 
 `lock_timeout`이 한 번만 소진되는 이유가 `group=true`에 있다. 실행 집합 14건이 한 트랜잭션이라
@@ -1080,8 +1110,9 @@ Supabase는 `ALTER DEFAULT PRIVILEGES FOR ROLE postgres`로 **`postgres`가 만�
 | 게이트를 없앤 뒤 부트스트랩 전에 다른 커밋이 prod에 뜬다 (릴리스 또는 `workflow_dispatch`) | 리포의 `flyway.enabled`가 계속 `false`라 어느 경로로 떠도 prod 동작이 바뀌지 않는다. 전환은 운영 조작이 일으킨다 |
 | 리포 설정과 prod 실제 설정이 어긋난 채 방치된다 | 8절 6단계(정본화 PR)를 부트스트랩과 같은 스프린트에서 닫는다. ConfigMap 오버라이드는 임시 상태다 |
 | ConfigMap 환경변수가 바인딩되지 않는다 | `spring.flyway.out-of-order`는 대시 때문에 변환형이 애매하다. 시스템 프로퍼티로 주고 리허설에서 확인한다 |
+| **접속 대상이 Neon인 채로 토글이 켜진다** | 소유권 이전·심기는 Supabase에서, Flyway는 Neon에서 일어난다. 8절 0단계가 교체와 확인을 토글보다 앞에 둔다 |
 | 롤아웃 실패 후 정리가 안 된 채 남는다 | `deploy-service.sh`에 `rollout undo`가 없다. 수동 정리 단계를 절차에 명시한다 |
-| DDL 선행 조건이 빠진 채 전환한다 | 쌍둥이 리허설이 `tasks` 소유권 · `users` `REFERENCES` · 창구의 `SET ROLE` 능력 세 가지를 각각 실패로 재현했다. 8절 3단계가 SQL로 적는다 |
+| DDL 선행 조건이 빠진 채 전환한다 | 쌍둥이 리허설이 창구의 `SET ROLE` 능력 · 레거시 테이블 20개 소유권 · `extensions` 접근(`USAGE` + `search_path`) 세 가지를 각각 실패로 재현했다. 8절 3단계가 SQL로 적는다 |
 | `momens_server`가 이력 테이블에 권한을 갖지 못한다 | 다음 기동이 `permission denied`로 죽고 심기 시점에는 신호가 없다. `--generate` 생성물이 트랜잭션 안에서 DML을 부여하고(소유권 이전이 아니다 — 8절 4단계), `prod-flyway-bootstrap-verify-test.sh`가 그 줄을 지킨다 |
 | `tasks` 소유권을 되돌리며 DML 재발급을 잊는다 | 기동이 성공해 배포에서 잡히지 않고 첫 요청에서 끊긴다. 7절에 재발급 한 줄을 절차로 적었다 |
 | Data API 소비자가 서버 소유 테이블을 읽고 있다 | 새 12개 테이블은 `momens_server` 소유라 `anon`·`authenticated`에 권한이 붙지 않는다. 소비자 목록은 MOM-0925에서 확인 중이다 |
