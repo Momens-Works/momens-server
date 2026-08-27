@@ -93,8 +93,13 @@ granted="$(psql_root "select count(distinct table_name) from information_schema.
 # prod 는 `tasks` 를 의도적으로 빼고 18 개를 GRANT 했다(소유권 이전으로 대체하려던 판단).
 # 쌍둥이도 그 형상을 그대로 재현하므로 한 개가 비는 것이 정상이다.
 echo "   레거시 테이블 중 엔티티가 매핑하는 것 $overlap 개 / DML GRANT $granted 개 (tasks 제외)"
-[[ "$overlap" -eq $((granted + 1)) ]] \
-    || echo "   주의: 차이가 tasks 한 개가 아닙니다. roles.sql 의 GRANT 목록을 확인하세요." >&2
+# 어긋난 채로 twin_base 를 만들면 이후 리허설이 prod 와 다른 role 형상에서 돌고, 그 결과를
+# 그대로 믿게 된다. 이 쌍둥이가 존재하는 이유가 정확히 그 실패(superuser 리허설의 거짓 통과)라
+# 경고로 넘기지 않는다.
+[[ "$overlap" -eq $((granted + 1)) ]] || {
+    echo "GRANT 대상 차이가 tasks 한 개가 아닙니다. roles.sql 의 GRANT 목록을 확인하세요." >&2
+    exit 1
+}
 
 echo "== 4/6 Supabase 고유 형상 =="
 # 확장 스키마 분리와 event trigger. 레거시 마이그레이션만으로는 재현되지 않는다.

@@ -21,7 +21,7 @@
 #   no-search-path 확장 스키마가 search_path 에 없음
 #   bulk-ownership 레거시 테이블 20개를 한 번에 넘길 때
 #   ownership-reverted  부트스트랩 성공 후 tasks 소유권을 되돌릴 때
-#   history-owner  이력 테이블을 postgres 가 만든 경우
+#   history-grant  이력 테이블 권한 — 미부여 / 소유권 이전 / DML 부여
 #   lock           레거시가 tasks 를 ACCESS EXCLUSIVE 로 잡고 있는 경우
 #   checksum       심은 체크섬 하나가 파일과 다른 경우
 
@@ -262,7 +262,16 @@ for line in open(log, encoding="utf-8", errors="replace"):
         rec = json.loads(line)
     except ValueError:
         continue
-    ts = datetime.fromisoformat(rec["@timestamp"])
+    # @timestamp 가 없거나 이 파이썬이 못 읽는 형태면 그 줄만 건너뛴다. timeline 은 lock
+    # 시나리오의 보고용이라, 여기서 죽으면 이미 측정이 끝난 구간 값을 못 보고 런이 끝난다.
+    # (3.11 미만은 끝의 Z 를 못 읽고, 3.9 는 소수 초 9자리를 거부한다.)
+    raw = rec.get("@timestamp")
+    if not raw:
+        continue
+    try:
+        ts = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        continue
     msg = rec.get("message", "")
     if first is None:
         first = ts
@@ -295,6 +304,9 @@ docker inspect "$container" >/dev/null 2>&1 || { echo "쌍둥이가 없습니다
 
 say "부트스트랩 INSERT 생성"
 "$repo_root/scripts/prod-flyway-bootstrap.sh" --generate "$bootstrap_sql" 2>&1 | grep -E '심기 목록|INSERT ' | sed 's/^/   /'
+# set -e 가 없고 grep 이 파이프 끝이라 생성 실패가 여기서 드러나지 않는다. 빈 파일로 계속 가면
+# 전 시나리오가 심기 없이 돌아 실패 원인이 시나리오 판정 쪽으로 흩어진다.
+[[ -s "$bootstrap_sql" ]] || { echo "부트스트랩 SQL 생성에 실패했습니다: $bootstrap_sql" >&2; exit 1; }
 
 # --- 시나리오 ---------------------------------------------------------------
 
@@ -306,7 +318,7 @@ scenario_baseline() {
 
     # 실행 창구는 Supabase SQL Editor = postgres 세션이다. momens_server 로 psql 을 여는 선택지는
     # 없다 — 그 비밀번호는 생성 후 GitHub Secret 에만 들어갔고 아무도 모른다. 생성물이 트랜잭션
-    # 안에서 이력 테이블 소유권을 넘기므로 postgres 로 심어도 성립한다(history-owner 시나리오).
+    # 안에서 이력 테이블에 DML 을 부여하므로 postgres 로 심어도 성립한다(history-grant 시나리오).
     local out
     out="$(op_file "$bootstrap_sql")"
     expect "심기 28행 INSERT (SQL Editor 대역 = 비-superuser)" "COMMIT" "$out"
@@ -352,6 +364,10 @@ scenario_no_ownership() {
     reset_db
     prereq_operator_set_role
     prereq_users_references
+    # 소유권 하나만 남기고 나머지 선행 조건은 전부 채운다. 실행 집합은 version 순이라
+    # tasks 를 건드리는 V20260714091000 이 uuid_generate_v4() 를 쓰는 V20260810090000 보다
+    # 앞서므로 이것이 없어도 증상은 같지만, 그러면 변수가 둘이 된다.
+    prereq_extensions_search_path
     step "tasks 소유자: $(root "select tableowner from pg_tables where tablename='tasks'") (이전하지 않음)"
 
     local out
