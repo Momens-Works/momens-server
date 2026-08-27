@@ -247,12 +247,29 @@ PYEOF
 timeline() {
     local wall_start="$1" wall_end="$2"
     python3 - "$app_log" "$wall_start" "$wall_end" <<'PYEOF'
-import json, sys
+import json, re, sys
 from datetime import datetime
 
 log, wall_start, wall_end = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
 first = connected = failed = None
 timeouts = 0
+unparsed = 0
+
+# Spring Boot 의 logstash 형식은 나노초까지 낼 수 있는데 3.11 미만의 fromisoformat 은 소수 초
+# 6자리만 받고 끝의 Z 도 못 읽는다. 못 읽는 줄을 그냥 건너뛰면 전 줄이 건너뛰어졌을 때 구간이
+# 통째로 "?" 로 나오면서 시나리오는 OK 로 지나간다 — 이 하네스가 잡으려는 "틀려도 조용한"
+# 유형을 여기서 만들게 된다. 그래서 자르고, 그래도 못 읽으면 아래에서 세어 드러낸다.
+def parse_ts(raw):
+    v = raw.strip()
+    if v.endswith("Z"):
+        v = v[:-1] + "+00:00"
+    m = re.match(r"^(.*\.\d{6})\d+(.*)$", v)
+    if m:
+        v = m.group(1) + m.group(2)
+    try:
+        return datetime.fromisoformat(v)
+    except ValueError:
+        return None
 
 for line in open(log, encoding="utf-8", errors="replace"):
     line = line.strip()
@@ -262,15 +279,12 @@ for line in open(log, encoding="utf-8", errors="replace"):
         rec = json.loads(line)
     except ValueError:
         continue
-    # @timestamp 가 없거나 이 파이썬이 못 읽는 형태면 그 줄만 건너뛴다. timeline 은 lock
-    # 시나리오의 보고용이라, 여기서 죽으면 이미 측정이 끝난 구간 값을 못 보고 런이 끝난다.
-    # (3.11 미만은 끝의 Z 를 못 읽고, 3.9 는 소수 초 9자리를 거부한다.)
     raw = rec.get("@timestamp")
     if not raw:
         continue
-    try:
-        ts = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-    except ValueError:
+    ts = parse_ts(raw)
+    if ts is None:
+        unparsed += 1
         continue
     msg = rec.get("message", "")
     if first is None:
@@ -291,6 +305,10 @@ print("     첫 로그 → Flyway 가 DB 를 잡음   %s초  (JVM + Spring 컨�
 print("     DB 를 잡음 → 포기                %s초  ← 절차에 적을 값" % secs(connected, failed))
 print("     프로세스 전체 (wall-clock)       %d초" % (wall_end - wall_start))
 print("     lock_timeout 소진 횟수           %d" % timeouts)
+if unparsed:
+    print("     주의: 읽지 못한 @timestamp %d 줄 — 위 구간 값을 믿지 마세요" % unparsed)
+if first is None:
+    print("     주의: 시각을 하나도 읽지 못했습니다. 구간 값이 없는 것이지 0 이 아닙니다")
 PYEOF
 }
 
