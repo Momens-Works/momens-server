@@ -139,13 +139,23 @@ CREATE TABLE some_shared_table (...);
 GRANT SELECT, INSERT, UPDATE, DELETE ON some_shared_table TO postgres;
 ```
 
+**`SERIAL`·`BIGSERIAL`·`IDENTITY` 컬럼이 있으면 backing sequence 권한도 함께 줍니다.** 테이블
+DML 만으로는 `INSERT`가 `permission denied for sequence ...`로 끊깁니다. 기본값을 평가하는 쪽이
+그 시퀀스에 `USAGE`를 요구하기 때문입니다.
+
+```sql
+GRANT USAGE, SELECT ON SEQUENCE some_shared_table_id_seq TO postgres;
+```
+
 빠뜨리면 그 서비스가 런타임에 `permission denied`로 끊깁니다. **배포에서 잡히지 않습니다** —
-`ddl-auto: validate`는 카탈로그만 보고 DML 권한을 보지 않습니다.
+`ddl-auto: validate`는 카탈로그만 보고 DML 권한도 시퀀스 권한도 보지 않습니다.
 
 서버만 쓰는 테이블에는 쓰지 않습니다. 기본 `SELECT`로 충분합니다.
 
 부트스트랩이 만드는 12개 테이블 중 어디에 이 GRANT가 필요한지는 MOM-0936이 판정합니다
-(최소 `outbox_events` — ADR-0009상 worker가 `signal.created`를 발행합니다).
+(최소 `outbox_events` — ADR-0009상 worker가 `signal.created`를 발행합니다). `outbox_events`는
+`id BIGSERIAL PRIMARY KEY`이므로 **`outbox_events_id_seq`까지 함께 부여해야** worker의 INSERT가
+성립합니다.
 
 ## 시간 · 식별자
 

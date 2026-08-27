@@ -702,9 +702,11 @@ MOM-0908 (이 문서 + ADR-0019)
    grantee로 하는 ACL을 함께 가져가므로, 사전 GRANT로는 막을 수 없다(제3자가 부여해도 같다 —
    쌍둥이 확인). 20개를 되돌린다면 20개 전부에 재발급이 필요하다. 7절에 절차로 적었다.
 
-   (1)이 없으면 소유권 이전과 심기가 둘 다 `must be able to SET ROLE "momens_server"` 로 죽는다. 단일 트랜잭션이라
-   앞의 INSERT 까지 통째로 롤백돼 `flyway_schema_history` 자체가 남지 않는다 — 실패로서는
-   깨끗하지만 절차가 그 자리에서 멈춘다. **(3)을 관리자가 적용하지 않을 거라면 대안은 (4)단계의
+   (1)이 없으면 **소유권 이전이** `must be able to SET ROLE "momens_server"` 로 죽는다. 심기는
+   영향을 받지 않는다 — 생성물이 이력 테이블에 DML 만 부여하고 소유권을 넘기지 않기 때문이다
+   (4단계). 쌍둥이의 `no-set-option` 이 셋을 나란히 확인한다: 소유권 이전은 막히고, 심기는
+   되고, 부트스트랩도 완주한다. 다만 소유권이 없으면 그 뒤 실행 집합이 `must be owner of
+   table tasks` 로 죽으므로 절차는 결국 그 자리에서 멈춘다. **(3)을 관리자가 적용하지 않을 거라면 대안은 (4)단계의
    `ALTER TABLE flyway_schema_history OWNER TO momens_server` 를 관리자가 직접 실행하는 것이다.**
 3.5. **Supabase 고유 형상은 관측했고, 그 결과가 선행 조건 하나를 더 만들었다.** (2026-08-25 실측)
 
@@ -938,7 +940,7 @@ ADR-0019가 정한 최종 상태는 서버가 prod 스키마를 소유하는 것
 | **baseline** 토글 없이 재기동 | `is up to date. No migration necessary` — 1회성으로 끄는 설계가 PG17·비-superuser에서도 성립한다 |
 | **no-ownership** `tasks` 소유권 이전 생략 | `must be owner of table tasks`로 기동 실패. 새 테이블 0개 |
 | **no-references** `users` `REFERENCES` 누락 | `permission denied for table users`로 기동 실패. 새 테이블 0개 |
-| **no-set-option** 창구가 `momens_server`로 `SET ROLE` 불가 | 심기가 `must be able to SET ROLE`로 실패. 단일 트랜잭션이라 `flyway_schema_history`가 아예 남지 않음 |
+| **no-set-option** 창구가 `momens_server`로 `SET ROLE` 불가 | 소유권 이전이 `must be able to SET ROLE`로 실패. **심기와 부트스트랩은 SET 능력 없이도 성립한다** — 생성물이 DML만 부여하기 때문이다 |
 | **bulk-ownership** 레거시 테이블 20개 일괄 이전 | `GRANT ALL PRIVILEGES`로도 `ALTER`는 불가. 이전 후 20개 전부 서버 소유이고 레거시(`postgres`)가 전부 읽고 쓴다. `anon` 영향 없음. `schema_migrations`는 레거시 소유로 유지. 그 상태에서 부트스트랩 42건 완주 |
 | **no-search-path** `momens_server`가 `extensions`를 못 봄 | `function uuid_generate_v4() does not exist`로 `V20260810090000`에서 실패. `USAGE`와 `search_path` **둘 다** 줘야 통과 |
 | **ownership-reverted** 부트스트랩 성공 후 `tasks` 소유권 원복 | `momens_server`의 DML이 소유권을 따라 사라짐. 조회는 `permission denied for table tasks`인데 **기동은 성공한다** — `validate`가 DML 권한을 보지 않는다. 재발급하면 복구 |
@@ -1044,7 +1046,7 @@ Supabase는 `ALTER DEFAULT PRIVILEGES FOR ROLE postgres`로 **`postgres`가 만�
 | ConfigMap 환경변수가 바인딩되지 않는다 | `spring.flyway.out-of-order`는 대시 때문에 변환형이 애매하다. 시스템 프로퍼티로 주고 리허설에서 확인한다 |
 | 롤아웃 실패 후 정리가 안 된 채 남는다 | `deploy-service.sh`에 `rollout undo`가 없다. 수동 정리 단계를 절차에 명시한다 |
 | DDL 선행 조건이 빠진 채 전환한다 | 쌍둥이 리허설이 `tasks` 소유권 · `users` `REFERENCES` · 창구의 `SET ROLE` 능력 세 가지를 각각 실패로 재현했다. 8절 3단계가 SQL로 적는다 |
-| 이력 테이블 소유자가 `momens_server`가 아니게 된다 | 다음 기동이 `permission denied`로 죽고 심기 시점에는 신호가 없다. `--generate` 생성물이 트랜잭션 안에서 소유권을 넘기고, `prod-flyway-bootstrap-verify-test.sh`가 그 줄을 지킨다 |
+| `momens_server`가 이력 테이블에 권한을 갖지 못한다 | 다음 기동이 `permission denied`로 죽고 심기 시점에는 신호가 없다. `--generate` 생성물이 트랜잭션 안에서 DML을 부여하고(소유권 이전이 아니다 — 8절 4단계), `prod-flyway-bootstrap-verify-test.sh`가 그 줄을 지킨다 |
 | `tasks` 소유권을 되돌리며 DML 재발급을 잊는다 | 기동이 성공해 배포에서 잡히지 않고 첫 요청에서 끊긴다. 7절에 재발급 한 줄을 절차로 적었다 |
 | Data API 소비자가 서버 소유 테이블을 읽고 있다 | 새 12개 테이블은 `momens_server` 소유라 `anon`·`authenticated`에 권한이 붙지 않는다. 소비자 목록은 MOM-0925에서 확인 중이다 |
 | 확장이 `public`이 아닌 스키마에 있다 | `uuid-ossp`가 `extensions`에 있고 실행 집합 2건이 한정 없이 호출한다. 8절 3.5단계의 `USAGE` + `search_path` 두 줄로 닫는다. 파일 수정은 체크섬 때문에 불가능하다 |

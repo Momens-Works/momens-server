@@ -69,6 +69,28 @@ ALTER DEFAULT PRIVILEGES FOR ROLE sb_postgres IN SCHEMA public
 -- 소유권 이전에 쓸 수 없다. 그 GRANT 는 관리자 조치이고, 있고 없고를 시나리오가 가른다.
 CREATE ROLE momens_server LOGIN PASSWORD 'momens_server';
 
+-- **멤버십을 prod 형상으로 명시해 만든다.** 여기를 비워 두면 나중에 시나리오가 거는
+-- `GRANT ... WITH SET TRUE` 가 멤버십을 처음 만들면서 inherit 을 sb_postgres 의 기본값(true)
+-- 으로 먹는다. 그러면 창구가 momens_server 의 테이블 권한을 **상속**하고, 소유권 이전이
+-- 창구의 ACL 을 가져가도 has_table_privilege 가 계속 true 로 답한다 — 즉
+-- **`GRANT ... TO postgres` 재발급이 빠진 것을 쌍둥이가 잡지 못한다.** 이 리허설이 확인해야
+-- 하는 안전장치가 통째로 무력해진다(실측: inherit=true 면 t, prod 형상이면 f).
+--
+-- prod 는 `postgres` 가 CREATEROLE 로 momens_server 를 만들어 생긴 자동 멤버십이라
+-- admin=true, inherit=false, set=false 다. superuser 가 만드는 여기서는 자동 멤버십이 생기지
+-- 않으므로 같은 값을 손으로 적는다.
+--
+-- PG16 의 GRANT 는 **명시한 옵션만 갱신한다.** 그래서 이후 시나리오가 SET 만 켜고 꺼도
+-- inherit=false 가 유지된다.
+GRANT momens_server TO sb_postgres WITH ADMIN TRUE, INHERIT FALSE, SET FALSE;
+
+-- prod 실측(2026-08-27): 관리자가 서버 소유 테이블에 창구의 SELECT 만 붙는 기본 권한을 걸었다.
+-- 이것이 있어야 `docs/rules/persistence.md` 의 "쓰기까지 해야 하면 마이그레이션이 GRANT 를
+-- 직접 쓴다" 규칙이 실제로 필요한 상태가 재현된다. 없으면 새 테이블에 창구 권한이 아예 없어
+-- 규칙의 전제(SELECT 는 되고 쓰기만 안 된다)가 어긋난다.
+ALTER DEFAULT PRIVILEGES FOR ROLE momens_server IN SCHEMA public
+    GRANT SELECT ON TABLES TO sb_postgres;
+
 -- prod 실측: `sch_create = true`. 관리자 조치 이전부터 있었다.
 GRANT USAGE, CREATE ON SCHEMA public TO momens_server;
 

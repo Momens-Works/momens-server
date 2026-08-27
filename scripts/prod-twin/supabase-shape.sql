@@ -37,6 +37,9 @@ ALTER ROLE sb_postgres SET search_path = "$user", public, extensions;
 
 -- --- event trigger -------------------------------------------------------------
 -- prod 실측: supabase_admin 소유로 6 개가 켜져 있다.
+-- **쌍둥이에서는 postgres 소유다.** supabase_admin 을 만들지 않기 때문이고, 의도한 축약이다 —
+-- 확인 대상은 "매 DDL 마다 발화하는 event trigger 가 부트스트랩을 방해하는가" 이지 소유자가
+-- 누구인가가 아니다. 소유자에 따라 동작이 갈리는 것을 보려면 그때 supabase_admin 을 만든다.
 --
 --   ddl_command_end : pgrst_ddl_watch, issue_pg_cron_access,
 --                     issue_pg_graphql_access, issue_pg_net_access

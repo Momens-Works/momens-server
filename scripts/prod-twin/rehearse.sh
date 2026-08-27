@@ -73,10 +73,14 @@ expect() {
 reset_db() {
     stop_app
     # role 멤버십은 데이터베이스가 아니라 클러스터에 딸려 있어 DROP DATABASE 로 사라지지 않는다.
-    # 회수하지 않으면 앞 시나리오가 준 SET 능력이 뒤 시나리오까지 따라가 no-set-option 이
+    # 되돌리지 않으면 앞 시나리오가 준 SET 능력이 뒤 시나리오까지 따라가 no-set-option 이
     # 통과해 버린다.
+    #
+    # **REVOKE 가 아니라 prod 형상으로 복원한다.** 지우면 다음 GRANT 가 멤버십을 새로 만들면서
+    # inherit 을 기본값(true)으로 먹고, 그러면 창구가 momens_server 의 권한을 상속해 소유권
+    # 이전이 ACL 을 가져간 것을 감춘다(roles.sql 의 같은 주석 참조).
     docker exec -i "$container" psql -U postgres -d postgres -q -Atc \
-        "REVOKE momens_server FROM sb_postgres" >/dev/null 2>&1
+        "GRANT momens_server TO sb_postgres WITH ADMIN TRUE, INHERIT FALSE, SET FALSE" >/dev/null 2>&1
     docker exec -i "$container" psql -U postgres -d postgres -q -Atc \
         "ALTER ROLE momens_server RESET search_path" >/dev/null 2>&1
     docker exec -i "$container" psql -U postgres -d postgres -q -Atc \
@@ -85,6 +89,19 @@ reset_db() {
         "DROP DATABASE IF EXISTS $db" >/dev/null
     docker exec -i "$container" psql -U postgres -d postgres -q -v ON_ERROR_STOP=1 -Atc \
         "CREATE DATABASE $db TEMPLATE $base_db" >/dev/null
+
+    # 시나리오가 prod 와 다른 role 형상에서 시작하지 않도록 매번 확인한다. 특히 inherit 은
+    # 틀려도 아무 증상이 없고 검사만 조용히 통과시키므로 여기서 잡는다.
+    local shape
+    shape="$(docker exec -i "$container" psql -U postgres -d postgres -qAt -c \
+        "SELECT admin_option||'/'||inherit_option||'/'||set_option
+           FROM pg_auth_members m
+           JOIN pg_roles r ON r.oid = m.member
+           JOIN pg_roles g ON g.oid = m.roleid
+          WHERE g.rolname = 'momens_server' AND r.rolname = 'sb_postgres'")"
+    if [[ "$shape" != "t/f/f" ]]; then
+        bad "멤버십 형상이 prod 와 다릅니다 (admin/inherit/set = ${shape:-없음}, 기대 t/f/f)"
+    fi
 }
 
 # 부트스트랩의 DDL 선행 조건은 셋이다. 지금까지의 계획에는 첫째만 있었다 — 나머지 둘은 이
@@ -305,12 +322,17 @@ print("     첫 로그 → Flyway 가 DB 를 잡음   %s초  (JVM + Spring 컨�
 print("     DB 를 잡음 → 포기                %s초  ← 절차에 적을 값" % secs(connected, failed))
 print("     프로세스 전체 (wall-clock)       %d초" % (wall_end - wall_start))
 print("     lock_timeout 소진 횟수           %d" % timeouts)
-if unparsed:
-    print("     주의: 읽지 못한 @timestamp %d 줄 — 위 구간 값을 믿지 마세요" % unparsed)
-if first is None:
-    print("     주의: 시각을 하나도 읽지 못했습니다. 구간 값이 없는 것이지 0 이 아닙니다")
+
+# 마지막 줄은 호출부가 판정에 쓴다. 출력만 하고 넘어가면 파싱이 전멸하거나 lock_timeout 이
+# 두 번 소진돼도 시나리오가 통과한다 — 절차에 적을 상한이 그 값들에서 나오므로 판정 대상이다.
+held = "%.1f" % (failed - connected).total_seconds() if connected and failed else ""
+print("VERDICT unparsed=%d parsed_all=%s timeouts=%d held=%s"
+      % (unparsed, "yes" if (first and connected and failed) else "no", timeouts, held))
 PYEOF
 }
+
+# lock 시나리오의 상한. lock_timeout 5초 + 트랜잭션 abort 여유다. 실측은 5.3~5.4 초.
+lock_held_max=8.0
 
 toggles='-Dspring.flyway.out-of-order=true -Dspring.flyway.group=true'
 lock_opt='-Dspring.flyway.init-sqls="SET lock_timeout TO '"'"'5s'"'"'"'
@@ -650,7 +672,32 @@ scenario_lock() {
     # 프로세스 시작부터 재면 JVM·Spring 기동이 섞인다. 절차에 적을 상한은 **Flyway 가 DB 를
     # 잡은 뒤 포기까지** 이므로 로그 타임스탬프로 구간을 분리한다. lock_timeout 이 몇 번
     # 소진되는지도 함께 센다 — 두 번이면 창구의 wall-clock 예산이 두 배가 된다.
-    timeline "$t0" "$t1"
+    local tl verdict
+    tl="$(timeline "$t0" "$t1")"
+    printf '%s\n' "$tl" | grep -v '^VERDICT '
+    verdict="$(printf '%s\n' "$tl" | grep '^VERDICT ' || true)"
+
+    # 여기부터가 판정이다. 출력만 하면 파싱 전멸이나 lock_timeout 2회가 39/39 에 묻힌다.
+    local unparsed parsed_all timeouts held
+    unparsed="$(sed -n 's/.*unparsed=\([0-9]*\).*/\1/p' <<<"$verdict")"
+    parsed_all="$(sed -n 's/.*parsed_all=\([a-z]*\).*/\1/p' <<<"$verdict")"
+    timeouts="$(sed -n 's/.*timeouts=\([0-9]*\).*/\1/p' <<<"$verdict")"
+    held="$(sed -n 's/.*held=\([0-9.]*\).*/\1/p' <<<"$verdict")"
+
+    if [[ "$parsed_all" == yes && "$unparsed" == 0 ]]; then ok "구간 시각을 전부 읽었다"
+    else bad "구간 시각을 읽지 못했다 (parsed_all=$parsed_all, 못 읽은 줄=$unparsed) — 아래 값은 무효다"; fi
+
+    if [[ "$timeouts" == 1 ]]; then ok "lock_timeout 소진 1회 (group=true 로 재시도가 없다)"
+    else bad "lock_timeout 소진이 $timeouts 회다. 창구 예산이 그만큼 늘어난다"; fi
+
+    # 상한은 lock_timeout 5초에 트랜잭션 abort 여유를 더한 값이다. 넘으면 절차에 적은
+    # 5.4초가 더 이상 맞지 않는다는 뜻이라 문서를 고쳐야 한다.
+    if [[ -n "$held" ]] && awk "BEGIN{exit !($held <= $lock_held_max)}"; then
+        ok "DB 를 잡은 뒤 포기까지 ${held}초 (상한 ${lock_held_max}초)"
+    else
+        bad "DB 를 잡은 뒤 포기까지 ${held:-?}초 — 상한 ${lock_held_max}초를 넘었다"
+    fi
+
     step "실패 후 새 테이블: $(server "select count(*) from pg_tables where tablename in ('signals','outbox_events','user_identities')") 개"
     stop_app
     docker exec -i "$container" psql -U postgres -d postgres -q -Atc \
