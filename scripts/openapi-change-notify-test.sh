@@ -36,7 +36,7 @@ run_notify() {
     OASDIFF_RUNNER=fake_oasdiff SEND_RUNNER=fake_send \
     OASDIFF_FIXTURE="$work/changes.json" SEND_CAPTURE="$work/sent.json" \
     DISCORD_WEBHOOK_URL="${1:-}" \
-    PR_NUMBER=191 PR_TITLE="태스크 연결" PR_URL="https://example/pr/191" \
+    PR_NUMBER=191 PR_TITLE="${PR_TITLE:-태스크 연결}" PR_URL="${PR_URL:-https://example/pr/191}" \
         "$notify" "$work/base.json" "$work/head.json" 2>/dev/null
 }
 
@@ -91,7 +91,19 @@ body="$(run_notify)"
 expect_contains "$body" "건은 아래 PR에서 확인해 주세요" "글자 수 한도"
 [[ "${#body}" -le 2000 ]] || fail "글자 수 한도: 본문이 2,000자를 넘었습니다(${#body})"
 
-# 5. 웹훅 URL이 있으면 메시지를 전송하고, 없으면 본문만 출력한다.
+# 5. 머리말과 URL이 길어도 항목이나 링크를 중간에서 자르지 않는다. 항목에 쓸 길이를 고정값으로 두면
+#    합계가 상한을 넘어 완성된 본문을 문자 단위로 자르게 되고, 그때 맨 끝의 PR 링크가 사라진다.
+given_changes "$(jq -n '
+  [range(0;3) | {id:"api-path-removed-without-deprecation",text:"api path removed without deprecation",level:3,operation:"DELETE",path:("/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/" + (.|tostring))}]
+  + [range(0;3) | {id:"x",text:"warn",level:2,operation:"POST",path:"/api/w"}]
+  + [range(0;40) | {id:"endpoint-added",text:"endpoint added",level:1,operation:"POST",path:("/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/" + (.|tostring))}]')"
+long_title="$(printf '아주 긴 PR 제목입니다 %0.s' {1..20})"
+long_url="https://github.com/Momens-Works/momens-server/pull/999"
+body="$(PR_TITLE="$long_title" PR_URL="$long_url" run_notify)"
+[[ "${#body}" -le 2000 ]] || fail "긴 머리말: 본문이 2,000자를 넘었습니다(${#body})"
+expect_contains "$body" "$long_url>" "긴 머리말"
+
+# 6. 웹훅 URL이 있으면 메시지를 전송하고, 없으면 본문만 출력한다.
 given_changes '[{"id":"endpoint-added","text":"endpoint added","level":1,"operation":"POST","path":"/api/a"}]'
 run_notify "https://example/webhook" >/dev/null
 expect_sent "웹훅 URL 있음"

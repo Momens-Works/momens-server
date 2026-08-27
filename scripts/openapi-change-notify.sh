@@ -29,7 +29,10 @@ readonly OASDIFF_IMAGE="tufin/oasdiff@sha256:6065c16a4c9ce12504752f444d4981091e5
 
 # 디스코드 메시지 본문은 최대 2,000자다. 머리말과 맺음말에 필요한 길이를 제외한 나머지를 변경 항목에 할당한다.
 readonly CONTENT_LIMIT=2000
-readonly BODY_BUDGET=1700
+
+# 제외 안내문과 그룹 제목이 들어갈 자리다. 안내문은 제외된 항목이 생겨야 붙지만 그때는 이미 예산을
+# 다 쓴 뒤라 미리 빼 두어야 한다. 그룹은 영향도 셋이 모두 나오는 경우를 기준으로 잡는다.
+readonly RESERVED_TAIL=200
 
 # docker 호출을 함수로 분리한다. 테스트에서는 OASDIFF_RUNNER에 다른 함수를 지정해 docker를 호출하지 않는다.
 docker_oasdiff() {
@@ -68,8 +71,9 @@ build_body() {
         | map(select(length > 0))
         | map({ level: .[0].level, items: . })
         | reduce .[] as $group ({ text: "", used: 0, dropped: 0 };
-            (.text + "__" + level_name($group.level) + " " + ($group.items | length | tostring) + "건__\n") as $header
-            | reduce $group.items[] as $item (. + { text: $header };
+            ("__" + level_name($group.level) + " " + ($group.items | length | tostring) + "건__\n") as $title
+            | reduce $group.items[] as $item (
+                . + { text: (.text + $title), used: (.used + ($title | length)) };
                 ($item | line) as $rendered
                 | if (.used + ($rendered | length)) <= $budget
                   then { text: (.text + $rendered + "\n"), used: (.used + ($rendered | length)), dropped: .dropped }
@@ -106,13 +110,17 @@ main() {
     [[ -n "${PR_TITLE:-}" ]] && subject="${subject:+$subject }${PR_TITLE}"
     [[ -n "$subject" ]] && heading="${heading}"$'\n'"${subject}"
 
-    local body content
-    body="$(build_body "$changes" "$BODY_BUDGET")"
-    content="${heading}"$'\n\n'"${body}"
-    [[ -n "${PR_URL:-}" ]] && content="${content}"$'\n\n'"<${PR_URL}>"
+    local tail=""
+    [[ -n "${PR_URL:-}" ]] && tail=$'\n\n'"<${PR_URL}>"
 
-    # 변경 항목에 글자 수 한도를 적용했더라도 머리말이 길 수 있으므로 완성된 본문을 마지막에 한 번 더 자른다.
-    content="${content:0:$CONTENT_LIMIT}"
+    # 항목에 쓸 수 있는 길이는 상한에서 머리말과 맺음말이 차지하는 만큼을 뺀 나머지다. 고정값을 두면
+    # PR 제목이 길 때 합계가 상한을 넘어 완성된 본문을 문자 단위로 잘라야 하고, 그러면 항목이나
+    # 링크가 중간에서 끊긴다.
+    local budget=$(( CONTENT_LIMIT - ${#heading} - ${#tail} - RESERVED_TAIL ))
+
+    local body content
+    body="$(build_body "$changes" "$budget")"
+    content="${heading}"$'\n\n'"${body}${tail}"
 
     if [[ -z "${DISCORD_WEBHOOK_URL:-}" ]]; then
         echo "웹훅 URL이 없어 전송하지 않고 본문만 출력합니다." >&2
