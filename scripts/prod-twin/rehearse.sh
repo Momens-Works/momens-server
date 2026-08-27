@@ -99,8 +99,8 @@ reset_db() {
            JOIN pg_roles r ON r.oid = m.member
            JOIN pg_roles g ON g.oid = m.roleid
           WHERE g.rolname = 'momens_server' AND r.rolname = 'sb_postgres'")"
-    if [[ "$shape" != "t/f/f" ]]; then
-        bad "멤버십 형상이 prod 와 다릅니다 (admin/inherit/set = ${shape:-없음}, 기대 t/f/f)"
+    if [[ "$shape" != "true/false/false" ]]; then
+        bad "멤버십 형상이 prod 와 다릅니다 (admin/inherit/set = ${shape:-없음}, 기대 true/false/false)"
     fi
 }
 
@@ -340,6 +340,14 @@ lock_opt='-Dspring.flyway.init-sqls="SET lock_timeout TO '"'"'5s'"'"'"'
 # --- 준비 -------------------------------------------------------------------
 
 [[ -f "$jar" ]] || { echo "bootJar 가 없습니다. ./gradlew :app:bootJar" >&2; exit 1; }
+
+# 포트를 누가 쥐고 있으면 앱이 뜨지 못하고, 그 증상이 "기동 실패" 로 나와 시나리오가 보려던
+# 실패와 구분되지 않는다. 실제로 리허설 두 개를 겹쳐 돌려 이 혼란이 났다. 먼저 막는다.
+if lsof -ti ":$app_port" >/dev/null 2>&1; then
+    echo "포트 $app_port 를 이미 누가 쓰고 있습니다. 다른 리허설이 도는 중인지 확인하세요." >&2
+    lsof -i ":$app_port" >&2
+    exit 1
+fi
 docker inspect "$container" >/dev/null 2>&1 || { echo "쌍둥이가 없습니다. scripts/prod-twin/build.sh" >&2; exit 1; }
 
 say "부트스트랩 INSERT 생성"
@@ -527,7 +535,10 @@ scenario_bulk_ownership() {
     prereq_extensions_search_path
 
     local own_sql="$work/ownership.sql"
-    "$repo_root/scripts/prod-ownership-transfer.sh" --generate "$own_sql" 2>/dev/null
+    # 쌍둥이의 창구는 sb_postgres 다. 기본값(postgres)으로 두면 생성물이 컨테이너 superuser 에게
+    # 재발급하고, 아래 "레거시가 전부 읽고 쓴다" 판정이 창구를 보므로 검증이 성립하지 않는다.
+    PROD_OWNER_ROLE=sb_postgres \
+        "$repo_root/scripts/prod-ownership-transfer.sh" --generate "$own_sql" 2>/dev/null
 
     # GRANT ALL 로는 ALTER 가 안 된다는 것을 먼저 못박는다. 이것이 소유권이 필요한 이유다.
     root "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO momens_server" >/dev/null

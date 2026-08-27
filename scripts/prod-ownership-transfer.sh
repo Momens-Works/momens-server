@@ -27,8 +27,13 @@ seed_manifest="$repo_root/scripts/prod-flyway-bootstrap-seed.txt"
 exec_manifest="$repo_root/scripts/prod-flyway-bootstrap-exec.txt"
 
 # prod 에서 앱이 접속하는 role 과 운영 창구 role.
+#
+# 창구 이름만 바꿔 끼울 수 있게 열어 둔다. prod 는 `postgres` 이고 그것이 기본값이라 운영
+# 절차는 이 변수를 몰라도 된다. 쌍둥이는 "Supabase 의 postgres 는 superuser 가 아니다" 를
+# 재현하려고 창구를 `sb_postgres` 로 두므로, 그대로 돌리면 생성물이 엉뚱한 role 에 재발급하고
+# 리허설이 검증하려던 것을 검증하지 못한다.
 prod_role="momens_server"
-owner_role="postgres"
+owner_role="${PROD_OWNER_ROLE:-postgres}"
 
 tables() { grep -vE '^\s*(#|$)' "$manifest"; }
 
@@ -107,8 +112,16 @@ generate() {
         echo "        EXECUTE format('ALTER TABLE public.%I OWNER TO $prod_role', t);"
         echo "        -- 위 한 줄이 $owner_role 의 권한을 가져간다. 레거시가 그 role 로 접속하므로"
         echo "        -- 재발급이 반드시 짝으로 붙어야 한다."
+        echo "        --"
+        echo "        -- **재발급은 $prod_role 로 갈아타서 해야 한다.** 위 ALTER 직후 이 세션은 더 이상"
+        echo "        -- 소유자가 아니고, GRANT 는 소유자만 할 수 있어 그대로 두면"
+        echo "        -- permission denied for table 로 죽는다. 세션이 소유자 권한을 상속하면 우연히"
+        echo "        -- 통과하지만 그것은 멤버십의 inherit 옵션에 달린 문제라 기대면 안 된다."
+        echo "        -- SET ROLE 능력은 위 ALTER 가 이미 요구하므로 새 선행 조건이 아니다."
+        echo "        EXECUTE 'SET LOCAL ROLE $prod_role';"
         echo "        EXECUTE format("
         echo "            'GRANT SELECT, INSERT, UPDATE, DELETE ON public.%I TO $owner_role', t);"
+        echo "        EXECUTE 'RESET ROLE';"
         echo "    END LOOP;"
         echo ""
         echo "    -- 매니페스트가 실제와 어긋났다는 신호다. WARNING 으로는 부족하다 — 실행 창구인"

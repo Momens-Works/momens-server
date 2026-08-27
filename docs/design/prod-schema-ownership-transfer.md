@@ -674,6 +674,20 @@ MOM-0908 (이 문서 + ADR-0019)
    소유자가 되면서 불필요해진다. 쌍둥이의 `bulk-ownership` 시나리오가 이 상태에서 부트스트랩이
    끝까지 도는 것을 확인한다.
 
+   **재발급은 `momens_server`로 갈아타서 해야 한다.** `ALTER TABLE ... OWNER TO` 직후 창구
+   세션은 더 이상 그 테이블의 소유자가 아니고, `GRANT`는 소유자만 할 수 있다. 그대로 두면
+   `permission denied for table`로 죽는다. 생성물이 각 테이블마다
+   `SET LOCAL ROLE momens_server` → `GRANT` → `RESET ROLE`로 감싸는 이유다. `SET ROLE` 능력은
+   위 `ALTER`가 이미 요구하므로 새 선행 조건이 아니다.
+
+   > 이것은 쌍둥이의 멤버십을 prod 형상(`inherit=false`)으로 맞추자 드러났다. 그 전에는
+   > `inherit=true`라 창구가 소유자 권한을 **상속**해 `GRANT`가 우연히 통과했다. 같은 상속이
+   > `has_table_privilege` 검사도 통과시켜서, 재발급이 아예 빠져도 쌍둥이가 잡지 못했다.
+   >
+   > **`pg_auth_members.inherit_option`의 prod 값은 기록돼 있지 않다.** 아래 실측이 그 컬럼을
+   > select 하면서 `admin_option`과 `set_option`만 적었다. 값이 무엇이든 성립하도록 고쳤으므로
+   > 절차는 이 미확인 값에 의존하지 않는다.
+
    **재발급이 짝으로 붙어야 하는 이유.** `ALTER TABLE ... OWNER TO`는 이전 소유자를 grantee로 하는
    ACL 항목을 새 소유자로 옮긴다. 그래서 소유권을 넘기는 순간 `postgres`가 그 테이블의 권한을
    잃는다. **레거시가 `postgres`로 접속하고 지금 실제 트래픽을 받는 쪽이 레거시다** — 재발급 누락은
@@ -696,7 +710,9 @@ MOM-0908 (이 문서 + ADR-0019)
    ```
 
    prod 실측(2026-08-25): `postgres`가 `admin_option = true`, `set_option = false`. (1)이 통과하고,
-   `set_option = false`가 소유권 이전이 막히던 원인이다.
+   `set_option = false`가 소유권 이전이 막히던 원인이다. **`inherit_option`은 이 쿼리가 select
+   하고도 값을 남기지 않았다** — 절차가 그 값에 의존하지 않게 고쳤으므로(3단계 재발급) 이제
+   확인하지 않아도 되지만, 다시 볼 일이 있으면 위 쿼리가 그대로 답한다.
 
    **소유권을 되돌린다면 DML 재발급이 함께 가야 한다.** `ALTER TABLE ... OWNER TO`가 소유자를
    grantee로 하는 ACL을 함께 가져가므로, 사전 GRANT로는 막을 수 없다(제3자가 부여해도 같다 —
@@ -949,6 +965,26 @@ ADR-0019가 정한 최종 상태는 서버가 prod 스키마를 소유하는 것
 | **history-grant (c)** 생성물 그대로 (DML 부여) | 이력 테이블 소유자는 `postgres` 그대로, 앱이 42건을 끝까지 돌고 기동 성공 |
 | **lock** 레거시가 `tasks`를 60초간 ACCESS EXCLUSIVE로 점유 | `canceling statement due to lock timeout`으로 포기. 락이 풀릴 때까지 기다리지 않았다. 새 테이블 0개. 구간은 아래에 분해했다 |
 | **checksum** 심은 체크섬 하나를 +1 | `checksum mismatch`로 기동 실패, 스키마 무변경. `--verify`가 해당 version을 이름으로 지목 |
+
+#### 멤버십 형상이 세 결함을 동시에 가리고 있었다 (2026-08-28)
+
+위 표는 쌍둥이의 창구 멤버십이 `inherit=true`인 상태에서 얻은 것이다. prod는 `postgres`가
+`CREATEROLE`로 `momens_server`를 만들어 생긴 자동 멤버십이라 `inherit=false`다. 이 한 칸이
+다르면 창구가 `momens_server`의 권한을 **상속**하고, 그것이 셋을 한꺼번에 덮는다.
+
+| 덮인 것 | 성격 |
+| --- | --- |
+| 소유권 이전 직후의 `GRANT`가 `permission denied`로 죽는다 | **prod에서 실패했을 실제 버그.** 창구는 이전 직후 소유자가 아니다 |
+| 생성물의 재발급 대상(`postgres`)과 시나리오 판정 대상(`sb_postgres`)이 다르다 | 검증이 애초에 성립한 적이 없다 |
+| 재발급이 아예 빠져도 `has_table_privilege`가 `true`로 답한다 | 안전장치가 무력 |
+
+처방은 셋이다. `roles.sql`이 멤버십을 prod 형상으로 명시해 만들고 `reset_db`가 그 형상으로
+복원한다(매 시나리오 시작에 assert). 생성물이 재발급을 `SET LOCAL ROLE momens_server`로 감싼다.
+창구 이름은 `PROD_OWNER_ROLE`로 바꿔 끼운다(기본값이 prod의 `postgres`다).
+
+**이 축의 교훈은 "검증 코드도 조용히 틀린다"이다.** 39/39는 세 결함을 안은 채로 나온 값이었고,
+어느 시나리오도 실패하지 않았다. 락 구간 값을 출력만 하고 판정하지 않던 것도 같은 유형이라
+함께 hard assertion으로 바꿨다(현재 42건).
 
 `group=true` 덕분에 **모든 실패 경로에서 스키마가 하나도 바뀌지 않았다.** 실행 집합 14건이 한
 트랜잭션이라 중간에 죽으면 통째로 롤백된다. 롤백 절차(7절)가 실제로 필요해지는 구간이 좁다.
