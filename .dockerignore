@@ -2,6 +2,8 @@
 .github
 .gradle
 **/.gradle
+.gradle-work
+**/.gradle-work
 build
 **/build
 out

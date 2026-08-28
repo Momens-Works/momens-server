@@ -1,0 +1,16 @@
+legacy_status: 403
+server_status: 403
+--- body ---
+@@ -1,3 +1,9 @@
+ {
+-  "error": "member already exists with different role"
++  "error": {
++    "code": "WORKSPACE_MEMBER_ROLE_CONFLICT",
++    "details": {
++      "user_id": "00000000-0000-4000-8000-000000000001"
++    },
++    "message": "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
++  }
+ }
+--- db ---
+동일

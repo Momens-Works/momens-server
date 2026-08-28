@@ -1,0 +1,25 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    // 의존성 버전은 Boot BOM으로 관리합니다. Boot 플러그인은 app 모듈에만 적용합니다.
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // workspace, project, memory 모듈의 public API를 조합해 관련 데이터를 하나의 트랜잭션으로 저장합니다.
+    // onboarding 모듈은 엔티티와 repository를 두지 않습니다.
+    implementation project(':workspace')
+    implementation project(':project')
+    implementation project(':memory')
+
+    // 엔티티가 없으므로 data-jpa 대신 빈 등록과 트랜잭션 경계에 필요한 의존성만 사용합니다(web 모듈과 같은 구성).
+    implementation 'org.springframework:spring-context'
+    implementation 'org.springframework:spring-tx'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}

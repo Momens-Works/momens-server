@@ -1,0 +1,4 @@
+# app 모듈 application.yml의 전역 wire format 설정을 slice test에도 적용합니다.
+spring:
+  jackson:
+    property-naming-strategy: SNAKE_CASE

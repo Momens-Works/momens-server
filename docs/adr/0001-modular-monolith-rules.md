@@ -75,7 +75,7 @@
 - 복잡도 기준으로 direct call / event / port/adapter를 나눠 과설계를 피하면서 중요한
   의존을 통제한다.
 - "단순 조회"·"복잡한 동기 의존"·"event publisher를 port로 감싸는" 세부 기준과 이벤트
-  실패·재처리 정책은 실제 적용 과정과 리뷰에서 구체화한다([추후 결정](../pending-decisions.md)).
+  실패·재처리 정책은 실제 적용 과정과 리뷰에서 구체화한다.
 
 ## 결정 4. Spring Modulith 적용 범위
 

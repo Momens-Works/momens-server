@@ -8,10 +8,14 @@ spring:
     password: ${DATABASE_PASSWORD}
   jpa:
     show-sql: false
-  # 전환기 공유 Neon DB의 스키마는 레거시 momens-api가 단일 소유합니다. 새 서버는 운영에서
-  # 스키마를 만들거나 바꾸지 않고 검증만 합니다(conformer). 따라서 prod 에서는 Flyway 를 끄고
-  # ddl-auto=validate(공통)로 매핑만 검증합니다. 진짜 신규 테이블은 별도 레거시 마이그레이션으로
-  # 추가합니다(이관 전략 결정①). local/test 는 새 서버 Flyway 가 그대로 소유합니다(별도 DB).
+  # prod 스키마는 이 서버가 소유합니다(ADR-0019). 다만 부트스트랩(MOM-0909)이 적용되기 전까지는
+  # 여기를 끈 채로 둡니다. 미반영 스키마가 있는 상태에서 Flyway 가 켜지면 레거시가 이미 만든
+  # 객체부터 다시 만들려다 죽습니다. 그동안은 ddl-auto=validate(공통)로 매핑만 검증합니다.
+  #
+  # 부트스트랩은 이 값을 여기서 바꾸지 않고 k8s ConfigMap 의 SPRING_FLYWAY_ENABLED 로 켭니다.
+  # 환경변수가 설정 파일보다 우선하므로, 여기를 false 로 두면 **어떤 릴리스도 스스로 Flyway 를
+  # 켤 수 없고** 전환 시점을 운영자가 쥡니다. 부트스트랩이 끝나면 이 값을 true 로 정본화하고
+  # ConfigMap 오버라이드를 걷어냅니다.
   flyway:
     enabled: false
 

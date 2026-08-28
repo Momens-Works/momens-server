@@ -1,0 +1,17 @@
+legacy_status: 403
+server_status: 404
+--- body ---
+@@ -1,3 +1,10 @@
+ {
+-  "error": "member not found"
++  "error": {
++    "code": "WORKSPACE_MEMBER_NOT_FOUND",
++    "details": {
++      "user_id": "00000000-0000-4000-8000-000000000004",
++      "workspace_id": "00000000-0000-4000-8000-000000000012"
++    },
++    "message": "워크스페이스 멤버를 찾을 수 없습니다."
++  }
+ }
+--- db ---
+동일

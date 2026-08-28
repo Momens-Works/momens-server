@@ -1,0 +1,32 @@
+-- prod-schema: required MOM-0840
+-- 원장 운영 지표를 받치는 부분 인덱스(MOM-0821, docs/design/minsu-async-task-draft-design.md 9.3절).
+--
+-- 지표 스냅샷은 다음 여섯을 한 쿼리로 집계한다: pending·processing 건수, 가장 오래된 미종료 age,
+-- 만료 lease 수와 최대 age, read_deadline_at을 지난 미종료 수.
+--
+-- 이 유계성은 공짜가 아니다. 두 claim 쿼리가 apply_cutoff_at > NOW()를 요구하므로 그 시각을 지난
+-- 행은 영영 집히지 않고, 닫아 주는 경로가 없으면 미종료로 영구히 쌓인다. MinsuAbandonedGenerationScheduler가
+-- 그 행들을 deadline_exceeded로 닫는 것이 이 인덱스와 집계 설계의 전제다(설계 11.1절).
+--
+-- 여섯 모두 미종료 행만 필요하다. completed를 보는 집계가 하나도 없어서 스캔 대상을
+-- `status <> 'completed'`로 좁힐 수 있고, 미종료 집합은 처리량에 묶여 유계이므로 테이블이 아무리
+-- 커져도 이 쿼리 비용이 늘지 않는다. 이 성질이 "completed 건수를 gauge로 두지 않는다"는 판단의
+-- 근거이기도 하다. 그 하나를 넣는 순간 전체 스캔이 되어 성질이 깨진다.
+--
+-- MOM-0817이 만든 기존 두 인덱스는 claim 경로 전용이라 여기에 쓰이지 않는다. 각각
+-- `WHERE status = 'pending'`, `WHERE status = 'processing'`으로 갈려 있어 미종료 전체를 한 번에
+-- 훑지 못한다. OR로 묶으면 둘 다 놓친다(TaskDraftGenerationRepository가 두 claim 쿼리를 나눠 둔
+-- 이유와 같다).
+--
+-- 이 인덱스의 값은 전적으로 부분 술어가 스캔 대상을 미종료로 좁히는 데서 나온다. 집계가 COUNT(*)
+-- FILTER를 여러 개 계산하느라 미종료 집합을 어차피 전부 읽으므로, 정렬된 스캔으로 MIN을 일찍 끊는
+-- 이득은 없다. 키를 created_at으로 둔 것은 나중에 나이 범위 조건이 붙을 여지가 있는 유일한 컬럼이기
+-- 때문이지, 지금 집계를 빠르게 하기 위해서가 아니다.
+--
+-- 나머지 집계 컬럼을 INCLUDE하지 않는 이유는 쓰기 비용이다. 원장 행은 claim·재시도·종료로 여러 번
+-- 갱신되므로 인덱스를 넓히면 그 비용이 매 전이마다 붙는다. 미종료 집합이 작아 heap 접근이 싸다.
+--
+-- 부분 인덱스 술어가 집계 쿼리의 WHERE와 문자 그대로 같아야 planner가 쓴다. 쿼리를 바꿀 때
+-- 이 술어도 함께 봐야 한다.
+CREATE INDEX idx_minsu_task_draft_generations_unfinished
+    ON minsu_task_draft_generations (created_at) WHERE status <> 'completed';

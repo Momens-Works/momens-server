@@ -10,16 +10,28 @@ permissions:
 jobs:
   pr-format:
     runs-on: ubuntu-latest
-    if: github.actor != 'dependabot[bot]'
     steps:
+      - uses: actions/checkout@v7
+
       - name: Validate PR title and body
+        if: github.actor != 'dependabot[bot]'
         # PR 제목/본문은 신뢰할 수 없는 입력이므로 env 로만 전달하고 스크립트에 직접 보간하지 않습니다.
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           set -uo pipefail
           fail=0
+
+          release_pr=false
+          if [[ "$PR_HEAD_REF" == "develop" && "$PR_BASE_REF" == "main" ]]; then
+            release_pr=true
+          fi
+
+          # 템플릿 안내 주석(예시·설명)이 실제 입력으로 오인되지 않도록 제거합니다.
+          PR_BODY_VISIBLE="$(perl -0777 -pe 's/<!--.*?-->//gs' <<<"$PR_BODY")"
 
           # 1) 제목: [Feature]/[Bug]/[Refactor]/[Chore]/[Docs] prefix + 제목
           if [[ ! "$PR_TITLE" =~ ^\[(Feature|Bug|Refactor|Chore|Docs)\]\ .+ ]]; then
@@ -29,21 +41,31 @@ jobs:
           fi
 
           # 2) 본문: 비어 있지 않아야 함
-          if [[ -z "${PR_BODY//[[:space:]]/}" ]]; then
+          if [[ -z "${PR_BODY_VISIBLE//[[:space:]]/}" ]]; then
             echo "::error::PR 본문이 비어 있습니다. PR 템플릿을 작성해주세요."
             fail=1
           else
             # 필수 섹션 존재 확인
-            for section in "## 요약" "## 작업 유형" "## 검증"; do
-              if ! grep -qF "$section" <<<"$PR_BODY"; then
+            required_sections=("## 요약" "## 작업 유형" "## 검증")
+            for section in "${required_sections[@]}"; do
+              if ! grep -qF "$section" <<<"$PR_BODY_VISIBLE"; then
                 echo "::error::PR 본문에 '$section' 섹션이 없습니다."
                 fail=1
               fi
             done
 
             # 작업 유형/체크리스트에 최소 1개 체크
-            if ! grep -qE '^[[:space:]]*- \[[xX]\]' <<<"$PR_BODY"; then
+            if ! grep -qE '^[[:space:]]*- \[[xX]\]' <<<"$PR_BODY_VISIBLE"; then
               echo "::error::체크된 항목(- [x])이 없습니다. 작업 유형을 최소 1개 체크해주세요."
+              fail=1
+            fi
+          fi
+
+          # 3) 일반 PR 브랜치는 'MOM-<번호>-<타입>/<작업-내용>' 형식을 따릅니다.
+          if [[ "$release_pr" != "true" ]]; then
+            if [[ ! "$PR_HEAD_REF" =~ ^MOM-[0-9]+-(feat|fix|docs|refactor|chore)/[a-z0-9][a-z0-9-]*$ ]]; then
+              echo "::error::브랜치는 'MOM-<번호>-<타입>/<작업-내용>' 형식이어야 합니다."
+              echo "  현재 브랜치: $PR_HEAD_REF"
               fail=1
             fi
           fi
@@ -53,3 +75,38 @@ jobs:
             exit 1
           fi
           echo "PR 제목/본문 형식 OK"
+
+      # 아래 두 단계는 별도 job이 아니라 pr-format 안에 둡니다. ruleset(`protected-branches`)의
+      # 필수 체크가 `build`·`pr-format` 둘뿐이라, 새 job으로 두면 실패해도 머지를 막지 못합니다
+      # ([Git] docs/rules/git.md). 게이트는 차단해야 의미가 있으므로 이미 필수인 job에 싣습니다.
+
+      # prod 필수 설정 선언이 실제 설정과 맞는지 검사합니다. 규약은 docs/rules/configuration.md 입니다.
+      #
+      # 스키마 검사는 없습니다. prod 스키마 주도권이 이 서버로 넘어오면서(ADR-0019) 마이그레이션의
+      # prod 반영 헤더와 그것을 검사하던 게이트를 폐지했습니다. 잘못된 마이그레이션은 이제 배포
+      # 시점에 Flyway 가 막습니다.
+      - name: Check prod required config ledger
+        run: |
+          ./scripts/prod-readiness-ledger-test.sh
+          ./scripts/prod-readiness-ledger.sh --check
+
+      # 모든 마이그레이션이 부트스트랩에서 심기/실행 중 하나로 분류됐는지 검사합니다. 분류를
+      # 빠뜨리면 그 파일이 prod 에서 실행되고, 레거시가 이미 만든 객체라면 already exists 로
+      # 죽습니다. 그 실패는 prod 기동 실패로만 드러나므로 여기서 막습니다.
+      # 부트스트랩이 끝나면 이 검사와 두 목록은 함께 없앱니다(MOM-0909).
+      - name: Check prod bootstrap classification
+        run: |
+          ./scripts/prod-flyway-bootstrap-check-test.sh
+          ./scripts/prod-flyway-bootstrap-check.sh
+          ./scripts/prod-flyway-bootstrap-verify-test.sh
+
+      # main 을 대상으로 하는 모든 PR에서 미반영 필수 설정을 막습니다. 미반영 상태로 배포하면
+      # 설정 바인딩 단계에서 애플리케이션이 기동하지 않을 수 있습니다.
+      #
+      # 조건을 `develop` → `main` 으로 좁히지 않는 이유는 운영 배포가 build-and-deploy.yml 의
+      # `push: branches: [main]` 으로 트리거되기 때문입니다. main 에 머지되는 모든 PR이 배포로
+      # 이어지므로, 검사 대상이 배포 대상보다 좁으면 hotfix 같은 경로가 게이트를 우회합니다.
+      # (workflow_dispatch 로 임의 ref 를 배포하는 경로는 이 게이트가 막지 못합니다.)
+      - name: Block release with unreflected prod requirements
+        if: github.base_ref == 'main'
+        run: ./scripts/prod-readiness-ledger.sh --release-check

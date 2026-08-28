@@ -1,0 +1,9 @@
+package works.momens.server.mobile.auth.dto.request;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+
+@Schema(description = "로그아웃 요청")
+public record LogoutRequest(
+    @NotBlank @Schema(description = "폐기할 refresh token", example = "mF_9.B5f-4.1JqM")
+        String refreshToken) {}

@@ -6,18 +6,30 @@ on:
     branches:
       - main
       - develop
+  workflow_dispatch:
 
-# 같은 ref 의 이전 실행은 취소합니다(불필요한 중복 실행 방지).
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+# 기본은 읽기만 부여하고, 이미지 push 가 필요한 배포 job 에서만 권한을 넓힙니다.
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
+    # 같은 ref 의 이전 검증만 취소합니다. workflow 레벨에 두면 실행 전체가 취소되어, 이미
+    # 테스트를 통과하고 진행 중이던 deploy-dev 까지 함께 죽습니다(새 커밋의 테스트가 실패하면
+    # 직전 커밋도 배포되지 않음). 그래서 검증 취소는 이 job 에만 겁니다.
+    concurrency:
+      group: ci-${{ github.ref }}
+      cancel-in-progress: true
+
     steps:
       - uses: actions/checkout@v7
+        with:
+          # pull_request merge ref의 base 부모와 병합 결과만 비교합니다.
+          fetch-depth: 2
+          submodules: recursive
+          token: ${{ secrets.CI_SUBMODULES_TOKEN }}
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -28,19 +40,125 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Format check
-        run: ./gradlew spotlessCheck
-
-      - name: Test
-        run: ./gradlew test
+      # 포맷, Gradle-Docker 모듈 정합성, 테스트를 한 호출로 검사합니다. bootJar 까지 같이
+      # 넘기면 Gradle 이 태스크 그래프 순서대로 bootJar 를 테스트보다 먼저 실행해, 테스트가
+      # 실패할 커밋도 jar 조립 비용을 먼저 치릅니다. 그래서 호출을 나눕니다.
+      - name: Check and test
+        run: ./gradlew spotlessCheck verifyDockerModuleBuildScripts test
 
       - name: Upload test report
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: test-report
-          path: app/build/reports/tests/test/
+          # 경로를 여러 개 넘기면 아티팩트 루트가 검색 경로들의 최소 공통 조상(저장소 루트)이
+          # 되어, 실제로 리포트를 남긴 모듈이 몇 개든 모듈 경로가 아티팩트에 보존됩니다.
+          path: |
+            app/build/reports/tests/test/
+            common/build/reports/tests/test/
+            modules/*/build/reports/tests/test/
+          # spotlessCheck 등 테스트 이전 단계에서 실패하면 리포트가 없으므로 경고도 남기지 않습니다.
+          if-no-files-found: ignore
           retention-days: 7
 
       - name: Build boot jar
         run: ./gradlew bootJar
+
+      # 실제 Docker 빌드에 영향을 주는 파일이 바뀐 PR만 이미지 빌드를 검증합니다.
+      # push 하지 않으며, develop push의 deploy-dev와 배포 정책은 그대로 유지합니다.
+      - name: Detect Docker build input changes
+        id: docker-inputs
+        if: github.event_name == 'pull_request'
+        run: |
+          changed_files="$(git diff --name-only HEAD^1 HEAD)"
+          if grep -Eq \
+            '^(Dockerfile|\.dockerignore|\.gitattributes|gradlew|settings\.gradle|build\.gradle|gradle\.properties|\.github/workflows/ci\.yml)$|^(gradle|third_party)/|(^|/)build\.gradle$' \
+            <<< "$changed_files"; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.docker-inputs.outputs.changed == 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Validate Docker image
+        if: steps.docker-inputs.outputs.changed == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          # PR은 base branch의 deploy-dev 캐시를 읽기만 해 PR ref 캐시가 저장소 용량을
+          # 차지하거나 develop 캐시를 축출하지 않게 합니다.
+          cache-from: type=gha
+
+  # dev 배포는 같은 워크플로의 build job 에 의존시켜, 테스트가 성공한 커밋만 배포합니다.
+  # needs 로 순서를 잡으면 워크플로 이름 문자열 참조(workflow_run)가 필요 없고, checkout 도
+  # 기본값이 곧 테스트한 커밋(github.sha)이라 배포 대상 커밋을 따로 지정하지 않아도 됩니다.
+  deploy-dev:
+    needs: build
+    # develop 의 push 와 수동 실행에서만 배포합니다. PR·main push, 그리고 다른 브랜치에서의
+    # 수동 CI 재실행은 배포로 이어지지 않습니다.
+    if: >-
+      github.ref == 'refs/heads/develop' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    # dev 는 단일 환경이라 배포는 항상 최신 실행만 진행합니다(늦게 끝난 실행이 dev 를 이전
+    # SHA 로 되돌리는 레이스 방지).
+    concurrency:
+      group: build-momens-server-dev
+      cancel-in-progress: true
+
+    # step if 에서 참조하려면 job 레벨 env 여야 합니다.
+    env:
+      K8S_DEV_DISPATCH_TOKEN: ${{ secrets.MOMENS_K8S_DEV_DISPATCH_TOKEN }}
+      IMAGE: ghcr.io/momens-works/momens-server
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          token: ${{ secrets.CI_SUBMODULES_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # dev 배포 정책(D18)상 commit SHA 태그만 push 합니다. prod 워크플로와
+      # 달리 latest 등 mutable 태그는 만들지 않습니다.
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # momens-k8s-dev 레포에 dev 배포를 요청합니다. deploy-momens-server 핸들러와
+      # MOMENS_K8S_DEV_DISPATCH_TOKEN secret 이 있어야 동작합니다.
+      # 토큰이 없으면 이 스텝을 건너뛰어, 이미지 push 까지만 돌고 워크플로는 성공으로 남습니다.
+      - name: Request dev deploy
+        if: ${{ env.K8S_DEV_DISPATCH_TOKEN != '' }}
+        run: |
+          curl -fsS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $K8S_DEV_DISPATCH_TOKEN" \
+            https://api.github.com/repos/Momens-Works/momens-k8s-dev/dispatches \
+            -d "{\"event_type\":\"deploy-momens-server\",\"client_payload\":{\"image_tag\":\"${GITHUB_SHA}\",\"source_branch\":\"${GITHUB_REF_NAME}\"}}"

@@ -1,0 +1,36 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    // Boot BOM으로 버전을 관리합니다(boot 플러그인은 app만 적용).
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // 공유 영속성 베이스(BaseEntity)와 공유 에러 계약(BusinessException).
+    implementation project(':common')
+    // signal.created consumer 의존 방향(docs/design/signal-push-demo-design.md 11.1절).
+    // outbox: consumer 조회 public API. signal: Signal hydrate. project: 프로젝트명 조회.
+    // workspace: 수신자(멤버십) 결정.
+    implementation project(':outbox')
+    implementation project(':signal')
+    implementation project(':project')
+    implementation project(':workspace')
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // FCM 발송에 사용합니다. Spring Boot BOM 관리 대상이 아니므로 버전 카탈로그에서 버전을
+    // 고정합니다. 인증은 ADC를 사용합니다(12절).
+    implementation libs.firebase.admin
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // common testFixtures의 Testcontainers 통합테스트 베이스를 재사용합니다.
+    testImplementation testFixtures(project(':common'))
+    // 슬라이스 통합 테스트에서 project/workspace Flyway 체인(users FK)을 만족시키기 위해 필요.
+    testImplementation project(':user')
+}

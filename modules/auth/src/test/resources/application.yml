@@ -1,0 +1,18 @@
+# app 모듈 application.yml의 전역 wire format 설정을 slice test에도 적용합니다.
+spring:
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+momens:
+  auth:
+    jwt-secret: test-only-momens-auth-jwt-secret-0123456789abcdef
+    google:
+      audiences: test-google-client-id.apps.googleusercontent.com
+    web:
+      google-oauth:
+        client-id: test-web-client-id.apps.googleusercontent.com
+        client-secret: test-web-client-secret
+        redirect-uri: http://localhost:8080/api/auth/google/callback
+      redirect:
+        success-uri: http://localhost:3000/auth/success
+        failure-uri: http://localhost:3000/auth/failure

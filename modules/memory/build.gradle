@@ -1,0 +1,38 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    // Boot BOM으로 버전을 관리합니다(boot 플러그인은 app만 적용).
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // 후보·메모리 읽기 엔티티는 BaseEntity 를 상속합니다. 레거시가 소유한 테이블이지만 id·created_at·
+    // updated_at 을 BaseEntity 와 같은 모양으로 온전히 갖기 때문이며, 같은 조건인 project 모듈의
+    // Milestone 과 맞춥니다. source·context 의 읽기 엔티티가 BaseEntity 를 상속하지 않는 것은 그 테이블들이
+    // 감사 3종을 그대로 갖지 않아 매핑이 어긋나기 때문이고, 읽기 전용이어서가 아닙니다.
+    implementation project(':common')
+    // resolve(H093)가 RESOLVES 관계를 entity_relations 에 기록합니다.
+    implementation project(':context')
+    // confirm(H084·H088)이 memory.confirmed, resolve 가 memory.updated 를 발행합니다(ADR-0008).
+    implementation project(':outbox')
+    // 확정 시 MEM 라벨을 LabelAllocator 로 발급받고, 워크스페이스 멤버십을 WorkspaceAccess 로 확인합니다.
+    // 이 런타임 의존은 workspaces·workspace_members 마이그레이션도 테스트 클래스패스에 올립니다.
+    implementation project(':workspace')
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // common testFixtures의 Testcontainers 통합테스트 베이스를 재사용합니다.
+    testImplementation testFixtures(project(':common'))
+    // 위 :workspace 런타임 의존이 workspaces 마이그레이션을 테스트 클래스패스에 올리는데, 그 테이블이
+    // users(id)를 FK로 참조합니다. 슬라이스 통합테스트의 Flyway 가 users 를 만들 수 있도록 user 모듈
+    // 마이그레이션을 테스트 스코프로 올립니다(project 모듈과 같은 처방, User 엔티티는 memory 패키지
+    // 밖이라 매핑되지 않습니다).
+    testImplementation project(':user')
+}

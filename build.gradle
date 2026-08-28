@@ -1,11 +1,95 @@
 plugins {
-    id 'org.springframework.boot' version '4.1.0' apply false
-    id 'com.diffplug.spotless' version '8.7.0' apply false
+    alias(libs.plugins.spring.boot) apply false
+    alias(libs.plugins.spotless) apply false
 }
 
 allprojects {
     group = 'works.momens'
     version = '0.1.0-SNAPSHOT'
+}
+
+// 루트의 build.gradle과 settings.gradle도 마지막 줄 개행과 공백 정리를 강제합니다.
+// java 블록은 .java만 다뤄서 gradle 파일이 검사에서 빠졌고, 리뷰에서 두 번 지적됐습니다(PR #41, #42).
+apply plugin: 'com.diffplug.spotless'
+
+spotless {
+    format 'gradle', {
+        target '*.gradle'
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+
+    format 'versionCatalog', {
+        target 'gradle/*.versions.toml'
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+// 로컬 git 훅을 설치합니다. hooks/ 는 버전 관리되지만 .git/hooks 는 아니므로,
+// core.hooksPath 를 hooks/ 로 지정해 저장소 훅을 그대로 쓰게 합니다(최초 1회 실행).
+tasks.register('installGitHooks', Exec) {
+    group = 'git hooks'
+    description = 'core.hooksPath 를 hooks/ 로 설정해 저장소 공용 git 훅을 활성화합니다.'
+    commandLine 'git', 'config', 'core.hooksPath', 'hooks'
+}
+
+// settings.gradle에 등록한 모든 서브프로젝트는 Docker 의존성 워밍 레이어에서도
+// build.gradle을 먼저 복사해야 합니다. 이 목록이 어긋나면 COPY . . 전 Gradle 구성에 실패합니다.
+tasks.register('verifyDockerModuleBuildScripts') {
+    group = 'verification'
+    description = 'Gradle 서브프로젝트의 build.gradle이 Docker 워밍 레이어에 포함됐는지 검사합니다.'
+
+    doLast {
+        Set<String> gradleModules = subprojects.collect { subproject ->
+            rootProject.projectDir.toPath()
+                .relativize(subproject.projectDir.toPath())
+                .toString()
+                .replace(File.separator, '/')
+        }.toSet()
+        Set<String> dockerModules = new TreeSet<>()
+        List<String> invalidCopies = []
+
+        file('Dockerfile').eachLine { line ->
+            def matcher = line =~ /^\s*COPY\s+(\S+)\/build\.gradle\s+(\S+)\s*$/
+            if (matcher.matches()) {
+                String sourceDir = matcher.group(1).replaceFirst('^\\./', '')
+                String destinationDir = matcher.group(2)
+                    .replaceFirst('^\\./', '')
+                    .replaceFirst('/$', '')
+                if (sourceDir == destinationDir) {
+                    dockerModules.add(sourceDir)
+                } else {
+                    invalidCopies.add(line.trim())
+                }
+            }
+        }
+
+        Set<String> missingModules = new TreeSet<>(gradleModules)
+        missingModules.removeAll(dockerModules)
+        Set<String> staleModules = new TreeSet<>(dockerModules)
+        staleModules.removeAll(gradleModules)
+        List<String> errors = []
+        if (!missingModules.isEmpty()) {
+            errors.add("누락된 모듈: ${missingModules.join(', ')}")
+        }
+        if (!staleModules.isEmpty()) {
+            errors.add("제거되지 않은 모듈: ${staleModules.join(', ')}")
+        }
+        if (!invalidCopies.isEmpty()) {
+            errors.add("source와 destination이 다른 COPY: ${invalidCopies.join(', ')}")
+        }
+
+        if (!errors.isEmpty()) {
+            throw new GradleException(
+                "Gradle 서브프로젝트와 Dockerfile 의존성 워밍 레이어가 일치하지 않습니다.\n- "
+                    + errors.join('\n- '))
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('verifyDockerModuleBuildScripts')
 }
 
 subprojects {
@@ -22,6 +106,12 @@ subprojects {
         mavenCentral()
     }
 
+    // Spring MVC가 @PathVariable 같은 핸들러 인자 이름을 리플렉션으로 읽을 수 있게 합니다.
+    // Boot 플러그인이 붙는 app은 자동 적용되지만 feature 모듈은 java 플러그인만 써서 명시가 필요합니다.
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs << '-parameters'
+    }
+
     tasks.named('test') {
         useJUnitPlatform()
     }
@@ -30,6 +120,12 @@ subprojects {
         java {
             googleJavaFormat()
             removeUnusedImports()
+            trimTrailingWhitespace()
+            endWithNewline()
+        }
+        // 모듈 build.gradle의 마지막 줄 개행과 공백 정리도 강제합니다(위 루트 설정과 같은 이유).
+        format 'gradle', {
+            target '*.gradle'
             trimTrailingWhitespace()
             endWithNewline()
         }

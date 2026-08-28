@@ -1,0 +1,33 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    // Boot BOM으로 버전을 관리합니다(boot 플러그인은 app만 적용).
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // 공유 영속성 베이스(BaseEntity, JPA Auditing)와 공유 에러 계약.
+    implementation project(':common')
+    // task 생성 시 workspace 범위 MOM 라벨을 LabelAllocator public API로 발급받습니다(MOM-62/MOM-37).
+    // 접근 범위(workspace 스코프) 자체는 여전히 호출하는 쪽이 멤버십을 한 번 조회해 넘깁니다(PR #42
+    // 리뷰). 이 런타임 의존은 projects/tasks 의 workspace FK 마이그레이션도 테스트 클래스패스에 올립니다.
+    implementation project(':workspace')
+    // task 생성 시 task.created outbox 이벤트를 발행합니다(CO-6, ADR-0008).
+    implementation project(':outbox')
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // common testFixtures의 Testcontainers 통합테스트 베이스를 재사용합니다.
+    testImplementation testFixtures(project(':common'))
+    // projects.owner_id는 users(id)를 FK로 참조합니다. 슬라이스 통합테스트가 Flyway로 users
+    // 테이블을 만들 수 있도록 user 모듈 마이그레이션을 테스트 클래스패스에 올립니다(테스트 스코프,
+    // User 엔티티는 project 패키지 밖이라 매핑되지 않습니다).
+    testImplementation project(':user')
+}

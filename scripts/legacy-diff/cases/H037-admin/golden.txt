@@ -1,0 +1,20 @@
+legacy_status: 201
+server_status: 201
+--- body ---
+@@ -9,12 +9,11 @@
+     "Uuid_2",
+     "Uuid_3"
+   ],
+-  "progress": 0,
+   "status": "active",
+   "summary": "1차 스프린트 요약",
+-  "target_date": "Time_2",
++  "target_date": "2026-09-30",
+   "unresolved_count": 0,
+-  "updated_at": "Time_3",
++  "updated_at": "Time_1",
+   "voc_signal_count": 0,
+   "workspace_id": "Uuid_4"
+ }
+--- db ---
+동일

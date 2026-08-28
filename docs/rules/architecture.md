@@ -23,14 +23,21 @@ Gradle 멀티모듈(빌드 타임 컴파일 격리)과 Spring Modulith(런타임
   기능 모듈이 의존할 수 있는 별도 모듈에 둡니다(`app`에 두면 순환 의존이 생김).
 - 모든 모듈은 같은 base package `works.momens.server.*` 아래 패키지를 써서, `app`
   클래스패스에서 Spring Modulith가 하나로 조립해 검증할 수 있게 합니다.
+- 버전을 명시하는 의존성은 모듈 `build.gradle`이 아니라 **버전 카탈로그**
+  (`gradle/libs.versions.toml`)에 추가합니다. Spring Boot BOM이 버전을 관리하는 의존성은
+  카탈로그에 두지 않습니다.
 
 ```text
 root
-├── app            # 실행·조립
-├── user           # 기능/도메인 모듈
-├── …
-└── common         # 최소화된 공유 모듈
+├── app              # 실행·조립
+├── common           # 최소화된 공유 모듈
+└── modules          # 기능/capability 모듈의 물리적 그룹
+    ├── user
+    └── …
 ```
+
+`modules` 디렉터리는 물리적 정리를 위한 그룹일 뿐 Gradle 서브프로젝트가 아닙니다. 기능 모듈의
+Gradle 논리 경로는 `:user`, `:auth`처럼 평면으로 유지합니다.
 
 ## 모듈 경계
 
@@ -48,6 +55,10 @@ root
   - domain: 핵심 비즈니스 규칙, entity, value object, domain service
   - infrastructure: JPA, Redis, 외부 API client, messaging adapter 등 기술 의존 구현
 - 작은 모듈은 `internal` 아래 단순 package-private 구조를 허용합니다.
+- 하나의 Gradle 모듈 안에서 도메인이 여러 개로 나뉘면 하위 도메인을 Spring Modulith nested
+  application module로 논리 분리합니다(물리 분리를 먼저 두고, 모듈이 커지면 논리 분리로
+  정리하는 순서). 트랜잭션 단위는 같은 도메인(aggregate)에 닫고, 모듈 경계를 넘는 트랜잭션
+  참여는 최소화합니다.
 - 다른 모듈·외부 시스템 의존이 application/domain을 오염시키면 port/adapter를 도입합니다.
 - 모든 모듈에 hexagonal/clean architecture를 일괄 강제하지 않습니다.
 - 레이어 책임(controller 얇게·service 트랜잭션·repository 캡슐화)은
@@ -64,9 +75,15 @@ root
 ## Spring Modulith 적용
 
 - `ApplicationModules.of(Application.class).verify()` 테스트를 두고 CI에 포함합니다.
-- 모듈 root package를 public API 영역으로 보고, 다른 모듈의 `internal` package 참조를 금지합니다.
-- root package 외 하위 package를 외부 모듈에 공개하지 않습니다. 공개가 필요하면
-  `NamedInterface` 도입을 검토합니다.
+- application module의 root package를 public API 영역으로 보고, 다른 모듈의 `internal` package
+  참조를 금지합니다.
+- application module root 외 하위 package를 외부 모듈에 공개하지 않습니다. 하나의 Gradle 모듈 안에서
+  하위 도메인별 공개 API package가 필요하면 `NamedInterface`를 사용합니다. nested application
+  module은 다른 상위 모듈이 직접 참조할 수 없으므로 외부 공개 API 분리 수단으로 사용하지 않습니다.
+- `NamedInterface`로 나눈 하위 도메인은 Modulith가 여전히 한 모듈로 보므로 하위 도메인 사이의 의존
+  방향과 순환은 검증되지 않습니다. 이 공백은 ArchUnit slice 규칙으로 메웁니다
+  (`ProjectSubDomainBoundaryTests`). 하위 도메인 경계를 새로 만들면 같은 형태의 방향 테스트를 함께
+  둡니다.
 - 모듈 간 event 협력에는 persisted event publication registry를 사용합니다(fire-and-forget
   아님). registry 인프라(events-jpa 의존성, `event_publication` Flyway 마이그레이션,
   completion 설정)는 첫 application event 도입 시 함께 추가합니다([데이터](persistence.md)).

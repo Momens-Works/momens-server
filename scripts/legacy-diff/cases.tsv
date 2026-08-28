@@ -1,0 +1,135 @@
+# 비교 대상 목록(MOM-0877). 슬라이스마다 행을 추가합니다.
+#
+# yaml 대신 TSV 인 이유: yq 의존 없이 순수 bash 로 읽습니다.
+# 열: id  as  method  legacy_path  server_path  ignore  scrub
+# as: fixture.sql 의 사용자 키(owner|member|stranger|nobody|none)
+# none 은 토큰 없이 호출합니다(401 계약 비교).
+# ignore: 응답 body 에서 빼고 볼 필드(쉼표 구분). 없으면 - 입니다(MOM-0882).
+# scrub: 값을 등장 순서 자리표시자로 바꿀 타입(time|uuid, 쉼표 구분). 없으면 - 입니다(MOM-0881).
+#   ignore 는 아예 안 보고, scrub 은 값은 안 보되 같은지 다른지는 봅니다.
+#
+# write 케이스의 요청 body 와 DB 비교 SQL 은 cases/<id>/ 아래 규약으로 둡니다.
+#   cases/<id>/body.json   요청 body
+#   cases/<id>/check.sql   요청 이후 양쪽 DB 에 그대로 실행할 조회
+# 경로를 열에 적지 않는 것은 규약으로 대체 가능한 정보를 중복 기재하지 않기 위해서입니다.
+# DB 에서 안 볼 컬럼은 SELECT 목록에서 빼면 되므로 ignore 는 응답 body 전용입니다.
+#
+# id	as	method	legacy_path	server_path	ignore	scrub
+H020-member	owner	GET	/workspaces	/api/workspaces	-	-
+H020-empty	nobody	GET	/workspaces	/api/workspaces	-	-
+H020-noauth	none	GET	/workspaces	/api/workspaces	-	-
+H022-ok	owner	GET	/workspaces/00000000-0000-4000-8000-000000000012	/api/workspaces/00000000-0000-4000-8000-000000000012	-	-
+H022-no-description	owner	GET	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-	-
+H022-forbidden	owner	GET	/workspaces/00000000-0000-4000-8000-000000000013	/api/workspaces/00000000-0000-4000-8000-000000000013	-	-
+H022-not-found	owner	GET	/workspaces/00000000-0000-4000-8000-0000000000ff	/api/workspaces/00000000-0000-4000-8000-0000000000ff	-	-
+H022-bad-uuid	owner	GET	/workspaces/not-a-uuid	/api/workspaces/not-a-uuid	-	-
+H023-owner	owner	GET	/workspaces/00000000-0000-4000-8000-000000000012/snapshot	/api/workspaces/00000000-0000-4000-8000-000000000012/snapshot	-	-
+H023-forbidden	owner	GET	/workspaces/00000000-0000-4000-8000-000000000013/snapshot	/api/workspaces/00000000-0000-4000-8000-000000000013/snapshot	-	-
+H023-not-found	owner	GET	/workspaces/00000000-0000-4000-8000-0000000000ff/snapshot	/api/workspaces/00000000-0000-4000-8000-0000000000ff/snapshot	-	-
+H021-available	owner	GET	/workspaces/slug-available?slug=ws-free	/api/workspaces/slug-available?slug=ws-free	-	-
+H021-taken	owner	GET	/workspaces/slug-available?slug=ws-alpha	/api/workspaces/slug-available?slug=ws-alpha	-	-
+H021-reserved	owner	GET	/workspaces/slug-available?slug=settings	/api/workspaces/slug-available?slug=settings	-	-
+H021-uppercase	owner	GET	/workspaces/slug-available?slug=Alpha	/api/workspaces/slug-available?slug=Alpha	-	-
+H021-empty	owner	GET	/workspaces/slug-available	/api/workspaces/slug-available	-	-
+H021-noauth	none	GET	/workspaces/slug-available?slug=ws-free	/api/workspaces/slug-available?slug=ws-free	-	-
+H024-rename	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-	time
+H024-noop	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-	time
+H024-empty-body	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-	time
+H024-forbidden	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000012	/api/workspaces/00000000-0000-4000-8000-000000000012	-	-
+H024-not-found	owner	PATCH	/workspaces/00000000-0000-4000-8000-0000000000ff	/api/workspaces/00000000-0000-4000-8000-0000000000ff	-	-
+H024-slug-taken	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-	-
+H024-slug-reserved	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000011	/api/workspaces/00000000-0000-4000-8000-000000000011	-	-
+H027-ok	owner	GET	/workspaces/00000000-0000-4000-8000-000000000012/members	/api/workspaces/00000000-0000-4000-8000-000000000012/members	-	-
+H027-forbidden	owner	GET	/workspaces/00000000-0000-4000-8000-000000000013/members	/api/workspaces/00000000-0000-4000-8000-000000000013/members	-	-
+H027-not-found	owner	GET	/workspaces/00000000-0000-4000-8000-0000000000ff/members	/api/workspaces/00000000-0000-4000-8000-0000000000ff/members	-	-
+H027-noauth	none	GET	/workspaces/00000000-0000-4000-8000-000000000012/members	/api/workspaces/00000000-0000-4000-8000-000000000012/members	-	-
+H033-to-admin	member	PATCH	/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000001	/api/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000001	-	time
+H033-owner-target	member	PATCH	/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000002	/api/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000002	-	-
+H033-invalid-role	member	PATCH	/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000001	/api/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000001	-	-
+H033-member-not-found	member	PATCH	/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000004	/api/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000004	-	-
+H033-forbidden	owner	PATCH	/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000002	/api/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000002	-	-
+H034-ok	member	DELETE	/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000001	/api/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000001	-	-
+H034-self	member	DELETE	/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000002	/api/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000002	-	-
+H034-owner-target	stranger	DELETE	/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000002	/api/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000002	-	-
+H034-member-not-found	member	DELETE	/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000004	/api/workspaces/00000000-0000-4000-8000-000000000012/members/00000000-0000-4000-8000-000000000004	-	-
+H040-member	owner	GET	/workspaces/00000000-0000-4000-8000-000000000012/source-connections	/api/workspaces/00000000-0000-4000-8000-000000000012/source-connections	-	-
+H040-forbidden	owner	GET	/workspaces/00000000-0000-4000-8000-000000000013/source-connections	/api/workspaces/00000000-0000-4000-8000-000000000013/source-connections	-	-
+H040-not-found	owner	GET	/workspaces/00000000-0000-4000-8000-0000000000ff/source-connections	/api/workspaces/00000000-0000-4000-8000-0000000000ff/source-connections	-	-
+H040-noauth	none	GET	/workspaces/00000000-0000-4000-8000-000000000012/source-connections	/api/workspaces/00000000-0000-4000-8000-000000000012/source-connections	-	-
+H041-forbidden	owner	GET	/workspaces/00000000-0000-4000-8000-000000000012/source-connections/install?provider=github	/api/workspaces/00000000-0000-4000-8000-000000000012/source-connections/install?provider=github	-	-
+H041-unsupported	owner	GET	/workspaces/00000000-0000-4000-8000-000000000011/source-connections/install?provider=linear	/api/workspaces/00000000-0000-4000-8000-000000000011/source-connections/install?provider=linear	-	-
+H041-unconfigured	owner	GET	/workspaces/00000000-0000-4000-8000-000000000011/source-connections/install?provider=github	/api/workspaces/00000000-0000-4000-8000-000000000011/source-connections/install?provider=github	-	-
+H082-no-code	none	GET	/source-connections/oauth/callback?state=some-state	/api/source-connections/oauth/callback?state=some-state	-	-
+H082-bad-state	none	GET	/source-connections/oauth/callback?code=code-1&state=not-a-state	/api/source-connections/oauth/callback?code=code-1&state=not-a-state	-	-
+H096-forbidden	owner	POST	/source-refs/00000000-0000-4000-8000-000000000042/verify	/api/source-refs/00000000-0000-4000-8000-000000000042/verify	-	-
+H096-not-found	owner	POST	/source-refs/00000000-0000-4000-8000-0000000000ff/verify	/api/source-refs/00000000-0000-4000-8000-0000000000ff/verify	-	-
+H096-member	owner	POST	/source-refs/00000000-0000-4000-8000-000000000041/verify	/api/source-refs/00000000-0000-4000-8000-000000000041/verify	-	time
+H084-confirm	owner	POST	/memory-candidates/00000000-0000-4000-8000-000000000051/confirm	/api/memory-candidates/00000000-0000-4000-8000-000000000051/confirm	-	time,uuid
+H084-confirm-rich	owner	POST	/memory-candidates/00000000-0000-4000-8000-000000000052/confirm	/api/memory-candidates/00000000-0000-4000-8000-000000000052/confirm	-	time,uuid
+H084-already-reviewed	owner	POST	/memory-candidates/00000000-0000-4000-8000-000000000053/confirm	/api/memory-candidates/00000000-0000-4000-8000-000000000053/confirm	-	-
+H084-forbidden	owner	POST	/memory-candidates/00000000-0000-4000-8000-000000000054/confirm	/api/memory-candidates/00000000-0000-4000-8000-000000000054/confirm	-	-
+H084-not-found	owner	POST	/memory-candidates/00000000-0000-4000-8000-0000000000ff/confirm	/api/memory-candidates/00000000-0000-4000-8000-0000000000ff/confirm	-	-
+H088-edit-and-confirm	owner	POST	/memory-candidates/00000000-0000-4000-8000-000000000052/edit-and-confirm	/api/memory-candidates/00000000-0000-4000-8000-000000000052/edit-and-confirm	-	time,uuid
+H088-empty-edit	owner	POST	/memory-candidates/00000000-0000-4000-8000-000000000051/edit-and-confirm	/api/memory-candidates/00000000-0000-4000-8000-000000000051/edit-and-confirm	-	time,uuid
+H085-reject-with-reason	owner	POST	/memory-candidates/00000000-0000-4000-8000-000000000051/reject	/api/memory-candidates/00000000-0000-4000-8000-000000000051/reject	-	time,uuid
+H085-reject-no-body	owner	POST	/memory-candidates/00000000-0000-4000-8000-000000000051/reject	/api/memory-candidates/00000000-0000-4000-8000-000000000051/reject	-	time,uuid
+H086-merge	owner	POST	/memory-candidates/00000000-0000-4000-8000-000000000051/merge	/api/memory-candidates/00000000-0000-4000-8000-000000000051/merge	-	time,uuid
+H086-merge-cross-workspace	owner	POST	/memory-candidates/00000000-0000-4000-8000-000000000051/merge	/api/memory-candidates/00000000-0000-4000-8000-000000000051/merge	-	-
+H086-merge-target-not-found	owner	POST	/memory-candidates/00000000-0000-4000-8000-000000000051/merge	/api/memory-candidates/00000000-0000-4000-8000-000000000051/merge	-	-
+H087-expire	owner	POST	/memory-candidates/00000000-0000-4000-8000-000000000051/expire	/api/memory-candidates/00000000-0000-4000-8000-000000000051/expire	-	time,uuid
+H093-resolve	owner	POST	/memories/00000000-0000-4000-8000-000000000061/resolve	/api/memories/00000000-0000-4000-8000-000000000061/resolve	-	time,uuid
+H093-resolve-cross-workspace	owner	POST	/memories/00000000-0000-4000-8000-000000000061/resolve	/api/memories/00000000-0000-4000-8000-000000000061/resolve	-	-
+H093-resolve-deleted-target	owner	POST	/memories/00000000-0000-4000-8000-000000000064/resolve	/api/memories/00000000-0000-4000-8000-000000000064/resolve	-	-
+H093-resolve-deleted-resolver	owner	POST	/memories/00000000-0000-4000-8000-000000000061/resolve	/api/memories/00000000-0000-4000-8000-000000000061/resolve	-	-
+H030-list	owner	GET	/workspaces/00000000-0000-4000-8000-000000000011/invitations	/api/workspaces/00000000-0000-4000-8000-000000000011/invitations	-	-
+H030-forbidden	owner	GET	/workspaces/00000000-0000-4000-8000-000000000012/invitations	/api/workspaces/00000000-0000-4000-8000-000000000012/invitations	-	-
+H030-not-found	owner	GET	/workspaces/00000000-0000-4000-8000-0000000000ff/invitations	/api/workspaces/00000000-0000-4000-8000-0000000000ff/invitations	-	-
+H029-create	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invitations	/api/workspaces/00000000-0000-4000-8000-000000000011/invitations	-	time,uuid
+H029-overwrites-pending	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invitations	/api/workspaces/00000000-0000-4000-8000-000000000011/invitations	-	time
+H029-member-uppercase	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invitations	/api/workspaces/00000000-0000-4000-8000-000000000011/invitations	-	-
+H031-pending	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invitations/00000000-0000-4000-8000-000000000071/resend	/api/workspaces/00000000-0000-4000-8000-000000000011/invitations/00000000-0000-4000-8000-000000000071/resend	-	time
+H031-revives-revoked	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invitations/00000000-0000-4000-8000-000000000073/resend	/api/workspaces/00000000-0000-4000-8000-000000000011/invitations/00000000-0000-4000-8000-000000000073/resend	-	time
+H031-accepted	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invitations/00000000-0000-4000-8000-000000000074/resend	/api/workspaces/00000000-0000-4000-8000-000000000011/invitations/00000000-0000-4000-8000-000000000074/resend	-	-
+H032-revoke	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invitations/00000000-0000-4000-8000-000000000071/revoke	/api/workspaces/00000000-0000-4000-8000-000000000011/invitations/00000000-0000-4000-8000-000000000071/revoke	-	time
+H032-accepted	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invitations/00000000-0000-4000-8000-000000000074/revoke	/api/workspaces/00000000-0000-4000-8000-000000000011/invitations/00000000-0000-4000-8000-000000000074/revoke	-	-
+H046-accept	nobody	POST	/invitations/accept	/api/invitations/accept	-	time
+H046-mismatch	stranger	POST	/invitations/accept	/api/invitations/accept	-	-
+H046-expired	member	POST	/invitations/accept	/api/invitations/accept	-	-
+H046-revoked	stranger	POST	/invitations/accept	/api/invitations/accept	-	-
+H028-add	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invite	/api/workspaces/00000000-0000-4000-8000-000000000011/invite	-	-
+H028-role-conflict	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invite	/api/workspaces/00000000-0000-4000-8000-000000000011/invite	-	-
+H028-uppercase-email	owner	POST	/workspaces/00000000-0000-4000-8000-000000000011/invite	/api/workspaces/00000000-0000-4000-8000-000000000011/invite	-	-
+H037-admin	stranger	POST	/workspaces/00000000-0000-4000-8000-000000000012/projects	/api/workspaces/00000000-0000-4000-8000-000000000012/projects	-	time,uuid
+H037-forbidden	owner	POST	/workspaces/00000000-0000-4000-8000-000000000012/projects	/api/workspaces/00000000-0000-4000-8000-000000000012/projects	-	-
+H037-not-found	owner	POST	/workspaces/00000000-0000-4000-8000-0000000000ff/projects	/api/workspaces/00000000-0000-4000-8000-0000000000ff/projects	-	-
+H037-invalid-owner	stranger	POST	/workspaces/00000000-0000-4000-8000-000000000012/projects	/api/workspaces/00000000-0000-4000-8000-000000000012/projects	-	-
+H050-member	owner	POST	/projects/00000000-0000-4000-8000-000000000021/milestones	/api/projects/00000000-0000-4000-8000-000000000021/milestones	-	time,uuid
+H050-project-not-found	owner	POST	/projects/00000000-0000-4000-8000-0000000000ff/milestones	/api/projects/00000000-0000-4000-8000-0000000000ff/milestones	-	-
+H050-forbidden	nobody	POST	/projects/00000000-0000-4000-8000-000000000021/milestones	/api/projects/00000000-0000-4000-8000-000000000021/milestones	-	-
+# H019는 번호가 가장 앞이지만 파일 마지막에 배치합니다. 하네스는 스택을 한 번 기동하고 픽스처를 한 번만 적용한 뒤 위에서부터
+# 케이스를 실행합니다. 워크스페이스 생성 케이스를 앞에 배치하면 이후 케이스의 기대값이 달라집니다. H020은 owner의 워크스페이스
+# 목록 전체를 비교하고, H021은 ws-free가 비어 있다고 가정합니다.
+#
+# H019-slug-collision은 이름으로 생성한 slug가 픽스처의 ws-alpha와 충돌하는 경우입니다. H019-korean-name은 한글
+# 이름에서 slug에 사용할 수 있는 문자가 모두 제거되어 workspace를 사용하는 경우입니다. 한국어 이름을 사용하는 워크스페이스는
+# 모두 해당 경로를 거칩니다.
+#
+# 에러 케이스 네 건은 HTTP status가 레거시와 같고 응답 본문 형식만 다릅니다. 이관 목록 문서의 공통 전환 규칙에 따라
+# Standard 에러 형식을 사용합니다.
+H019-create	owner	POST	/workspaces	/api/workspaces	-	time,uuid
+H019-with-description	owner	POST	/workspaces	/api/workspaces	-	time,uuid
+H019-slug-collision	owner	POST	/workspaces	/api/workspaces	-	time,uuid
+H019-korean-name	owner	POST	/workspaces	/api/workspaces	-	time,uuid
+H019-slug-taken	owner	POST	/workspaces	/api/workspaces	-	-
+H019-slug-invalid	owner	POST	/workspaces	/api/workspaces	-	-
+H019-slug-reserved	owner	POST	/workspaces	/api/workspaces	-	-
+H019-noauth	none	POST	/workspaces	/api/workspaces	-	-
+H067-link	owner	POST	/tasks/00000000-0000-4000-8000-000000000081/memories/00000000-0000-4000-8000-000000000061	/api/tasks/00000000-0000-4000-8000-000000000081/memories/00000000-0000-4000-8000-000000000061	-	uuid
+H067-cross-workspace	owner	POST	/tasks/00000000-0000-4000-8000-000000000081/memories/00000000-0000-4000-8000-000000000063	/api/tasks/00000000-0000-4000-8000-000000000081/memories/00000000-0000-4000-8000-000000000063	-	-
+H067-task-not-found	owner	POST	/tasks/00000000-0000-4000-8000-0000000000ff/memories/00000000-0000-4000-8000-000000000061	/api/tasks/00000000-0000-4000-8000-0000000000ff/memories/00000000-0000-4000-8000-000000000061	-	-
+H068-unlink	owner	DELETE	/tasks/00000000-0000-4000-8000-000000000081/memories/00000000-0000-4000-8000-000000000062	/api/tasks/00000000-0000-4000-8000-000000000081/memories/00000000-0000-4000-8000-000000000062	-	uuid
+H068-not-linked	owner	DELETE	/tasks/00000000-0000-4000-8000-000000000081/memories/00000000-0000-4000-8000-000000000061	/api/tasks/00000000-0000-4000-8000-000000000081/memories/00000000-0000-4000-8000-000000000061	-	uuid
+H068-forbidden	nobody	DELETE	/tasks/00000000-0000-4000-8000-000000000081/memories/00000000-0000-4000-8000-000000000062	/api/tasks/00000000-0000-4000-8000-000000000081/memories/00000000-0000-4000-8000-000000000062	-	uuid
+H069-create	owner	POST	/tasks/00000000-0000-4000-8000-000000000081/source-refs	/api/tasks/00000000-0000-4000-8000-000000000081/source-refs	-	uuid
+H069-blank-url	owner	POST	/tasks/00000000-0000-4000-8000-000000000081/source-refs	/api/tasks/00000000-0000-4000-8000-000000000081/source-refs	-	uuid
+H071-unlink	owner	DELETE	/tasks/00000000-0000-4000-8000-000000000081/source-refs/00000000-0000-4000-8000-000000000041	/api/tasks/00000000-0000-4000-8000-000000000081/source-refs/00000000-0000-4000-8000-000000000041	-	uuid

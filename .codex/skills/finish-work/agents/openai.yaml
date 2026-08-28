@@ -1,0 +1,11 @@
+interface:
+  display_name: "Finish Work"
+  short_description: "Finish merged work in Momens safely"
+  default_prompt: "Use $finish-work to verify the merged PR and complete its Momens task."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "momens"
+      description: "Momens task status and comments"
+      transport: "streamable_http"
+      url: "https://api.momens.works/mcp"

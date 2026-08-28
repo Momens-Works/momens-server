@@ -11,6 +11,8 @@
 - **Spotless + Google Java Format** (2-space, 100칸)으로 강제합니다.
 - 커밋 전 `./gradlew spotlessApply`로 정렬하고, CI가 `./gradlew spotlessCheck`로 검사합니다.
 - 에디터 설정은 `.editorconfig`를 따릅니다.
+- 줄바꿈 형식은 `.gitattributes`를 기준으로 LF로 통일하며, `gradlew.bat`만 CRLF 예외로
+  처리합니다.
 - GJF가 자동 처리하므로 따로 신경 쓰지 않아도 되는 것: 와일드카드 import 금지, 모든
   제어문 중괄호, 연산자 공백, 배열 Java식(`String[]`).
 
@@ -132,6 +134,15 @@ class ThingController {
   만들며 확정합니다.
 - API 성공 응답에는 전역 wrapper(`success`, `data`)를 두지 않습니다. 응답/에러 코드
   규격은 [서버 명세 > API 응답과 에러 코드](../spec/api-response-error-codes.md)를 따릅니다.
+- JSON wire format은 snake_case이며, 소유자는 전역 설정 하나입니다: app
+  `application.yml`의 `spring.jackson.property-naming-strategy: SNAKE_CASE`.
+  DTO별 `@JsonNaming`은 두지 않습니다.
+  - 기능 모듈 slice test는 app 설정을 읽지 않으므로, presentation DTO가 있는 모듈은
+    `src/test/resources/application.yml`에 같은 키를 둡니다.
+  - 외부 API 클라이언트(RestClient 등) DTO도 전역 전략을 타므로, camelCase wire를 쓰는
+    외부 API는 `@JsonProperty`로 필드별 이름을 명시합니다.
+  - 문서 쪽(swagger-core, Jackson 2)은 이 설정을 읽지 못해 `OpenApiConfig`의
+    `ModelResolver`가 같은 전략을 별도로 겁니다.
 
 ### 네이밍
 

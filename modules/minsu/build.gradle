@@ -1,0 +1,48 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+    id 'java-test-fixtures'
+}
+
+dependencies {
+    // Boot BOM으로 버전을 관리합니다(boot 플러그인은 app만 적용).
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // 생성 원장의 공유 영속성 베이스(BaseEntity). MOM-0817에서 minsu가 영속성을 소유하게 됐습니다.
+    implementation project(':common')
+
+    // 생성 결과를 tasks에 반영하고 task.draft_generated를 발행합니다(ADR-0015). 둘 다 MOM-0820에서
+    // 추가한 의존이며, project 참조는 draft 반영 한 가지로 제한합니다.
+    implementation project(':project')
+    implementation project(':outbox')
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    // Google Gen AI Java SDK입니다. Spring Boot BOM 관리 대상이 아니므로 버전 카탈로그에서
+    // 버전을 고정합니다.
+    implementation libs.google.genai
+
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testFixturesImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+    testFixturesImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    testFixturesImplementation 'org.springframework.boot:spring-boot-test'
+    testFixturesImplementation 'org.springframework:spring-context'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // common testFixtures의 Testcontainers 통합테스트 베이스를 재사용합니다.
+    testImplementation testFixtures(project(':common'))
+    // 슬라이스 통합 테스트에서 project/workspace Flyway 체인(users FK)을 만족시키기 위해 필요(signal과 같은 이유).
+    testImplementation project(':user')
+    testImplementation 'io.micrometer:micrometer-observation-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}

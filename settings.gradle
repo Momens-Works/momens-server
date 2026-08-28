@@ -1,9 +1,34 @@
 rootProject.name = 'momens-server'
 
-// app: 실행·조립 모듈. common: 공유 영속성 베이스. user/auth/workspace: 기능/도메인 모듈.
-// 도메인 모듈 목록은 기능이 추가되며 점진적으로 늘립니다.
+includeBuild('third_party/momens-proto') {
+    dependencySubstitution {
+        substitute module('com.momens:momens-proto') using project(':')
+    }
+}
+
+// app: 실행·조립 모듈. common: 최소 공유 기반.
+// capability 모듈은 modules/ 아래에 모으되, Gradle 논리 경로(:auth 등)는 평면으로 유지합니다.
 include 'app'
 include 'common'
-include 'user'
-include 'auth'
-include 'workspace'
+
+def capabilityModules = [
+    'auth',
+    'context',
+    'memory',
+    'minsu',
+    'mobile',
+    'notification',
+    'onboarding',
+    'outbox',
+    'project',
+    'signal',
+    'source',
+    'user',
+    'web',
+    'workspace',
+]
+
+capabilityModules.each { moduleName ->
+    include moduleName
+    project(":${moduleName}").projectDir = file("modules/${moduleName}")
+}

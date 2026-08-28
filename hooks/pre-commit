@@ -1,0 +1,31 @@
+#!/bin/sh
+# 커밋 전에 스테이징된 Java, Gradle, TOML 파일의 포맷을 검사합니다. CI의 `spotlessCheck`와
+# 동일한 기준으로 동작합니다.
+#
+# 설치: `./gradlew installGitHooks` (core.hooksPath 를 이 디렉터리로 설정)
+# 검사 대상이 없으면(문서만 수정 등) Gradle 을 띄우지 않고 즉시 통과합니다.
+
+set -eu
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR -- '*.java' '*.gradle' '*.toml')
+if [ -z "$staged" ]; then
+  exit 0
+fi
+
+# spotlessCheck 는 인덱스가 아니라 작업 트리를 검사합니다. 스테이징된 파일에 아직 스테이징
+# 안 된 변경이 남아 있으면(부분 스테이징) 검사 대상이 실제 커밋 내용과 달라질 수 있어 알립니다.
+# CI 가 커밋 트리를 최종 검사하므로 여기서는 차단하지 않고 경고만 합니다.
+partial=$(git status --porcelain -- '*.java' '*.gradle' '*.toml' | grep -E '^[MARC][MD]' || true)
+if [ -n "$partial" ]; then
+  echo "pre-commit 경고: 스테이징 안 된 변경이 남은 파일이 있어 작업 트리 기준으로 검사합니다."
+  echo "$partial"
+fi
+
+repo_root=$(git rev-parse --show-toplevel)
+echo "pre-commit: 스테이징된 Java/Gradle/TOML 파일 감지, spotlessCheck 실행"
+if ! "$repo_root"/gradlew -q spotlessCheck; then
+  echo
+  echo "포맷 검사에 실패했습니다. 아래를 실행해 포맷을 적용한 뒤 다시 스테이징·커밋하세요:"
+  echo "  ./gradlew spotlessApply"
+  exit 1
+fi

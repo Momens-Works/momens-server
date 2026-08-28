@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" style="margin:0;padding:0;">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>You're invited to {{.WorkspaceName}} on Momens</title>
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
+  <style>
+    /* ---- client resets ---- */
+    html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+    * { -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    a { text-decoration: none; }
+    body, table, td, p, a { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+
+    /* ---- mobile ---- */
+    @media only screen and (max-width: 620px) {
+      .m-card { width: 100% !important; }
+      .m-pad { padding-left: 26px !important; padding-right: 26px !important; }
+      .m-btn-a { display: block !important; }
+    }
+
+    /* ---- dark mode (clients that honor it) ---- */
+    @media (prefers-color-scheme: dark) {
+      .bg-page   { background: #0c0d0e !important; }
+      .bg-card   { background: #161718 !important; border-color: rgba(255,255,255,0.10) !important; }
+      .t-primary { color: #f7f8f8 !important; }
+      .t-second  { color: #c6cbd3 !important; }
+      .t-muted   { color: #9aa0a8 !important; }
+      .t-faint   { color: #7c818a !important; }
+      .meta-box  { background: #0f1011 !important; border-color: rgba(255,255,255,0.09) !important; }
+      .rule      { border-color: rgba(255,255,255,0.09) !important; background: rgba(255,255,255,0.09) !important; }
+      .mark      { background: #2f63e7 !important; }
+      .mark-dot-one { background: #edf1f8 !important; }
+      .mark-dot-two { background: #9fb8ec !important; }
+      .link-blue { color: #6f9bff !important; }
+      .url-box   { background: #0f1011 !important; border-color: rgba(255,255,255,0.09) !important; }
+    }
+  </style>
+</head>
+<body class="bg-page" style="margin:0; padding:0; width:100%; background:#f4f5f6;">
+
+  <!-- preheader (hidden) -->
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#f4f5f6; opacity:0;">
+    {{.InviterName}} invited you to join {{.WorkspaceName}} on Momens. Accept to see shared projects, tasks, and decisions.
+    &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="bg-page" style="background:#f4f5f6;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+
+        <!-- card -->
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="m-card bg-card" style="width:600px; max-width:600px; background:#ffffff; border:1px solid #e6e8eb; border-radius:14px;">
+
+          <!-- brand row -->
+          <tr>
+            <td class="m-pad" style="padding:30px 44px 0 44px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align:middle; padding-right:9px;">
+                    <span style="display:inline-block; width:22px; height:22px; border-radius:7px; background:#2f63e7; position:relative; vertical-align:middle; overflow:hidden;" class="mark">
+                      <span style="position:absolute; left:5px; top:7px; width:7px; height:7px; border-radius:999px; background:#edf1f8;" class="mark-dot-one">&nbsp;</span>
+                      <span style="position:absolute; left:12px; top:11px; width:7px; height:7px; border-radius:999px; background:#9fb8ec;" class="mark-dot-two">&nbsp;</span>
+                    </span>
+                  </td>
+                  <td style="vertical-align:middle;">
+                    <span class="t-primary" style="font-size:15px; font-weight:600; letter-spacing:-0.2px; color:#1a1c1e;">Momens</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- eyebrow -->
+          <tr>
+            <td class="m-pad" style="padding:28px 44px 0 44px;">
+              <span class="t-faint" style="font-size:12px; font-weight:600; letter-spacing:0.6px; text-transform:uppercase; color:#8a8f98;">Workspace invitation</span>
+            </td>
+          </tr>
+
+          <!-- headline -->
+          <tr>
+            <td class="m-pad" style="padding:10px 44px 0 44px;">
+              <h1 class="t-primary" style="margin:0; font-size:23px; line-height:1.32; font-weight:600; letter-spacing:-0.4px; color:#1a1c1e;">
+                {{.InviterName}} invited you to join {{.WorkspaceName}} on Momens.
+              </h1>
+            </td>
+          </tr>
+
+          <!-- supporting -->
+          <tr>
+            <td class="m-pad" style="padding:14px 44px 0 44px;">
+              <p class="t-second" style="margin:0; font-size:15px; line-height:1.6; color:#4a4d54;">
+                Join the workspace to see shared projects, tasks, decisions, and context &mdash; all in one place.
+              </p>
+            </td>
+          </tr>
+
+          <!-- CTA -->
+          <tr>
+            <td class="m-pad" style="padding:26px 44px 0 44px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" bgcolor="#2563eb" style="border-radius:9px; background:#2563eb;">
+                    <!--[if mso]>&nbsp;<![endif]-->
+                    <a href="{{.AcceptURL}}" class="m-btn-a" target="_blank" style="display:inline-block; padding:14px 30px; font-size:15px; font-weight:600; letter-spacing:-0.1px; color:#ffffff; background:#2563eb; border-radius:9px; mso-padding-alt:14px 30px;">Accept invitation</a>
+                    <!--[if mso]>&nbsp;<![endif]-->
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- fallback link -->
+          <tr>
+            <td class="m-pad" style="padding:22px 44px 0 44px;">
+              <p class="t-muted" style="margin:0 0 8px 0; font-size:12.5px; line-height:1.5; color:#6b7077;">
+                If the button doesn&rsquo;t work, copy and paste this link into your browser:
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="url-box" style="padding:11px 14px; background:#f7f8f9; border:1px solid #e9ebee; border-radius:8px;">
+                    <a href="{{.AcceptURL}}" class="link-blue" target="_blank" style="font-family:ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace; font-size:12.5px; line-height:1.5; color:#2563eb; word-break:break-all;">{{.AcceptURL}}</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- divider -->
+          <tr>
+            <td class="m-pad" style="padding:28px 44px 0 44px;">
+              <div class="rule" style="height:1px; line-height:1px; font-size:1px; background:#ebedef; border-top:1px solid #ebedef;">&nbsp;</div>
+            </td>
+          </tr>
+
+          <!-- metadata -->
+          <tr>
+            <td class="m-pad" style="padding:22px 44px 0 44px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="meta-box" style="background:#f7f8f9; border:1px solid #e9ebee; border-radius:10px;">
+                <tr>
+                  <td style="padding:14px 16px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="92" style="padding:5px 0; vertical-align:top;"><span class="t-faint" style="font-size:12.5px; color:#8a8f98;">Invited by</span></td>
+                        <td style="padding:5px 0; vertical-align:top;"><span class="t-second" style="font-size:12.5px; font-weight:500; color:#3a3d44;">{{.InviterEmail}}</span></td>
+                      </tr>
+                      <tr>
+                        <td width="92" style="padding:5px 0; vertical-align:top;"><span class="t-faint" style="font-size:12.5px; color:#8a8f98;">Role</span></td>
+                        <td style="padding:5px 0; vertical-align:top;"><span class="t-second" style="font-size:12.5px; font-weight:500; color:#3a3d44;">{{.Role}}</span></td>
+                      </tr>
+                      <tr>
+                        <td width="92" style="padding:5px 0; vertical-align:top;"><span class="t-faint" style="font-size:12.5px; color:#8a8f98;">Expires</span></td>
+                        <td style="padding:5px 0; vertical-align:top;"><span class="t-second" style="font-family:ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; font-weight:500; color:#3a3d44;">{{.ExpiresAt}}</span></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- footer note -->
+          <tr>
+            <td class="m-pad" style="padding:22px 44px 32px 44px;">
+              <p class="t-muted" style="margin:0; font-size:12.5px; line-height:1.6; color:#6b7077;">
+                If you weren&rsquo;t expecting this invitation, you can ignore this email or reply to <a href="mailto:{{.ReplyToEmail}}" class="link-blue" style="color:#2563eb; font-weight:500;">{{.ReplyToEmail}}</a>.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- /card -->
+
+        <!-- sub-footer -->
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="m-card" style="width:600px; max-width:600px;">
+          <tr>
+            <td align="center" style="padding:20px 44px 8px 44px;">
+              <span class="t-faint" style="font-size:11.5px; line-height:1.5; color:#9aa0a8;">Momens &middot; shared projects, tasks, and decisions</span>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

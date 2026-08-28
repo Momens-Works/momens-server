@@ -1,0 +1,45 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    // Boot BOM으로 버전을 관리합니다(boot 플러그인은 app만 적용).
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // 공유 에러 계약(BusinessException)과 현재 사용자 헬퍼(CurrentUser).
+    implementation project(':common')
+    // 웹 진입 API는 도메인 모듈의 public API만 조합합니다(module-map 의존 방향, MOM-0850 설계).
+    // 워크스페이스 조회(H020, H022)는 workspace 하나만 조합합니다. capability가 늘어날 때마다 의존을 추가합니다.
+    implementation project(':workspace')
+    implementation project(':project')
+    implementation project(':context')
+    implementation project(':memory')
+    implementation project(':onboarding')
+    implementation project(':source')
+    implementation project(':user')
+    // 웹 인증 표면(MOM-0852)이 auth의 WebAuthSession public API에 위임합니다.
+    implementation project(':auth')
+
+    // 워크스페이스 컨트롤러(presentation).
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    // 조합 서비스의 @Transactional(readOnly). 이 모듈은 엔티티가 없어 data-jpa 대신 tx만 둡니다(mobile 모듈 전례).
+    implementation 'org.springframework:spring-tx'
+    // 요청 body 검증(@Valid, @Size). 검증 실패는 app의 예외 핸들러가 COMMON_VALIDATION_FAILED로 변환합니다.
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // OpenAPI 문서화 애너테이션(@Tag/@Operation/@Schema)만 사용합니다. Swagger UI와 공통 설정은
+    // 실행과 조립을 맡는 app 모듈이 springdoc starter로 소유합니다(docs/spec/openapi.md).
+    implementation libs.swagger.annotations.jakarta
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // 컨트롤러 web 슬라이스 테스트(@WebMvcTest, @MockitoBean)와 서비스 Mockito 단위 테스트.
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    // Gradle이 테스트 실행에 요구하는 JUnit Platform launcher. 이 모듈은 DB 통합 테스트가 없어
+    // 다른 모듈처럼 common testFixtures 대신 launcher만 직접 둡니다(mobile 모듈 전례).
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}

@@ -4,14 +4,6 @@ plugins {
     id 'org.springframework.boot'
 }
 
-// 비-Boot 관리 의존성 버전.
-// Spring Boot BOM이 관리하지 않는 의존성만 명시적으로 버전을 지정합니다.
-ext {
-    springModulithVersion = '2.1.0'
-    springdocVersion = '3.0.3'
-    springDotenvVersion = '5.1.0'
-}
-
 dependencies {
     // Spring Boot Gradle plugin이 제공하는 기본 BOM만 사용합니다.
     implementation platform(SpringBootPlugin.BOM_COORDINATES)
@@ -24,6 +16,17 @@ dependencies {
     implementation project(':user')
     implementation project(':auth')
     implementation project(':workspace')
+    implementation project(':project')
+    implementation project(':source')
+    implementation project(':context')
+    implementation project(':memory')
+    implementation project(':signal')
+    implementation project(':outbox')
+    implementation project(':notification')
+    implementation project(':onboarding')
+    implementation project(':mobile')
+    implementation project(':minsu')
+    implementation project(':web')
 
     // Core (Boot BOM 관리, 버전 생략)
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
@@ -45,12 +48,14 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
     runtimeOnly 'org.postgresql:postgresql'
 
-    // Spring Modulith (별도 릴리스 트레인, 명시적 버전)
-    implementation "org.springframework.modulith:spring-modulith-starter-core:${springModulithVersion}"
+    // Spring Modulith는 Spring Boot BOM과 별도의 릴리스 트레인을 따르므로, 버전은 버전 카탈로그에서 고정합니다.
+    implementation libs.spring.modulith.starter.core
 
-    // API 문서 / 로컬 env (Boot BOM 비관리, 명시적 버전)
-    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
-    implementation "me.paulschwarz:spring-dotenv:${springDotenvVersion}"
+    // API 문서 및 로컬 env 관련 의존성입니다. Spring Boot BOM 관리 대상이 아니므로
+    // 버전 카탈로그에서 버전을 고정합니다.
+    implementation libs.springdoc.openapi.starter.webmvc.ui
+    implementation libs.swagger.core.jakarta
+    implementation libs.spring.dotenv
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -61,9 +66,65 @@ dependencies {
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation "org.springframework.modulith:spring-modulith-starter-test:${springModulithVersion}"
+    testImplementation libs.spring.modulith.starter.test
     // Testcontainers 통합테스트 베이스(common testFixtures)를 재사용합니다.
     testImplementation testFixtures(project(':common'))
     // 보안 통합테스트용 access token 팩토리(auth public testFixtures). auth.internal 직접 참조를 피합니다.
     testImplementation testFixtures(project(':auth'))
+    // Minsu 통합테스트가 llm nested module을 직접 참조하지 않고 provider 응답을 제어합니다.
+    testImplementation testFixtures(project(':minsu'))
+    // 실제 request/response를 /v3/api-docs 스펙과 대조하는 계약 검증(문서-응답 드리프트 방지).
+    testImplementation libs.openapi.request.validator.mockmvc
+    // push 기능 활성화를 검증하는 통합 테스트에서 FirebaseMessaging을 mock으로 대체하기 위해 필요합니다.
+    testImplementation libs.firebase.admin
+}
+
+// OpenAPI 스냅샷(docs/spec/openapi.json)은 커밋본과 실제 문서를 대조하는 계약 게이트입니다(MOM-0878).
+// test 는 비교만 하고, 파일을 쓰는 것은 아래 갱신 task 뿐입니다. 갱신을 이름 있는 명시적 행위로 두어
+// 계약 변경이 PR diff에 드러나게 합니다.
+def openApiSnapshotFile = rootProject.file('docs/spec/openapi.json')
+
+// 비교 경로(test)와 생성 경로(updateOpenApiSnapshot)가 같은 런타임 설정으로 돌아야 합니다. 설정이
+// 갈리면 아무리 재생성해도 게이트와 맞지 않는데 원인이 드러나지 않습니다. 이 파일이 소유한 설정은
+// 아래 블록으로 공유합니다.
+//
+// 다만 test 의 설정 전부를 상속하지는 못합니다. useJUnitPlatform() 은 루트 subprojects 블록에,
+// 나머지 기본값은 Spring Boot 플러그인에 있습니다. test 에 systemProperty/environment/jvmArgs 를
+// 추가할 때는 이 블록에 넣어야 생성 경로에도 반영됩니다.
+def configureOpenApiSnapshotTest = { Test task ->
+    task.systemProperty 'momens.openapi.snapshot.path', openApiSnapshotFile.absolutePath
+}
+
+tasks.named('test', Test) {
+    configureOpenApiSnapshotTest(it)
+    // 스냅샷 파일은 test 의 입력이므로 명시합니다. 선언하지 않으면 스냅샷만 바뀌었을 때
+    // test 가 up-to-date 로 스킵되거나 빌드 캐시에서 복원되어 게이트가 조용히 통과합니다.
+    //
+    // file 이 아니라 files 인 이유: inputs.file 은 존재를 검증해, 파일이 없으면 Gradle 이 테스트 실행
+    // 전에 중단합니다. app 테스트 전체가 막히고 "스냅샷이 없습니다" 안내를 띄우는 assertion 이 도달
+    // 불가가 됩니다. optional(true) 로는 풀리지 않습니다(그건 프로퍼티 미설정을 허용할 뿐입니다).
+    // files 는 없는 파일을 빈 입력으로 취급해 up-to-date 정확성을 유지하면서 assertion 을 살립니다.
+    inputs.files(openApiSnapshotFile)
+            .withPropertyName('openApiSnapshot')
+            .withPathSensitivity(PathSensitivity.NONE)
+}
+
+// test 에 write 프로퍼티를 얹어 재사용하면 up-to-date 캐시로 두 번째 실행이 스킵되므로
+// 별도 Test task 로 등록합니다.
+tasks.register('updateOpenApiSnapshot', Test) {
+    group = 'documentation'
+    description = 'OpenAPI 스냅샷(docs/spec/openapi.json)을 현재 API 문서로 갱신합니다.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching 'works.momens.server.support.openapi.OpenApiSnapshotTest'
+    }
+    configureOpenApiSnapshotTest(it)
+    systemProperty 'momens.openapi.snapshot.write', 'true'
+    // 이 task 의 실제 산출물인 스냅샷 파일은 Gradle 에 선언되지 않은 출력입니다. Test 는
+    // @CacheableTask 라서, outputs.upToDateWhen { false } 만 두면 빌드 캐시를 켠 환경에서
+    // FROM-CACHE 로 스킵되며 성공을 보고하고도 파일을 쓰지 않습니다. doNotTrackState 는
+    // up-to-date 검사와 캐싱을 함께 끄므로 항상 다시 생성한다는 의도와 정확히 같습니다.
+    doNotTrackState('스냅샷 파일을 항상 다시 생성합니다.')
 }

@@ -11,11 +11,11 @@ docs/
 ├── README.md             # (이 문서) 인덱스
 ├── onboarding.md         # 신규 합류 가이드
 ├── local-development.md  # 로컬 개발
+├── prod-readiness-ledger.md # prod 운영 준비 대장 (필수 설정·수기 의무)
 ├── rules/                # 기반 규칙 (성격별 폴더)
 ├── adr/                  # 결정 기록 (ADR, 결정마다 파일 하나씩)
 ├── spec/                 # 서버 명세 (API/계약)
-├── design/               # 상세설계 (현재 사실의 단일 출처)
-└── pending-decisions.md  # 추후 결정(열린 결정) 로그
+└── design/               # 상세설계 (현재 사실의 단일 출처)
 ```
 
 문서 계층:
@@ -29,11 +29,22 @@ docs/
 
 - [온보딩](onboarding.md) — 처음 합류했다면 여기서 시작
 - [로컬 개발](local-development.md)
+- [prod 운영 준비 대장](prod-readiness-ledger.md) — prod 필수 설정과 파일 밖 prod 의무를 함께 확인
 - [기반 규칙](rules/README.md)
 - [ADR](adr/README.md)
 - [서버 명세](spec/README.md)
+- [서버 명세 > 모바일 API](spec/mobile-api.md)
 - [상세설계 > 모듈 맵](design/module-map.md)
-- [추후 결정 로그](pending-decisions.md)
+- [상세설계 > 모바일 MVP 서버 요구사항](design/mobile-mvp-server-requirements.md)
+- [상세설계 > 레거시 Product API 이관 전략](design/legacy-product-api-migration/strategy.md)
+- [상세설계 > 레거시 Product API 이관 원장](design/legacy-product-api-migration/ledger.md)
+- [상세설계 > 첫 웹 read 슬라이스 계약 (워크스페이스 조회)](design/legacy-product-api-migration/slice-workspace-read.md)
+- [상세설계 > 웹 snapshot 계약 (H023)](design/legacy-product-api-migration/slice-snapshot.md)
+- [상세설계 > MOM-0689 Signal push 데모](design/signal-push-demo-design.md)
+- [상세설계 > MOM-0803 Signal Minsu task draft](design/minsu-signal-task-draft-design.md)
+- [상세설계 > MOM-0810 Minsu 비동기 task draft 생성](design/minsu-async-task-draft-design.md)
+- [상세설계 > 지표 인벤토리](design/metrics-inventory.md)
+- [상세설계 > prod 스키마 주도권 이전](design/prod-schema-ownership-transfer.md)
 
 ## 제품 레벨 문서는 어디에?
 

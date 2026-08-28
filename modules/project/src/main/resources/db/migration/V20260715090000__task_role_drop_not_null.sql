@@ -1,0 +1,12 @@
+-- prod-schema: required MOM-0840
+-- 태스크 role의 NOT NULL 제약을 제거한다(2026-07-15 확정).
+-- momens-server와 레거시 momens-api는 tasks 테이블을 공유하며,
+-- 웹은 role 없이 태스크를 생성한다. 웹에서 생성한 태스크가
+-- role = NULL로 저장되고 모바일에서는 "미지정"으로 조회될 수 있도록
+-- NOT NULL만 제거한다.
+--
+-- CHECK(pm, design, backend, frontend) 제약은 유지한다.
+-- PostgreSQL의 CHECK는 NULL을 허용하므로 role이 있는 경우에만 값을 검증한다.
+-- 기존 데이터는 백필하지 않으며, 모바일 생성·수정 API의 role 필수 검증은
+-- 앱 계층에서 그대로 유지한다(MOM-76의 스키마 제약만 완화).
+ALTER TABLE tasks ALTER COLUMN role DROP NOT NULL;

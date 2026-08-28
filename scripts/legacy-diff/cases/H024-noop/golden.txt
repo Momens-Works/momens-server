@@ -1,0 +1,15 @@
+legacy_status: 200
+server_status: 200
+--- body ---
+@@ -3,5 +3,5 @@
+   "id": "00000000-0000-4000-8000-000000000011",
+   "name": "Alpha",
+   "slug": "ws-alpha",
+-  "updated_at": "Time_2"
++  "updated_at": "Time_1"
+ }
+--- db ---
+@@ -1,2 +1,2 @@
+ name,slug,description,created_at,updated_at
+-Alpha,ws-alpha,,Time_1,Time_2
++Alpha,ws-alpha,,Time_1,Time_1

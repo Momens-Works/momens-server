@@ -1,0 +1,52 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    // Boot BOM으로 버전을 관리합니다(boot 플러그인은 app만 적용).
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // 공유 에러 계약(BusinessException)과 현재 사용자 헬퍼(CurrentUser).
+    implementation project(':common')
+    // 모바일 진입 API는 도메인 모듈의 public API만 조합합니다(module-map 의존 방향).
+    // bootstrap: user(내 프로필) + project(접근 가능한 목록) + workspace(멤버십 role 매핑).
+    // brief: signal(미처리 시그널 요약, MOM-67).
+    implementation project(':user')
+    implementation project(':project')
+    implementation project(':workspace')
+    implementation project(':signal')
+    // 태스크 관련자료는 context(태스크와 연결된 source_ref 식별자)와 source(원본 정보)를 조합해 구성합니다(MOM-0779).
+    implementation project(':context')
+    implementation project(':source')
+    // push 설치 등록·해제 HTTP 표면이 notification public API에 위임합니다(MOM-0690).
+    implementation project(':notification')
+    // 태스크 상세가 draft 생성 상태를 함께 내려줍니다(MOM-0822). 상태를 읽는 쪽이 조합 표면이어야 하는
+    // 이유는 task 상세를 소유한 project에서 minsu를 부르면 minsu → project와 맞물려 순환이 되기 때문입니다.
+    implementation project(':minsu')
+    // 모바일 인증 표면(MOM-0852)이 auth의 MobileAuthService public API에 위임합니다.
+    implementation project(':auth')
+
+    // bootstrap 컨트롤러(presentation).
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    // 조합 서비스의 @Transactional(readOnly). 이 모듈은 엔티티가 없어 data-jpa 대신 tx만 둡니다.
+    implementation 'org.springframework:spring-tx'
+    // 태스크 생성 요청 body 검증(@Valid, @NotBlank, @Pattern). 검증 실패는 app의 예외 핸들러가
+    // COMMON_VALIDATION_FAILED로 변환합니다(MOM-62).
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // OpenAPI 문서화 애너테이션(@Tag/@Operation/@Schema)만 사용합니다. Swagger UI와 공통 설정은
+    // 실행과 조립을 맡는 app 모듈이 springdoc starter로 소유합니다(docs/spec/openapi.md).
+    implementation libs.swagger.annotations.jakarta
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // 컨트롤러 web 슬라이스 테스트(@WebMvcTest, @MockitoBean)와 서비스 Mockito 단위 테스트.
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    // Gradle이 테스트 실행에 요구하는 JUnit Platform launcher. 다른 모듈은 common testFixtures로
+    // 받지만, 이 모듈은 DB 통합 테스트가 없어 testFixtures 대신 launcher만 직접 둡니다.
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}

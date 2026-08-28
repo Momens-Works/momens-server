@@ -1,14 +1,9 @@
 version: 2
 updates:
-  # Gradle 의존성 (root + app/feature 모듈)
+  # Gradle 의존성은 별도로 검증합니다. 버전을 명시하는 모든 의존성은 루트 프로젝트의
+  # 버전 카탈로그에서 일괄 관리합니다.
   - package-ecosystem: "gradle"
-    directories:
-      - "/"
-      - "/app"
-      - "/common"
-      - "/user"
-      - "/auth"
-      - "/workspace"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"

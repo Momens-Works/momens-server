@@ -8,12 +8,26 @@ spring:
   flyway:
     enabled: true
 
+# local 프로필과 같은 노출 값입니다. 별도 컨텍스트를 만들지 않으려고 프로필에 둡니다.
+# @SpringBootTest(properties = ...)로 주입하면 컨텍스트 캐시 키가 갈려 풀이 하나 더 생깁니다.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
+
 # 테스트 전용 고정 secret(실제 secret 아님). HS256 최소 길이(32바이트) 충족.
 momens:
   cors:
     allowed-origins: http://localhost:3000
   auth:
     jwt-secret: test-only-momens-auth-jwt-secret-0123456789abcdef
+    dev-token:
+      secret: test-only-momens-auth-dev-token-secret
+      allowed-emails:
+        - owner@momens.works
+        - member@momens.works
+        - preserve@momens.works
     google:
       audiences: test-google-client-id.apps.googleusercontent.com
     web:

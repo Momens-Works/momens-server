@@ -1,0 +1,65 @@
+# 레거시 차등 비교 하네스(MOM-0877)의 컨테이너 구성.
+#
+# DB 를 두 개 두는 이유: 레거시와 신규 서버가 같은 테이블(users, workspaces,
+# workspace_members)의 DDL 을 각자 소유해 한 DB 에 두 마이그레이션을 함께 돌릴 수 없습니다.
+# 대신 fixture.sql 이 양쪽에 같은 행을 심어 응답 값이 문자 그대로 같아지게 만듭니다.
+#
+# momens-server 는 여기에 두지 않습니다. 이미지 빌드가 매번 수 분 걸려 반복 실행을 막습니다.
+# run.sh 가 bootJar 산출물을 java -jar 로 띄웁니다.
+#
+# 포트는 harness.conf 가 소유합니다. run.sh 가 export 한 뒤 compose 를 호출하므로 여기서는
+# 보간만 합니다. 기본값을 함께 두는 것은 compose 를 직접 호출하는 경우(예: 아래 down -v 안내)에
+# 변수가 없어 포트 매핑이 빈 값이 되는 것을 막기 위해서입니다.
+name: momens-legacy-diff
+
+services:
+  legacy-db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: momens_legacy
+      POSTGRES_USER: momens
+      POSTGRES_PASSWORD: momens
+    ports:
+      - "127.0.0.1:${MOMENS_DIFF_LEGACY_DB_PORT:-15433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U momens -d momens_legacy"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  server-db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: momens_server
+      POSTGRES_USER: momens
+      POSTGRES_PASSWORD: momens
+    ports:
+      - "127.0.0.1:${MOMENS_DIFF_SERVER_DB_PORT:-15434}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U momens -d momens_server"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  legacy-api:
+    # run.sh 가 ../momens-api 의 Dockerfile 로 미리 빌드하고, 해당 revision 의 이미지를 이 이름에
+    # 붙입니다. 이름 자체에는 revision 이 없으므로 compose 를 직접 띄우면 직전 실행의 이미지를 씁니다.
+    image: momens-api:legacy-diff
+    environment:
+      PORT: "8080"
+      # production 이 아니어야 시작 시 마이그레이션이 돕니다.
+      ENV: legacy-diff
+      MIGRATIONS_ENABLED: "true"
+      DATABASE_URL: postgres://momens:momens@legacy-db:5432/momens_legacy?sslmode=disable
+      # ADR-0017 의 전제. 신규 서버에 같은 값을 주입해 한 토큰이 양쪽을 통과합니다.
+      JWT_SECRET: ${MOMENS_DIFF_JWT_SECRET:?harness.conf 를 source 해야 합니다}
+      JWT_EXPIRY_HOURS: "24"
+      # 외부 provider 는 쓰지 않습니다. read 계약 비교에 필요 없습니다.
+      GOOGLE_CLIENT_ID: ""
+      GOOGLE_CLIENT_SECRET: ""
+      MOMENS_RETRIEVAL_ADDR: ""
+    ports:
+      - "127.0.0.1:${MOMENS_DIFF_LEGACY_PORT:-18080}:8080"
+    depends_on:
+      legacy-db:
+        condition: service_healthy

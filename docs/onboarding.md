@@ -25,6 +25,7 @@ Momens는 여러 레포로 나뉘어 있습니다.
 | **`momens-server`** | **새 Java Spring 제품 API 서버 (여기)** |
 | `momens-worker` | 외부 소스 수집·큐레이션 워커 |
 | `momens-retrieval` | 검색 read-model 서버 (gRPC) |
+| `momens-proto` | 서버·워커가 공유하는 protobuf 계약 (Git submodule) |
 | `k8s` | 쿠버네티스·인프라 정의 |
 
 제품 차원의 배경/용어가 궁금하면 먼저 `teams`를 보세요.
@@ -46,8 +47,11 @@ Momens는 여러 레포로 나뉘어 있습니다.
 
 ```bash
 # 1) 클론
-git clone https://github.com/Momens-Works/momens-server.git
+git clone --recurse-submodules https://github.com/Momens-Works/momens-server.git
 cd momens-server
+
+# 이미 클론한 리포라면 submodule 초기화
+git submodule update --init --recursive
 
 # 2) 로컬 환경변수 준비 (.env 는 커밋하지 않음)
 cp .env.example .env
@@ -57,7 +61,59 @@ docker compose up -d
 
 # 4) 빌드/테스트로 환경 검증 (Docker 실행 중이어야 함)
 ./gradlew test
+
+# 5) git 훅 설치 (커밋 전 포맷 검사). core.hooksPath 를 hooks/ 로 설정합니다.
+./gradlew installGitHooks
 ```
+
+`installGitHooks` 는 최초 1회만 실행하면 됩니다. 이후 커밋할 때 스테이징된 Java/Gradle
+파일이 있으면 `pre-commit` 훅이 `spotlessCheck` 를 돌려 CI 이전에 포맷 문제를 잡아줍니다.
+`spotlessCheck` 는 작업 트리 전체를 검사하므로, 스테이징하지 않은 다른 Java/Gradle 파일의
+포맷 문제도 함께 걸립니다.
+
+알아둘 점 두 가지입니다.
+
+- `core.hooksPath` 를 `hooks/` 로 지정하면 **기존 `.git/hooks` 의 훅은 더 이상 실행되지
+  않습니다**. 개인 훅을 쓰고 있었다면 `hooks/` 로 옮기거나 별도로 관리해야 합니다.
+- 훅을 건너뛰어야 할 때는 `git commit --no-verify` 를 씁니다. 다만 포맷 문제는 CI
+  (`spotlessCheck`)에서 다시 걸리므로 임시 우회로만 사용합니다.
+
+줄바꿈 형식은 `.gitattributes`에서 LF로 통일합니다. 저장소를 클론한 뒤 다음 명령으로 워킹
+트리의 줄바꿈 상태를 확인합니다.
+
+```bash
+git ls-files --eol | grep ' w/crlf' | grep -v 'eol=crlf'
+```
+
+출력이 비어 있으면 정상입니다. `eol=crlf`로 지정된 예외 파일은 필터링되기 때문에, 예외가
+추가되더라도 동일한 명령을 그대로 사용할 수 있습니다.
+
+만약 파일이 출력된다면 `.gitattributes` 설정이 적용되기 전에 저장소를 클론한 상태일 가능성이
+있습니다. 이 경우 아래 명령으로 인덱스 내용을 워킹 트리에 다시 반영합니다.
+
+```bash
+git status              # 커밋되지 않은 변경 사항이 없는지 먼저 확인합니다.
+git restore .
+```
+
+`git restore`는 인덱스는 건드리지 않고 워킹 트리만 다시 체크아웃합니다. 이 과정에서 `eol=lf`
+규칙이 적용되면서 CRLF가 LF로 정리됩니다. 다만 커밋되지 않은 변경 사항도 함께 사라지므로,
+반드시 `git status` 결과가 비어 있는지 먼저 확인해야 합니다.
+
+`git restore` 이후에도 `w/crlf` 표시가 남아 있다면, 인덱스를 초기화한 뒤 전체 파일을 다시
+체크아웃해야 합니다.
+
+```bash
+git rm --cached -r .
+git reset --hard
+```
+
+CRLF가 섞인 상태로 두면 워킹 트리를 검사하는 `spotlessCheck`가 실패합니다. 이 경우 코드를
+수정하지 않은 커밋에서도 pre-commit 훅이 차단될 수 있습니다.
+
+`momens-proto`는 private 리포이므로 로컬 GitHub 자격 증명에 읽기 권한이 필요합니다.
+GitHub Actions는 같은 권한을 가진 repository secret `CI_SUBMODULES_TOKEN`으로 submodule을
+checkout합니다.
 
 `.env` 키 설명과 프로필 구성은 [로컬 개발](local-development.md)을 참고하세요.
 
@@ -92,14 +148,32 @@ curl http://localhost:8080/actuator/health   # {"status":"UP"}
 momens-server
 ├── app/                       # 실행 애플리케이션 모듈 (Spring Boot main)
 │   └── src/main/java/works/momens/server/MomensServerApplication.java
+├── common/                    # 최소 공유 기반 모듈
+├── modules/                   # 기능/capability Gradle 모듈
+│   ├── auth/
+│   ├── context/
+│   ├── minsu/
+│   ├── mobile/
+│   ├── notification/
+│   ├── outbox/
+│   ├── project/
+│   ├── signal/
+│   ├── source/
+│   ├── user/
+│   └── workspace/
+├── third_party/
+│   └── momens-proto/          # 공유 protobuf 계약 submodule
 ├── build.gradle               # 루트(공통 설정)
-├── settings.gradle            # 멀티모듈 정의 (현재 :app)
+├── settings.gradle            # 멀티모듈·composite build 정의
 ├── docker-compose.yml         # 로컬 pgvector PostgreSQL
 └── docs/                      # 문서 (이 폴더)
 ```
 
 - 베이스 패키지: `works.momens.server`
-- 실행 모듈은 `app`으로 확정. **도메인 모듈 목록은 추후 결정**합니다.
+- 실행 모듈은 `app`, 최소 공유 기반은 `common`입니다.
+- `modules/`는 물리적 그룹일 뿐 Gradle 프로젝트가 아니며, 기능 모듈의 논리 경로는 `:auth`처럼
+  평면으로 유지합니다.
+- 확정된 모듈 목록과 책임 경계는 [상세설계 > 모듈 맵](design/module-map.md)을 따릅니다.
 - 구조/의존 방향은 [기반 규칙 > 아키텍처](rules/architecture.md)에 정리되어 있습니다.
 
 ---
@@ -111,19 +185,24 @@ momens-server
 
 ### 브랜치 이름
 
-이슈는 Linear에서 관리합니다. 브랜치 앞에 Linear 이슈 ID를 둡니다.
+작업은 Momens에서 관리합니다. 브랜치를 만들기 전에 기존 Momens 작업을 조회하고, 없으면 Momens
+MCP 또는 웹에서 작업을 생성해 발급된 라벨을 브랜치 앞에 둡니다.
 
 ```text
-<Linear-이슈ID>-<type>/<work-description>
-# 예) MOM-15-feat/create-category
+<Momens-작업-라벨>-<type>/<work-description>
+# 예) MOM-0680-feat/create-category
 ```
+
+새 작업은 제목, 배경·목적, 작업 범위, 완료 조건을 기록하고 `backlog` 또는 `todo`로 만듭니다. 구현에
+착수하면 `in_progress`로 변경합니다. 라벨을 브랜치명에 넣거나 `Fixes MOM-*`를 적어도 Momens 작업이
+자동으로 연결·완료되지는 않으므로, 실제 머지 후 Momens에서 직접 상태를 갱신합니다.
 
 ### 커밋 메시지
 
 ```text
-feat (domain): 새로운 기능 추가
-fix (domain): 버그 수정
-docs: 문서 수정
+feat(<Momens-작업-라벨>/<domain>): 새로운 기능 추가
+fix(<Momens-작업-라벨>/<domain>): 버그 수정
+docs(<Momens-작업-라벨>): 문서 수정
 ```
 
 타입과 형식 전체는 [기반 규칙 > Git](rules/git.md)을 참고하세요.
@@ -137,7 +216,7 @@ docs: 문서 수정
 | 체크 | 내용 | 머지 차단? |
 | --- | --- | --- |
 | `build` | `spotlessCheck` → `test` → `bootJar` | ✅ 필수 |
-| `pr-format` | PR 제목/본문 형식 검증 | ✅ 필수 |
+| `pr-format` | PR 제목/본문 형식, 브랜치명 정합성 검증 | ✅ 필수 |
 | CodeQL | 보안 정적 분석 | ℹ️ 비차단(Security 탭 알림) |
 
 ### 머지
@@ -145,8 +224,8 @@ docs: 문서 수정
 - **rebase 머지로 통일**(머지 커밋 없음, 선형 히스토리).
 - `develop`/`main`은 **PR로만** 변경(직접 push 차단), 리뷰 대화는 모두 resolve 후 머지.
 - 머지된 브랜치는 자동 삭제됩니다.
-- 머지하려면 **최소 1명의 승인이 필요합니다**(`protected-branches` ruleset 강제). CODEOWNERS
-  (`@Momens-Works/momens-backend`)에 리뷰 요청이 자동으로 갑니다.
+- 머지하려면 **최소 1명의 승인이 필요합니다**(`protected-branches` ruleset 강제). 리뷰어는 PR을
+  열 때 직접 지정합니다(자동 요청 없음).
 
 머지 정책 전체는 [기반 규칙 > Git > 머지](rules/git.md#머지)에 있습니다.
 
@@ -155,20 +234,24 @@ docs: 문서 수정
 ## 7. 첫 기여 따라하기
 
 ```bash
-# 1) Linear 이슈 생성 → 이슈 ID 확인 (예: MOM-15)
-# 2) 작업 브랜치 생성 (브랜치 앞에 Linear 이슈 ID)
+# 1) Momens에서 기존 작업 조회 또는 새 작업 생성 → 라벨 확인 (예: MOM-0680)
+# 2) 작업을 in_progress로 변경하고 브랜치 생성
 git switch develop && git pull
-git switch -c MOM-15-feat/create-category
+git switch -c MOM-0680-feat/create-category
 
 # 3) 작업 → 포맷 → 커밋
 ./gradlew spotlessApply
-git commit -m "feat (category): 카테고리 생성 API 추가"
+git commit -m "feat(MOM-0680/category): 카테고리 생성 API 추가"
 
-# 4) 푸시 후 PR 생성 (base: develop, 본문에 'Fixes MOM-15')
-git push -u origin MOM-15-feat/create-category
+# 4) 푸시 후 PR 생성 (base: develop)
+git push -u origin MOM-0680-feat/create-category
 
 # 5) CI(build, pr-format) 통과 + 승인 1 + 리뷰 대화 resolve → rebase 머지
+# 6) 실제 머지 확인 후 Momens 작업을 done으로 변경
 ```
+
+`Fixes MOM-0680`이나 브랜치 라벨은 Momens 작업을 자동 완료하지 않습니다. PR을 열거나 승인받은 시점이
+아니라 실제 머지된 뒤 `done`으로 변경합니다. 머지 없이 닫힌 PR은 완료 처리하지 않습니다.
 
 ---
 
@@ -181,7 +264,6 @@ git push -u origin MOM-15-feat/create-category
 | [기반 규칙](rules/README.md) | 코딩·Git·아키텍처 등 |
 | [spec/](spec/) | 서버 API 계약·응답·에러 코드 |
 | [adr/](adr/) | 결정 기록 (ADR) |
-| [pending-decisions.md](pending-decisions.md) | 추후 결정 로그 |
 | [../AGENTS.md](../AGENTS.md) | AI 진입점 (Codex/Claude 공용) |
 
 ---
@@ -189,20 +271,24 @@ git push -u origin MOM-15-feat/create-category
 ## 9. 에이전트 작업 흐름
 
 이 리포에는 프로젝트 종속 에이전트 스킬을 둡니다. Codex는 `.codex/skills/`, Claude Code는
-`.claude/skills/` 아래에 같은 스킬(`sync` / `diff-review` / `migrate-slice`)을 둡니다. 스킬은
-프로젝트 문서를 복제하지 않고, 필요한 문서를 어떤 순서로 읽고 어떤 검사를 실행할지 안내합니다.
+`.claude/skills/` 아래에 같은 스킬을 둡니다. 스킬은 프로젝트 문서를 복제하지 않고, 필요한 문서를
+어떤 순서로 읽고 어떤 검사와 작업 상태 변경을 수행할지 안내합니다.
 
 | 시점 | 스킬 | 목적 |
 | --- | --- | --- |
-| 작업 시작 전 | `sync` | 프로젝트 맥락, 브랜치 상태, 관련 문서 확인 |
-| PR 전 | `diff-review` | `develop`/`main` 대비 diff, 컨벤션, 테스트, 문서, 민감정보, API 계약 점검 |
+| 맥락 동기화 | `sync` | 프로젝트 맥락, 브랜치 상태, 기존 Momens 작업과 관련 문서 확인 |
+| 작업 착수 | `start-work` | Momens 작업 중복 조회·생성, `in_progress` 전환, 작업 브랜치 생성 |
+| PR 전 | `diff-review` | Momens 작업 범위와 diff 정합성, 컨벤션, 테스트, 문서, 민감정보, API 계약 점검 |
+| PR 머지 후 | `finish-work` | 실제 머지 검증, Momens 작업 `done` 전환, 머지 정보 댓글 기록 |
 | 레거시 이관 전 | `migrate-slice` | Go API에서 Spring으로 옮길 최소 수직 슬라이스 계획 |
 
 권장 흐름:
 
 ```text
-작업 시작 전: sync
+맥락 확인: sync
+작업 착수: start-work
 PR 전: diff-review
+PR 머지 후: finish-work
 레거시 기능 이관 전: migrate-slice
 ```
 
