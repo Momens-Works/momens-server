@@ -365,15 +365,18 @@ FK가 부모를 잠근다). 실측으로 확인했다 — `ADD COLUMN NOT NULL D
 따라서 "릴리스 시점만 사람이 통제하면 된다"는 완화가 성립하지 않는다. dispatch 한 번이면 통제가 무너진다.
 리포에 위험한 상태를 아예 두지 않는 편이 안전하다.
 
-대신 **k8s ConfigMap 환경변수로 토글한다.** `k8s/scripts/deploy-service.sh`가 이미지 변경 여부와
-무관하게 항상 `kubectl rollout restart`를 걸기 때문에(스크립트 117~120행이 "ConfigMap env and mounted
-secrets change without a new image"라고 명시한다) **서버 릴리스 없이 ConfigMap 변경만으로 반영된다.**
+대신 **k8s ConfigMap 환경변수로 토글한다.** `k8s` 리포 push 자체는 배포를 시작하지 않는다.
+`k8s/scripts/deploy-service.sh`가 호출됐을 때만 매니페스트를 적용하고, 이미지 변경 여부와 무관하게
+`kubectl rollout restart`를 건다. 따라서 ConfigMap 커밋과 rollout 시점은 분리된다.
 
 - 리포의 `application-prod.yml`은 부트스트랩이 성공할 때까지 `flyway.enabled: false`를 유지한다.
   리포에 위험한 상태가 존재하지 않는다.
-- 부트스트랩은 이력 INSERT 직후 ConfigMap에 토글을 넣고 롤아웃한다.
-- 성공 후 별도 PR로 `application-prod.yml`을 `true`로 정본화하고 ConfigMap 오버라이드를 걷어낸다.
-- `outOfOrder` 해제도 ConfigMap 한 줄 제거 + 롤아웃으로 끝난다. **서버 릴리스가 필요 없다.**
+- 부트스트랩은 이력 INSERT 직후 ConfigMap 토글 PR만 머지하고 **아직 rollout하지 않는다.** 토글 머지와
+  서버 릴리스 머지 사이에는 수동 dispatch를 금지한다.
+- 최초 rollout은 검증·심기에 사용한 고정 릴리스 내용으로 `main` 이미지를 만든 뒤에만 수행한다.
+- 성공 후 `outOfOrder`·`group`·`initSqls`를 ConfigMap에서 제거하고 같은 검증 이미지로 다시
+  dispatch한다. 이후 별도 서버 릴리스로 `application-prod.yml`을 `true`로 정본화한 뒤
+  `SPRING_FLYWAY_ENABLED` 오버라이드를 걷어낸다.
 
 **환경변수 이름 주의.** `spring.flyway.enabled` → `SPRING_FLYWAY_ENABLED`는 모호함이 없다.
 `spring.flyway.out-of-order`는 대시가 있어 relaxed binding 변환형이 애매하므로, ConfigMap이 이미 쓰고 있는
@@ -518,12 +521,12 @@ MOM-0841 소유이며 이 결정의 영향을 받지 않는다. 제거 대상은
 
 | 단계 | 실패 시 |
 | --- | --- |
-| ① 스크래치 DB에서 체크섬 산출 | prod 무관 |
-| ② 리허설 | prod 무관 |
-| ③ prod에 이력 INSERT | **완전 원복 가능.** `DROP TABLE flyway_schema_history`. 이 시점 Flyway는 아직 꺼져 있어 그 표를 읽는 주체가 없다 |
-| ④ ConfigMap 토글 + 롤아웃 — 기동 전 실패 | 스키마 무변경. ConfigMap 원복 후 ①부터 재시도 |
-| ④ ConfigMap 토글 + 롤아웃 — 실행 중 실패 | `group=true` 덕에 14건이 통째로 롤백된다(4절). 이력 행도 함께 사라져 ③ 직후 상태로 돌아간다. 그래도 남는 부분 적용이 있으면 **되돌리지 않고** fix-forward 한다 |
-| ⑤ `outOfOrder` 제거 | ConfigMap 한 줄 제거 + 롤아웃. 서버 릴리스 불필요 |
+| ① 릴리스 고정·체크섬 산출·리허설 | prod 무관 |
+| ② prod에 이력 INSERT(8절 4단계) | **완전 원복 가능.** `DROP TABLE flyway_schema_history`. 이 시점 Flyway는 아직 꺼져 있어 그 표를 읽는 주체가 없다 |
+| ③ ConfigMap 토글 PR 머지(8절 5단계) | 아직 rollout하지 않았으므로 스키마와 실행 Pod는 그대로다. 중단하려면 토글 PR을 되돌린 뒤 이력 테이블을 원복한다 |
+| ④ 고정 릴리스 머지·rollout — Flyway 실행 전 실패 | 스키마 무변경. 옛 Pod는 유지된다. ConfigMap 토글을 되돌리고 이전 정상 이미지로 dispatch해 실패한 ReplicaSet을 정리한 뒤 ①부터 재시도한다 |
+| ④ 고정 릴리스 머지·rollout — Flyway 실행 중 실패 | `group=true` 덕에 14건이 통째로 롤백된다(4절). 실행 대상 이력 행도 함께 사라져 심기 직후 상태로 돌아간다. 그래도 남는 부분 적용이 있으면 **되돌리지 않고** fix-forward 한다 |
+| ⑤ 임시 설정 제거 | `outOfOrder`·`group`·`initSqls` 제거 후 검증한 같은 이미지 SHA로 dispatch한다. `SPRING_FLYWAY_ENABLED`는 `application-prod.yml` 정본화 릴리스가 배포될 때까지 유지한다 |
 
 fix-forward가 기본인 이유는 **부트스트랩 중 사용자 영향이 0**이기 때문이다. 근거는 배포 매니페스트에서
 확인했다.
@@ -619,16 +622,23 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
 
    `docs/prod-readiness-ledger.md`의 수기 의무가 이 단계를 추적한다.
 
-1. 릴리스 PR의 **head SHA를 고정**하고 그 **릴리스 대상 커밋**을 체크아웃해 `--verify`로 체크섬을
+1. 릴리스 PR의 **head SHA·tree hash·main base SHA를 고정**하고 그 **릴리스 대상 커밋**을 체크아웃해
+   `--verify`로 체크섬을
    대조한다. 심기 목록 전건이 검증돼야
    한다 — 대조되지 못한 항목이 남으면 그 체크섬이 검증 없이 prod로 들어간다.
-   head SHA와 함께 tree hash도 기록한다. 이 리포는 rebase merge를 쓰므로 6단계에서 `main`에 생기는
-   commit SHA는 달라질 수 있지만, 릴리스 내용이 같다면 tree hash는 같아야 한다.
+   이 리포는 rebase merge를 쓰므로 6단계에서 `main`에 생기는 commit SHA는 달라질 수 있지만,
+   릴리스 내용이 같다면 tree hash는 같아야 한다. base SHA는 검증 뒤 `main`이 바뀌지 않았음을
+   확인하는 기준이다.
 
    ```bash
-   release_head="$(git rev-parse HEAD)"
-   release_tree="$(git rev-parse HEAD^{tree})"
-   printf 'release_head=%s\nrelease_tree=%s\n' "$release_head" "$release_tree"
+   release_pr=210
+   release_head="$(gh pr view "$release_pr" --json headRefOid --jq .headRefOid)"
+   release_base="$(gh pr view "$release_pr" --json baseRefOid --jq .baseRefOid)"
+   release_tree="$(gh api "repos/Momens-Works/momens-server/git/commits/$release_head" --jq .tree.sha)"
+   printf 'release_head=%s\nrelease_tree=%s\nrelease_base=%s\n' \
+     "$release_head" "$release_tree" "$release_base"
+   gh pr checkout "$release_pr" --detach
+   test "$(git rev-parse HEAD)" = "$release_head"
    ```
 
    - 6단계 머지까지 `develop`에 다른 변경을 넣지 않는다. head SHA가 바뀌면 기존 검증은 릴리스
@@ -730,9 +740,9 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
    > `inherit=true`라 창구가 소유자 권한을 **상속**해 `GRANT`가 우연히 통과했다. 같은 상속이
    > `has_table_privilege` 검사도 통과시켜서, 재발급이 아예 빠져도 쌍둥이가 잡지 못했다.
    >
-   > **`pg_auth_members.inherit_option`의 prod 값은 기록돼 있지 않다.** 아래 실측이 그 컬럼을
-   > select 하면서 `admin_option`과 `set_option`만 적었다. 값이 무엇이든 성립하도록 고쳤으므로
-   > 절차는 이 미확인 값에 의존하지 않는다.
+   > **`pg_auth_members.inherit_option`의 prod 값은 `false`다**(2026-08-29 재확인). 값이 무엇이든
+   > 성립하도록 고쳤으므로 절차는 이 값에 의존하지 않지만, 쌍둥이가 결함 셋을 덮었던 축의 prod
+   > 실측값으로 남긴다.
 
    **재발급이 짝으로 붙어야 하는 이유.** `ALTER TABLE ... OWNER TO`는 이전 소유자를 grantee로 하는
    ACL 항목을 새 소유자로 옮긴다. 그래서 소유권을 넘기는 순간 `postgres`가 그 테이블의 권한을
@@ -755,10 +765,9 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
     WHERE g.rolname = 'momens_server';
    ```
 
-   prod 실측(2026-08-25): `postgres`가 `admin_option = true`, `set_option = false`. (1)이 통과하고,
-   `set_option = false`가 소유권 이전이 막히던 원인이다. **`inherit_option`은 이 쿼리가 select
-   하고도 값을 남기지 않았다** — 절차가 그 값에 의존하지 않게 고쳤으므로(3단계 재발급) 이제
-   확인하지 않아도 되지만, 다시 볼 일이 있으면 위 쿼리가 그대로 답한다.
+   prod 실측(2026-08-29 재확인): `postgres`가 `admin_option = true`, `inherit_option = false`,
+   `set_option = false`. (1)이 통과하고, `set_option = false`가 소유권 이전이 막히던 원인이다.
+   절차는 `inherit_option`에 의존하지 않도록(3단계 재발급) 유지한다.
 
    **소유권을 되돌린다면 DML 재발급이 함께 가야 한다.** `ALTER TABLE ... OWNER TO`가 소유자를
    grantee로 하는 ACL을 함께 가져가므로, 사전 GRANT로는 막을 수 없다(제3자가 부여해도 같다 —
@@ -836,16 +845,48 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
    > Flyway 메이저 업그레이드가 이력 테이블 구조를 바꾸면 `ALTER`가 필요해져 소유권 문제가 다시
    > 생긴다. 그때는 업그레이드 절차가 소유권 이전을 함께 다뤄야 한다.
 
-5. **`k8s` 토글 PR 머지.** `k8s` 리포 push 자체는 배포를 시작하지 않으므로 이 시점에는 스키마와
-   실행 Pod가 바뀌지 않는다.
-6. **`develop` → `main` 릴리스 PR 머지.** rebase merge 후 `main` tip의 tree hash가 1단계에서 기록한
-   `release_tree`와 같은지 먼저 확인한다. `main` push는 그 새 commit SHA로 이미지를 만들고
-   `repository_dispatch`로 `Deploy momens-server`를 호출한다. `Request production deploy` 단계가
-   실행됐고 전달한 `image_tag`가 **merge 후 `main` SHA**인지 확인한다. 토큰 부재 등으로 dispatch
-   단계가 건너뛰었다면 같은 이미지 태그로 워크플로를 수동 dispatch한다.
+5. **릴리스 머지 직전 검증을 끝낸 뒤 `k8s` 토글 PR을 머지한다.** production dispatch에는 승인
+   게이트가 없으므로 머지 뒤 tree 비교로 배포를 차단할 수 없다. 다음 검사를 통과한 같은 작업 창에서
+   5·6단계를 연속 수행하고, 그 사이 다른 `main` 머지와 수동 `workflow_dispatch`를 금지한다.
+
+   ```bash
+   test "$(gh pr view "$release_pr" --json headRefOid --jq .headRefOid)" = "$release_head"
+   test "$(gh api "repos/Momens-Works/momens-server/git/commits/$release_head" --jq .tree.sha)" = "$release_tree"
+   test "$(gh pr view "$release_pr" --json baseRefOid --jq .baseRefOid)" = "$release_base"
+   gh pr checks "$release_pr" --required
+   # checks 조회 중 변경도 배제한다.
+   test "$(gh pr view "$release_pr" --json headRefOid --jq .headRefOid)" = "$release_head"
+   test "$(gh pr view "$release_pr" --json baseRefOid --jq .baseRefOid)" = "$release_base"
+   ```
+
+   `k8s` 리포 push 자체는 배포를 시작하지 않으므로 토글 PR 머지만으로는 스키마와 실행 Pod가
+   바뀌지 않는다. **이 시점부터 6단계의 고정 릴리스가 dispatch를 보낼 때까지 수동 dispatch하지 않는다.**
+6. **`develop` → `main` 릴리스 PR을 고정 head로 머지한다.** `k8s` 토글 PR 머지 뒤 head와 base를
+   한 번 더 대조하고, 다른 head가 우연히 머지되는 것을 막는 옵션을 사용한다.
+
+   ```bash
+   test "$(gh pr view "$release_pr" --json headRefOid --jq .headRefOid)" = "$release_head"
+   test "$(gh pr view "$release_pr" --json baseRefOid --jq .baseRefOid)" = "$release_base"
+   gh pr merge "$release_pr" --rebase --match-head-commit "$release_head"
+   ```
+
+   `main` push는 새 main SHA로 이미지를 만들고 곧바로 `repository_dispatch`로 `Deploy momens-server`를
+   호출한다. 머지 직후 아래를 실행한다.
+
+   ```bash
+   main_head="$(gh api repos/Momens-Works/momens-server/branches/main --jq .commit.sha)"
+   main_tree="$(gh api "repos/Momens-Works/momens-server/git/commits/$main_head" --jq .tree.sha)"
+   test "$main_tree" = "$release_tree"
+   ```
+
+   이 비교는 **배포 게이트가 아니라 감사와 비상 중단 확인**이다. 다르면
+   `Request production deploy` 전에 실행 중인 서버 워크플로를 즉시 취소하고 수동 dispatch하지 않는다.
+   같으면 `Request production deploy`가 전달한 `image_tag`가 **merge 후 main SHA**인지 확인한다. 토큰
+   부재 등으로 dispatch 단계가 건너뛰었을 때만 같은 main SHA로 수동 dispatch한다.
 7. 기동과 스키마 확인
-8. `out-of-order`와 `group`을 제거하는 PR 머지 후 다시 dispatch
-9. 후속 PR로 `application-prod.yml`을 `flyway.enabled: true`로 정본화하고 ConfigMap 오버라이드 제거
+8. `out-of-order`·`group`·`init-sqls`를 제거하는 PR 머지 후 같은 main 이미지 SHA로 다시 dispatch
+9. 후속 서버 릴리스로 `application-prod.yml`을 `flyway.enabled: true`로 정본화한 뒤 ConfigMap의
+   `SPRING_FLYWAY_ENABLED` 오버라이드를 제거하고, 대장의 MOM-0909 수기 의무 3행을 제거
 
 #### 토글은 수기 변경이 아니라 커밋이어야 한다
 
@@ -857,8 +898,9 @@ ConfigMap 키는 **다음 배포에서 지워진다.** 토글은 `k8s` 리포에
 쥔다. 문제는 그 `repository_dispatch`를 보내는 것이 **momens-server의 `main` push**라는 점이다.
 토글을 미리 머지해 두면 시딩 전에 나가는 무관한 릴리스가 그것을 적용해 버린다.
 
-그래서 **토글 PR은 시딩(4단계)이 끝난 뒤에 머지한다.** 그때까지 draft로 둔다.
-토글 머지 뒤에는 다른 서버 릴리스를 끼우지 않고, 1단계에서 SHA를 고정한 릴리스 PR을 바로 머지한다.
+그래서 **토글 PR은 시딩(4단계)과 5단계의 릴리스 머지 직전 검사가 끝난 뒤에 머지한다.** 그때까지
+draft로 둔다. 토글 머지 뒤에는 다른 서버 릴리스나 수동 dispatch를 끼우지 않고, 1단계에서 SHA를
+고정한 릴리스 PR을 바로 머지한다.
 
 ### 배포 리포(`k8s`)도 함께 바꿔야 한다
 
@@ -1132,8 +1174,8 @@ Supabase는 `ALTER DEFAULT PRIVILEGES FOR ROLE postgres`로 **`postgres`가 만�
 | `mirror` 헤더가 더 잘못 붙어 있다 | 2.8이 한 건 드러났다. MOM-0909의 객체 대조가 실행 집합 전체를 다시 판정한다 |
 | local·prod가 완전히 같지 않다 | 2.6의 5개 컬럼. 의도된 것이며 `validate` 대상이 아니다 |
 | 레거시가 만든 20개 테이블에서 local과 prod의 DDL이 갈린다 | 주도권 이전으로 사라지지 않는 위험이다(6절). `persistence.md`의 충실도 규칙이 계속 적용된다 |
-| 게이트를 없앤 뒤 부트스트랩 전에 다른 커밋이 prod에 뜬다 (릴리스 또는 `workflow_dispatch`) | Flyway는 꺼져 있어도 `ddl-auto=validate`가 새 테이블 부재로 기동을 막는다. 대장의 `main` 릴리스 금지 의무를 유지하고, 릴리스 PR head SHA를 고정한 뒤 심기와 토글 머지를 먼저 끝낸다 |
-| 리포 설정과 prod 실제 설정이 어긋난 채 방치된다 | 8절 6단계(정본화 PR)를 부트스트랩과 같은 스프린트에서 닫는다. ConfigMap 오버라이드는 임시 상태다 |
+| 게이트를 없앤 뒤 부트스트랩 전에 다른 커밋이 prod에 뜬다 (릴리스 또는 `workflow_dispatch`) | Flyway는 꺼져 있어도 `ddl-auto=validate`가 새 테이블 부재로 기동을 막는다. 대장의 `main` 릴리스 금지 의무를 유지하고, 릴리스 PR head·tree·base와 필수 CI를 머지 직전에 다시 검사한다. 토글 머지와 고정 릴리스 머지 사이에는 다른 `main` 머지와 수동 dispatch를 금지한다 |
+| 리포 설정과 prod 실제 설정이 어긋난 채 방치된다 | 8절 9단계(정본화 PR)를 부트스트랩과 같은 스프린트에서 닫는다. ConfigMap 오버라이드는 임시 상태다 |
 | ConfigMap 환경변수가 바인딩되지 않는다 | `spring.flyway.out-of-order`는 대시 때문에 변환형이 애매하다. 시스템 프로퍼티로 주고 리허설에서 확인한다 |
 | **접속 대상이 Neon인 채로 토글이 켜진다** | 소유권 이전·심기는 Supabase에서, Flyway는 Neon에서 일어난다. 8절 0단계가 교체와 확인을 토글보다 앞에 둔다 |
 | 롤아웃 실패 후 정리가 안 된 채 남는다 | `deploy-service.sh`에 `rollout undo`가 없다. 수동 정리 단계를 절차에 명시한다 |
