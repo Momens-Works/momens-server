@@ -498,10 +498,14 @@ local에서도 돌지만 local이 검증하는 대상은 우리 파일이 만든
 
 따라서 **MOM-0910의 게이트 제거는 부트스트랩 릴리스 이전에 `develop`에 머지한다.**
 
-게이트를 먼저 없애는 위험(미반영 스키마가 prod로 나감)은 「토글은 리포가 아니라 배포 ConfigMap에 둔다」가 이미 막고 있다. 리포의
-`flyway.enabled`가 계속 `false`라 그 사이 어떤 릴리스가 나가도 prod 동작이 바뀌지 않는다. 실제 전환은
-릴리스가 아니라 **이력 INSERT + ConfigMap 토글**이라는 운영 조작이 일으키고, 그 두 가지는 사람이 순서를
-통제한다.
+게이트를 먼저 없애는 위험(미반영 스키마가 prod로 나감)은 ConfigMap 토글만으로 막히지 않는다.
+`flyway.enabled=false`는 마이그레이션만 막고, 새 코드의 `ddl-auto=validate`는 실행된다. 실행 집합이
+만드는 테이블이 아직 없으므로 부트스트랩 전에 `main` 릴리스가 나가면 새 Pod가 기동하지 못한다.
+
+따라서 릴리스 PR은 미리 열어 CI와 리뷰를 끝내되 **머지는 이력 INSERT와 ConfigMap 토글 머지 뒤로
+미룬다.** 그동안 PR head SHA를 릴리스 대상으로 고정해 `--verify`와 `--generate`를 수행한다. head가
+바뀌면 심기 전에 1단계부터 다시 검증하고, 심은 뒤라면 릴리스하지 않고 이력을 원복한 뒤 다시 시작한다.
+게이트 폐지 뒤의 이 수기 의무는 `docs/prod-readiness-ledger.md`가 추적한다.
 
 대장 문서(`docs/prod-readiness-ledger.md`) 자체는 남는다. 선언 구간(prod 필수 환경변수)과 수기 구간은
 MOM-0841 소유이며 이 결정의 영향을 받지 않는다. 제거 대상은 생성 구간과 `--release-check`의 스키마 검사다.
@@ -576,15 +580,18 @@ ACL 항목을 새 소유자로 옮기므로, `momens_server`가 소유자가 되
 MOM-0908 (이 문서 + ADR-0019)
    ├─ MOM-0909  부트스트랩 스크립트 + 보정 마이그레이션 + 리허설   → develop
    └─ MOM-0910  헤더·대장·게이트 폐지                            → develop
-        └─ [릴리스 PR develop → main]  ← 게이트가 이미 없어야 통과한다
-             └─ [운영 조작] 이력 INSERT → ConfigMap 토글 → 확인 → 토글 정리
+        └─ [릴리스 PR develop → main 생성·검증, head SHA 고정]
+             └─ [운영 조작] verify/generate → 이력 INSERT → ConfigMap 토글 머지
+                  └─ [릴리스 PR 머지] → main push 배포 → 확인 → 토글 정리
 ```
 
 두 실행 티켓은 순서 없이 병행하고 **둘 다 `develop`에 머지된 뒤 하나의 릴리스로 나간다.**
 게이트 폐지가 먼저 들어가야 하는 이유는 6절에 있다.
 
-리포 쪽 변경이 위험하지 않은 이유는 `application-prod.yml`이 계속 `flyway.enabled: false`이기 때문이다.
-릴리스가 나가도 prod 동작은 바뀌지 않는다. **실제 전환은 릴리스가 아니라 아래 운영 조작이 일으킨다.**
+릴리스 PR을 여는 것과 prod 릴리스는 다르다. `application-prod.yml`의 `flyway.enabled: false`는
+Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. 실행 집합이 만들 12개 테이블이
+없는 상태에서 릴리스하면 새 Pod가 기동하지 못하므로, **PR은 미리 검증하되 머지는 4단계 심기와
+5단계 ConfigMap 토글 머지 뒤에 한다.**
 
 0. **DB 접속 정보를 Supabase로 교체한다. 아래 어느 단계보다 먼저다.**
 
@@ -612,8 +619,21 @@ MOM-0908 (이 문서 + ADR-0019)
 
    `docs/prod-readiness-ledger.md`의 수기 의무가 이 단계를 추적한다.
 
-1. **릴리스 대상 커밋**을 체크아웃해 `--verify`로 체크섬을 대조한다. 심기 목록 전건이 검증돼야
+1. 릴리스 PR의 **head SHA를 고정**하고 그 **릴리스 대상 커밋**을 체크아웃해 `--verify`로 체크섬을
+   대조한다. 심기 목록 전건이 검증돼야
    한다 — 대조되지 못한 항목이 남으면 그 체크섬이 검증 없이 prod로 들어간다.
+   head SHA와 함께 tree hash도 기록한다. 이 리포는 rebase merge를 쓰므로 6단계에서 `main`에 생기는
+   commit SHA는 달라질 수 있지만, 릴리스 내용이 같다면 tree hash는 같아야 한다.
+
+   ```bash
+   release_head="$(git rev-parse HEAD)"
+   release_tree="$(git rev-parse HEAD^{tree})"
+   printf 'release_head=%s\nrelease_tree=%s\n' "$release_head" "$release_tree"
+   ```
+
+   - 6단계 머지까지 `develop`에 다른 변경을 넣지 않는다. head SHA가 바뀌면 기존 검증은 릴리스
+     대상을 증명하지 못한다. 심기 전이면 1단계부터 다시 하고, 심기 뒤면 릴리스를 멈추고 7절에
+     따라 이력 테이블을 원복한 뒤 새 SHA로 다시 시작한다.
    - **대조 대상은 dev가 아니다.** dev는 `main` 릴리스로만 전진하는데 부트스트랩 전까지 릴리스를
      내지 않으므로 최신 마이그레이션이 없고, `--verify`가 구조적으로 실패한다.
    - **대조 대상의 이력은 앱의 Flyway가 만든 것이어야 한다.** 이것이 요점이다 — 스크래치 DB를
@@ -816,9 +836,13 @@ MOM-0908 (이 문서 + ADR-0019)
    > Flyway 메이저 업그레이드가 이력 테이블 구조를 바꾸면 `ALTER`가 필요해져 소유권 문제가 다시
    > 생긴다. 그때는 업그레이드 절차가 소유권 이전을 함께 다뤄야 한다.
 
-5. **`k8s` 토글 PR 머지**
-6. `Deploy momens-server` 워크플로를 dispatch. `deploy-service.sh`가 이미지 변경 없이도
-   `rollout restart`를 걸어 ConfigMap 변경이 반영된다
+5. **`k8s` 토글 PR 머지.** `k8s` 리포 push 자체는 배포를 시작하지 않으므로 이 시점에는 스키마와
+   실행 Pod가 바뀌지 않는다.
+6. **`develop` → `main` 릴리스 PR 머지.** rebase merge 후 `main` tip의 tree hash가 1단계에서 기록한
+   `release_tree`와 같은지 먼저 확인한다. `main` push는 그 새 commit SHA로 이미지를 만들고
+   `repository_dispatch`로 `Deploy momens-server`를 호출한다. `Request production deploy` 단계가
+   실행됐고 전달한 `image_tag`가 **merge 후 `main` SHA**인지 확인한다. 토큰 부재 등으로 dispatch
+   단계가 건너뛰었다면 같은 이미지 태그로 워크플로를 수동 dispatch한다.
 7. 기동과 스키마 확인
 8. `out-of-order`와 `group`을 제거하는 PR 머지 후 다시 dispatch
 9. 후속 PR로 `application-prod.yml`을 `flyway.enabled: true`로 정본화하고 ConfigMap 오버라이드 제거
@@ -834,6 +858,7 @@ ConfigMap 키는 **다음 배포에서 지워진다.** 토글은 `k8s` 리포에
 토글을 미리 머지해 두면 시딩 전에 나가는 무관한 릴리스가 그것을 적용해 버린다.
 
 그래서 **토글 PR은 시딩(4단계)이 끝난 뒤에 머지한다.** 그때까지 draft로 둔다.
+토글 머지 뒤에는 다른 서버 릴리스를 끼우지 않고, 1단계에서 SHA를 고정한 릴리스 PR을 바로 머지한다.
 
 ### 배포 리포(`k8s`)도 함께 바꿔야 한다
 
@@ -1107,7 +1132,7 @@ Supabase는 `ALTER DEFAULT PRIVILEGES FOR ROLE postgres`로 **`postgres`가 만�
 | `mirror` 헤더가 더 잘못 붙어 있다 | 2.8이 한 건 드러났다. MOM-0909의 객체 대조가 실행 집합 전체를 다시 판정한다 |
 | local·prod가 완전히 같지 않다 | 2.6의 5개 컬럼. 의도된 것이며 `validate` 대상이 아니다 |
 | 레거시가 만든 20개 테이블에서 local과 prod의 DDL이 갈린다 | 주도권 이전으로 사라지지 않는 위험이다(6절). `persistence.md`의 충실도 규칙이 계속 적용된다 |
-| 게이트를 없앤 뒤 부트스트랩 전에 다른 커밋이 prod에 뜬다 (릴리스 또는 `workflow_dispatch`) | 리포의 `flyway.enabled`가 계속 `false`라 어느 경로로 떠도 prod 동작이 바뀌지 않는다. 전환은 운영 조작이 일으킨다 |
+| 게이트를 없앤 뒤 부트스트랩 전에 다른 커밋이 prod에 뜬다 (릴리스 또는 `workflow_dispatch`) | Flyway는 꺼져 있어도 `ddl-auto=validate`가 새 테이블 부재로 기동을 막는다. 대장의 `main` 릴리스 금지 의무를 유지하고, 릴리스 PR head SHA를 고정한 뒤 심기와 토글 머지를 먼저 끝낸다 |
 | 리포 설정과 prod 실제 설정이 어긋난 채 방치된다 | 8절 6단계(정본화 PR)를 부트스트랩과 같은 스프린트에서 닫는다. ConfigMap 오버라이드는 임시 상태다 |
 | ConfigMap 환경변수가 바인딩되지 않는다 | `spring.flyway.out-of-order`는 대시 때문에 변환형이 애매하다. 시스템 프로퍼티로 주고 리허설에서 확인한다 |
 | **접속 대상이 Neon인 채로 토글이 켜진다** | 소유권 이전·심기는 Supabase에서, Flyway는 Neon에서 일어난다. 8절 0단계가 교체와 확인을 토글보다 앞에 둔다 |
