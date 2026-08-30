@@ -867,7 +867,7 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
    ```bash
    test "$(gh pr view "$release_pr" --json headRefOid --jq .headRefOid)" = "$release_head"
    test "$(gh pr view "$release_pr" --json baseRefOid --jq .baseRefOid)" = "$release_base"
-   gh pr merge "$release_pr" --rebase --match-head-commit "$release_head"
+   gh pr merge "$release_pr" --merge --match-head-commit "$release_head"
    ```
 
    `main` push는 새 main SHA로 이미지를 만들고 곧바로 `repository_dispatch`로 `Deploy momens-server`를
