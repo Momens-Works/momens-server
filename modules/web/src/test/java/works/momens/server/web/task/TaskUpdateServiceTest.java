@@ -1,7 +1,10 @@
 package works.momens.server.web.task;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -12,9 +15,13 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import works.momens.server.common.api.BusinessException;
+import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.project.task.TaskReader;
 import works.momens.server.project.task.TaskSnapshot;
 import works.momens.server.project.taskupdate.TaskUpdateDetail;
@@ -44,7 +51,35 @@ class TaskUpdateServiceTest {
 
     assertThat(service.list(TASK_ID, USER_ID)).containsExactly(update());
 
-    verify(taskUpdateReader).listByTaskId(TASK_ID);
+    InOrder inOrder = inOrder(taskReader, workspaceAccess, taskUpdateReader);
+    inOrder.verify(taskReader).findSnapshot(TASK_ID);
+    inOrder.verify(workspaceAccess).isMember(WORKSPACE_ID, USER_ID);
+    inOrder.verify(taskUpdateReader).listByTaskId(TASK_ID);
+  }
+
+  @Test
+  void listRejectsMissingTaskBeforeCheckingMembershipOrReadingUpdates() {
+    when(taskReader.findSnapshot(TASK_ID)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.list(TASK_ID, USER_ID))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).getErrorCode())
+        .isEqualTo(TaskErrorCode.TASK_NOT_FOUND);
+
+    verifyNoInteractions(workspaceAccess, taskUpdateReader);
+  }
+
+  @Test
+  void listRejectsNonMemberBeforeReadingUpdates() {
+    when(taskReader.findSnapshot(TASK_ID)).thenReturn(Optional.of(task()));
+    when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(false);
+
+    assertThatThrownBy(() -> service.list(TASK_ID, USER_ID))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).getErrorCode())
+        .isEqualTo(CommonErrorCode.AUTH_FORBIDDEN);
+
+    verifyNoInteractions(taskUpdateReader);
   }
 
   @Test
