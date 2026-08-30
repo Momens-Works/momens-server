@@ -26,6 +26,7 @@ import works.momens.server.web.task.dto.response.WebTaskResponse;
 @RequiredArgsConstructor
 class TaskWriteController implements TaskWriteControllerDocs {
   private final TaskWriteService taskWriteService;
+  private final TaskUpdateService taskUpdateService;
 
   @PostMapping(path = "/projects/{projectId}/tasks", version = "1")
   @ResponseStatus(HttpStatus.CREATED)
@@ -82,7 +83,7 @@ class TaskWriteController implements TaskWriteControllerDocs {
       @RequestBody CreateTaskUpdateRequest request,
       Principal principal) {
     TaskUpdateDetail update =
-        taskWriteService.createUpdate(
+        taskUpdateService.create(
             taskId, CurrentUser.id(principal), request.body(), request.kind(), request.metadata());
     return UpdateResponse.from(update);
   }
@@ -90,7 +91,7 @@ class TaskWriteController implements TaskWriteControllerDocs {
   @DeleteMapping(path = "/tasks/{taskId}/updates/{updateId}", version = "1")
   public WebMessageResponse deleteUpdate(
       @PathVariable UUID taskId, @PathVariable UUID updateId, Principal principal) {
-    taskWriteService.deleteUpdate(taskId, updateId, CurrentUser.id(principal));
+    taskUpdateService.delete(taskId, updateId, CurrentUser.id(principal));
     return new WebMessageResponse("deleted");
   }
 }
