@@ -24,7 +24,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
-import works.momens.server.context.EntityRelationReader;
 import works.momens.server.minsu.DraftStatus;
 import works.momens.server.minsu.TaskDraftStatusReader;
 import works.momens.server.project.core.ProjectErrorCode;
@@ -38,15 +37,13 @@ import works.momens.server.project.task.TaskScope;
 import works.momens.server.project.task.TaskSnapshot;
 import works.momens.server.project.task.TaskWriter;
 import works.momens.server.project.task.UpdateTaskCommand;
-import works.momens.server.source.SourceRefReader;
-import works.momens.server.source.SourceRefView;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
  * 태스크 보드 조회와 생성, 상세 조회 조합 규칙 검증. 도메인 모듈 public API는 mock으로 두고, 조합 규칙(권한 검사 순서, 그룹 구성, priority 매핑,
- * material_count 채우기, 생성 command 전달, 상세의 assignee 결합과 purpose 개명, 관련자료 조립)만 확인합니다.
+ * material_count 채우기, 생성 command 전달, 상세의 assignee 결합과 purpose 개명)만 확인합니다.
  */
 @ExtendWith(MockitoExtension.class)
 class ProjectTaskServiceTest {
@@ -56,8 +53,7 @@ class ProjectTaskServiceTest {
   @Mock private TaskReader taskReader;
   @Mock private TaskWriter taskWriter;
   @Mock private UserService userService;
-  @Mock private EntityRelationReader entityRelationReader;
-  @Mock private SourceRefReader sourceRefReader;
+  @Mock private TaskMaterialAssembler taskMaterialAssembler;
   @Mock private TaskDraftStatusReader taskDraftStatusReader;
   @InjectMocks private ProjectTaskService projectTaskService;
 
@@ -65,7 +61,6 @@ class ProjectTaskServiceTest {
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID CALLER_ID = UUID.randomUUID();
   private static final Instant CREATED_AT = Instant.parse("2026-07-01T00:00:00Z");
-  private static final Instant OCCURRED_AT = Instant.parse("2026-06-28T00:48:00Z");
   private static final UUID TASK_ID = UUID.randomUUID();
 
   @Test
@@ -140,42 +135,20 @@ class ProjectTaskServiceTest {
     stubMember();
     UUID linked = UUID.randomUUID();
     UUID unlinked = UUID.randomUUID();
-    UUID refA = UUID.randomUUID();
-    UUID refB = UUID.randomUUID();
     when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
         .thenReturn(
             List.of(
                 new BoardTask(linked, "자료 있는 태스크", "todo", "medium", "pm", CREATED_AT),
                 new BoardTask(unlinked, "자료 없는 태스크", "todo", "medium", "pm", CREATED_AT)));
-    when(entityRelationReader.findLinkedSourceRefIds(WORKSPACE_ID, List.of(linked, unlinked)))
-        .thenReturn(Map.of(linked, List.of(refA, refB)));
-    when(sourceRefReader.findByIds(WORKSPACE_ID, List.of(refA, refB)))
-        .thenReturn(List.of(sourceRef(refA), sourceRef(refB)));
+    when(taskMaterialAssembler.countMaterials(WORKSPACE_ID, List.of(linked, unlinked)))
+        .thenReturn(Map.of(linked, 2));
 
     List<MobileTaskCard> cards = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(0).tasks();
 
     assertThat(cards)
         .extracting(MobileTaskCard::id, MobileTaskCard::materialCount)
         .containsExactly(tuple(linked, 2), tuple(unlinked, 0));
-  }
-
-  @Test
-  void getBoardCountsOnlyMaterialsThatDetailAlsoShows() {
-    stubMember();
-    UUID taskId = UUID.randomUUID();
-    UUID live = UUID.randomUUID();
-    UUID gone = UUID.randomUUID();
-    when(taskReader.listTasksByStatus(eq(PROJECT_ID), any()))
-        .thenReturn(List.of(new BoardTask(taskId, "태스크", "todo", "medium", "pm", CREATED_AT)));
-    when(entityRelationReader.findLinkedSourceRefIds(WORKSPACE_ID, List.of(taskId)))
-        .thenReturn(Map.of(taskId, List.of(live, gone)));
-    // 연결은 둘 다 살아 있지만 원본 하나가 삭제된 상태다. 상세가 그 자료를 보여주지 못하므로 개수도 그것을 빼야 한다.
-    when(sourceRefReader.findByIds(WORKSPACE_ID, List.of(live, gone)))
-        .thenReturn(List.of(sourceRef(live)));
-
-    MobileTaskCard card = projectTaskService.getBoard(PROJECT_ID, CALLER_ID).get(0).tasks().get(0);
-
-    assertThat(card.materialCount()).isEqualTo(1);
+    verify(taskMaterialAssembler).countMaterials(WORKSPACE_ID, List.of(linked, unlinked));
   }
 
   @Test
@@ -334,41 +307,26 @@ class ProjectTaskServiceTest {
   }
 
   @Test
-  void getTaskDetailAssemblesMaterialsInLinkOrderAndSkipsMissingSourceRef() {
-    UUID figma = UUID.randomUUID();
-    UUID slack = UUID.randomUUID();
-    UUID gone = UUID.randomUUID();
+  void getTaskDetailUsesAssembledMaterials() {
+    MobileTaskDetail.Material material =
+        new MobileTaskDetail.Material(
+            UUID.randomUUID(),
+            "권한 요청 화면 v2",
+            "설명 문구 변경",
+            "figma",
+            Instant.parse("2026-06-28T00:48:00Z"),
+            "https://figma.example/p");
     when(taskReader.findScope(TASK_ID))
         .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
     when(taskReader.findDetail(TASK_ID)).thenReturn(Optional.of(detail(null, null, List.of())));
     when(workspaceAccess.isMember(WORKSPACE_ID, CALLER_ID)).thenReturn(true);
-    when(entityRelationReader.findLinkedSourceRefIds(WORKSPACE_ID, List.of(TASK_ID)))
-        .thenReturn(Map.of(TASK_ID, List.of(figma, slack, gone)));
-    // 원본 조회 순서는 보장되지 않으므로, 표시 순서는 링크 순서를 따라야 한다. 원본이 없는 링크(gone)는 빠진다.
-    when(sourceRefReader.findByIds(WORKSPACE_ID, List.of(figma, slack, gone)))
-        .thenReturn(
-            List.of(
-                new SourceRefView(
-                    slack, "slack", "스레드", null, "본문 전체", "https://slack.example/t", OCCURRED_AT),
-                new SourceRefView(
-                    figma,
-                    "figma",
-                    "권한 요청 화면 v2",
-                    "설명 문구 변경",
-                    "본문",
-                    "https://figma.example/p",
-                    OCCURRED_AT)));
+    when(taskMaterialAssembler.getMaterials(WORKSPACE_ID, TASK_ID)).thenReturn(List.of(material));
 
     List<MobileTaskDetail.Material> materials =
         projectTaskService.getTaskDetail(TASK_ID, CALLER_ID).detail().materials();
 
-    assertThat(materials).extracting(MobileTaskDetail.Material::id).containsExactly(figma, slack);
-    assertThat(materials.getFirst())
-        .isEqualTo(
-            new MobileTaskDetail.Material(
-                figma, "권한 요청 화면 v2", "설명 문구 변경", "figma", OCCURRED_AT, "https://figma.example/p"));
-    // snippet이 없으면 본문(text)을 요약으로 쓴다.
-    assertThat(materials.get(1).summary()).isEqualTo("본문 전체");
+    assertThat(materials).containsExactly(material);
+    verify(taskMaterialAssembler).getMaterials(WORKSPACE_ID, TASK_ID);
   }
 
   @Test
@@ -507,10 +465,6 @@ class ProjectTaskServiceTest {
         "https://lh3.googleusercontent.com/a/gyuil",
         null,
         null);
-  }
-
-  private static SourceRefView sourceRef(UUID id) {
-    return new SourceRefView(id, "figma", "제목", "요약", null, "https://x", OCCURRED_AT);
   }
 
   private void stubMember() {
