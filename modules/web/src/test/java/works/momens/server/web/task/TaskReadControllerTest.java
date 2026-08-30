@@ -33,6 +33,7 @@ class TaskReadControllerTest {
 
   @Autowired private MockMvc mockMvc;
   @MockitoBean private TaskReadService taskReadService;
+  @MockitoBean private TaskUpdateService taskUpdateService;
 
   @Test
   @DisplayName("태스크 상세는 레거시 필드를 snake_case로 응답한다")

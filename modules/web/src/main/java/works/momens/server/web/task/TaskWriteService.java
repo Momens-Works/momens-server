@@ -18,8 +18,6 @@ import works.momens.server.project.task.TaskOrigin;
 import works.momens.server.project.task.TaskReader;
 import works.momens.server.project.task.TaskSnapshot;
 import works.momens.server.project.task.TaskWriter;
-import works.momens.server.project.taskupdate.TaskUpdateDetail;
-import works.momens.server.project.taskupdate.TaskUpdateWriter;
 import works.momens.server.workspace.WorkspaceAccess;
 
 @Service
@@ -29,7 +27,6 @@ class TaskWriteService {
   private final TaskReader taskReader;
   private final ProjectReader projectReader;
   private final WorkspaceAccess workspaceAccess;
-  private final TaskUpdateWriter taskUpdateWriter;
 
   @Transactional
   TaskSnapshot create(
@@ -117,15 +114,6 @@ class TaskWriteService {
   void delete(UUID taskId, UUID userId) {
     requireTaskMember(taskId, userId);
     taskWriter.delete(taskId);
-  }
-
-  TaskUpdateDetail createUpdate(
-      UUID taskId, UUID userId, String body, String kind, Map<String, Object> metadata) {
-    return taskUpdateWriter.create(taskId, userId, body, kind, metadata);
-  }
-
-  void deleteUpdate(UUID taskId, UUID updateId, UUID userId) {
-    taskUpdateWriter.delete(taskId, updateId, userId);
   }
 
   private UUID requireProject(UUID projectId) {
