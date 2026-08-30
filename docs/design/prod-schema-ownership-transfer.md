@@ -626,9 +626,9 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
    `--verify`로 체크섬을
    대조한다. 심기 목록 전건이 검증돼야
    한다 — 대조되지 못한 항목이 남으면 그 체크섬이 검증 없이 prod로 들어간다.
-   이 리포는 rebase merge를 쓰므로 6단계에서 `main`에 생기는 commit SHA는 달라질 수 있지만,
-   릴리스 내용이 같다면 tree hash는 같아야 한다. base SHA는 검증 뒤 `main`이 바뀌지 않았음을
-   확인하는 기준이다.
+   릴리스 PR은 merge commit으로 들어가므로 6단계에서 `main`에 생기는 commit SHA는
+   `release_head`와 다르지만, 릴리스 내용이 같다면 tree hash는 같아야 한다. base SHA는 검증 뒤
+   `main`이 바뀌지 않았음을 확인하는 기준이다.
 
    ```bash
    release_pr=210

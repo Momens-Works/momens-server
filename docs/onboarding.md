@@ -221,10 +221,11 @@ docs(<Momens-작업-라벨>): 문서 수정
 
 ### 머지
 
-- **rebase 머지로 통일**(머지 커밋 없음, 선형 히스토리).
+- 일반 PR(`*` → `develop`)은 **rebase merge**, 릴리즈 PR(`develop` → `main`)과 hotfix PR은
+  **merge commit**으로 머지합니다. squash merge는 사용하지 않습니다.
 - `develop`/`main`은 **PR로만** 변경(직접 push 차단), 리뷰 대화는 모두 resolve 후 머지.
-- 머지된 브랜치는 자동 삭제됩니다.
-- 머지하려면 **최소 1명의 승인이 필요합니다**(`protected-branches` ruleset 강제). 리뷰어는 PR을
+- 머지된 일반 작업 브랜치는 자동 삭제되고, 기본 브랜치인 `develop`은 릴리즈 후에도 유지됩니다.
+- 머지하려면 **최소 1명의 승인이 필요합니다**(보호 ruleset 강제). 리뷰어는 PR을
   열 때 직접 지정합니다(자동 요청 없음).
 
 머지 정책 전체는 [기반 규칙 > Git > 머지](rules/git.md#머지)에 있습니다.
