@@ -1,7 +1,8 @@
 name: OpenAPI change notification
 
-# OpenAPI 스냅샷이 변경된 PR이 머지될 때만 실행한다. 이 저장소는 rebase merge를 사용하므로
-# push를 기준으로 실행하면 여러 커밋이 한 번에 반영될 때 비교 범위가 모호해진다.
+# OpenAPI 스냅샷이 변경된 PR이 머지될 때만 실행한다. 대상 브랜치에 따라 rebase merge 또는
+# merge commit을 사용하므로 push를 기준으로 실행하면 여러 커밋이 한 번에 반영될 때 비교 범위가
+# 모호해진다.
 # 또한 push 이벤트에서는 PR 번호와 링크를 확인할 수 없다.
 on:
   pull_request:
