@@ -28,8 +28,8 @@ import works.momens.server.user.UserService;
 import works.momens.server.workspace.WorkspaceAccess;
 
 /**
- * 모바일 태스크 표면(보드 조회, 생성, 상세 조회)의 조합 서비스입니다. project(태스크 도메인), workspace(멤버십), user(프로필),
- * context(관련자료 연결), source(연결된 원본), minsu(draft 생성 상태) public API를 조합하고 도메인 정책을 소유하지 않습니다.
+ * 모바일 태스크 표면(보드 조회, 생성, 상세 조회)의 조합 서비스입니다. project(태스크 도메인), workspace(멤버십), user(프로필), minsu(draft
+ * 생성 상태) public API를 조합하고 도메인 정책을 소유하지 않습니다.
  *
  * <p>보드 그룹 구성과 상세의 purpose 개명은 모바일 조합 규칙이므로 이 서비스가 소유하고, 저장 priority 해석(urgent를 high로 반환)은 {@link
  * MobilePriority}가 소유합니다.
