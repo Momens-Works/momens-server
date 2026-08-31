@@ -1,13 +1,11 @@
 package works.momens.server.project.milestone.internal;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import works.momens.server.common.api.BusinessException;
-import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.common.api.FieldValidationException;
 import works.momens.server.project.core.ProjectOwnerReader;
 import works.momens.server.project.milestone.CreateMilestoneCommand;
 import works.momens.server.project.milestone.MilestoneCreator;
@@ -38,7 +36,7 @@ class MilestoneCreatorImpl implements MilestoneCreator {
   @Transactional
   public MilestoneDetail create(CreateMilestoneCommand command) {
     if (command.name() == null || command.name().isEmpty()) {
-      throw validation(FIELD_NAME);
+      throw FieldValidationException.forField(FIELD_NAME);
     }
     List<UUID> ownerUserIds = resolveOwnerUserIds(command);
     ownerMembershipChecker.requireWorkspaceMembers(command.workspaceId(), ownerUserIds);
@@ -86,7 +84,9 @@ class MilestoneCreatorImpl implements MilestoneCreator {
     if (requested == null || requested.isEmpty()) {
       return HealthStatus.PLANNED.value();
     }
-    return HealthStatus.from(requested).orElseThrow(() -> validation(FIELD_HEALTH_STATUS)).value();
+    return HealthStatus.from(requested)
+        .orElseThrow(() -> FieldValidationException.forField(FIELD_HEALTH_STATUS))
+        .value();
   }
 
   private static int progressOf(Integer requested) {
@@ -94,17 +94,13 @@ class MilestoneCreatorImpl implements MilestoneCreator {
       return 0;
     }
     if (requested < 0 || requested > 100) {
-      throw validation(FIELD_PROGRESS);
+      throw FieldValidationException.forField(FIELD_PROGRESS);
     }
     return requested;
   }
 
   private static String emptyToNull(String value) {
     return value == null || value.isEmpty() ? null : value;
-  }
-
-  private static BusinessException validation(String field) {
-    return new BusinessException(CommonErrorCode.COMMON_VALIDATION_FAILED, Map.of("field", field));
   }
 
   private static MilestoneDetail toDetail(Milestone milestone, List<UUID> ownerUserIds) {

@@ -1,13 +1,11 @@
 package works.momens.server.project.core.internal;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import works.momens.server.common.api.BusinessException;
-import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.common.api.FieldValidationException;
 import works.momens.server.project.core.CreateProjectCommand;
 import works.momens.server.project.core.ProjectCreator;
 import works.momens.server.project.core.ProjectDetail;
@@ -43,7 +41,7 @@ class ProjectCreatorImpl implements ProjectCreator {
   @Transactional
   public ProjectDetail create(CreateProjectCommand command) {
     if (command.name() == null || command.name().isEmpty()) {
-      throw validation(FIELD_NAME);
+      throw FieldValidationException.forField(FIELD_NAME);
     }
     List<UUID> ownerUserIds = resolveOwnerUserIds(command);
     ownerMembershipChecker.requireWorkspaceMembers(command.workspaceId(), ownerUserIds);
@@ -83,7 +81,9 @@ class ProjectCreatorImpl implements ProjectCreator {
     if (requested == null || requested.isEmpty()) {
       return HealthStatus.OPEN.value();
     }
-    return HealthStatus.from(requested).orElseThrow(() -> validation(FIELD_HEALTH_STATUS)).value();
+    return HealthStatus.from(requested)
+        .orElseThrow(() -> FieldValidationException.forField(FIELD_HEALTH_STATUS))
+        .value();
   }
 
   private static int progressOf(Integer requested) {
@@ -91,7 +91,7 @@ class ProjectCreatorImpl implements ProjectCreator {
       return 0;
     }
     if (requested < 0 || requested > 100) {
-      throw validation(FIELD_PROGRESS);
+      throw FieldValidationException.forField(FIELD_PROGRESS);
     }
     return requested;
   }
@@ -101,17 +101,13 @@ class ProjectCreatorImpl implements ProjectCreator {
       return 0;
     }
     if (requested < 0) {
-      throw validation(field);
+      throw FieldValidationException.forField(field);
     }
     return requested;
   }
 
   private static String emptyToNull(String value) {
     return value == null || value.isEmpty() ? null : value;
-  }
-
-  private static BusinessException validation(String field) {
-    return new BusinessException(CommonErrorCode.COMMON_VALIDATION_FAILED, Map.of("field", field));
   }
 
   private static ProjectDetail toDetail(Project project, List<UUID> ownerUserIds) {

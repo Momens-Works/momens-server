@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.common.api.FieldValidationException;
 import works.momens.server.outbox.OutboxAppender;
 import works.momens.server.project.milestone.MilestoneDirectory;
 import works.momens.server.project.task.CreateTaskCommand;
@@ -124,10 +125,10 @@ class TaskWriterImpl implements TaskWriter {
   private void validateReferences(
       UUID workspaceId, UUID projectId, UUID milestoneId, UUID assigneeId) {
     if (milestoneId != null && !milestoneDirectory.existsInProject(milestoneId, projectId)) {
-      throw validation("milestone_id");
+      throw FieldValidationException.forField("milestone_id");
     }
     if (assigneeId != null && !workspaceAccess.isMember(workspaceId, assigneeId)) {
-      throw validation("assignee_id");
+      throw FieldValidationException.forField("assignee_id");
     }
   }
 
@@ -170,9 +171,5 @@ class TaskWriterImpl implements TaskWriter {
         task.getOriginSignalId() == null ? null : task.getOriginSignalId().toString());
     outboxAppender.append(
         task.getWorkspaceId(), "task", task.getId().toString(), EVENT_TASK_CREATED, payload);
-  }
-
-  private static BusinessException validation(String field) {
-    return new BusinessException(CommonErrorCode.COMMON_VALIDATION_FAILED, Map.of("field", field));
   }
 }

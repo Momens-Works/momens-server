@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
-import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.common.api.FieldValidationException;
 import works.momens.server.workspace.AddMembershipCommand;
 import works.momens.server.workspace.CreateWorkspaceCommand;
 import works.momens.server.workspace.WorkspaceCreator;
@@ -39,8 +39,7 @@ class WorkspaceCreatorImpl implements WorkspaceCreator {
   @Transactional
   public WorkspaceDetail create(CreateWorkspaceCommand command) {
     if (command.name() == null || command.name().isEmpty()) {
-      throw new BusinessException(
-          CommonErrorCode.COMMON_VALIDATION_FAILED, Map.of("field", FIELD_NAME));
+      throw FieldValidationException.forField(FIELD_NAME);
     }
     Workspace workspace =
         workspaceRepository.saveAndFlush(
