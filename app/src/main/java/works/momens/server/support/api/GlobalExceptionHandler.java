@@ -1,7 +1,7 @@
 package works.momens.server.support.api;
 
 import java.util.List;
-import java.util.Locale;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import tools.jackson.databind.ObjectMapper;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.common.api.ErrorCode;
@@ -32,7 +33,10 @@ import works.momens.server.common.api.FieldValidationException;
  */
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+  private final ObjectMapper objectMapper;
 
   @ExceptionHandler(BusinessException.class)
   public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
@@ -58,9 +62,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
       HttpStatusCode status,
       WebRequest request) {
     List<FieldValidationDetails.FieldViolation> fields =
-        ex.getBindingResult().getFieldErrors().stream()
-            .map(GlobalExceptionHandler::toFieldErrorDetail)
-            .toList();
+        ex.getBindingResult().getFieldErrors().stream().map(this::toFieldErrorDetail).toList();
     log.debug("validation failed fields={}", fields.size());
     ErrorCode errorCode = CommonErrorCode.COMMON_VALIDATION_FAILED;
     Object body =
@@ -110,17 +112,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     };
   }
 
-  private static FieldValidationDetails.FieldViolation toFieldErrorDetail(FieldError fieldError) {
+  private FieldValidationDetails.FieldViolation toFieldErrorDetail(FieldError fieldError) {
     String reason = fieldError.getDefaultMessage();
     return new FieldValidationDetails.FieldViolation(
-        toSnakeCase(fieldError.getField()),
+        toJsonFieldName(fieldError.getField()),
         reason == null ? FieldValidationException.DEFAULT_REASON : reason);
   }
 
-  private static String toSnakeCase(String field) {
-    return field
-        .replaceAll("([A-Z]+)([A-Z][a-z])", "$1_$2")
-        .replaceAll("([a-z0-9])([A-Z])", "$1_$2")
-        .toLowerCase(Locale.ROOT);
+  private String toJsonFieldName(String field) {
+    return objectMapper
+        .serializationConfig()
+        .getPropertyNamingStrategy()
+        .nameForField(null, null, field);
   }
 }
