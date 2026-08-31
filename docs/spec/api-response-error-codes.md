@@ -236,9 +236,10 @@ JSON 에러 본문을 쓰지 않습니다. 콜백 실패는 브라우저에 JSON
 
 ## Validation details
 
-필드 검증 실패는 Bean Validation과 수동 검증 모두 `details.fields`에 정리합니다. 각 원소의
-`field`는 JSON 요청의 `snake_case` 필드명을 사용하고, `reason`은 사람이 문제를 이해하기 위한
-설명으로 제공합니다. 클라이언트는 `reason` 문구나 배열 순서를 분기 기준으로 사용하지 않습니다.
+Bean Validation과 `FieldValidationException`을 통한 필드 단위 검증 실패는 `details.fields`에
+정리합니다. 각 원소의 `field`는 JSON 요청의 `snake_case` 필드명을 사용하고, `reason`은 사람이
+문제를 이해하기 위한 설명으로 제공합니다. 클라이언트는 `reason` 문구나 배열 순서를 분기 기준으로
+사용하지 않습니다.
 
 ```json
 {

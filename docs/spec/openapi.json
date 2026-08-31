@@ -3251,14 +3251,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -3600,14 +3592,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -3895,14 +3879,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -4190,14 +4166,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -4497,14 +4465,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -4846,14 +4806,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -5120,14 +5072,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -5544,14 +5488,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -5806,14 +5742,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -6062,14 +5990,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -6306,14 +6226,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -6558,14 +6470,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -6841,14 +6745,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -7133,14 +7029,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -7415,14 +7303,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -7707,14 +7587,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -7998,14 +7870,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -8272,14 +8136,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -8536,14 +8392,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -8839,14 +8687,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -9122,14 +8962,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -9396,14 +9228,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -9670,14 +9494,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -9952,14 +9768,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -10226,14 +10034,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -10500,14 +10300,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -10764,14 +10556,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -11028,14 +10812,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -11303,14 +11079,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -11597,14 +11365,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -11881,14 +11641,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -12155,14 +11907,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -12437,14 +12181,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -12864,14 +12600,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -13168,14 +12896,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -13440,14 +13160,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -13722,14 +13434,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -13996,14 +13700,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -14280,14 +13976,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -14582,14 +14270,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -14926,14 +14606,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -15210,14 +14882,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -15504,14 +15168,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -15786,14 +15442,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -16070,14 +15718,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -16334,14 +15974,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -16576,14 +16208,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -16929,14 +16553,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -17173,14 +16789,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -17535,14 +17143,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -17889,14 +17489,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -18331,14 +17923,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -18775,14 +18359,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -19219,14 +18795,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -19663,14 +19231,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -20017,14 +19577,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -20381,14 +19933,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -20753,14 +20297,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -21117,14 +20653,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -21471,14 +20999,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -21825,14 +21345,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
@@ -22188,14 +21700,6 @@
                     "value" : {
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
-                        "details" : {
-                          "fields" : [
-                            {
-                              "field" : "field_name",
-                              "reason" : "invalid value"
-                            }
-                          ]
-                        },
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }

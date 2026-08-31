@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.media.MediaType;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import works.momens.server.common.api.CommonErrorCode;
@@ -29,14 +28,6 @@ class SwaggerErrorExampleGeneratorTest {
         .isEqualTo(
             Map.of(
                 "error",
-                Map.of(
-                    "code",
-                    "COMMON_VALIDATION_FAILED",
-                    "message",
-                    "요청 값이 유효하지 않습니다.",
-                    "details",
-                    Map.of(
-                        "fields",
-                        List.of(Map.of("field", "field_name", "reason", "invalid value"))))));
+                Map.of("code", "COMMON_VALIDATION_FAILED", "message", "요청 값이 유효하지 않습니다.")));
   }
 }
