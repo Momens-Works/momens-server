@@ -12,7 +12,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
+import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.common.api.ErrorCode;
+import works.momens.server.common.api.FieldValidationException;
 
 /** {@link ErrorCode} enum을 OpenAPI 실패 응답 예시로 변환합니다. */
 public class SwaggerErrorExampleGenerator {
@@ -82,6 +84,15 @@ public class SwaggerErrorExampleGenerator {
     Map<String, Object> error = new LinkedHashMap<>();
     error.put("code", errorCode.code());
     error.put("message", errorCode.defaultMessage());
+    if (errorCode == CommonErrorCode.COMMON_VALIDATION_FAILED) {
+      error.put(
+          "details",
+          Map.of(
+              "fields",
+              List.of(
+                  Map.of(
+                      "field", "field_name", "reason", FieldValidationException.DEFAULT_REASON))));
+    }
     Map<String, Object> body = new LinkedHashMap<>();
     body.put("error", error);
 

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.common.api.FieldValidationException;
 import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.project.task.TaskReader;
 import works.momens.server.project.task.TaskScope;
@@ -30,7 +31,7 @@ class TaskUpdateWriterImpl implements TaskUpdateWriter {
     TaskScope task = requireTask(taskId);
     requireMember(task.workspaceId(), userId);
     if (body == null || body.trim().isEmpty()) {
-      throw validation("body");
+      throw FieldValidationException.forField("body");
     }
     TaskUpdate update =
         TaskUpdate.create(
@@ -75,16 +76,12 @@ class TaskUpdateWriterImpl implements TaskUpdateWriter {
     return new BusinessException(TaskErrorCode.TASK_NOT_FOUND);
   }
 
-  private static BusinessException validation(String field) {
-    return new BusinessException(CommonErrorCode.COMMON_VALIDATION_FAILED, Map.of("field", field));
-  }
-
   private static String normalizeKind(String value) {
     String normalized = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     return switch (normalized) {
       case "", "comment" -> "comment";
       case "update" -> "update";
-      default -> throw validation("kind");
+      default -> throw FieldValidationException.forField("kind");
     };
   }
 }

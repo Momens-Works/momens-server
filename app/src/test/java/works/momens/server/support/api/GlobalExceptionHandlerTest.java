@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.ErrorCode;
+import works.momens.server.common.api.FieldValidationException;
 
 /** 전역 예외 핸들러가 예외를 Standard 에러 응답으로 매핑하는지 검증합니다. */
 // advice 테스트 전용 TestController로 슬라이스를 한정(실제 컨트롤러 스캔 방지).
@@ -68,11 +69,26 @@ class GlobalExceptionHandlerTest {
         .perform(
             post("/test/validate")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"\"}"))
+                .content("{\"display_name\":\"\"}"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.error.code").value("COMMON_VALIDATION_FAILED"))
-        .andExpect(jsonPath("$.error.details.fields[0].field").value("name"))
+        .andExpect(jsonPath("$.error.details.fields[0].field").value("display_name"))
         .andExpect(jsonPath("$.error.details.fields[0].reason").exists());
+  }
+
+  @Test
+  @DisplayName("수동 필드 검증 실패도 COMMON_VALIDATION_FAILED와 details.fields로 매핑된다")
+  void rendersProgrammaticFieldValidationFailure() throws Exception {
+    mockMvc
+        .perform(get("/test/field-validation"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.code").value("COMMON_VALIDATION_FAILED"))
+        .andExpect(jsonPath("$.error.message").value("요청 값이 유효하지 않습니다."))
+        .andExpect(jsonPath("$.error.details.field").doesNotExist())
+        .andExpect(jsonPath("$.error.details.fields[0].field").value("owner_user_ids"))
+        .andExpect(
+            jsonPath("$.error.details.fields[0].reason")
+                .value("must contain only workspace members"));
   }
 
   @Test
@@ -156,6 +172,12 @@ class GlobalExceptionHandlerTest {
     @PostMapping("/test/validate")
     void validate(@Valid @RequestBody TestRequest request) {}
 
+    @GetMapping("/test/field-validation")
+    void fieldValidation() {
+      throw FieldValidationException.forField(
+          "owner_user_ids", "must contain only workspace members");
+    }
+
     @GetMapping("/test/typed")
     void typed(@RequestParam int value) {}
 
@@ -169,7 +191,7 @@ class GlobalExceptionHandlerTest {
       throw new IllegalStateException("boom secret should not leak");
     }
 
-    record TestRequest(@NotBlank String name) {}
+    record TestRequest(@NotBlank String displayName) {}
   }
 
   @RequiredArgsConstructor
