@@ -77,6 +77,18 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
+  @DisplayName("Bean Validation 필드명은 설정된 Jackson snake_case 전략을 그대로 따른다")
+  void rendersValidationFieldUsingConfiguredJacksonNamingStrategy() throws Exception {
+    mockMvc
+        .perform(
+            post("/test/validate-acronym")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"user_idtoken\":\"\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error.details.fields[0].field").value("user_idtoken"));
+  }
+
+  @Test
   @DisplayName("수동 필드 검증 실패도 COMMON_VALIDATION_FAILED와 details.fields로 매핑된다")
   void rendersProgrammaticFieldValidationFailure() throws Exception {
     mockMvc
@@ -172,6 +184,9 @@ class GlobalExceptionHandlerTest {
     @PostMapping("/test/validate")
     void validate(@Valid @RequestBody TestRequest request) {}
 
+    @PostMapping("/test/validate-acronym")
+    void validateAcronym(@Valid @RequestBody AcronymRequest request) {}
+
     @GetMapping("/test/field-validation")
     void fieldValidation() {
       throw FieldValidationException.forField(
@@ -192,6 +207,8 @@ class GlobalExceptionHandlerTest {
     }
 
     record TestRequest(@NotBlank String displayName) {}
+
+    record AcronymRequest(@NotBlank String userIDToken) {}
   }
 
   @RequiredArgsConstructor
