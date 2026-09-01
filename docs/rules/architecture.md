@@ -46,6 +46,8 @@ Gradle 논리 경로는 `:user`, `:auth`처럼 평면으로 유지합니다.
 - bounded context는 모델과 언어의 의미가 달라질 때 보조 기준으로 사용합니다.
 - workflow는 1차 모듈 경계로 삼지 않습니다. 필요하면 각 capability의 public API만 조합하는
   얇은 orchestration module로 두며, orchestration module은 도메인 정책을 소유하지 않습니다.
+- 모듈을 새로 만들 때는 담당 영역도 함께 정하고 [모듈 맵](../design/module-map.md)에
+  기록합니다.
 
 ## 모듈 내부 구조
 
@@ -71,6 +73,12 @@ Gradle 논리 경로는 `:user`, `:auth`처럼 평면으로 유지합니다.
 - 단순한 경우 상대 모듈의 public API 직접 참조를 허용하되, 리뷰 단계에서 세부 논의합니다.
 - 다른 모듈의 `internal` package 참조와 순환 의존은 금지합니다.
 - event listener는 얇게 유지하고 application service를 호출합니다.
+- 웹과 모바일이 공동으로 담당하는 모듈의 public API와 스키마는 상대 영역과 협의한 뒤 변경합니다.
+  `internal` 패키지는 다른 모듈에서 참조할 수 없으므로 이 규칙을 적용하지 않습니다.
+- 담당 영역이 하나인 모듈이라도 상대 영역에서 읽기 전용으로 참조하는 타입이 있다면 해당 타입의
+  시그니처를 변경하기 전에 알립니다.
+- 모듈별 담당 영역은 [모듈 맵](../design/module-map.md)에서 확인할 수 있으며, 배정 기준과 변경
+  규칙의 근거는 [ADR-0021](../adr/0021-module-ownership-and-change-rule.md)에 정리되어 있습니다.
 
 ## Spring Modulith 적용
 
