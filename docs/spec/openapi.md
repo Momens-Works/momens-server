@@ -54,7 +54,10 @@ schema에 의도하지 않은 `default: null`이 생길 수 있습니다.
 @Tag(name = "User", description = "사용자 API")
 interface UserControllerDocs {
 
-  @Operation(summary = "내 사용자 정보 조회", description = "인증된 사용자 본인의 정보를 조회합니다.")
+  @Operation(
+      operationId = "getMe",
+      summary = "내 사용자 정보 조회",
+      description = "인증된 사용자 본인의 정보를 조회합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "내 사용자 정보 조회 성공",
@@ -80,6 +83,18 @@ class UserController implements UserControllerDocs {
 ```
 
 path는 `/api/me` 단일 경로이며 `version = "1"` mapping을 둡니다. 레거시 path alias는 두지 않습니다.
+
+### operationId
+
+모든 엔드포인트의 `@Operation`에 `operationId`를 명시합니다. 값을 지정하지 않으면 springdoc이 메서드명을 기준으로 자동 생성하며, 이름이 중복되면 뒤에 `_1`을 붙입니다. 이로 인해 다른 엔드포인트를 추가할 때 기존 엔드포인트의 이름이 변경될 수 있습니다. `operationId`는 다음 규칙에 따라 정하며, 결정 배경은 [ADR-0021](../adr/0021-operation-id-naming-convention.md)에서 확인할 수 있습니다.
+
+- `<동사><대상>` 형식의 camelCase를 사용하며, OpenAPI 문서 전체에서 고유해야 합니다.
+- 목록 조회에는 `list`, 단건 조회에는 `get`, 생성에는 `create`, 수정에는 `update`, 삭제에는 `delete`를 사용합니다. 적절한 도메인 동사가 있으면 해당 동사를 우선합니다.
+- 경로에 클라이언트를 구분하는 세그먼트가 있으면 해당 세그먼트를 접두사로 붙입니다. `/api/mobile/**`에는 `mobile`, `/api/auth/web/**`에는 `web`, `/api/dev/**`와 `/api/auth/dev/**`에는 `dev`를 붙입니다. 클라이언트를 구분하는 세그먼트가 없는 `/api/**`에는 접두사를 붙이지 않습니다.
+- 접두사는 경로에서만 가져오며, 모듈명이나 클래스명에서는 가져오지 않습니다.
+- 상위 자원은 문서에서 대상을 식별하는 데 필요한 범위까지만 이름에 포함합니다.
+
+예를 들어 `PATCH /api/tasks/{taskId}`의 `operationId`는 `updateTask`, `PATCH /api/mobile/tasks/{taskId}`의 `operationId`는 `mobileUpdateTask`로 지정합니다.
 
 ## 성공 응답
 
@@ -197,6 +212,7 @@ tag를 하나 추가하면 배열 전체가 재정렬되어 무관한 churn diff
 - 성공 응답은 실제 DTO shape 그대로 문서화합니다.
 - 주요 실패 응답은 `@ApiExceptions`로 선언합니다.
 - `@ApiExceptions`가 너무 넓은 공통 에러를 노출하지 않는지 확인합니다.
+- 모든 엔드포인트에 `operationId`를 명시하고 [operationId](#operationid) 절의 명명 규칙을 따릅니다.
 - 모든 엔드포인트는 `API-Version` header를 문서화합니다.
 - controller docs에 `API-Version` parameter를 직접 중복 선언하지 않습니다.
 - 모든 path를 `/api` prefix 단일 경로로 문서화하고, 레거시 alias path를 두지 않습니다.
