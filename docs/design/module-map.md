@@ -10,32 +10,32 @@
 - `app`과 `common`은 저장소 루트에 두고 기능/capability 모듈은 `modules/` 아래에 모읍니다.
   `modules` 자체는 Gradle 서브프로젝트가 아니며, 각 모듈의 논리 경로는 `:auth`처럼 평면입니다.
 - 모듈은 기능이 추가되며 점진적으로 늘립니다. 새 모듈·경계 변경 시 이 문서를 갱신합니다.
-- `담당 영역`은 해당 모듈의 비즈니스 규칙을 변경하는 영역을 의미합니다. 배정 기준과 기각한 대안,
-  웹과 모바일이 공동으로 담당하는 모듈의 변경 규칙은
-  [ADR-0021](../adr/0021-module-ownership-and-change-rule.md)에 정리되어 있습니다. 새 모듈을 만들
-  때는 담당 영역도 함께 지정합니다.
+- `영향 범위`는 해당 모듈을 변경했을 때 `mobile`과 `web` 중 어느 쪽에 영향을 미치는지를
+  나타냅니다. 각 모듈의 `build.gradle`에 정의된 의존 관계를 기준으로 산정하며, 직접 참조뿐 아니라
+  다른 모듈을 거치는 간접 영향도 포함합니다. `outbox`는 `mobile`과 `web`이 직접 참조하지 않지만,
+  이벤트를 발행하는 도메인 모듈을 통해 양쪽에 간접적으로 영향을 미칩니다.
 
 ## 모듈 개요
 
-| 모듈 | 책임 | 담당 영역 | 레거시 흡수 |
+| 모듈 | 책임 | 영향 범위 | 레거시 흡수 |
 | --- | --- | --- | --- |
-| `app` | 실행·조립, 전체 컨텍스트 테스트, Modulith 경계 검증 | 웹 서버와 모바일 서버 | `bootstrap` |
-| `common` | 영속성 베이스·공유 확장·테스트 fixture (최소) | 웹 서버와 모바일 서버 | — |
-| `user` | 사용자 엔티티·로그인 수단·프로필, FindOrCreate public API | 웹 서버와 모바일 서버 | `domain.User` |
-| `auth` | OAuth 로그인·JWT·SecurityFilterChain·logout, dev 토큰 발급 | 웹 서버와 모바일 서버 | `auth` |
-| `workspace` | workspace·멤버·초대·RBAC·label 발급 (중심 모듈) | 웹 서버 | `workspace`·`access`·`label` |
-| `project` | project·milestone·task·decision·blocker 운영 흐름 | 웹 서버와 모바일 서버 | 동명 5개 패키지 |
-| `signal` | 모바일 Signal 원본 조회·사용자 action ledger·Signal action outbox | 모바일 서버 | 신규 |
-| `outbox` | append-only outbox 발행 로그 공용 모듈 (ADR-0008) | 웹 서버와 모바일 서버 | 신규 |
-| `notification` | Signal 발생 push notification 소비·발송, push 설치(FID/FCM token) lifecycle | 모바일 서버 | 신규 |
-| `mobile` | 모바일 진입 API. 도메인 public API 조합(얇은 orchestration) | 모바일 서버 | 없음 (신규 표면) |
-| `web` | 웹 Product API. 도메인 public API 조합(얇은 orchestration). `MOM-0851`에서 추가 | 웹 서버 | 레거시 웹 Product JSON |
-| `memory` | 메모리 후보 검토·confirmed memory lifecycle | 웹 서버 | `memory` |
-| `source` | 외부 연결 lifecycle·provider OAuth·source-ref verify | 웹 서버 | `source` |
-| `context` | task-memory/source-ref 연결·context API (얇은 orchestration) | 웹 서버 | `relation` |
-| `onboarding` | 새 워크스페이스 생성과 초기 데이터 구성. 도메인 public API를 조합하는 얇은 orchestration 계층. `MOM-0897`에서 추가 | 웹 서버 | `workspace.seedWelcome` |
+| `app` | 실행·조립, 전체 컨텍스트 테스트, Modulith 경계 검증 | `mobile`, `web` | `bootstrap` |
+| `common` | 영속성 베이스·공유 확장·테스트 fixture (최소) | `mobile`, `web` | — |
+| `user` | 사용자 엔티티·로그인 수단·프로필, FindOrCreate public API | `mobile`, `web` | `domain.User` |
+| `auth` | OAuth 로그인·JWT·SecurityFilterChain·logout, dev 토큰 발급 | `mobile`, `web` | `auth` |
+| `workspace` | workspace·멤버·초대·RBAC·label 발급 (중심 모듈) | `mobile`, `web` | `workspace`·`access`·`label` |
+| `project` | project·milestone·task·decision·blocker 운영 흐름 | `mobile`, `web` | 동명 5개 패키지 |
+| `signal` | 모바일 Signal 원본 조회·사용자 action ledger·Signal action outbox | `mobile` | 신규 |
+| `outbox` | append-only outbox 발행 로그 공용 모듈 (ADR-0008) | `mobile`, `web` | 신규 |
+| `notification` | Signal 발생 push notification 소비·발송, push 설치(FID/FCM token) lifecycle | `mobile` | 신규 |
+| `mobile` | 모바일 진입 API. 도메인 public API 조합(얇은 orchestration) | — | 없음 (신규 표면) |
+| `web` | 웹 Product API. 도메인 public API 조합(얇은 orchestration). `MOM-0851`에서 추가 | — | 레거시 웹 Product JSON |
+| `memory` | 메모리 후보 검토·confirmed memory lifecycle | `web` | `memory` |
+| `source` | 외부 연결 lifecycle·provider OAuth·source-ref verify | `mobile`, `web` | `source` |
+| `context` | task-memory/source-ref 연결·context API (얇은 orchestration) | `mobile`, `web` | `relation` |
+| `onboarding` | 새 워크스페이스 생성과 초기 데이터 구성. 도메인 public API를 조합하는 얇은 orchestration 계층. `MOM-0897`에서 추가 | `web` | `workspace.seedWelcome` |
 | `retrieval` | 검색 read-model projection·document/event schema 소유 | — | `retrieval` |
-| `minsu` | Minsu usecase·LLM provider/model 경계·gRPC client·Slack 표면 | 모바일 서버 | `minsu`·`slackbot` |
+| `minsu` | Minsu usecase·LLM provider/model 경계·gRPC client·Slack 표면 | `mobile` | `minsu`·`slackbot` |
 
 ## 의존 방향
 

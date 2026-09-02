@@ -26,4 +26,3 @@
 | [0018](0018-transitional-legacy-acceptance-of-new-access-token.md) | 전환기 레거시의 신규 access token 수용 | Accepted ([0003](0003-auth-session-transport-model.md)의 한시적 예외, [0017](0017-transitional-legacy-session-token-acceptance.md)의 반대 방향) |
 | [0019](0019-prod-schema-ownership-transfer.md) | prod 스키마 주도권을 서버로 이전 | Accepted |
 | [0020](0020-mobile-workspace-scope.md) | 모바일 워크스페이스 범위: bootstrap의 워크스페이스 표현과 선택 소유권 | Proposed |
-| [0021](0021-module-ownership-and-change-rule.md) | 모듈별 담당 영역 배정 및 공용 모듈 변경 규칙 | Proposed |
