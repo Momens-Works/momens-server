@@ -96,6 +96,8 @@ path는 `/api/me` 단일 경로이며 `version = "1"` mapping을 둡니다. 레�
 
 예를 들어 `PATCH /api/tasks/{taskId}`의 `operationId`는 `updateTask`, `PATCH /api/mobile/tasks/{taskId}`의 `operationId`는 `mobileUpdateTask`로 지정합니다.
 
+`OpenApiOperationIdTest`는 모든 `@Operation`에 `operationId`가 명시되어 있는지와 각 값이 형식 및 접두사 규칙을 준수하는지 검사합니다. 또한 커밋된 스냅샷의 모든 `operationId`가 애너테이션에 명시된 값과 일치하는지도 대조합니다.
+
 ## 성공 응답
 
 성공 응답은 실제 response DTO shape 그대로 문서화합니다.
