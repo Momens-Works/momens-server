@@ -32,8 +32,13 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
+          # 머지된 브랜치는 자동으로 삭제되고 `develop`에는 rebase merge로 새로운 SHA가 생성되므로, PR이 닫힌 뒤에는
+          # 어떤 브랜치에서도 `head.sha`에 도달할 수 없습니다. GitHub가 브랜치 삭제 후에도 유지하는
+          # `refs/pull/<번호>/head`를 가져와야 `git show`로 해당 커밋을 읽을 수 있습니다.
+          git fetch --no-tags origin "refs/pull/${PR_NUMBER}/head"
           # 스냅샷을 처음 추가한 PR은 base 시점에 파일이 없다. 이 경우 빈 문서를 사용해 모든 항목을 추가된 변경으로 판정한다.
           git show "$BASE_SHA:docs/spec/openapi.json" > "$RUNNER_TEMP/base.json" 2>/dev/null \
             || printf '%s\n' '{"openapi":"3.1.0","info":{"title":"momens-server","version":"v1"},"paths":{}}' \
