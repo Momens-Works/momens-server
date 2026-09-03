@@ -27,6 +27,7 @@ import works.momens.server.signal.dev.dto.response.CreateDevSignalResponse;
 interface DevSignalControllerDocs {
 
   @Operation(
+      operationId = "devCreateSignal",
       summary = "dev 데모용 Signal 생성",
       description =
           "완전한 Signal(evidence 원본 포함)을 생성하고 signal.created outbox 이벤트를 같은 트랜잭션으로 저장합니다. commit되면"

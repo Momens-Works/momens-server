@@ -30,6 +30,7 @@ import works.momens.server.signal.SignalErrorCode;
 interface SignalControllerDocs {
 
   @Operation(
+      operationId = "mobileListSignals",
       summary = "시그널 목록 조회",
       description =
           "프로젝트의 아직 처리되지 않은 시그널을 생성 시각 내림차순(동률 시 id 내림차순)으로 조회합니다. 처리된 시그널을 다시 보는 흐름은 MVP 이후입니다.")
@@ -42,6 +43,7 @@ interface SignalControllerDocs {
       @Parameter(description = "project 식별자") UUID projectId, Principal principal);
 
   @Operation(
+      operationId = "mobileGetSignal",
       summary = "시그널 상세 조회",
       description =
           "시그널 상세 bottom sheet에 필요한 근거(대상·변화·영향)와 민수 제안을 조회합니다. 미처리 시그널만 대상이며, 처리·삭제된 시그널은"
@@ -55,6 +57,7 @@ interface SignalControllerDocs {
       @Parameter(description = "signal 식별자") UUID signalId, Principal principal);
 
   @Operation(
+      operationId = "mobileConvertSignalToTask",
       summary = "시그널을 태스크로 전환",
       description =
           "시그널을 원탭으로 태스크에 등록합니다. 요청 body는 없습니다(ADR-0011). 서버가 민수 task draft(title은 시그널 제목, role은 pm,"
@@ -73,6 +76,7 @@ interface SignalControllerDocs {
       @Parameter(description = "signal 식별자") UUID signalId, Principal principal);
 
   @Operation(
+      operationId = "mobileDismissSignal",
       summary = "시그널을 처리하지 않고 닫음(dismiss)",
       description =
           "시그널을 태스크로 전환하지 않고 처리 완료로 기록합니다. 물리 삭제가 아니며, 같은 시그널에 dismiss를 재요청하면 기존 결과를 200으로"

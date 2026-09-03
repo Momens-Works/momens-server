@@ -28,6 +28,7 @@ import works.momens.server.project.task.TaskErrorCode;
 interface TaskControllerDocs {
 
   @Operation(
+      operationId = "mobileGetTask",
       summary = "태스크 상세 조회",
       description =
           "태스크 상세 화면에 필요한 정보를 조회합니다. materials는 태스크에 연결된 관련자료이고 연결이 없으면 빈 배열입니다."
@@ -41,6 +42,7 @@ interface TaskControllerDocs {
       @Parameter(description = "task 식별자") UUID taskId, Principal principal);
 
   @Operation(
+      operationId = "mobileUpdateTask",
       summary = "태스크 수정",
       description =
           "수정 화면이 저장한 편집 상태 전체로 태스크를 갱신합니다. 제목, 역할, 담당자, 우선순위, 상태, 목적, 완료기준을 한 번에 저장합니다. 담당자를"
@@ -54,6 +56,7 @@ interface TaskControllerDocs {
       Principal principal);
 
   @Operation(
+      operationId = "mobileToggleChecklistItem",
       summary = "완료기준 완료 상태 변경",
       description = "완료기준 항목 하나의 완료 상태를 변경합니다. 변경한 항목과 함께 태스크 전체 완료 수, 전체 수를 반환합니다.")
   @ApiResponse(

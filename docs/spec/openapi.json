@@ -3188,7 +3188,7 @@
     "/api/auth/dev/token" : {
       "post" : {
         "description" : "허용된 테스트 사용자의 access token을 발급합니다. dev 계열 프로필에서만 동작하며, 호출자는 공유 시크릿 헤더로 제한합니다.",
-        "operationId" : "issueDevToken",
+        "operationId" : "devIssueToken",
         "parameters" : [
           {
             "description" : "호출자 제한용 공유 시크릿",
@@ -3453,7 +3453,7 @@
     "/api/auth/google/callback" : {
       "get" : {
         "description" : "code를 교환해 WEB 세션 토큰을 발급합니다. 성공: access/refresh HttpOnly 쿠키 설정 후 success-uri로 리다이렉트. 실패: failure-uri로 리다이렉트하며 `?error=`에는 `invalid_state`, `email_not_verified`, `email_conflict`, `google_error`, `server_error` 중 하나를 전달합니다.",
-        "operationId" : "googleCallback",
+        "operationId" : "completeGoogleLogin",
         "parameters" : [
           {
             "in" : "query",
@@ -3498,7 +3498,7 @@
     "/api/auth/google/login" : {
       "get" : {
         "description" : "state·PKCE 쿠키를 설정하고 Google consent 화면으로 리다이렉트합니다.",
-        "operationId" : "googleLogin",
+        "operationId" : "startGoogleLogin",
         "parameters" : [
           {
             "in" : "header",
@@ -4101,7 +4101,7 @@
     "/api/auth/refresh" : {
       "post" : {
         "description" : "Refresh token을 회전하고 새 access/refresh token을 발급합니다.",
-        "operationId" : "refresh",
+        "operationId" : "refreshAccessToken",
         "parameters" : [
           {
             "in" : "header",
@@ -4417,7 +4417,7 @@
     "/api/auth/web/refresh" : {
       "post" : {
         "description" : "refresh 쿠키를 회전해 새 access/refresh HttpOnly 쿠키를 설정합니다. 본문은 없습니다.",
-        "operationId" : "webRefresh",
+        "operationId" : "webRefreshSession",
         "parameters" : [
           {
             "in" : "header",
@@ -4687,7 +4687,7 @@
     "/api/dev/projects/{projectId}/signals" : {
       "post" : {
         "description" : "완전한 Signal(evidence 원본 포함)을 생성하고 signal.created outbox 이벤트를 같은 트랜잭션으로 저장합니다. commit되면 api-server의 notification consumer가 workspace 전체 구성원의 활성 Android 기기로 FCM push를 발송합니다. 응답은 commit 완료를 뜻하며 FCM 발송 성공을 기다리지 않습니다.",
-        "operationId" : "createSignal",
+        "operationId" : "devCreateSignal",
         "parameters" : [
           {
             "description" : "project 식별자",
@@ -5017,7 +5017,7 @@
     "/api/invitations/accept" : {
       "post" : {
         "description" : "초대 링크에 포함된 토큰으로 워크스페이스에 참여합니다. 로그인한 계정의 이메일 주소가 초대받은 이메일 주소와 일치해야 합니다.",
-        "operationId" : "accept",
+        "operationId" : "acceptInvitation",
         "parameters" : [
           {
             "in" : "header",
@@ -5943,7 +5943,7 @@
     "/api/me/push-devices/{firebaseInstallationId}" : {
       "delete" : {
         "description" : "현재 인증 사용자가 소유한 설치를 비활성화합니다. Android 앱은 로그아웃 직전에 호출합니다. 이미 비활성화됐거나 없는 설치도 204로 멱등 처리하며, 다른 사용자가 소유한 활성 설치는 해제하지 않습니다.",
-        "operationId" : "unregister",
+        "operationId" : "unregisterPushDevice",
         "parameters" : [
           {
             "description" : "Firebase Installation ID",
@@ -6169,7 +6169,7 @@
       },
       "put" : {
         "description" : "Firebase Installation ID(FID) 단위로 설치를 등록하거나 FCM token을 갱신합니다. 같은 FID의 재요청은 token을 갱신하고 활성화하며, 다른 사용자에게 귀속된 FID면 현재 인증 사용자에게 소유권을 이전합니다. 같은 활성 token이 다른 FID에 연결돼 있으면 이전 연결을 비활성화합니다.",
-        "operationId" : "register",
+        "operationId" : "registerPushDevice",
         "parameters" : [
           {
             "description" : "Firebase Installation ID",
@@ -8091,7 +8091,7 @@
     "/api/mobile/bootstrap" : {
       "get" : {
         "description" : "로그인 후 앱 진입에 필요한 현재 사용자 정보, 기본 project id, 접근 가능한 project 목록을 조회합니다.",
-        "operationId" : "getBootstrap",
+        "operationId" : "mobileGetBootstrap",
         "parameters" : [
           {
             "in" : "header",
@@ -8337,7 +8337,7 @@
     "/api/mobile/projects/{projectId}/brief" : {
       "get" : {
         "description" : "브리프 화면(오늘의 브리프)의 초기 로드에 필요한 정보를 조회합니다. 시그널 요약은 당일 시그널의 최신순 첫 페이지(기본 20개)와 타입별 개수를 담습니다. 클라이언트는 첫 페이지에서 최신 3개만 노출하고, 더보기 시 나머지 항목을 펼쳐 보여줍니다. 이후 20개를 초과하면 next_cursor로 다음 페이지를 조회해 무한 스크롤을 이어갑니다. 최신 3개만 노출하는 것은 화면 정책이며, 서버는 전체 첫 페이지를 반환합니다. change도 다른 type과 똑같이 포함합니다. 필터 전환은 하위 엔드포인트 GET .../brief/signal-summary를 사용합니다.",
-        "operationId" : "getBrief",
+        "operationId" : "mobileGetBrief",
         "parameters" : [
           {
             "description" : "project 식별자",
@@ -8603,7 +8603,7 @@
     "/api/mobile/projects/{projectId}/brief/signal-summary" : {
       "get" : {
         "description" : "브리프 시그널 요약의 필터 전환과 후속 페이지 조회에 사용합니다. 커서 기반 페이지네이션을 사용하며, 정렬은 최신순(생성 시각 내림차순, 같으면 id 내림차순)입니다.\n\n브리프 조회는 all 필터의 첫 페이지를 함께 반환하므로, 더보기를 처음 누를 때는 이 엔드포인트를 호출하지 않습니다. 필터를 변경하면 해당 타입의 첫 페이지를 조회하고, 브리프 조회에서 받은 첫 페이지를 모두 소비한 뒤에는 직전 응답의 next_cursor를 cursor로 전달해 다음 페이지를 이어 조회합니다. 조회한 항목은 기존 목록 뒤에 추가하며, next_cursor가 null이면 더 조회할 데이터가 없습니다.",
-        "operationId" : "getSignalSummaryPage",
+        "operationId" : "mobileListBriefSignalSummaries",
         "parameters" : [
           {
             "description" : "project 식별자",
@@ -8898,7 +8898,7 @@
     "/api/mobile/projects/{projectId}/members" : {
       "get" : {
         "description" : "태스크 담당자 선택에 사용할 프로젝트 멤버 목록을 조회합니다. 멤버 범위는 project가 속한 workspace의 멤버십입니다.",
-        "operationId" : "listMembers",
+        "operationId" : "mobileListProjectMembers",
         "parameters" : [
           {
             "description" : "project 식별자",
@@ -9173,7 +9173,7 @@
     "/api/mobile/projects/{projectId}/signals" : {
       "get" : {
         "description" : "프로젝트의 아직 처리되지 않은 시그널을 생성 시각 내림차순(동률 시 id 내림차순)으로 조회합니다. 처리된 시그널을 다시 보는 흐름은 MVP 이후입니다.",
-        "operationId" : "listSignals",
+        "operationId" : "mobileListSignals",
         "parameters" : [
           {
             "description" : "project 식별자",
@@ -9439,7 +9439,7 @@
     "/api/mobile/projects/{projectId}/tasks" : {
       "get" : {
         "description" : "태스크를 todo, in_progress, done, backlog, cancelled 다섯 그룹으로 조회합니다. 수정 화면이 상태 5종을 모두 편집하므로 보드도 5종을 담습니다.",
-        "operationId" : "getBoard",
+        "operationId" : "mobileGetTaskBoard",
         "parameters" : [
           {
             "description" : "project 식별자",
@@ -9703,7 +9703,7 @@
       },
       "post" : {
         "description" : "제목과 역할, 우선순위로 일반 태스크를 생성합니다. 세 필드 모두 필수이고 역할은 하나만 선택합니다. 생성된 태스크는 todo 그룹에서 시작합니다.",
-        "operationId" : "createTask",
+        "operationId" : "mobileCreateTask",
         "parameters" : [
           {
             "description" : "project 식별자",
@@ -9979,7 +9979,7 @@
     "/api/mobile/signals/{signalId}" : {
       "get" : {
         "description" : "시그널 상세 bottom sheet에 필요한 근거(대상·변화·영향)와 민수 제안을 조회합니다. 미처리 시그널만 대상이며, 처리·삭제된 시그널은 SIGNAL_NOT_FOUND입니다.",
-        "operationId" : "getSignal",
+        "operationId" : "mobileGetSignal",
         "parameters" : [
           {
             "description" : "signal 식별자",
@@ -10235,7 +10235,7 @@
     "/api/mobile/signals/{signalId}/actions/convert-to-task" : {
       "post" : {
         "description" : "시그널을 원탭으로 태스크에 등록합니다. 요청 body는 없습니다(ADR-0011). 서버가 민수 task draft(title은 시그널 제목, role은 pm, priority는 medium)로 태스크를 만듭니다. 같은 시그널에 같은 action을 재요청하면 새 태스크를 만들지 않고 기존 결과를 200으로 반환합니다.",
-        "operationId" : "convertToTask",
+        "operationId" : "mobileConvertSignalToTask",
         "parameters" : [
           {
             "description" : "signal 식별자",
@@ -10501,7 +10501,7 @@
     "/api/mobile/signals/{signalId}/actions/dismiss" : {
       "post" : {
         "description" : "시그널을 태스크로 전환하지 않고 처리 완료로 기록합니다. 물리 삭제가 아니며, 같은 시그널에 dismiss를 재요청하면 기존 결과를 200으로 반환합니다.",
-        "operationId" : "dismiss",
+        "operationId" : "mobileDismissSignal",
         "parameters" : [
           {
             "description" : "signal 식별자",
@@ -10757,7 +10757,7 @@
     "/api/mobile/tasks/{taskId}" : {
       "get" : {
         "description" : "태스크 상세 화면에 필요한 정보를 조회합니다. materials는 태스크에 연결된 관련자료이고 연결이 없으면 빈 배열입니다. open_questions, next_action은 backing source가 생기기 전까지 각각 빈 배열, null입니다.",
-        "operationId" : "getTaskDetail",
+        "operationId" : "mobileGetTask",
         "parameters" : [
           {
             "description" : "task 식별자",
@@ -11021,7 +11021,7 @@
       },
       "patch" : {
         "description" : "수정 화면이 저장한 편집 상태 전체로 태스크를 갱신합니다. 제목, 역할, 담당자, 우선순위, 상태, 목적, 완료기준을 한 번에 저장합니다. 담당자를 비우려면 assignee_id를 null로 보내고, 완료기준은 최종 목록으로 전체 교체하며 0개에서 5개까지 허용합니다. 저장만 하고 본문은 반환하지 않으므로, 저장 후 최신 상태는 태스크 상세 조회로 다시 읽습니다.",
-        "operationId" : "updateTask",
+        "operationId" : "mobileUpdateTask",
         "parameters" : [
           {
             "description" : "task 식별자",
@@ -11290,7 +11290,7 @@
     "/api/mobile/tasks/{taskId}/checklist-items/{itemId}" : {
       "patch" : {
         "description" : "완료기준 항목 하나의 완료 상태를 변경합니다. 변경한 항목과 함께 태스크 전체 완료 수, 전체 수를 반환합니다.",
-        "operationId" : "toggleChecklistItem",
+        "operationId" : "mobileToggleChecklistItem",
         "parameters" : [
           {
             "description" : "task 식별자",
@@ -12392,7 +12392,7 @@
     "/api/source-connections/oauth/callback" : {
       "get" : {
         "description" : "provider가 승인 결과와 함께 호출하는 경로입니다. state를 검증하고 토큰을 교환한 뒤 연결 정보를 저장합니다.",
-        "operationId" : "callback",
+        "operationId" : "completeSourceConnection",
         "parameters" : [
           {
             "description" : "provider가 발급한 승인 코드",
@@ -12545,7 +12545,7 @@
     "/api/source-refs/{sourceRefId}/verify" : {
       "post" : {
         "description" : "source-ref를 확인한 것으로 표시하고 검증한 사용자와 시각을 기록합니다. 해당 워크스페이스의 멤버 권한이 필요합니다.",
-        "operationId" : "verify",
+        "operationId" : "verifySourceRef",
         "parameters" : [
           {
             "description" : "source-ref 식별자",
@@ -13369,7 +13369,7 @@
       },
       "patch" : {
         "description" : "워크스페이스 멤버가 전달한 필드만 수정합니다.",
-        "operationId" : "updateWebTask",
+        "operationId" : "updateTask",
         "parameters" : [
           {
             "description" : "태스크 식별자",
@@ -16499,7 +16499,7 @@
     "/api/workspaces/slug-available" : {
       "get" : {
         "description" : "입력한 값을 워크스페이스 slug로 사용할 수 있는지 확인합니다. 사용할 수 없는 경우에도 200으로 응답하며 판정 사유를 함께 반환합니다.",
-        "operationId" : "slugAvailable",
+        "operationId" : "checkWorkspaceSlugAvailability",
         "parameters" : [
           {
             "description" : "사용 가능 여부를 확인할 slug. 값이 없으면 형식 오류로 판정합니다.",
@@ -16734,7 +16734,7 @@
     "/api/workspaces/{workspaceId}" : {
       "get" : {
         "description" : "워크스페이스 한 건을 조회합니다.",
-        "operationId" : "get",
+        "operationId" : "getWorkspace",
         "parameters" : [
           {
             "description" : "워크스페이스 식별자",
@@ -17078,7 +17078,7 @@
       },
       "patch" : {
         "description" : "워크스페이스의 이름, 설명, slug를 수정합니다. admin 또는 owner 권한이 필요합니다.",
-        "operationId" : "update",
+        "operationId" : "updateWorkspace",
         "parameters" : [
           {
             "description" : "워크스페이스 식별자",
@@ -17858,7 +17858,7 @@
       },
       "post" : {
         "description" : "이메일 주소로 초대를 생성하고 초대 링크를 발송합니다. admin 또는 owner 권한이 필요합니다. 같은 이메일 주소로 대기 중인 초대가 있으면 기존 초대를 갱신합니다.",
-        "operationId" : "create",
+        "operationId" : "createWorkspaceInvitation",
         "parameters" : [
           {
             "description" : "워크스페이스 식별자",
@@ -18294,7 +18294,7 @@
     "/api/workspaces/{workspaceId}/invitations/{invitationId}/resend" : {
       "post" : {
         "description" : "초대 토큰과 만료 시각을 새로 발급한 뒤 초대 링크를 다시 발송합니다. 만료되었거나 폐기된 초대도 재발송할 수 있지만, 이미 수락된 초대는 재발송할 수 없습니다.",
-        "operationId" : "resend",
+        "operationId" : "resendWorkspaceInvitation",
         "parameters" : [
           {
             "description" : "워크스페이스 식별자",
@@ -18730,7 +18730,7 @@
     "/api/workspaces/{workspaceId}/invitations/{invitationId}/revoke" : {
       "post" : {
         "description" : "초대를 폐기하여 기존 초대 링크를 사용할 수 없게 합니다. 이미 수락된 초대는 폐기할 수 없습니다.",
-        "operationId" : "revoke",
+        "operationId" : "revokeWorkspaceInvitation",
         "parameters" : [
           {
             "description" : "워크스페이스 식별자",
@@ -19166,7 +19166,7 @@
     "/api/workspaces/{workspaceId}/invite" : {
       "post" : {
         "description" : "초대를 생성하지 않고 이메일 주소로 사용자를 찾아 워크스페이스 멤버로 바로 추가합니다. admin 또는 owner 권한이 필요합니다.",
-        "operationId" : "invite",
+        "operationId" : "addWorkspaceMember",
         "parameters" : [
           {
             "description" : "워크스페이스 식별자",
@@ -19868,7 +19868,7 @@
     "/api/workspaces/{workspaceId}/members/{userId}" : {
       "delete" : {
         "description" : "멤버를 워크스페이스에서 제거합니다. admin 또는 owner 권한이 필요하며 자기 자신과 owner인 멤버는 제거할 수 없습니다.",
-        "operationId" : "remove",
+        "operationId" : "removeWorkspaceMember",
         "parameters" : [
           {
             "description" : "워크스페이스 식별자",
@@ -20222,7 +20222,7 @@
       },
       "patch" : {
         "description" : "멤버의 역할을 변경합니다. admin 또는 owner 권한이 필요하며 owner인 멤버는 변경할 수 없습니다.",
-        "operationId" : "update_1",
+        "operationId" : "updateWorkspaceMemberRole",
         "parameters" : [
           {
             "description" : "워크스페이스 식별자",
@@ -20944,7 +20944,7 @@
     "/api/workspaces/{workspaceId}/snapshot" : {
       "get" : {
         "description" : "워크스페이스 보드에 필요한 read 모델을 한 응답으로 반환합니다.",
-        "operationId" : "snapshot",
+        "operationId" : "getWorkspaceSnapshot",
         "parameters" : [
           {
             "description" : "워크스페이스 식별자",
@@ -21636,7 +21636,7 @@
     "/api/workspaces/{workspaceId}/source-connections/install" : {
       "get" : {
         "description" : "provider 승인 화면으로 이동할 URL을 발급합니다. admin 또는 owner 권한이 필요합니다. 지원하지 않는 provider는 400, 서버에 해당 provider 설정이 없으면 500을 반환합니다.",
-        "operationId" : "install",
+        "operationId" : "startSourceConnection",
         "parameters" : [
           {
             "description" : "워크스페이스 식별자",

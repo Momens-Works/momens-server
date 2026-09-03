@@ -42,6 +42,7 @@ interface WorkspaceInvitationControllerDocs {
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
 
   @Operation(
+      operationId = "createWorkspaceInvitation",
       summary = "워크스페이스 초대 생성",
       description =
           "이메일 주소로 초대를 생성하고 초대 링크를 발송합니다. admin 또는 owner 권한이 필요합니다. 같은 이메일 주소로 대기 중인 초대가 있으면 기존"
@@ -57,6 +58,7 @@ interface WorkspaceInvitationControllerDocs {
       Principal principal);
 
   @Operation(
+      operationId = "resendWorkspaceInvitation",
       summary = "워크스페이스 초대 재발송",
       description =
           "초대 토큰과 만료 시각을 새로 발급한 뒤 초대 링크를 다시 발송합니다. 만료되었거나 폐기된 초대도 재발송할 수 있지만, 이미 수락된 초대는 재발송할 수"
@@ -72,6 +74,7 @@ interface WorkspaceInvitationControllerDocs {
       Principal principal);
 
   @Operation(
+      operationId = "revokeWorkspaceInvitation",
       summary = "워크스페이스 초대 폐기",
       description = "초대를 폐기하여 기존 초대 링크를 사용할 수 없게 합니다. 이미 수락된 초대는 폐기할 수 없습니다.")
   @ApiResponse(
@@ -85,6 +88,7 @@ interface WorkspaceInvitationControllerDocs {
       Principal principal);
 
   @Operation(
+      operationId = "addWorkspaceMember",
       summary = "워크스페이스 멤버 추가",
       description = "초대를 생성하지 않고 이메일 주소로 사용자를 찾아 워크스페이스 멤버로 바로 추가합니다. admin 또는 owner 권한이 필요합니다.")
   @ApiResponse(
