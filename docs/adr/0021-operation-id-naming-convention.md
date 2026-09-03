@@ -1,6 +1,6 @@
 # 0021. 엔드포인트 operationId 명명 규칙
 
-- 상태: Proposed
+- 상태: Accepted
 - 날짜: 2026-09-02
 - 작성자: jsshin8128
 
