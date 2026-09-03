@@ -24,6 +24,7 @@ import works.momens.server.mobile.auth.dto.response.TokenResponse;
 interface AuthControllerDocs {
 
   @Operation(
+      operationId = "loginWithGoogleToken",
       summary = "모바일 Google ID 토큰 교환",
       description = "Google ID 토큰을 검증하고 Momens access/refresh token을 발급합니다.")
   @ApiResponse(
@@ -35,6 +36,7 @@ interface AuthControllerDocs {
   TokenResponse loginWithGoogleToken(GoogleTokenRequest request);
 
   @Operation(
+      operationId = "refreshAccessToken",
       summary = "Access token 재발급",
       description = "Refresh token을 회전하고 새 access/refresh token을 발급합니다.")
   @ApiResponse(
@@ -45,7 +47,7 @@ interface AuthControllerDocs {
   @ApiExceptions({AuthErrorCode.class, CommonErrorCode.class})
   TokenResponse refresh(RefreshTokenRequest request);
 
-  @Operation(summary = "로그아웃", description = "Refresh token을 폐기합니다.")
+  @Operation(operationId = "logout", summary = "로그아웃", description = "Refresh token을 폐기합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "로그아웃 성공",

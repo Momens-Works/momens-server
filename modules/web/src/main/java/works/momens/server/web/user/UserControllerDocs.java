@@ -21,7 +21,7 @@ import works.momens.server.web.user.dto.response.MeResponse;
 @Tag(name = "User", description = "사용자 프로필 API")
 interface UserControllerDocs {
 
-  @Operation(summary = "내 프로필 조회", description = "인증된 사용자 본인의 프로필을 조회합니다.")
+  @Operation(operationId = "getMe", summary = "내 프로필 조회", description = "인증된 사용자 본인의 프로필을 조회합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "내 프로필 조회 성공",
@@ -29,7 +29,10 @@ interface UserControllerDocs {
   @ApiExceptions({UserErrorCode.class, CommonErrorCode.class})
   MeResponse getMe(Principal principal);
 
-  @Operation(summary = "내 프로필 수정", description = "인증된 사용자 본인의 프로필을 부분 수정합니다. 제공된 필드만 갱신합니다.")
+  @Operation(
+      operationId = "updateMe",
+      summary = "내 프로필 수정",
+      description = "인증된 사용자 본인의 프로필을 부분 수정합니다. 제공된 필드만 갱신합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "내 프로필 수정 성공",

@@ -24,6 +24,7 @@ import works.momens.server.web.source.dto.response.WebSourceRefResponse;
 interface SourceRefControllerDocs {
 
   @Operation(
+      operationId = "verifySourceRef",
       summary = "source-ref 검증 완료 표시",
       description = "source-ref를 확인한 것으로 표시하고 검증한 사용자와 시각을 기록합니다. 해당 워크스페이스의 멤버 권한이 필요합니다.")
   @ApiResponse(

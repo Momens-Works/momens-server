@@ -38,7 +38,7 @@ interface TaskWriteControllerDocs {
       Principal principal);
 
   @Operation(
-      operationId = "updateWebTask",
+      operationId = "updateTask",
       summary = "태스크 수정",
       description = "워크스페이스 멤버가 전달한 필드만 수정합니다.")
   @ApiResponse(

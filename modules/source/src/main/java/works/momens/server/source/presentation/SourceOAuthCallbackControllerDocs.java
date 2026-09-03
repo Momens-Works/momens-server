@@ -26,6 +26,7 @@ import works.momens.server.source.presentation.dto.response.SourceOAuthCallbackR
 interface SourceOAuthCallbackControllerDocs {
 
   @Operation(
+      operationId = "completeSourceConnection",
       summary = "provider 승인 결과 수신",
       description = "provider가 승인 결과와 함께 호출하는 경로입니다. state를 검증하고 토큰을 교환한 뒤 연결 정보를 저장합니다.")
   @ApiResponses({

@@ -17,6 +17,7 @@ import works.momens.server.mobile.pushdevice.dto.request.RegisterPushDeviceReque
 interface PushDeviceControllerDocs {
 
   @Operation(
+      operationId = "registerPushDevice",
       summary = "push 설치 등록 또는 token 갱신",
       description =
           "Firebase Installation ID(FID) 단위로 설치를 등록하거나 FCM token을 갱신합니다. 같은 FID의 재요청은 token을 갱신하고"
@@ -30,6 +31,7 @@ interface PushDeviceControllerDocs {
       Principal principal);
 
   @Operation(
+      operationId = "unregisterPushDevice",
       summary = "push 설치 해제",
       description =
           "현재 인증 사용자가 소유한 설치를 비활성화합니다. Android 앱은 로그아웃 직전에 호출합니다. 이미 비활성화됐거나 없는 설치도 204로 멱등"

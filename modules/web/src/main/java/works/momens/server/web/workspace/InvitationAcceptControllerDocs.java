@@ -25,6 +25,7 @@ import works.momens.server.workspace.WorkspaceErrorCode;
 interface InvitationAcceptControllerDocs {
 
   @Operation(
+      operationId = "acceptInvitation",
       summary = "워크스페이스 초대 수락",
       description = "초대 링크에 포함된 토큰으로 워크스페이스에 참여합니다. 로그인한 계정의 이메일 주소가 초대받은 이메일 주소와 일치해야 합니다.")
   @ApiResponse(

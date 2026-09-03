@@ -39,6 +39,7 @@ interface WorkspaceControllerDocs {
   WorkspaceListResponse list(Principal principal);
 
   @Operation(
+      operationId = "checkWorkspaceSlugAvailability",
       summary = "slug 사용 가능 여부 조회",
       description =
           "입력한 값을 워크스페이스 slug로 사용할 수 있는지 확인합니다. 사용할 수 없는 경우에도 200으로 응답하며 판정 사유를 함께 반환합니다.")
@@ -51,7 +52,10 @@ interface WorkspaceControllerDocs {
   WorkspaceSlugAvailabilityResponse slugAvailable(
       @Parameter(description = "사용 가능 여부를 확인할 slug. 값이 없으면 형식 오류로 판정합니다.") String slug);
 
-  @Operation(summary = "워크스페이스 상세 조회", description = "워크스페이스 한 건을 조회합니다.")
+  @Operation(
+      operationId = "getWorkspace",
+      summary = "워크스페이스 상세 조회",
+      description = "워크스페이스 한 건을 조회합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "조회 성공",
@@ -60,7 +64,10 @@ interface WorkspaceControllerDocs {
   WorkspaceResponse get(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
 
-  @Operation(summary = "웹 보드 snapshot 조회", description = "워크스페이스 보드에 필요한 read 모델을 한 응답으로 반환합니다.")
+  @Operation(
+      operationId = "getWorkspaceSnapshot",
+      summary = "웹 보드 snapshot 조회",
+      description = "워크스페이스 보드에 필요한 read 모델을 한 응답으로 반환합니다.")
   @ApiResponse(
       responseCode = "200",
       description = "snapshot 조회 성공. 모든 목록은 비어 있으면 빈 배열입니다.",
@@ -83,6 +90,7 @@ interface WorkspaceControllerDocs {
   WorkspaceResponse createWorkspace(CreateWorkspaceRequest request, Principal principal);
 
   @Operation(
+      operationId = "updateWorkspace",
       summary = "워크스페이스 수정",
       description = "워크스페이스의 이름, 설명, slug를 수정합니다. admin 또는 owner 권한이 필요합니다.")
   @ApiResponse(

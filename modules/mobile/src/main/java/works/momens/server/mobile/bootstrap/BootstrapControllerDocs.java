@@ -21,6 +21,7 @@ import works.momens.server.user.UserErrorCode;
 interface BootstrapControllerDocs {
 
   @Operation(
+      operationId = "mobileGetBootstrap",
       summary = "모바일 부트스트랩 조회",
       description = "로그인 후 앱 진입에 필요한 현재 사용자 정보, 기본 project id, 접근 가능한 project 목록을 조회합니다.")
   @ApiResponse(

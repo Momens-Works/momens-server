@@ -27,6 +27,7 @@ import works.momens.server.common.api.CommonErrorCode;
 interface WebAuthControllerDocs {
 
   @Operation(
+      operationId = "startGoogleLogin",
       summary = "웹 Google 로그인 시작",
       description = "state·PKCE 쿠키를 설정하고 Google consent 화면으로 리다이렉트합니다.")
   @ApiResponse(responseCode = "302", description = "Google consent로 리다이렉트")
@@ -34,6 +35,7 @@ interface WebAuthControllerDocs {
   void googleLogin(HttpServletResponse response) throws IOException;
 
   @Operation(
+      operationId = "completeGoogleLogin",
       summary = "웹 Google 로그인 콜백",
       description =
           "code를 교환해 WEB 세션 토큰을 발급합니다. 성공: access/refresh HttpOnly 쿠키 설정 후 success-uri로"
@@ -50,6 +52,7 @@ interface WebAuthControllerDocs {
       throws IOException;
 
   @Operation(
+      operationId = "webRefreshSession",
       summary = "웹 세션 갱신",
       description = "refresh 쿠키를 회전해 새 access/refresh HttpOnly 쿠키를 설정합니다. 본문은 없습니다.")
   @ApiResponse(responseCode = "204", description = "갱신 성공(Set-Cookie로 access/refresh 회전)")
@@ -58,6 +61,7 @@ interface WebAuthControllerDocs {
   ResponseEntity<Void> webRefresh(@Parameter(hidden = true) HttpServletRequest request);
 
   @Operation(
+      operationId = "webLogout",
       summary = "웹 로그아웃",
       description = "refresh 쿠키를 폐기하고 access/refresh 쿠키를 정리합니다. 쿠키 유무·상태와 무관하게 204를 반환합니다(멱등).")
   @ApiResponse(responseCode = "204", description = "로그아웃 성공(access/refresh 쿠키 정리)")

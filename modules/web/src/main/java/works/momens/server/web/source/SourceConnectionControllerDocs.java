@@ -39,6 +39,7 @@ interface SourceConnectionControllerDocs {
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
 
   @Operation(
+      operationId = "startSourceConnection",
       summary = "source 연결 시작",
       description =
           "provider 승인 화면으로 이동할 URL을 발급합니다. admin 또는 owner 권한이 필요합니다. 지원하지 않는 provider는 400,"

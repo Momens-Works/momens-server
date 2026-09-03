@@ -22,6 +22,7 @@ import works.momens.server.common.api.CommonErrorCode;
 interface DevTokenControllerDocs {
 
   @Operation(
+      operationId = "devIssueToken",
       summary = "dev 테스트 사용자 토큰 발급",
       description = "허용된 테스트 사용자의 access token을 발급합니다. dev 계열 프로필에서만 동작하며, 호출자는 공유 시크릿 헤더로 제한합니다.")
   @Parameter(

@@ -27,6 +27,7 @@ import works.momens.server.project.task.TaskErrorCode;
 interface ProjectTaskControllerDocs {
 
   @Operation(
+      operationId = "mobileGetTaskBoard",
       summary = "프로젝트 태스크 보드 조회",
       description =
           "태스크를 todo, in_progress, done, backlog, cancelled 다섯 그룹으로 조회합니다. 수정 화면이 상태 5종을 모두 편집하므로 보드도"
@@ -40,6 +41,7 @@ interface ProjectTaskControllerDocs {
       @Parameter(description = "project 식별자") UUID projectId, Principal principal);
 
   @Operation(
+      operationId = "mobileCreateTask",
       summary = "일반 태스크 생성",
       description =
           "제목과 역할, 우선순위로 일반 태스크를 생성합니다. 세 필드 모두 필수이고 역할은 하나만 선택합니다. 생성된 태스크는 todo 그룹에서 시작합니다.")
