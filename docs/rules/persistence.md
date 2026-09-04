@@ -34,14 +34,11 @@
   관리합니다. 첫 application event 도입 시 함께 추가합니다([아키텍처](architecture.md), [ADR-0001](../adr/0001-modular-monolith-rules.md)).
 - 운영(`prod`)의 스키마는 **이 서버가 소유합니다**([ADR-0019](../adr/0019-prod-schema-ownership-transfer.md)).
   마이그레이션은 배포 때 Flyway가 직접 적용하고, 잘못된 마이그레이션은 그 시점에 Flyway가 막습니다.
-  `local`·`test`·`dev`와 같은 모델입니다.
-  - **전환 중입니다.** 부트스트랩(MOM-0909)이 prod에 적용되기 전까지 prod의 Flyway는 꺼져 있고
-    (`spring.flyway.enabled=false`) `ddl-auto=validate`로 매핑만 검증합니다. 그동안 추가하는
-    마이그레이션은 prod에 자동으로 반영되지 않으므로 **부트스트랩의 실행 집합에 포함되어야 합니다.**
-    새 마이그레이션을 추가한다면 MOM-0909에 알립니다.
-  - **그 전까지 `main` 릴리스를 내지 않습니다.** 미반영 16건 때문에 새 이미지가 기동에 실패하고
-    롤아웃이 깨집니다. 이것을 막던 자동 게이트는 폐지됐으므로(교착 해소) 지금은 수기 의무입니다 —
-    [prod 운영 준비 대장](../prod-readiness-ledger.md)의 수기 구간이 추적합니다.
+  `local`·`test`·`dev`와 같은 모델입니다. 부트스트랩(MOM-0909)이 2026-09-04에 적용돼 이 모델이
+  prod에서 실제로 돌고 있습니다.
+  - **적용된 마이그레이션 파일은 고치지 않습니다.** prod에 이력이 남은 뒤로는 파일을 수정하면
+    checksum이 어긋나 **다음 배포의 기동이 실패합니다.** 바꿔야 할 것이 있으면 새 마이그레이션을
+    추가합니다.
 
 ### 레거시·worker DDL 동결
 
