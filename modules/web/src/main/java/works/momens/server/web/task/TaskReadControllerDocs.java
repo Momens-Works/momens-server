@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.project.core.ProjectErrorCode;
 import works.momens.server.project.task.TaskErrorCode;
@@ -29,7 +29,9 @@ interface TaskReadControllerDocs {
       responseCode = "200",
       description = "조회 성공. 태스크가 없으면 tasks는 빈 배열입니다.",
       content = @Content(schema = @Schema(implementation = WebTaskListResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WebTaskListResponse list(
       @Parameter(description = "프로젝트 식별자") UUID projectId, Principal principal);
 
@@ -41,7 +43,9 @@ interface TaskReadControllerDocs {
       responseCode = "200",
       description = "조회 성공",
       content = @Content(schema = @Schema(implementation = WebTaskResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WebTaskResponse get(@Parameter(description = "태스크 식별자") UUID taskId, Principal principal);
 
   @Operation(
@@ -52,7 +56,9 @@ interface TaskReadControllerDocs {
       responseCode = "200",
       description = "조회 성공. 업데이트가 없으면 updates는 빈 배열입니다.",
       content = @Content(schema = @Schema(implementation = TaskUpdateListResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   TaskUpdateListResponse updates(
       @Parameter(description = "태스크 식별자") UUID taskId, Principal principal);
 
@@ -64,6 +70,8 @@ interface TaskReadControllerDocs {
       responseCode = "200",
       description = "조회 성공. 연결된 항목이 없으면 memories와 source_refs는 빈 배열입니다.",
       content = @Content(schema = @Schema(implementation = TaskContextResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   TaskContextResponse context(@Parameter(description = "태스크 식별자") UUID taskId, Principal principal);
 }

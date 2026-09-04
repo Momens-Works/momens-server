@@ -6,13 +6,14 @@ import io.swagger.v3.oas.models.Operation;
 import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.method.HandlerMethod;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 
 class SwaggerOperationCustomizerTest {
 
   private final SwaggerOperationCustomizer customizer =
-      new SwaggerOperationCustomizer(new SwaggerErrorExampleGenerator());
+      new SwaggerOperationCustomizer(
+          new ApiExceptionResolver(), new SwaggerErrorExampleGenerator());
 
   @Test
   void readsApiExceptionsFromControllerDocsInterface() throws NoSuchMethodException {
@@ -55,7 +56,7 @@ class SwaggerOperationCustomizerTest {
 
   private interface InterfaceAnnotatedControllerDocs {
 
-    @ApiExceptions({CommonErrorCode.class})
+    @ApiException(CommonErrorCode.class)
     void get();
   }
 
@@ -67,7 +68,7 @@ class SwaggerOperationCustomizerTest {
 
   private static class MethodAnnotatedController {
 
-    @ApiExceptions({CommonErrorCode.class})
+    @ApiException(CommonErrorCode.class)
     public void get() {}
   }
 

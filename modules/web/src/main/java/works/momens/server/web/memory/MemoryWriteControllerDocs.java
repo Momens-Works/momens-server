@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.memory.MemoryErrorCode;
 import works.momens.server.web.dto.response.WebMessageResponse;
@@ -24,7 +24,8 @@ interface MemoryWriteControllerDocs {
   @ApiResponse(
       responseCode = "201",
       content = @Content(schema = @Schema(implementation = ConfirmedMemoryResponse.class)))
-  @ApiExceptions({MemoryErrorCode.class, CommonErrorCode.class})
+  @ApiException(MemoryErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   ConfirmedMemoryResponse confirm(
       @Parameter(description = "메모리 후보 식별자") UUID candidateId, Principal principal);
 
@@ -32,7 +33,8 @@ interface MemoryWriteControllerDocs {
   @ApiResponse(
       responseCode = "201",
       content = @Content(schema = @Schema(implementation = ConfirmedMemoryResponse.class)))
-  @ApiExceptions({MemoryErrorCode.class, CommonErrorCode.class})
+  @ApiException(MemoryErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   ConfirmedMemoryResponse editAndConfirm(
       UUID candidateId, EditAndConfirmMemoryCandidateRequest request, Principal principal);
 
@@ -40,7 +42,8 @@ interface MemoryWriteControllerDocs {
   @ApiResponse(
       responseCode = "200",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({MemoryErrorCode.class, CommonErrorCode.class})
+  @ApiException(MemoryErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WebMessageResponse reject(
       UUID candidateId, RejectMemoryCandidateRequest request, Principal principal);
 
@@ -48,7 +51,8 @@ interface MemoryWriteControllerDocs {
   @ApiResponse(
       responseCode = "200",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({MemoryErrorCode.class, CommonErrorCode.class})
+  @ApiException(MemoryErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WebMessageResponse merge(
       UUID candidateId, MergeMemoryCandidateRequest request, Principal principal);
 
@@ -56,13 +60,15 @@ interface MemoryWriteControllerDocs {
   @ApiResponse(
       responseCode = "200",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({MemoryErrorCode.class, CommonErrorCode.class})
+  @ApiException(MemoryErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WebMessageResponse expire(UUID candidateId, Principal principal);
 
   @Operation(operationId = "resolveMemory", summary = "메모리 해결")
   @ApiResponse(
       responseCode = "200",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({MemoryErrorCode.class, CommonErrorCode.class})
+  @ApiException(MemoryErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WebMessageResponse resolve(UUID memoryId, ResolveMemoryRequest request, Principal principal);
 }

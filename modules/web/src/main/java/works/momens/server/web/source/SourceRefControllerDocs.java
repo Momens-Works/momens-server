@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.source.SourceErrorCode;
 import works.momens.server.web.source.dto.response.WebSourceRefResponse;
@@ -31,7 +31,8 @@ interface SourceRefControllerDocs {
       responseCode = "200",
       description = "source-ref 검증 완료 표시 성공",
       content = @Content(schema = @Schema(implementation = WebSourceRefResponse.class)))
-  @ApiExceptions({SourceErrorCode.class, CommonErrorCode.class})
+  @ApiException(SourceErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WebSourceRefResponse verify(
       @Parameter(description = "source-ref 식별자") UUID sourceRefId, Principal principal);
 }

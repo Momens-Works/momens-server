@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.web.project.dto.request.CreateProjectRequest;
 import works.momens.server.web.project.dto.response.WebProjectResponse;
@@ -32,7 +32,8 @@ interface ProjectControllerDocs {
       responseCode = "201",
       description = "프로젝트 생성 성공",
       content = @Content(schema = @Schema(implementation = WebProjectResponse.class)))
-  @ApiExceptions({WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WebProjectResponse createProject(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
       CreateProjectRequest request,

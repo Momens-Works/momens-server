@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.project.core.ProjectErrorCode;
 import works.momens.server.project.task.TaskErrorCode;
@@ -31,7 +31,9 @@ interface TaskWriteControllerDocs {
       responseCode = "201",
       description = "생성 성공",
       content = @Content(schema = @Schema(implementation = WebTaskResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WebTaskResponse create(
       @Parameter(description = "프로젝트 식별자") UUID projectId,
       CreateWebTaskRequest request,
@@ -45,7 +47,9 @@ interface TaskWriteControllerDocs {
       responseCode = "200",
       description = "수정 성공",
       content = @Content(schema = @Schema(implementation = WebTaskResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WebTaskResponse update(
       @Parameter(description = "태스크 식별자") UUID taskId,
       UpdateWebTaskRequest request,
@@ -59,7 +63,9 @@ interface TaskWriteControllerDocs {
       responseCode = "200",
       description = "삭제 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WebMessageResponse delete(@Parameter(description = "태스크 식별자") UUID taskId, Principal principal);
 
   @Operation(
@@ -70,7 +76,9 @@ interface TaskWriteControllerDocs {
       responseCode = "201",
       description = "생성 성공",
       content = @Content(schema = @Schema(implementation = UpdateResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   UpdateResponse createUpdate(
       @Parameter(description = "태스크 식별자") UUID taskId,
       CreateTaskUpdateRequest request,
@@ -84,7 +92,9 @@ interface TaskWriteControllerDocs {
       responseCode = "200",
       description = "삭제 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WebMessageResponse deleteUpdate(
       @Parameter(description = "태스크 식별자") UUID taskId,
       @Parameter(description = "태스크 업데이트 식별자") UUID updateId,

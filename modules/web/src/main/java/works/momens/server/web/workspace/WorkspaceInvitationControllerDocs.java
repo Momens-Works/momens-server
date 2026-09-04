@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.web.dto.response.WebMessageResponse;
 import works.momens.server.web.workspace.dto.request.AddWorkspaceMemberRequest;
@@ -37,7 +37,9 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "200",
       description = "목록 조회 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationsResponse.class)))
-  @ApiExceptions({InvitationErrorCode.class, WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(InvitationErrorCode.class)
+  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WorkspaceInvitationsResponse list(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
 
@@ -51,7 +53,9 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "201",
       description = "초대 생성 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationResponse.class)))
-  @ApiExceptions({InvitationErrorCode.class, WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(InvitationErrorCode.class)
+  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WorkspaceInvitationResponse create(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
       CreateWorkspaceInvitationRequest request,
@@ -67,7 +71,9 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "200",
       description = "초대 재발송 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationResponse.class)))
-  @ApiExceptions({InvitationErrorCode.class, WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(InvitationErrorCode.class)
+  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WorkspaceInvitationResponse resend(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
       @Parameter(description = "초대 식별자") UUID invitationId,
@@ -81,7 +87,9 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "200",
       description = "초대 폐기 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationResponse.class)))
-  @ApiExceptions({InvitationErrorCode.class, WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(InvitationErrorCode.class)
+  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WorkspaceInvitationResponse revoke(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
       @Parameter(description = "초대 식별자") UUID invitationId,
@@ -95,7 +103,8 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "200",
       description = "멤버 추가 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   WebMessageResponse invite(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
       AddWorkspaceMemberRequest request,

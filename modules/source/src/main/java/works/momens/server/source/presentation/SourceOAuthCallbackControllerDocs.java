@@ -9,7 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.source.SourceErrorCode;
 import works.momens.server.source.presentation.dto.response.SourceOAuthCallbackResponse;
 
@@ -36,7 +36,7 @@ interface SourceOAuthCallbackControllerDocs {
         description = "이동할 URL이 설정되지 않은 경우 연결 정보 반환",
         content = @Content(schema = @Schema(implementation = SourceOAuthCallbackResponse.class)))
   })
-  @ApiExceptions({SourceErrorCode.class})
+  @ApiException(SourceErrorCode.class)
   ResponseEntity<SourceOAuthCallbackResponse> callback(
       @Parameter(description = "provider가 발급한 승인 코드") String code,
       @Parameter(description = "연결 시작 시 서버가 서명해 provider에 전달한 값") String state);

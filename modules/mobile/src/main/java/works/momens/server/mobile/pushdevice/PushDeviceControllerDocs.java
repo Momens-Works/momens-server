@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.mobile.pushdevice.dto.request.RegisterPushDeviceRequest;
 
@@ -24,7 +24,7 @@ interface PushDeviceControllerDocs {
               + " 활성화하며, 다른 사용자에게 귀속된 FID면 현재 인증 사용자에게 소유권을 이전합니다. 같은 활성 token이 다른 FID에 연결돼 있으면"
               + " 이전 연결을 비활성화합니다.")
   @ApiResponse(responseCode = "204", description = "생성·갱신 모두 성공.")
-  @ApiExceptions(CommonErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   void register(
       @Parameter(description = "Firebase Installation ID") String firebaseInstallationId,
       RegisterPushDeviceRequest request,
@@ -37,7 +37,7 @@ interface PushDeviceControllerDocs {
           "현재 인증 사용자가 소유한 설치를 비활성화합니다. Android 앱은 로그아웃 직전에 호출합니다. 이미 비활성화됐거나 없는 설치도 204로 멱등"
               + " 처리하며, 다른 사용자가 소유한 활성 설치는 해제하지 않습니다.")
   @ApiResponse(responseCode = "204", description = "해제 성공(신규 또는 멱등 replay).")
-  @ApiExceptions(CommonErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   void unregister(
       @Parameter(description = "Firebase Installation ID") String firebaseInstallationId,
       Principal principal);

@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import works.momens.server.auth.dev.dto.request.DevTokenRequest;
 import works.momens.server.auth.dev.dto.response.DevTokenResponse;
 import works.momens.server.auth.internal.application.DevTokenErrorCode;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 
 /**
@@ -36,6 +36,7 @@ interface DevTokenControllerDocs {
       description = "토큰 발급 성공",
       content = @Content(schema = @Schema(implementation = DevTokenResponse.class)))
   @SecurityRequirements
-  @ApiExceptions({DevTokenErrorCode.class, CommonErrorCode.class})
+  @ApiException(DevTokenErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   DevTokenResponse issueDevToken(String secret, DevTokenRequest request);
 }
