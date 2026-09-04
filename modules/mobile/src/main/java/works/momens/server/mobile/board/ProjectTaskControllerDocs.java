@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.mobile.board.dto.request.CreateTaskRequest;
 import works.momens.server.mobile.board.dto.response.TaskBoardResponse;
@@ -36,7 +36,9 @@ interface ProjectTaskControllerDocs {
       responseCode = "200",
       description = "보드 조회 성공. 다섯 그룹을 항상 포함하고, 비어 있으면 tasks는 빈 배열입니다.",
       content = @Content(schema = @Schema(implementation = TaskBoardResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   TaskBoardResponse getBoard(
       @Parameter(description = "project 식별자") UUID projectId, Principal principal);
 
@@ -49,7 +51,9 @@ interface ProjectTaskControllerDocs {
       responseCode = "201",
       description = "생성 성공",
       content = @Content(schema = @Schema(implementation = TaskCreateResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   TaskCreateResponse createTask(
       @Parameter(description = "project 식별자") UUID projectId,
       CreateTaskRequest request,

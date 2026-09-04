@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import works.momens.server.auth.AuthErrorCode;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.mobile.auth.dto.request.GoogleTokenRequest;
 import works.momens.server.mobile.auth.dto.request.LogoutRequest;
@@ -32,7 +32,8 @@ interface AuthControllerDocs {
       description = "토큰 발급 성공",
       content = @Content(schema = @Schema(implementation = TokenResponse.class)))
   @SecurityRequirements
-  @ApiExceptions({AuthErrorCode.class, CommonErrorCode.class})
+  @ApiException(AuthErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   TokenResponse loginWithGoogleToken(GoogleTokenRequest request);
 
   @Operation(
@@ -44,7 +45,8 @@ interface AuthControllerDocs {
       description = "토큰 재발급 성공",
       content = @Content(schema = @Schema(implementation = TokenResponse.class)))
   @SecurityRequirements
-  @ApiExceptions({AuthErrorCode.class, CommonErrorCode.class})
+  @ApiException(AuthErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   TokenResponse refresh(RefreshTokenRequest request);
 
   @Operation(operationId = "logout", summary = "로그아웃", description = "Refresh token을 폐기합니다.")
@@ -53,6 +55,7 @@ interface AuthControllerDocs {
       description = "로그아웃 성공",
       content = @Content(schema = @Schema(implementation = AuthMessageResponse.class)))
   @SecurityRequirements
-  @ApiExceptions({AuthErrorCode.class, CommonErrorCode.class})
+  @ApiException(AuthErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   AuthMessageResponse logout(LogoutRequest request);
 }

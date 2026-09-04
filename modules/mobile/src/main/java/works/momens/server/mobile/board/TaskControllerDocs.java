@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.mobile.board.dto.request.ToggleChecklistItemRequest;
 import works.momens.server.mobile.board.dto.request.UpdateTaskRequest;
@@ -37,7 +37,9 @@ interface TaskControllerDocs {
       responseCode = "200",
       description = "상세 조회 성공. 담당자 미지정이면 assignee가, 목적 작성 전이면 purpose가 null입니다.",
       content = @Content(schema = @Schema(implementation = TaskDetailResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   TaskDetailResponse getTaskDetail(
       @Parameter(description = "task 식별자") UUID taskId, Principal principal);
 
@@ -49,7 +51,9 @@ interface TaskControllerDocs {
               + " 비우려면 assignee_id를 null로 보내고, 완료기준은 최종 목록으로 전체 교체하며 0개에서 5개까지 허용합니다. 저장만 하고 본문은"
               + " 반환하지 않으므로, 저장 후 최신 상태는 태스크 상세 조회로 다시 읽습니다.")
   @ApiResponse(responseCode = "204", description = "수정 성공. 본문 없음. 최신 상태는 상세 조회로 읽습니다.")
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   void updateTask(
       @Parameter(description = "task 식별자") UUID taskId,
       UpdateTaskRequest request,
@@ -63,7 +67,9 @@ interface TaskControllerDocs {
       responseCode = "200",
       description = "변경 성공",
       content = @Content(schema = @Schema(implementation = ChecklistToggleResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   ChecklistToggleResponse toggleChecklistItem(
       @Parameter(description = "task 식별자") UUID taskId,
       @Parameter(description = "완료기준 항목 식별자") UUID itemId,

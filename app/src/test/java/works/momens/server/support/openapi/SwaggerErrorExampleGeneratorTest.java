@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.media.MediaType;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import works.momens.server.common.api.CommonErrorCode;
@@ -17,7 +18,7 @@ class SwaggerErrorExampleGeneratorTest {
   void addsStandardErrorExamplesByStatus() {
     Operation operation = new Operation();
 
-    generator.addErrorResponses(operation, CommonErrorCode.class);
+    generator.addErrorResponses(operation, List.of(CommonErrorCode.values()));
 
     MediaType badRequest = operation.getResponses().get("400").getContent().get("application/json");
     Example validationExample = badRequest.getExamples().get("COMMON_VALIDATION_FAILED");

@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.source.SourceErrorCode;
 import works.momens.server.web.source.dto.response.SourceConnectionsResponse;
@@ -34,7 +34,8 @@ interface SourceConnectionControllerDocs {
       responseCode = "200",
       description = "source 연결 목록 조회 성공",
       content = @Content(schema = @Schema(implementation = SourceConnectionsResponse.class)))
-  @ApiExceptions({WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   SourceConnectionsResponse list(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
 
@@ -48,7 +49,9 @@ interface SourceConnectionControllerDocs {
       responseCode = "200",
       description = "provider 승인 URL 발급 성공",
       content = @Content(schema = @Schema(implementation = SourceInstallResponse.class)))
-  @ApiExceptions({SourceErrorCode.class, WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(SourceErrorCode.class)
+  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   SourceInstallResponse install(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
       @Parameter(

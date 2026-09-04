@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.web.workspace.dto.request.AcceptInvitationRequest;
 import works.momens.server.web.workspace.dto.response.AcceptInvitationResponse;
@@ -32,6 +32,8 @@ interface InvitationAcceptControllerDocs {
       responseCode = "200",
       description = "초대 수락 성공",
       content = @Content(schema = @Schema(implementation = AcceptInvitationResponse.class)))
-  @ApiExceptions({InvitationErrorCode.class, WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(InvitationErrorCode.class)
+  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   AcceptInvitationResponse accept(AcceptInvitationRequest request, Principal principal);
 }

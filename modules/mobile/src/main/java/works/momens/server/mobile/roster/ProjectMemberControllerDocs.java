@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.mobile.roster.dto.response.ProjectMembersResponse;
 import works.momens.server.project.core.ProjectErrorCode;
@@ -32,7 +32,9 @@ interface ProjectMemberControllerDocs {
       responseCode = "200",
       description = "멤버 목록 조회 성공. 이름 오름차순으로 정렬되고, 검색 결과가 없으면 members는 빈 배열입니다.",
       content = @Content(schema = @Schema(implementation = ProjectMembersResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(ProjectErrorCode.class)
+  @ApiException(TaskErrorCode.class)
+  @ApiException(CommonErrorCode.class)
   ProjectMembersResponse listMembers(
       @Parameter(description = "project 식별자") UUID projectId,
       @Parameter(description = "이름 검색어. 부분 일치에 대소문자를 무시하고, 없거나 공백이면 전체 멤버를 반환합니다.") String query,
