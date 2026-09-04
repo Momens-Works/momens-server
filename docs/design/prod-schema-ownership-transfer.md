@@ -662,7 +662,7 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
        -p 127.0.0.1:15498:5432 pgvector/pgvector:pg16
      until docker exec verify-db pg_isready -U momens -d verifydb >/dev/null 2>&1; do sleep 1; done
 
-     # prod 프로필은 flyway.enabled=false 라 SPRING_FLYWAY_ENABLED 로 켠다. auth 값은 @NotBlank
+     # prod 프로필은 flyway.enabled=true 라 별도 토글이 필요 없다. auth 값은 @NotBlank
      # 검증만 통과하면 되므로 더미다 — 이 DB는 체크섬 산출에만 쓰고 버린다.
      SPRING_PROFILES_ACTIVE=prod \
      SPRING_FLYWAY_ENABLED=true \
@@ -889,7 +889,7 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
 7. 기동과 스키마 확인
 8. `out-of-order`·`group`·`init-sqls`를 제거하는 PR 머지 후 같은 main 이미지 SHA로 다시 dispatch
 9. 후속 서버 릴리스로 `application-prod.yml`을 `flyway.enabled: true`로 정본화한 뒤 ConfigMap의
-   `SPRING_FLYWAY_ENABLED` 오버라이드를 제거하고, 대장의 MOM-0909 수기 의무 3행을 제거
+   `SPRING_FLYWAY_ENABLED` 오버라이드를 제거하고, 대장의 MOM-0909 수기 의무 4행을 제거
 
 #### 토글은 수기 변경이 아니라 커밋이어야 한다
 

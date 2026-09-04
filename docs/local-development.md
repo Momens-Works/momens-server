@@ -111,9 +111,10 @@ Flyway checksum은 주석을 포함한 파일 내용 전체로 계산합니다. 
 docker compose down -v && docker compose up -d
 ```
 
-테스트는 Testcontainers로 매번 새 DB를 쓰므로 영향을 받지 않습니다. `prod`는 Flyway가 꺼져 있어
-무관하고, Flyway가 켜지는 `dev`는 같은 문제를 만나므로 DB를 다시 만들거나 `flyway repair`로
-checksum을 갱신해야 합니다.
+테스트는 Testcontainers로 매번 새 DB를 쓰므로 영향을 받지 않습니다. `dev`와 `prod`는 Flyway가
+켜져 있어 같은 문제를 만나는데, DB를 다시 만들 수 없는 `prod`에서는 **이미 적용된 파일을 고치는
+순간 다음 배포의 기동이 실패합니다.** 적용된 마이그레이션은 고치지 말고 새 파일을 추가합니다
+([데이터 규칙](rules/persistence.md)).
 
 ## 레거시 차등 비교
 
