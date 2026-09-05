@@ -60,7 +60,9 @@ interface WorkspaceControllerDocs {
       responseCode = "200",
       description = "조회 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceResponse.class)))
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WorkspaceResponse get(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
@@ -73,7 +75,9 @@ interface WorkspaceControllerDocs {
       responseCode = "200",
       description = "snapshot 조회 성공. 모든 목록은 비어 있으면 빈 배열입니다.",
       content = @Content(schema = @Schema(implementation = WorkspaceSnapshotResponse.class)))
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WorkspaceSnapshotResponse snapshot(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
@@ -88,7 +92,13 @@ interface WorkspaceControllerDocs {
       responseCode = "201",
       description = "생성 성공. 생성된 워크스페이스를 반환합니다.",
       content = @Content(schema = @Schema(implementation = WorkspaceResponse.class)))
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {
+        "WORKSPACE_INVALID_SLUG",
+        "WORKSPACE_RESERVED_SLUG",
+        "WORKSPACE_SLUG_ALREADY_EXISTS"
+      })
   @ApiException(CommonErrorCode.class)
   WorkspaceResponse createWorkspace(CreateWorkspaceRequest request, Principal principal);
 
@@ -100,7 +110,14 @@ interface WorkspaceControllerDocs {
       responseCode = "200",
       description = "수정 성공. 변경된 워크스페이스를 반환합니다.",
       content = @Content(schema = @Schema(implementation = WorkspaceResponse.class)))
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {
+        "WORKSPACE_NOT_FOUND",
+        "WORKSPACE_INVALID_SLUG",
+        "WORKSPACE_RESERVED_SLUG",
+        "WORKSPACE_SLUG_ALREADY_EXISTS"
+      })
   @ApiException(CommonErrorCode.class)
   WorkspaceResponse update(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,

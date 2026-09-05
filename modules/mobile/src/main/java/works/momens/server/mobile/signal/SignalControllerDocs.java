@@ -16,7 +16,6 @@ import works.momens.server.mobile.signal.dto.response.DismissResponse;
 import works.momens.server.mobile.signal.dto.response.SignalDetailResponse;
 import works.momens.server.mobile.signal.dto.response.SignalListResponse;
 import works.momens.server.project.core.ProjectErrorCode;
-import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.signal.SignalErrorCode;
 
 /**
@@ -38,8 +37,9 @@ interface SignalControllerDocs {
       responseCode = "200",
       description = "미처리 시그널 목록. 없으면 signals는 빈 배열입니다.",
       content = @Content(schema = @Schema(implementation = SignalListResponse.class)))
-  @ApiException(ProjectErrorCode.class)
-  @ApiException(TaskErrorCode.class)
+  @ApiException(
+      value = ProjectErrorCode.class,
+      codes = {"PROJECT_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   SignalListResponse listSignals(
       @Parameter(description = "project 식별자") UUID projectId, Principal principal);
@@ -54,7 +54,9 @@ interface SignalControllerDocs {
       responseCode = "200",
       description = "시그널 상세.",
       content = @Content(schema = @Schema(implementation = SignalDetailResponse.class)))
-  @ApiException(SignalErrorCode.class)
+  @ApiException(
+      value = SignalErrorCode.class,
+      codes = {"SIGNAL_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   SignalDetailResponse getSignal(
       @Parameter(description = "signal 식별자") UUID signalId, Principal principal);
@@ -74,7 +76,9 @@ interface SignalControllerDocs {
       responseCode = "200",
       description = "같은 action 재요청(멱등 replay).",
       content = @Content(schema = @Schema(implementation = ConvertToTaskResponse.class)))
-  @ApiException(SignalErrorCode.class)
+  @ApiException(
+      value = SignalErrorCode.class,
+      codes = {"SIGNAL_NOT_FOUND", "SIGNAL_INVALID_STATE"})
   @ApiException(CommonErrorCode.class)
   ResponseEntity<ConvertToTaskResponse> convertToTask(
       @Parameter(description = "signal 식별자") UUID signalId, Principal principal);
@@ -89,7 +93,9 @@ interface SignalControllerDocs {
       responseCode = "200",
       description = "처리 완료(신규 또는 멱등 replay).",
       content = @Content(schema = @Schema(implementation = DismissResponse.class)))
-  @ApiException(SignalErrorCode.class)
+  @ApiException(
+      value = SignalErrorCode.class,
+      codes = {"SIGNAL_NOT_FOUND", "SIGNAL_INVALID_STATE"})
   @ApiException(CommonErrorCode.class)
   DismissResponse dismiss(
       @Parameter(description = "signal 식별자") UUID signalId, Principal principal);

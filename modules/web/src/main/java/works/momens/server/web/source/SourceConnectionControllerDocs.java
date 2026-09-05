@@ -34,7 +34,9 @@ interface SourceConnectionControllerDocs {
       responseCode = "200",
       description = "source 연결 목록 조회 성공",
       content = @Content(schema = @Schema(implementation = SourceConnectionsResponse.class)))
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   SourceConnectionsResponse list(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
@@ -49,8 +51,12 @@ interface SourceConnectionControllerDocs {
       responseCode = "200",
       description = "provider 승인 URL 발급 성공",
       content = @Content(schema = @Schema(implementation = SourceInstallResponse.class)))
-  @ApiException(SourceErrorCode.class)
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = SourceErrorCode.class,
+      codes = {"SOURCE_UNSUPPORTED_PROVIDER", "SOURCE_PROVIDER_UNCONFIGURED"})
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   SourceInstallResponse install(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
