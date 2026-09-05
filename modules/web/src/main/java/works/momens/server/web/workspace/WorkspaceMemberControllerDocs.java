@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.web.dto.response.WebMessageResponse;
 import works.momens.server.web.workspace.dto.request.UpdateWorkspaceMemberRequest;
@@ -34,7 +34,10 @@ interface WorkspaceMemberControllerDocs {
       responseCode = "200",
       description = "목록 조회 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceMembersResponse.class)))
-  @ApiExceptions({WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   WorkspaceMembersResponse list(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
 
@@ -46,7 +49,15 @@ interface WorkspaceMemberControllerDocs {
       responseCode = "200",
       description = "수정 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {
+        "WORKSPACE_NOT_FOUND",
+        "WORKSPACE_INVALID_ROLE",
+        "WORKSPACE_MEMBER_NOT_FOUND",
+        "WORKSPACE_OWNER_PROTECTED"
+      })
+  @ApiException(CommonErrorCode.class)
   WebMessageResponse update(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
       @Parameter(description = "대상 사용자 식별자") UUID userId,
@@ -61,7 +72,15 @@ interface WorkspaceMemberControllerDocs {
       responseCode = "200",
       description = "제거 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {
+        "WORKSPACE_NOT_FOUND",
+        "WORKSPACE_MEMBER_NOT_FOUND",
+        "WORKSPACE_OWNER_PROTECTED",
+        "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED"
+      })
+  @ApiException(CommonErrorCode.class)
   WebMessageResponse remove(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
       @Parameter(description = "대상 사용자 식별자") UUID userId,

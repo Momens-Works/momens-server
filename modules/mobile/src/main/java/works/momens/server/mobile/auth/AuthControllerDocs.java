@@ -7,13 +7,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import works.momens.server.auth.AuthErrorCode;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.mobile.auth.dto.request.GoogleTokenRequest;
 import works.momens.server.mobile.auth.dto.request.LogoutRequest;
 import works.momens.server.mobile.auth.dto.request.RefreshTokenRequest;
 import works.momens.server.mobile.auth.dto.response.AuthMessageResponse;
 import works.momens.server.mobile.auth.dto.response.TokenResponse;
+import works.momens.server.user.UserErrorCode;
 
 /**
  * 인증 API 문서. 이 엔드포인트들은 모두 공개이므로(요청 본문의 자격 증명으로 동작하고 SecurityConfig의 공개 체인에 속한다) OpenApiConfig가 적용한
@@ -32,7 +33,13 @@ interface AuthControllerDocs {
       description = "토큰 발급 성공",
       content = @Content(schema = @Schema(implementation = TokenResponse.class)))
   @SecurityRequirements
-  @ApiExceptions({AuthErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = AuthErrorCode.class,
+      codes = {"AUTH_GOOGLE_TOKEN_INVALID", "AUTH_GOOGLE_EMAIL_NOT_VERIFIED"})
+  @ApiException(
+      value = UserErrorCode.class,
+      codes = {"USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY"})
+  @ApiException(CommonErrorCode.class)
   TokenResponse loginWithGoogleToken(GoogleTokenRequest request);
 
   @Operation(
@@ -44,7 +51,10 @@ interface AuthControllerDocs {
       description = "토큰 재발급 성공",
       content = @Content(schema = @Schema(implementation = TokenResponse.class)))
   @SecurityRequirements
-  @ApiExceptions({AuthErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = AuthErrorCode.class,
+      codes = {"AUTH_REFRESH_TOKEN_INVALID"})
+  @ApiException(CommonErrorCode.class)
   TokenResponse refresh(RefreshTokenRequest request);
 
   @Operation(operationId = "logout", summary = "로그아웃", description = "Refresh token을 폐기합니다.")
@@ -53,6 +63,9 @@ interface AuthControllerDocs {
       description = "로그아웃 성공",
       content = @Content(schema = @Schema(implementation = AuthMessageResponse.class)))
   @SecurityRequirements
-  @ApiExceptions({AuthErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = AuthErrorCode.class,
+      codes = {"AUTH_REFRESH_TOKEN_INVALID"})
+  @ApiException(CommonErrorCode.class)
   AuthMessageResponse logout(LogoutRequest request);
 }

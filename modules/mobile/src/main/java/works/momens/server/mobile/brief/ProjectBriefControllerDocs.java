@@ -8,12 +8,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.mobile.brief.dto.response.BriefResponse;
 import works.momens.server.mobile.brief.dto.response.BriefSignalSummaryPageResponse;
 import works.momens.server.project.core.ProjectErrorCode;
-import works.momens.server.project.task.TaskErrorCode;
 
 /**
  * {@code /api/mobile/projects/{projectId}/brief} OpenAPI 문서. Swagger 애너테이션을 컨트롤러 구현과
@@ -37,7 +36,10 @@ interface ProjectBriefControllerDocs {
       responseCode = "200",
       description = "브리프 조회 성공",
       content = @Content(schema = @Schema(implementation = BriefResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = ProjectErrorCode.class,
+      codes = {"PROJECT_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   BriefResponse getBrief(
       @Parameter(description = "project 식별자") UUID projectId, Principal principal);
 
@@ -54,7 +56,10 @@ interface ProjectBriefControllerDocs {
       responseCode = "200",
       description = "페이지 조회 성공",
       content = @Content(schema = @Schema(implementation = BriefSignalSummaryPageResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = ProjectErrorCode.class,
+      codes = {"PROJECT_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   BriefSignalSummaryPageResponse getSignalSummaryPage(
       @Parameter(description = "project 식별자") UUID projectId,
       @Parameter(

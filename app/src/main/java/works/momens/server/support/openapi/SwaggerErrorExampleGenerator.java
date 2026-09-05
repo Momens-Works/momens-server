@@ -6,7 +6,6 @@ import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,14 +13,12 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import works.momens.server.common.api.ErrorCode;
 
-/** {@link ErrorCode} enum을 OpenAPI 실패 응답 예시로 변환합니다. */
+/** {@link ErrorCode} 목록을 OpenAPI 실패 응답 예시로 변환합니다. */
 public class SwaggerErrorExampleGenerator {
 
   private static final String APPLICATION_JSON = "application/json";
 
-  @SafeVarargs
-  public final void addErrorResponses(
-      Operation operation, Class<? extends ErrorCode>... errorEnums) {
+  public void addErrorResponses(Operation operation, List<? extends ErrorCode> errorCodes) {
     ApiResponses responses = operation.getResponses();
     if (responses == null) {
       responses = new ApiResponses();
@@ -30,27 +27,13 @@ public class SwaggerErrorExampleGenerator {
     ApiResponses targetResponses = responses;
 
     Map<Integer, List<ErrorCode>> errorCodesByStatus =
-        extractErrorCodes(errorEnums).stream()
+        errorCodes.stream()
             .collect(
-                Collectors.groupingBy(ErrorCode::status, LinkedHashMap::new, Collectors.toList()));
+                Collectors.groupingBy(
+                    ErrorCode::status, LinkedHashMap::new, Collectors.<ErrorCode>toList()));
 
     errorCodesByStatus.forEach(
         (status, codes) -> mergeIntoResponses(targetResponses, status, codes));
-  }
-
-  private List<ErrorCode> extractErrorCodes(Class<? extends ErrorCode>[] errorEnums) {
-    return Arrays.stream(errorEnums)
-        .flatMap(errorEnum -> Arrays.stream(enumConstants(errorEnum)))
-        .toList();
-  }
-
-  private ErrorCode[] enumConstants(Class<? extends ErrorCode> errorEnum) {
-    ErrorCode[] constants = errorEnum.getEnumConstants();
-    if (constants == null) {
-      throw new IllegalArgumentException(
-          "@ApiExceptions only supports ErrorCode enum classes: " + errorEnum.getName());
-    }
-    return constants;
   }
 
   private void mergeIntoResponses(ApiResponses responses, int status, List<ErrorCode> errorCodes) {

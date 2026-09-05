@@ -8,10 +8,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.project.core.ProjectErrorCode;
-import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.web.project.dto.request.CreateMilestoneRequest;
 import works.momens.server.web.project.dto.response.WebMilestoneResponse;
 
@@ -33,7 +32,10 @@ interface MilestoneControllerDocs {
       responseCode = "201",
       description = "마일스톤 생성 성공",
       content = @Content(schema = @Schema(implementation = WebMilestoneResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = ProjectErrorCode.class,
+      codes = {"PROJECT_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   WebMilestoneResponse createMilestone(
       @Parameter(description = "프로젝트 식별자") UUID projectId,
       CreateMilestoneRequest request,

@@ -23,6 +23,7 @@ app/src/main/java/works/momens/server/support/openapi
 - `OpenAPI` 기본 정보(title, version, description, server)
 - Swagger UI가 사용하는 공통 component
 - 실패 응답 예시를 보강하는 `OperationCustomizer`
+- `@ApiException` 선언을 `ErrorCode` 목록으로 변환하는 `ApiExceptionResolver`
 
 기능 모듈에는 해당 기능의 controller, request/response DTO, controller docs interface를 둡니다.
 
@@ -62,7 +63,8 @@ interface UserControllerDocs {
       responseCode = "200",
       description = "내 사용자 정보 조회 성공",
       content = @Content(schema = @Schema(implementation = MeResponse.class)))
-  @ApiExceptions({UserErrorCode.class, CommonErrorCode.class})
+  @ApiException(value = UserErrorCode.class, codes = {"USER_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   MeResponse getMe(Principal principal);
 }
 ```
@@ -115,13 +117,19 @@ path는 `/api/me` 단일 경로이며 `version = "1"` mapping을 둡니다. 레�
 
 ## 실패 응답
 
-실패 응답 예시는 `@ApiExceptions`와 `OperationCustomizer`로 자동 생성합니다.
+실패 응답 예시는 `@ApiException`과 `OperationCustomizer`를 사용해 자동으로 생성합니다.
 
-- `@ApiExceptions`에는 문서화할 `ErrorCode` enum class를 선언합니다.
-- `OperationCustomizer`는 enum 상수를 읽어 HTTP status별 OpenAPI response와 example을 추가합니다.
-- 공통 에러 enum 전체를 선언할 때는 해당 endpoint에 실제로 해당될 수 없는 에러까지 노출되지 않는지
-  확인합니다.
-- Standard 모드 예시는 아래 shape를 사용합니다.
+- `@ApiException`의 `value`에는 문서화할 `ErrorCode` enum 클래스를 지정하고, `codes`에는 해당 enum에서
+  문서화할 에러 코드를 지정합니다. 같은 메서드에 여러 번 선언할 수 있습니다.
+- `OperationCustomizer`는 `ApiExceptionResolver`가 해석한 에러 코드를 바탕으로 HTTP 상태 코드별 OpenAPI
+  응답과 예시를 추가합니다.
+- `codes`에는 해당 엔드포인트에서 실제로 반환할 수 있는 도메인 에러 코드만 지정합니다. 반환할 수 없는
+  코드가 문서에 포함되면 클라이언트에 불필요한 예외 처리 분기가 생깁니다.
+- `codes`를 비워 두면 해당 enum의 모든 상수를 문서화합니다. 공통 에러 코드처럼 엔드포인트별 범위가 아직
+  정해지지 않은 경우에만 사용하는 과도기적 표현이며, 범위가 정해지면 `codes`를 명시합니다.
+- `codes`에 지정한 이름은 컴파일러가 검증하지 않습니다. `ApiExceptionDeclarationTest`에서 해당 이름이
+  enum에 존재하는지 확인합니다.
+- Standard 모드에서는 아래 형식을 사용합니다.
 
 ```json
 {
@@ -212,8 +220,9 @@ tag를 하나 추가하면 배열 전체가 재정렬되어 무관한 churn diff
 
 - controller docs interface를 둘지 먼저 결정합니다.
 - 성공 응답은 실제 DTO shape 그대로 문서화합니다.
-- 주요 실패 응답은 `@ApiExceptions`로 선언합니다.
-- `@ApiExceptions`가 너무 넓은 공통 에러를 노출하지 않는지 확인합니다.
+- 주요 실패 응답은 `@ApiException`으로 선언합니다.
+- 해당 엔드포인트에서 실제로 반환하는 도메인 에러 코드를 `codes`에 빠짐없이 지정했는지 리뷰에서
+  확인합니다.
 - 모든 엔드포인트에 `operationId`를 명시하고 [operationId](#operationid) 절의 명명 규칙을 따릅니다.
 - 모든 엔드포인트는 `API-Version` header를 문서화합니다.
 - controller docs에 `API-Version` parameter를 직접 중복 선언하지 않습니다.

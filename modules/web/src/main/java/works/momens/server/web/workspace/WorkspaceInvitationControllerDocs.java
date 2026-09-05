@@ -8,8 +8,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.user.UserErrorCode;
 import works.momens.server.web.dto.response.WebMessageResponse;
 import works.momens.server.web.workspace.dto.request.AddWorkspaceMemberRequest;
 import works.momens.server.web.workspace.dto.request.CreateWorkspaceInvitationRequest;
@@ -37,7 +38,10 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "200",
       description = "목록 조회 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationsResponse.class)))
-  @ApiExceptions({InvitationErrorCode.class, WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   WorkspaceInvitationsResponse list(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
 
@@ -51,7 +55,13 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "201",
       description = "초대 생성 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationResponse.class)))
-  @ApiExceptions({InvitationErrorCode.class, WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = InvitationErrorCode.class,
+      codes = {"INVITATION_INVALID_EMAIL", "INVITATION_EMAIL_SEND_FAILED"})
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND", "WORKSPACE_MEMBER_ALREADY_EXISTS", "WORKSPACE_INVALID_ROLE"})
+  @ApiException(CommonErrorCode.class)
   WorkspaceInvitationResponse create(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
       CreateWorkspaceInvitationRequest request,
@@ -67,7 +77,20 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "200",
       description = "초대 재발송 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationResponse.class)))
-  @ApiExceptions({InvitationErrorCode.class, WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = InvitationErrorCode.class,
+      codes = {
+        "INVITATION_NOT_FOUND",
+        "INVITATION_EMAIL_SEND_FAILED",
+        "INVITATION_ALREADY_ACCEPTED"
+      })
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND"})
+  @ApiException(
+      value = UserErrorCode.class,
+      codes = {"USER_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   WorkspaceInvitationResponse resend(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
       @Parameter(description = "초대 식별자") UUID invitationId,
@@ -81,7 +104,13 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "200",
       description = "초대 폐기 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationResponse.class)))
-  @ApiExceptions({InvitationErrorCode.class, WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = InvitationErrorCode.class,
+      codes = {"INVITATION_NOT_FOUND", "INVITATION_ALREADY_ACCEPTED"})
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   WorkspaceInvitationResponse revoke(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
       @Parameter(description = "초대 식별자") UUID invitationId,
@@ -95,7 +124,15 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "200",
       description = "멤버 추가 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {
+        "WORKSPACE_NOT_FOUND",
+        "WORKSPACE_INVALID_ROLE",
+        "WORKSPACE_INVITEE_NOT_FOUND",
+        "WORKSPACE_MEMBER_ROLE_CONFLICT"
+      })
+  @ApiException(CommonErrorCode.class)
   WebMessageResponse invite(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
       AddWorkspaceMemberRequest request,

@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.user.UserErrorCode;
 import works.momens.server.web.user.dto.request.UpdateMeRequest;
@@ -26,7 +26,10 @@ interface UserControllerDocs {
       responseCode = "200",
       description = "내 프로필 조회 성공",
       content = @Content(schema = @Schema(implementation = MeResponse.class)))
-  @ApiExceptions({UserErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = UserErrorCode.class,
+      codes = {"USER_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   MeResponse getMe(Principal principal);
 
   @Operation(
@@ -37,6 +40,9 @@ interface UserControllerDocs {
       responseCode = "200",
       description = "내 프로필 수정 성공",
       content = @Content(schema = @Schema(implementation = MeResponse.class)))
-  @ApiExceptions({UserErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = UserErrorCode.class,
+      codes = {"USER_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   MeResponse updateMe(Principal principal, UpdateMeRequest request);
 }

@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.web.workspace.dto.request.AcceptInvitationRequest;
 import works.momens.server.web.workspace.dto.response.AcceptInvitationResponse;
@@ -32,6 +32,19 @@ interface InvitationAcceptControllerDocs {
       responseCode = "200",
       description = "초대 수락 성공",
       content = @Content(schema = @Schema(implementation = AcceptInvitationResponse.class)))
-  @ApiExceptions({InvitationErrorCode.class, WorkspaceErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = InvitationErrorCode.class,
+      codes = {
+        "INVITATION_INVALID_TOKEN",
+        "INVITATION_NOT_FOUND",
+        "INVITATION_ALREADY_ACCEPTED",
+        "INVITATION_REVOKED",
+        "INVITATION_EXPIRED",
+        "INVITATION_EMAIL_MISMATCH"
+      })
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_INVALID_ROLE", "WORKSPACE_MEMBER_ALREADY_EXISTS", "WORKSPACE_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   AcceptInvitationResponse accept(AcceptInvitationRequest request, Principal principal);
 }

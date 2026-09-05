@@ -10,7 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.http.ResponseEntity;
 import works.momens.server.auth.AuthErrorCode;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 
 /**
@@ -56,8 +56,11 @@ interface WebAuthControllerDocs {
       summary = "웹 세션 갱신",
       description = "refresh 쿠키를 회전해 새 access/refresh HttpOnly 쿠키를 설정합니다. 본문은 없습니다.")
   @ApiResponse(responseCode = "204", description = "갱신 성공(Set-Cookie로 access/refresh 회전)")
-  @ApiExceptions({AuthErrorCode.class, CommonErrorCode.class})
   @SecurityRequirements
+  @ApiException(
+      value = AuthErrorCode.class,
+      codes = {"AUTH_REFRESH_TOKEN_INVALID"})
+  @ApiException(CommonErrorCode.class)
   ResponseEntity<Void> webRefresh(@Parameter(hidden = true) HttpServletRequest request);
 
   @Operation(
