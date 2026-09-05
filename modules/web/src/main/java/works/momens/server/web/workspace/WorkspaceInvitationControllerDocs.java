@@ -10,6 +10,7 @@ import java.security.Principal;
 import java.util.UUID;
 import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.user.UserErrorCode;
 import works.momens.server.web.dto.response.WebMessageResponse;
 import works.momens.server.web.workspace.dto.request.AddWorkspaceMemberRequest;
 import works.momens.server.web.workspace.dto.request.CreateWorkspaceInvitationRequest;
@@ -78,10 +79,17 @@ interface WorkspaceInvitationControllerDocs {
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationResponse.class)))
   @ApiException(
       value = InvitationErrorCode.class,
-      codes = {"INVITATION_NOT_FOUND", "INVITATION_EMAIL_SEND_FAILED"})
+      codes = {
+        "INVITATION_NOT_FOUND",
+        "INVITATION_EMAIL_SEND_FAILED",
+        "INVITATION_ALREADY_ACCEPTED"
+      })
   @ApiException(
       value = WorkspaceErrorCode.class,
       codes = {"WORKSPACE_NOT_FOUND"})
+  @ApiException(
+      value = UserErrorCode.class,
+      codes = {"USER_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WorkspaceInvitationResponse resend(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
@@ -98,7 +106,7 @@ interface WorkspaceInvitationControllerDocs {
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationResponse.class)))
   @ApiException(
       value = InvitationErrorCode.class,
-      codes = {"INVITATION_NOT_FOUND"})
+      codes = {"INVITATION_NOT_FOUND", "INVITATION_ALREADY_ACCEPTED"})
   @ApiException(
       value = WorkspaceErrorCode.class,
       codes = {"WORKSPACE_NOT_FOUND"})

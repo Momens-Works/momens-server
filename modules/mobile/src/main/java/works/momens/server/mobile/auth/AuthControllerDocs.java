@@ -14,6 +14,7 @@ import works.momens.server.mobile.auth.dto.request.LogoutRequest;
 import works.momens.server.mobile.auth.dto.request.RefreshTokenRequest;
 import works.momens.server.mobile.auth.dto.response.AuthMessageResponse;
 import works.momens.server.mobile.auth.dto.response.TokenResponse;
+import works.momens.server.user.UserErrorCode;
 
 /**
  * 인증 API 문서. 이 엔드포인트들은 모두 공개이므로(요청 본문의 자격 증명으로 동작하고 SecurityConfig의 공개 체인에 속한다) OpenApiConfig가 적용한
@@ -35,6 +36,9 @@ interface AuthControllerDocs {
   @ApiException(
       value = AuthErrorCode.class,
       codes = {"AUTH_GOOGLE_TOKEN_INVALID", "AUTH_GOOGLE_EMAIL_NOT_VERIFIED"})
+  @ApiException(
+      value = UserErrorCode.class,
+      codes = {"USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY"})
   @ApiException(CommonErrorCode.class)
   TokenResponse loginWithGoogleToken(GoogleTokenRequest request);
 

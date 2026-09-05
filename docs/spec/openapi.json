@@ -3710,6 +3710,16 @@
                         "message" : "요청이 현재 상태와 충돌합니다."
                       }
                     }
+                  },
+                  "USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY" : {
+                    "description" : "이미 다른 계정에 연결된 이메일입니다.",
+                    "summary" : "USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY",
+                    "value" : {
+                      "error" : {
+                        "code" : "USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY",
+                        "message" : "이미 다른 계정에 연결된 이메일입니다."
+                      }
+                    }
                   }
                 }
               }
@@ -6183,6 +6193,16 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
+                  },
+                  "MEMORY_INVALID_INPUT" : {
+                    "description" : "메모리 요청이 유효하지 않습니다.",
+                    "summary" : "MEMORY_INVALID_INPUT",
+                    "value" : {
+                      "error" : {
+                        "code" : "MEMORY_INVALID_INPUT",
+                        "message" : "메모리 요청이 유효하지 않습니다."
+                      }
+                    }
                   }
                 }
               }
@@ -6505,6 +6525,16 @@
                         "message" : "메모리 후보를 찾을 수 없습니다."
                       }
                     }
+                  },
+                  "MEMORY_NOT_FOUND" : {
+                    "description" : "메모리를 찾을 수 없습니다.",
+                    "summary" : "MEMORY_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "MEMORY_NOT_FOUND",
+                        "message" : "메모리를 찾을 수 없습니다."
+                      }
+                    }
                   }
                 }
               }
@@ -6767,6 +6797,16 @@
                       "error" : {
                         "code" : "MEMORY_CANDIDATE_NOT_FOUND",
                         "message" : "메모리 후보를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "MEMORY_NOT_FOUND" : {
+                    "description" : "메모리를 찾을 수 없습니다.",
+                    "summary" : "MEMORY_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "MEMORY_NOT_FOUND",
+                        "message" : "메모리를 찾을 수 없습니다."
                       }
                     }
                   }
@@ -7061,6 +7101,16 @@
                         "message" : "요청이 현재 상태와 충돌합니다."
                       }
                     }
+                  },
+                  "MEMORY_INVALID_STATE" : {
+                    "description" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다.",
+                    "summary" : "MEMORY_INVALID_STATE",
+                    "value" : {
+                      "error" : {
+                        "code" : "MEMORY_INVALID_STATE",
+                        "message" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다."
+                      }
+                    }
                   }
                 }
               }
@@ -7200,6 +7250,16 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
+                  },
+                  "MEMORY_INVALID_INPUT" : {
+                    "description" : "메모리 요청이 유효하지 않습니다.",
+                    "summary" : "MEMORY_INVALID_INPUT",
+                    "value" : {
+                      "error" : {
+                        "code" : "MEMORY_INVALID_INPUT",
+                        "message" : "메모리 요청이 유효하지 않습니다."
+                      }
+                    }
                   }
                 }
               }
@@ -7323,6 +7383,16 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  },
+                  "MEMORY_INVALID_STATE" : {
+                    "description" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다.",
+                    "summary" : "MEMORY_INVALID_STATE",
+                    "value" : {
+                      "error" : {
+                        "code" : "MEMORY_INVALID_STATE",
+                        "message" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다."
                       }
                     }
                   }
@@ -7576,6 +7646,16 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  },
+                  "MEMORY_INVALID_STATE" : {
+                    "description" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다.",
+                    "summary" : "MEMORY_INVALID_STATE",
+                    "value" : {
+                      "error" : {
+                        "code" : "MEMORY_INVALID_STATE",
+                        "message" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다."
                       }
                     }
                   }
@@ -10312,6 +10392,16 @@
                         "message" : "태스크를 찾을 수 없습니다."
                       }
                     }
+                  },
+                  "USER_NOT_FOUND" : {
+                    "description" : "사용자를 찾을 수 없습니다.",
+                    "summary" : "USER_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "USER_NOT_FOUND",
+                        "message" : "사용자를 찾을 수 없습니다."
+                      }
+                    }
                   }
                 }
               }
@@ -10843,6 +10933,16 @@
                       "error" : {
                         "code" : "TASK_NOT_FOUND",
                         "message" : "태스크를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "USER_NOT_FOUND" : {
+                    "description" : "사용자를 찾을 수 없습니다.",
+                    "summary" : "USER_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "USER_NOT_FOUND",
+                        "message" : "사용자를 찾을 수 없습니다."
                       }
                     }
                   }
@@ -16851,6 +16951,16 @@
                       }
                     }
                   },
+                  "USER_NOT_FOUND" : {
+                    "description" : "사용자를 찾을 수 없습니다.",
+                    "summary" : "USER_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "USER_NOT_FOUND",
+                        "message" : "사용자를 찾을 수 없습니다."
+                      }
+                    }
+                  },
                   "WORKSPACE_NOT_FOUND" : {
                     "description" : "워크스페이스를 찾을 수 없습니다.",
                     "summary" : "WORKSPACE_NOT_FOUND",
@@ -16896,6 +17006,16 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  },
+                  "INVITATION_ALREADY_ACCEPTED" : {
+                    "description" : "이미 수락된 초대입니다.",
+                    "summary" : "INVITATION_ALREADY_ACCEPTED",
+                    "value" : {
+                      "error" : {
+                        "code" : "INVITATION_ALREADY_ACCEPTED",
+                        "message" : "이미 수락된 초대입니다."
                       }
                     }
                   }
@@ -17172,6 +17292,16 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  },
+                  "INVITATION_ALREADY_ACCEPTED" : {
+                    "description" : "이미 수락된 초대입니다.",
+                    "summary" : "INVITATION_ALREADY_ACCEPTED",
+                    "value" : {
+                      "error" : {
+                        "code" : "INVITATION_ALREADY_ACCEPTED",
+                        "message" : "이미 수락된 초대입니다."
                       }
                     }
                   }

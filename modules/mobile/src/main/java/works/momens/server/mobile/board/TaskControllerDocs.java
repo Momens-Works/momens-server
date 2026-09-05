@@ -15,6 +15,7 @@ import works.momens.server.mobile.board.dto.request.UpdateTaskRequest;
 import works.momens.server.mobile.board.dto.response.ChecklistToggleResponse;
 import works.momens.server.mobile.board.dto.response.TaskDetailResponse;
 import works.momens.server.project.task.TaskErrorCode;
+import works.momens.server.user.UserErrorCode;
 
 /**
  * {@code /api/mobile/tasks/{taskId}} OpenAPI 문서. Swagger 애너테이션을 컨트롤러 구현과
@@ -39,6 +40,9 @@ interface TaskControllerDocs {
   @ApiException(
       value = TaskErrorCode.class,
       codes = {"TASK_NOT_FOUND"})
+  @ApiException(
+      value = UserErrorCode.class,
+      codes = {"USER_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   TaskDetailResponse getTaskDetail(
       @Parameter(description = "task 식별자") UUID taskId, Principal principal);
@@ -71,6 +75,9 @@ interface TaskControllerDocs {
   @ApiException(
       value = TaskErrorCode.class,
       codes = {"TASK_NOT_FOUND", "TASK_CHECKLIST_ITEM_NOT_FOUND"})
+  @ApiException(
+      value = UserErrorCode.class,
+      codes = {"USER_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   ChecklistToggleResponse toggleChecklistItem(
       @Parameter(description = "task 식별자") UUID taskId,
