@@ -665,7 +665,6 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
      # prod 프로필은 flyway.enabled=true 라 별도 토글이 필요 없다. auth 값은 @NotBlank
      # 검증만 통과하면 되므로 더미다 — 이 DB는 체크섬 산출에만 쓰고 버린다.
      SPRING_PROFILES_ACTIVE=prod \
-     SPRING_FLYWAY_ENABLED=true \
      DATABASE_URL='jdbc:postgresql://127.0.0.1:15498/verifydb' \
      DATABASE_USERNAME=momens DATABASE_PASSWORD=momens \
      MOMENS_AUTH_JWT_SECRET="$(printf '0%.0s' {1..64})" \
@@ -1201,10 +1200,7 @@ session pooler 가 세션을 유지하므로 Flyway 의 세션 단위 잠금과 
 | `mirror` 헤더가 더 잘못 붙어 있다 | 2.8이 한 건 드러났다. MOM-0909의 객체 대조가 실행 집합 전체를 다시 판정한다 |
 | local·prod가 완전히 같지 않다 | 2.6의 5개 컬럼. 의도된 것이며 `validate` 대상이 아니다 |
 | 레거시가 만든 20개 테이블에서 local과 prod의 DDL이 갈린다 | 주도권 이전으로 사라지지 않는 위험이다(6절). `persistence.md`의 충실도 규칙이 계속 적용된다 |
-| 게이트를 없앤 뒤 부트스트랩 전에 다른 커밋이 prod에 뜬다 (릴리스 또는 `workflow_dispatch`) | Flyway는 꺼져 있어도 `ddl-auto=validate`가 새 테이블 부재로 기동을 막는다. 대장의 `main` 릴리스 금지 의무를 유지하고, 릴리스 PR head·tree·base와 필수 CI를 머지 직전에 다시 검사한다. 토글 머지와 고정 릴리스 머지 사이에는 다른 `main` 머지와 수동 dispatch를 금지한다 |
 | 리포 설정과 prod 실제 설정이 어긋난 채 방치된다 | 8절 9단계(정본화 PR)를 부트스트랩과 같은 스프린트에서 닫는다. ConfigMap 오버라이드는 임시 상태다 |
-| ConfigMap 환경변수가 바인딩되지 않는다 | `spring.flyway.out-of-order`는 대시 때문에 변환형이 애매하다. 시스템 프로퍼티로 주고 리허설에서 확인한다 |
-| **접속 대상이 Neon인 채로 토글이 켜진다** | 소유권 이전·심기는 Supabase에서, Flyway는 Neon에서 일어난다. 8절 0단계가 교체와 확인을 토글보다 앞에 둔다 |
 | 롤아웃 실패 후 정리가 안 된 채 남는다 | `deploy-service.sh`에 `rollout undo`가 없다. 수동 정리 단계를 절차에 명시한다 |
 | DDL 선행 조건이 빠진 채 전환한다 | 쌍둥이 리허설이 창구의 `SET ROLE` 능력 · 레거시 테이블 20개 소유권 · `extensions` 접근(`USAGE` + `search_path`) 세 가지를 각각 실패로 재현했다. 8절 3단계가 SQL로 적는다 |
 | `momens_server`가 이력 테이블에 권한을 갖지 못한다 | 다음 기동이 `permission denied`로 죽고 심기 시점에는 신호가 없다. `--generate` 생성물이 트랜잭션 안에서 DML을 부여하고(소유권 이전이 아니다 — 8절 4단계), `prod-flyway-bootstrap-verify-test.sh`가 그 줄을 지킨다 |
