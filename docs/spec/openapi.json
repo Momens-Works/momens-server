@@ -3566,16 +3566,6 @@
             "content" : {
               "application/json" : {
                 "examples" : {
-                  "AUTH_OAUTH_STATE_INVALID" : {
-                    "description" : "OAuth state가 유효하지 않습니다.",
-                    "summary" : "AUTH_OAUTH_STATE_INVALID",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_OAUTH_STATE_INVALID",
-                        "message" : "OAuth state가 유효하지 않습니다."
-                      }
-                    }
-                  },
                   "COMMON_BAD_REQUEST" : {
                     "description" : "요청 형식이 올바르지 않습니다.",
                     "summary" : "COMMON_BAD_REQUEST",
@@ -3632,16 +3622,6 @@
                       "error" : {
                         "code" : "AUTH_INVALID_TOKEN",
                         "message" : "토큰이 유효하지 않습니다."
-                      }
-                    }
-                  },
-                  "AUTH_REFRESH_TOKEN_INVALID" : {
-                    "description" : "Refresh token이 유효하지 않습니다.",
-                    "summary" : "AUTH_REFRESH_TOKEN_INVALID",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_REFRESH_TOKEN_INVALID",
-                        "message" : "Refresh token이 유효하지 않습니다."
                       }
                     }
                   },
@@ -3778,16 +3758,6 @@
             "content" : {
               "application/json" : {
                 "examples" : {
-                  "AUTH_OAUTH_EXCHANGE_FAILED" : {
-                    "description" : "Google OAuth 코드 교환에 실패했습니다.",
-                    "summary" : "AUTH_OAUTH_EXCHANGE_FAILED",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_OAUTH_EXCHANGE_FAILED",
-                        "message" : "Google OAuth 코드 교환에 실패했습니다."
-                      }
-                    }
-                  },
                   "COMMON_BAD_GATEWAY" : {
                     "description" : "외부 서비스 호출에 실패했습니다.",
                     "summary" : "COMMON_BAD_GATEWAY",
@@ -3853,16 +3823,6 @@
             "content" : {
               "application/json" : {
                 "examples" : {
-                  "AUTH_OAUTH_STATE_INVALID" : {
-                    "description" : "OAuth state가 유효하지 않습니다.",
-                    "summary" : "AUTH_OAUTH_STATE_INVALID",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_OAUTH_STATE_INVALID",
-                        "message" : "OAuth state가 유효하지 않습니다."
-                      }
-                    }
-                  },
                   "COMMON_BAD_REQUEST" : {
                     "description" : "요청 형식이 올바르지 않습니다.",
                     "summary" : "COMMON_BAD_REQUEST",
@@ -3892,26 +3852,6 @@
             "content" : {
               "application/json" : {
                 "examples" : {
-                  "AUTH_GOOGLE_EMAIL_NOT_VERIFIED" : {
-                    "description" : "Google 계정 이메일이 검증되지 않았습니다.",
-                    "summary" : "AUTH_GOOGLE_EMAIL_NOT_VERIFIED",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_GOOGLE_EMAIL_NOT_VERIFIED",
-                        "message" : "Google 계정 이메일이 검증되지 않았습니다."
-                      }
-                    }
-                  },
-                  "AUTH_GOOGLE_TOKEN_INVALID" : {
-                    "description" : "Google ID 토큰이 유효하지 않습니다.",
-                    "summary" : "AUTH_GOOGLE_TOKEN_INVALID",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_GOOGLE_TOKEN_INVALID",
-                        "message" : "Google ID 토큰이 유효하지 않습니다."
-                      }
-                    }
-                  },
                   "AUTH_INVALID_TOKEN" : {
                     "description" : "토큰이 유효하지 않습니다.",
                     "summary" : "AUTH_INVALID_TOKEN",
@@ -4065,16 +4005,6 @@
             "content" : {
               "application/json" : {
                 "examples" : {
-                  "AUTH_OAUTH_EXCHANGE_FAILED" : {
-                    "description" : "Google OAuth 코드 교환에 실패했습니다.",
-                    "summary" : "AUTH_OAUTH_EXCHANGE_FAILED",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_OAUTH_EXCHANGE_FAILED",
-                        "message" : "Google OAuth 코드 교환에 실패했습니다."
-                      }
-                    }
-                  },
                   "COMMON_BAD_GATEWAY" : {
                     "description" : "외부 서비스 호출에 실패했습니다.",
                     "summary" : "COMMON_BAD_GATEWAY",
@@ -4140,16 +4070,6 @@
             "content" : {
               "application/json" : {
                 "examples" : {
-                  "AUTH_OAUTH_STATE_INVALID" : {
-                    "description" : "OAuth state가 유효하지 않습니다.",
-                    "summary" : "AUTH_OAUTH_STATE_INVALID",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_OAUTH_STATE_INVALID",
-                        "message" : "OAuth state가 유효하지 않습니다."
-                      }
-                    }
-                  },
                   "COMMON_BAD_REQUEST" : {
                     "description" : "요청 형식이 올바르지 않습니다.",
                     "summary" : "COMMON_BAD_REQUEST",
@@ -4179,26 +4099,6 @@
             "content" : {
               "application/json" : {
                 "examples" : {
-                  "AUTH_GOOGLE_EMAIL_NOT_VERIFIED" : {
-                    "description" : "Google 계정 이메일이 검증되지 않았습니다.",
-                    "summary" : "AUTH_GOOGLE_EMAIL_NOT_VERIFIED",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_GOOGLE_EMAIL_NOT_VERIFIED",
-                        "message" : "Google 계정 이메일이 검증되지 않았습니다."
-                      }
-                    }
-                  },
-                  "AUTH_GOOGLE_TOKEN_INVALID" : {
-                    "description" : "Google ID 토큰이 유효하지 않습니다.",
-                    "summary" : "AUTH_GOOGLE_TOKEN_INVALID",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_GOOGLE_TOKEN_INVALID",
-                        "message" : "Google ID 토큰이 유효하지 않습니다."
-                      }
-                    }
-                  },
                   "AUTH_INVALID_TOKEN" : {
                     "description" : "토큰이 유효하지 않습니다.",
                     "summary" : "AUTH_INVALID_TOKEN",
@@ -4352,16 +4252,6 @@
             "content" : {
               "application/json" : {
                 "examples" : {
-                  "AUTH_OAUTH_EXCHANGE_FAILED" : {
-                    "description" : "Google OAuth 코드 교환에 실패했습니다.",
-                    "summary" : "AUTH_OAUTH_EXCHANGE_FAILED",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_OAUTH_EXCHANGE_FAILED",
-                        "message" : "Google OAuth 코드 교환에 실패했습니다."
-                      }
-                    }
-                  },
                   "COMMON_BAD_GATEWAY" : {
                     "description" : "외부 서비스 호출에 실패했습니다.",
                     "summary" : "COMMON_BAD_GATEWAY",
@@ -4439,16 +4329,6 @@
             "content" : {
               "application/json" : {
                 "examples" : {
-                  "AUTH_OAUTH_STATE_INVALID" : {
-                    "description" : "OAuth state가 유효하지 않습니다.",
-                    "summary" : "AUTH_OAUTH_STATE_INVALID",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_OAUTH_STATE_INVALID",
-                        "message" : "OAuth state가 유효하지 않습니다."
-                      }
-                    }
-                  },
                   "COMMON_BAD_REQUEST" : {
                     "description" : "요청 형식이 올바르지 않습니다.",
                     "summary" : "COMMON_BAD_REQUEST",
@@ -4478,26 +4358,6 @@
             "content" : {
               "application/json" : {
                 "examples" : {
-                  "AUTH_GOOGLE_EMAIL_NOT_VERIFIED" : {
-                    "description" : "Google 계정 이메일이 검증되지 않았습니다.",
-                    "summary" : "AUTH_GOOGLE_EMAIL_NOT_VERIFIED",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_GOOGLE_EMAIL_NOT_VERIFIED",
-                        "message" : "Google 계정 이메일이 검증되지 않았습니다."
-                      }
-                    }
-                  },
-                  "AUTH_GOOGLE_TOKEN_INVALID" : {
-                    "description" : "Google ID 토큰이 유효하지 않습니다.",
-                    "summary" : "AUTH_GOOGLE_TOKEN_INVALID",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_GOOGLE_TOKEN_INVALID",
-                        "message" : "Google ID 토큰이 유효하지 않습니다."
-                      }
-                    }
-                  },
                   "AUTH_INVALID_TOKEN" : {
                     "description" : "토큰이 유효하지 않습니다.",
                     "summary" : "AUTH_INVALID_TOKEN",
@@ -4651,16 +4511,6 @@
             "content" : {
               "application/json" : {
                 "examples" : {
-                  "AUTH_OAUTH_EXCHANGE_FAILED" : {
-                    "description" : "Google OAuth 코드 교환에 실패했습니다.",
-                    "summary" : "AUTH_OAUTH_EXCHANGE_FAILED",
-                    "value" : {
-                      "error" : {
-                        "code" : "AUTH_OAUTH_EXCHANGE_FAILED",
-                        "message" : "Google OAuth 코드 교환에 실패했습니다."
-                      }
-                    }
-                  },
                   "COMMON_BAD_GATEWAY" : {
                     "description" : "외부 서비스 호출에 실패했습니다.",
                     "summary" : "COMMON_BAD_GATEWAY",
@@ -4886,26 +4736,6 @@
                         "message" : "프로젝트를 찾을 수 없습니다."
                       }
                     }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_NOT_FOUND" : {
-                    "description" : "태스크를 찾을 수 없습니다.",
-                    "summary" : "TASK_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_NOT_FOUND",
-                        "message" : "태스크를 찾을 수 없습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -5076,16 +4906,6 @@
                       }
                     }
                   },
-                  "INVITATION_INVALID_EMAIL" : {
-                    "description" : "초대할 이메일 형식이 올바르지 않습니다.",
-                    "summary" : "INVITATION_INVALID_EMAIL",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_INVALID_EMAIL",
-                        "message" : "초대할 이메일 형식이 올바르지 않습니다."
-                      }
-                    }
-                  },
                   "INVITATION_INVALID_TOKEN" : {
                     "description" : "초대 토큰이 유효하지 않습니다.",
                     "summary" : "INVITATION_INVALID_TOKEN",
@@ -5103,26 +4923,6 @@
                       "error" : {
                         "code" : "WORKSPACE_INVALID_ROLE",
                         "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
                       }
                     }
                   }
@@ -5183,26 +4983,6 @@
                         "message" : "초대받은 이메일과 로그인한 계정의 이메일이 일치하지 않습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -5230,16 +5010,6 @@
                       "error" : {
                         "code" : "INVITATION_NOT_FOUND",
                         "message" : "초대를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -5330,36 +5100,6 @@
                         "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
                       }
                     }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -5415,16 +5155,6 @@
                       "error" : {
                         "code" : "COMMON_BAD_GATEWAY",
                         "message" : "외부 서비스 호출에 실패했습니다."
-                      }
-                    }
-                  },
-                  "INVITATION_EMAIL_SEND_FAILED" : {
-                    "description" : "초대 이메일을 발송하지 못했습니다.",
-                    "summary" : "INVITATION_EMAIL_SEND_FAILED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_EMAIL_SEND_FAILED",
-                        "message" : "초대 이메일을 발송하지 못했습니다."
                       }
                     }
                   }
@@ -5604,16 +5334,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY" : {
-                    "description" : "이미 다른 계정에 연결된 이메일입니다.",
-                    "summary" : "USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY",
-                    "value" : {
-                      "error" : {
-                        "code" : "USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY",
-                        "message" : "이미 다른 계정에 연결된 이메일입니다."
                       }
                     }
                   }
@@ -5858,16 +5578,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY" : {
-                    "description" : "이미 다른 계정에 연결된 이메일입니다.",
-                    "summary" : "USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY",
-                    "value" : {
-                      "error" : {
-                        "code" : "USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY",
-                        "message" : "이미 다른 계정에 연결된 이메일입니다."
                       }
                     }
                   }
@@ -6473,16 +6183,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "MEMORY_INVALID_INPUT" : {
-                    "description" : "메모리 요청이 유효하지 않습니다.",
-                    "summary" : "MEMORY_INVALID_INPUT",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_INVALID_INPUT",
-                        "message" : "메모리 요청이 유효하지 않습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -6551,16 +6251,6 @@
                       }
                     }
                   },
-                  "MEMORY_CANDIDATE_NOT_FOUND" : {
-                    "description" : "메모리 후보를 찾을 수 없습니다.",
-                    "summary" : "MEMORY_CANDIDATE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_CANDIDATE_NOT_FOUND",
-                        "message" : "메모리 후보를 찾을 수 없습니다."
-                      }
-                    }
-                  },
                   "MEMORY_NOT_FOUND" : {
                     "description" : "메모리를 찾을 수 없습니다.",
                     "summary" : "MEMORY_NOT_FOUND",
@@ -6606,16 +6296,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "MEMORY_INVALID_STATE" : {
-                    "description" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다.",
-                    "summary" : "MEMORY_INVALID_STATE",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_INVALID_STATE",
-                        "message" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다."
                       }
                     }
                   }
@@ -6748,16 +6428,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "MEMORY_INVALID_INPUT" : {
-                    "description" : "메모리 요청이 유효하지 않습니다.",
-                    "summary" : "MEMORY_INVALID_INPUT",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_INVALID_INPUT",
-                        "message" : "메모리 요청이 유효하지 않습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -6833,16 +6503,6 @@
                       "error" : {
                         "code" : "MEMORY_CANDIDATE_NOT_FOUND",
                         "message" : "메모리 후보를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "MEMORY_NOT_FOUND" : {
-                    "description" : "메모리를 찾을 수 없습니다.",
-                    "summary" : "MEMORY_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_NOT_FOUND",
-                        "message" : "메모리를 찾을 수 없습니다."
                       }
                     }
                   }
@@ -7032,16 +6692,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "MEMORY_INVALID_INPUT" : {
-                    "description" : "메모리 요청이 유효하지 않습니다.",
-                    "summary" : "MEMORY_INVALID_INPUT",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_INVALID_INPUT",
-                        "message" : "메모리 요청이 유효하지 않습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -7117,16 +6767,6 @@
                       "error" : {
                         "code" : "MEMORY_CANDIDATE_NOT_FOUND",
                         "message" : "메모리 후보를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "MEMORY_NOT_FOUND" : {
-                    "description" : "메모리를 찾을 수 없습니다.",
-                    "summary" : "MEMORY_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_NOT_FOUND",
-                        "message" : "메모리를 찾을 수 없습니다."
                       }
                     }
                   }
@@ -7306,16 +6946,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "MEMORY_INVALID_INPUT" : {
-                    "description" : "메모리 요청이 유효하지 않습니다.",
-                    "summary" : "MEMORY_INVALID_INPUT",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_INVALID_INPUT",
-                        "message" : "메모리 요청이 유효하지 않습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -7393,16 +7023,6 @@
                         "message" : "메모리 후보를 찾을 수 없습니다."
                       }
                     }
-                  },
-                  "MEMORY_NOT_FOUND" : {
-                    "description" : "메모리를 찾을 수 없습니다.",
-                    "summary" : "MEMORY_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_NOT_FOUND",
-                        "message" : "메모리를 찾을 수 없습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -7439,16 +7059,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "MEMORY_INVALID_STATE" : {
-                    "description" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다.",
-                    "summary" : "MEMORY_INVALID_STATE",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_INVALID_STATE",
-                        "message" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다."
                       }
                     }
                   }
@@ -7590,16 +7200,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "MEMORY_INVALID_INPUT" : {
-                    "description" : "메모리 요청이 유효하지 않습니다.",
-                    "summary" : "MEMORY_INVALID_INPUT",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_INVALID_INPUT",
-                        "message" : "메모리 요청이 유효하지 않습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -7723,16 +7323,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "MEMORY_INVALID_STATE" : {
-                    "description" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다.",
-                    "summary" : "MEMORY_INVALID_STATE",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_INVALID_STATE",
-                        "message" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다."
                       }
                     }
                   }
@@ -7873,16 +7463,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "MEMORY_INVALID_INPUT" : {
-                    "description" : "메모리 요청이 유효하지 않습니다.",
-                    "summary" : "MEMORY_INVALID_INPUT",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_INVALID_INPUT",
-                        "message" : "메모리 요청이 유효하지 않습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -7960,16 +7540,6 @@
                         "message" : "메모리 후보를 찾을 수 없습니다."
                       }
                     }
-                  },
-                  "MEMORY_NOT_FOUND" : {
-                    "description" : "메모리를 찾을 수 없습니다.",
-                    "summary" : "MEMORY_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_NOT_FOUND",
-                        "message" : "메모리를 찾을 수 없습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -8006,16 +7576,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "MEMORY_INVALID_STATE" : {
-                    "description" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다.",
-                    "summary" : "MEMORY_INVALID_STATE",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_INVALID_STATE",
-                        "message" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다."
                       }
                     }
                   }
@@ -8254,16 +7814,6 @@
                         "message" : "요청이 현재 상태와 충돌합니다."
                       }
                     }
-                  },
-                  "USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY" : {
-                    "description" : "이미 다른 계정에 연결된 이메일입니다.",
-                    "summary" : "USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY",
-                    "value" : {
-                      "error" : {
-                        "code" : "USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY",
-                        "message" : "이미 다른 계정에 연결된 이메일입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -8470,26 +8020,6 @@
                       "error" : {
                         "code" : "PROJECT_NOT_FOUND",
                         "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_NOT_FOUND" : {
-                    "description" : "태스크를 찾을 수 없습니다.",
-                    "summary" : "TASK_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_NOT_FOUND",
-                        "message" : "태스크를 찾을 수 없습니다."
                       }
                     }
                   }
@@ -8767,26 +8297,6 @@
                         "message" : "프로젝트를 찾을 수 없습니다."
                       }
                     }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_NOT_FOUND" : {
-                    "description" : "태스크를 찾을 수 없습니다.",
-                    "summary" : "TASK_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_NOT_FOUND",
-                        "message" : "태스크를 찾을 수 없습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -9042,26 +8552,6 @@
                         "message" : "프로젝트를 찾을 수 없습니다."
                       }
                     }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_NOT_FOUND" : {
-                    "description" : "태스크를 찾을 수 없습니다.",
-                    "summary" : "TASK_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_NOT_FOUND",
-                        "message" : "태스크를 찾을 수 없습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -9308,26 +8798,6 @@
                         "message" : "프로젝트를 찾을 수 없습니다."
                       }
                     }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_NOT_FOUND" : {
-                    "description" : "태스크를 찾을 수 없습니다.",
-                    "summary" : "TASK_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_NOT_FOUND",
-                        "message" : "태스크를 찾을 수 없습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -9572,26 +9042,6 @@
                       "error" : {
                         "code" : "PROJECT_NOT_FOUND",
                         "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_NOT_FOUND" : {
-                    "description" : "태스크를 찾을 수 없습니다.",
-                    "summary" : "TASK_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_NOT_FOUND",
-                        "message" : "태스크를 찾을 수 없습니다."
                       }
                     }
                   }
@@ -9846,26 +9296,6 @@
                       "error" : {
                         "code" : "PROJECT_NOT_FOUND",
                         "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_NOT_FOUND" : {
-                    "description" : "태스크를 찾을 수 없습니다.",
-                    "summary" : "TASK_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_NOT_FOUND",
-                        "message" : "태스크를 찾을 수 없습니다."
                       }
                     }
                   }
@@ -10150,16 +9580,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "SIGNAL_INVALID_STATE" : {
-                    "description" : "이미 다른 action으로 처리된 시그널입니다.",
-                    "summary" : "SIGNAL_INVALID_STATE",
-                    "value" : {
-                      "error" : {
-                        "code" : "SIGNAL_INVALID_STATE",
-                        "message" : "이미 다른 action으로 처리된 시그널입니다."
                       }
                     }
                   }
@@ -10883,26 +10303,6 @@
                       }
                     }
                   },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
                   "TASK_NOT_FOUND" : {
                     "description" : "태스크를 찾을 수 없습니다.",
                     "summary" : "TASK_NOT_FOUND",
@@ -11147,16 +10547,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -11436,16 +10826,6 @@
                       }
                     }
                   },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
                   "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
                     "description" : "완료기준 항목을 찾을 수 없습니다.",
                     "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
@@ -11721,26 +11101,6 @@
                         "message" : "프로젝트를 찾을 수 없습니다."
                       }
                     }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_NOT_FOUND" : {
-                    "description" : "태스크를 찾을 수 없습니다.",
-                    "summary" : "TASK_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_NOT_FOUND",
-                        "message" : "태스크를 찾을 수 없습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -11985,26 +11345,6 @@
                       "error" : {
                         "code" : "PROJECT_NOT_FOUND",
                         "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_NOT_FOUND" : {
-                    "description" : "태스크를 찾을 수 없습니다.",
-                    "summary" : "TASK_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_NOT_FOUND",
-                        "message" : "태스크를 찾을 수 없습니다."
                       }
                     }
                   }
@@ -12261,26 +11601,6 @@
                         "message" : "프로젝트를 찾을 수 없습니다."
                       }
                     }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_NOT_FOUND" : {
-                    "description" : "태스크를 찾을 수 없습니다.",
-                    "summary" : "TASK_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_NOT_FOUND",
-                        "message" : "태스크를 찾을 수 없습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -12477,25 +11797,6 @@
             },
             "description" : "Bad Request"
           },
-          "404" : {
-            "content" : {
-              "application/json" : {
-                "examples" : {
-                  "SOURCE_REF_NOT_FOUND" : {
-                    "description" : "source-ref를 찾을 수 없습니다.",
-                    "summary" : "SOURCE_REF_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "SOURCE_REF_NOT_FOUND",
-                        "message" : "source-ref를 찾을 수 없습니다."
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "description" : "Not Found"
-          },
           "500" : {
             "content" : {
               "application/json" : {
@@ -12601,36 +11902,6 @@
                       "error" : {
                         "code" : "COMMON_VALIDATION_FAILED",
                         "message" : "요청 값이 유효하지 않습니다."
-                      }
-                    }
-                  },
-                  "SOURCE_OAUTH_INVALID_REQUEST" : {
-                    "description" : "승인 요청에 필요한 값이 없습니다.",
-                    "summary" : "SOURCE_OAUTH_INVALID_REQUEST",
-                    "value" : {
-                      "error" : {
-                        "code" : "SOURCE_OAUTH_INVALID_REQUEST",
-                        "message" : "승인 요청에 필요한 값이 없습니다."
-                      }
-                    }
-                  },
-                  "SOURCE_OAUTH_INVALID_STATE" : {
-                    "description" : "승인 요청을 확인할 수 없습니다.",
-                    "summary" : "SOURCE_OAUTH_INVALID_STATE",
-                    "value" : {
-                      "error" : {
-                        "code" : "SOURCE_OAUTH_INVALID_STATE",
-                        "message" : "승인 요청을 확인할 수 없습니다."
-                      }
-                    }
-                  },
-                  "SOURCE_UNSUPPORTED_PROVIDER" : {
-                    "description" : "지원하지 않는 provider입니다.",
-                    "summary" : "SOURCE_UNSUPPORTED_PROVIDER",
-                    "value" : {
-                      "error" : {
-                        "code" : "SOURCE_UNSUPPORTED_PROVIDER",
-                        "message" : "지원하지 않는 provider입니다."
                       }
                     }
                   }
@@ -12786,16 +12057,6 @@
                         "message" : "서버 내부 오류가 발생했습니다."
                       }
                     }
-                  },
-                  "SOURCE_PROVIDER_UNCONFIGURED" : {
-                    "description" : "provider 설정이 서버에 없습니다.",
-                    "summary" : "SOURCE_PROVIDER_UNCONFIGURED",
-                    "value" : {
-                      "error" : {
-                        "code" : "SOURCE_PROVIDER_UNCONFIGURED",
-                        "message" : "provider 설정이 서버에 없습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -12813,16 +12074,6 @@
                       "error" : {
                         "code" : "COMMON_BAD_GATEWAY",
                         "message" : "외부 서비스 호출에 실패했습니다."
-                      }
-                    }
-                  },
-                  "SOURCE_OAUTH_EXCHANGE_FAILED" : {
-                    "description" : "provider와 토큰을 주고받지 못했습니다.",
-                    "summary" : "SOURCE_OAUTH_EXCHANGE_FAILED",
-                    "value" : {
-                      "error" : {
-                        "code" : "SOURCE_OAUTH_EXCHANGE_FAILED",
-                        "message" : "provider와 토큰을 주고받지 못했습니다."
                       }
                     }
                   }
@@ -12964,26 +12215,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
                       }
                     }
                   },
@@ -13228,26 +12459,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
                       }
                     }
                   },
@@ -13502,16 +12713,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -13771,26 +12972,6 @@
                       }
                     }
                   },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
                   "TASK_NOT_FOUND" : {
                     "description" : "태스크를 찾을 수 없습니다.",
                     "summary" : "TASK_NOT_FOUND",
@@ -13979,16 +13160,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "CONTEXT_CROSS_WORKSPACE_LINK_NOT_ALLOWED" : {
-                    "description" : "서로 다른 워크스페이스의 대상은 연결할 수 없습니다.",
-                    "summary" : "CONTEXT_CROSS_WORKSPACE_LINK_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "CONTEXT_CROSS_WORKSPACE_LINK_NOT_ALLOWED",
-                        "message" : "서로 다른 워크스페이스의 대상은 연결할 수 없습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -14064,26 +13235,6 @@
                       "error" : {
                         "code" : "CONTEXT_LINK_NOT_FOUND",
                         "message" : "연결을 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
                       }
                     }
                   },
@@ -14283,16 +13434,6 @@
                         "message" : "서로 다른 워크스페이스의 대상은 연결할 수 없습니다."
                       }
                     }
-                  },
-                  "MEMORY_INVALID_INPUT" : {
-                    "description" : "메모리 요청이 유효하지 않습니다.",
-                    "summary" : "MEMORY_INVALID_INPUT",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_INVALID_INPUT",
-                        "message" : "메모리 요청이 유효하지 않습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -14361,26 +13502,6 @@
                       }
                     }
                   },
-                  "CONTEXT_LINK_NOT_FOUND" : {
-                    "description" : "연결을 찾을 수 없습니다.",
-                    "summary" : "CONTEXT_LINK_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "CONTEXT_LINK_NOT_FOUND",
-                        "message" : "연결을 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "MEMORY_CANDIDATE_NOT_FOUND" : {
-                    "description" : "메모리 후보를 찾을 수 없습니다.",
-                    "summary" : "MEMORY_CANDIDATE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_CANDIDATE_NOT_FOUND",
-                        "message" : "메모리 후보를 찾을 수 없습니다."
-                      }
-                    }
-                  },
                   "MEMORY_NOT_FOUND" : {
                     "description" : "메모리를 찾을 수 없습니다.",
                     "summary" : "MEMORY_NOT_FOUND",
@@ -14388,26 +13509,6 @@
                       "error" : {
                         "code" : "MEMORY_NOT_FOUND",
                         "message" : "메모리를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
                       }
                     }
                   },
@@ -14456,16 +13557,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "MEMORY_INVALID_STATE" : {
-                    "description" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다.",
-                    "summary" : "MEMORY_INVALID_STATE",
-                    "value" : {
-                      "error" : {
-                        "code" : "MEMORY_INVALID_STATE",
-                        "message" : "현재 메모리 상태에서는 요청을 처리할 수 없습니다."
                       }
                     }
                   }
@@ -14677,26 +13768,6 @@
                       }
                     }
                   },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
                   "TASK_NOT_FOUND" : {
                     "description" : "태스크를 찾을 수 없습니다.",
                     "summary" : "TASK_NOT_FOUND",
@@ -14885,16 +13956,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "CONTEXT_CROSS_WORKSPACE_LINK_NOT_ALLOWED" : {
-                    "description" : "서로 다른 워크스페이스의 대상은 연결할 수 없습니다.",
-                    "summary" : "CONTEXT_CROSS_WORKSPACE_LINK_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "CONTEXT_CROSS_WORKSPACE_LINK_NOT_ALLOWED",
-                        "message" : "서로 다른 워크스페이스의 대상은 연결할 수 없습니다."
-                      }
-                    }
                   }
                 }
               }
@@ -14970,26 +14031,6 @@
                       "error" : {
                         "code" : "CONTEXT_LINK_NOT_FOUND",
                         "message" : "연결을 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
                       }
                     }
                   },
@@ -15236,26 +14277,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
                       }
                     }
                   },
@@ -15513,26 +14534,6 @@
                       }
                     }
                   },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
-                      }
-                    }
-                  },
                   "TASK_NOT_FOUND" : {
                     "description" : "태스크를 찾을 수 없습니다.",
                     "summary" : "TASK_NOT_FOUND",
@@ -15786,26 +14787,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "PROJECT_NOT_FOUND" : {
-                    "description" : "프로젝트를 찾을 수 없습니다.",
-                    "summary" : "PROJECT_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "PROJECT_NOT_FOUND",
-                        "message" : "프로젝트를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "TASK_CHECKLIST_ITEM_NOT_FOUND" : {
-                    "description" : "완료기준 항목을 찾을 수 없습니다.",
-                    "summary" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "TASK_CHECKLIST_ITEM_NOT_FOUND",
-                        "message" : "완료기준 항목을 찾을 수 없습니다."
                       }
                     }
                   },
@@ -16212,16 +15193,6 @@
                       }
                     }
                   },
-                  "WORKSPACE_INVALID_ROLE" : {
-                    "description" : "부여할 수 없는 역할입니다.",
-                    "summary" : "WORKSPACE_INVALID_ROLE",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_ROLE",
-                        "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
                   "WORKSPACE_INVALID_SLUG" : {
                     "description" : "사용할 수 없는 slug 형식입니다.",
                     "summary" : "WORKSPACE_INVALID_SLUG",
@@ -16289,26 +15260,6 @@
                         "message" : "권한이 없습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -16326,26 +15277,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_NOT_FOUND" : {
-                    "description" : "워크스페이스를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_NOT_FOUND",
-                        "message" : "워크스페이스를 찾을 수 없습니다."
                       }
                     }
                   }
@@ -16384,36 +15315,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
                       }
                     }
                   },
@@ -16792,36 +15693,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVALID_ROLE" : {
-                    "description" : "부여할 수 없는 역할입니다.",
-                    "summary" : "WORKSPACE_INVALID_ROLE",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_ROLE",
-                        "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -16870,26 +15741,6 @@
                         "message" : "권한이 없습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -16907,16 +15758,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -16965,46 +15806,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
                       }
                     }
                   }
@@ -17147,16 +15948,6 @@
                       }
                     }
                   },
-                  "WORKSPACE_INVALID_ROLE" : {
-                    "description" : "부여할 수 없는 역할입니다.",
-                    "summary" : "WORKSPACE_INVALID_ROLE",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_ROLE",
-                        "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
                   "WORKSPACE_INVALID_SLUG" : {
                     "description" : "사용할 수 없는 slug 형식입니다.",
                     "summary" : "WORKSPACE_INVALID_SLUG",
@@ -17224,26 +16015,6 @@
                         "message" : "권한이 없습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -17261,16 +16032,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -17319,36 +16080,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
                       }
                     }
                   },
@@ -17492,56 +16223,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "INVITATION_INVALID_EMAIL" : {
-                    "description" : "초대할 이메일 형식이 올바르지 않습니다.",
-                    "summary" : "INVITATION_INVALID_EMAIL",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_INVALID_EMAIL",
-                        "message" : "초대할 이메일 형식이 올바르지 않습니다."
-                      }
-                    }
-                  },
-                  "INVITATION_INVALID_TOKEN" : {
-                    "description" : "초대 토큰이 유효하지 않습니다.",
-                    "summary" : "INVITATION_INVALID_TOKEN",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_INVALID_TOKEN",
-                        "message" : "초대 토큰이 유효하지 않습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_ROLE" : {
-                    "description" : "부여할 수 없는 역할입니다.",
-                    "summary" : "WORKSPACE_INVALID_ROLE",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_ROLE",
-                        "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -17590,36 +16271,6 @@
                         "message" : "권한이 없습니다."
                       }
                     }
-                  },
-                  "INVITATION_EMAIL_MISMATCH" : {
-                    "description" : "초대받은 이메일과 로그인한 계정의 이메일이 일치하지 않습니다.",
-                    "summary" : "INVITATION_EMAIL_MISMATCH",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_EMAIL_MISMATCH",
-                        "message" : "초대받은 이메일과 로그인한 계정의 이메일이 일치하지 않습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -17637,26 +16288,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "INVITATION_NOT_FOUND" : {
-                    "description" : "초대를 찾을 수 없습니다.",
-                    "summary" : "INVITATION_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_NOT_FOUND",
-                        "message" : "초대를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -17705,76 +16336,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "INVITATION_ALREADY_ACCEPTED" : {
-                    "description" : "이미 수락된 초대입니다.",
-                    "summary" : "INVITATION_ALREADY_ACCEPTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_ALREADY_ACCEPTED",
-                        "message" : "이미 수락된 초대입니다."
-                      }
-                    }
-                  },
-                  "INVITATION_EXPIRED" : {
-                    "description" : "만료된 초대입니다.",
-                    "summary" : "INVITATION_EXPIRED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_EXPIRED",
-                        "message" : "만료된 초대입니다."
-                      }
-                    }
-                  },
-                  "INVITATION_REVOKED" : {
-                    "description" : "폐기된 초대입니다.",
-                    "summary" : "INVITATION_REVOKED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_REVOKED",
-                        "message" : "폐기된 초대입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
                       }
                     }
                   }
@@ -17832,16 +16393,6 @@
                       "error" : {
                         "code" : "COMMON_BAD_GATEWAY",
                         "message" : "외부 서비스 호출에 실패했습니다."
-                      }
-                    }
-                  },
-                  "INVITATION_EMAIL_SEND_FAILED" : {
-                    "description" : "초대 이메일을 발송하지 못했습니다.",
-                    "summary" : "INVITATION_EMAIL_SEND_FAILED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_EMAIL_SEND_FAILED",
-                        "message" : "초대 이메일을 발송하지 못했습니다."
                       }
                     }
                   }
@@ -17937,16 +16488,6 @@
                       }
                     }
                   },
-                  "INVITATION_INVALID_TOKEN" : {
-                    "description" : "초대 토큰이 유효하지 않습니다.",
-                    "summary" : "INVITATION_INVALID_TOKEN",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_INVALID_TOKEN",
-                        "message" : "초대 토큰이 유효하지 않습니다."
-                      }
-                    }
-                  },
                   "WORKSPACE_INVALID_ROLE" : {
                     "description" : "부여할 수 없는 역할입니다.",
                     "summary" : "WORKSPACE_INVALID_ROLE",
@@ -17954,26 +16495,6 @@
                       "error" : {
                         "code" : "WORKSPACE_INVALID_ROLE",
                         "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
                       }
                     }
                   }
@@ -18024,36 +16545,6 @@
                         "message" : "권한이 없습니다."
                       }
                     }
-                  },
-                  "INVITATION_EMAIL_MISMATCH" : {
-                    "description" : "초대받은 이메일과 로그인한 계정의 이메일이 일치하지 않습니다.",
-                    "summary" : "INVITATION_EMAIL_MISMATCH",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_EMAIL_MISMATCH",
-                        "message" : "초대받은 이메일과 로그인한 계정의 이메일이 일치하지 않습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -18071,26 +16562,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "INVITATION_NOT_FOUND" : {
-                    "description" : "초대를 찾을 수 없습니다.",
-                    "summary" : "INVITATION_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_NOT_FOUND",
-                        "message" : "초대를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -18142,36 +16613,6 @@
                       }
                     }
                   },
-                  "INVITATION_ALREADY_ACCEPTED" : {
-                    "description" : "이미 수락된 초대입니다.",
-                    "summary" : "INVITATION_ALREADY_ACCEPTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_ALREADY_ACCEPTED",
-                        "message" : "이미 수락된 초대입니다."
-                      }
-                    }
-                  },
-                  "INVITATION_EXPIRED" : {
-                    "description" : "만료된 초대입니다.",
-                    "summary" : "INVITATION_EXPIRED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_EXPIRED",
-                        "message" : "만료된 초대입니다."
-                      }
-                    }
-                  },
-                  "INVITATION_REVOKED" : {
-                    "description" : "폐기된 초대입니다.",
-                    "summary" : "INVITATION_REVOKED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_REVOKED",
-                        "message" : "폐기된 초대입니다."
-                      }
-                    }
-                  },
                   "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
                     "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
                     "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
@@ -18179,36 +16620,6 @@
                       "error" : {
                         "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
                         "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
                       }
                     }
                   }
@@ -18362,56 +16773,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "INVITATION_INVALID_EMAIL" : {
-                    "description" : "초대할 이메일 형식이 올바르지 않습니다.",
-                    "summary" : "INVITATION_INVALID_EMAIL",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_INVALID_EMAIL",
-                        "message" : "초대할 이메일 형식이 올바르지 않습니다."
-                      }
-                    }
-                  },
-                  "INVITATION_INVALID_TOKEN" : {
-                    "description" : "초대 토큰이 유효하지 않습니다.",
-                    "summary" : "INVITATION_INVALID_TOKEN",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_INVALID_TOKEN",
-                        "message" : "초대 토큰이 유효하지 않습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_ROLE" : {
-                    "description" : "부여할 수 없는 역할입니다.",
-                    "summary" : "WORKSPACE_INVALID_ROLE",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_ROLE",
-                        "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -18460,36 +16821,6 @@
                         "message" : "권한이 없습니다."
                       }
                     }
-                  },
-                  "INVITATION_EMAIL_MISMATCH" : {
-                    "description" : "초대받은 이메일과 로그인한 계정의 이메일이 일치하지 않습니다.",
-                    "summary" : "INVITATION_EMAIL_MISMATCH",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_EMAIL_MISMATCH",
-                        "message" : "초대받은 이메일과 로그인한 계정의 이메일이 일치하지 않습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -18517,16 +16848,6 @@
                       "error" : {
                         "code" : "INVITATION_NOT_FOUND",
                         "message" : "초대를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -18575,76 +16896,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "INVITATION_ALREADY_ACCEPTED" : {
-                    "description" : "이미 수락된 초대입니다.",
-                    "summary" : "INVITATION_ALREADY_ACCEPTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_ALREADY_ACCEPTED",
-                        "message" : "이미 수락된 초대입니다."
-                      }
-                    }
-                  },
-                  "INVITATION_EXPIRED" : {
-                    "description" : "만료된 초대입니다.",
-                    "summary" : "INVITATION_EXPIRED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_EXPIRED",
-                        "message" : "만료된 초대입니다."
-                      }
-                    }
-                  },
-                  "INVITATION_REVOKED" : {
-                    "description" : "폐기된 초대입니다.",
-                    "summary" : "INVITATION_REVOKED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_REVOKED",
-                        "message" : "폐기된 초대입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
                       }
                     }
                   }
@@ -18798,56 +17049,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "INVITATION_INVALID_EMAIL" : {
-                    "description" : "초대할 이메일 형식이 올바르지 않습니다.",
-                    "summary" : "INVITATION_INVALID_EMAIL",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_INVALID_EMAIL",
-                        "message" : "초대할 이메일 형식이 올바르지 않습니다."
-                      }
-                    }
-                  },
-                  "INVITATION_INVALID_TOKEN" : {
-                    "description" : "초대 토큰이 유효하지 않습니다.",
-                    "summary" : "INVITATION_INVALID_TOKEN",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_INVALID_TOKEN",
-                        "message" : "초대 토큰이 유효하지 않습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_ROLE" : {
-                    "description" : "부여할 수 없는 역할입니다.",
-                    "summary" : "WORKSPACE_INVALID_ROLE",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_ROLE",
-                        "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -18896,36 +17097,6 @@
                         "message" : "권한이 없습니다."
                       }
                     }
-                  },
-                  "INVITATION_EMAIL_MISMATCH" : {
-                    "description" : "초대받은 이메일과 로그인한 계정의 이메일이 일치하지 않습니다.",
-                    "summary" : "INVITATION_EMAIL_MISMATCH",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_EMAIL_MISMATCH",
-                        "message" : "초대받은 이메일과 로그인한 계정의 이메일이 일치하지 않습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -18953,16 +17124,6 @@
                       "error" : {
                         "code" : "INVITATION_NOT_FOUND",
                         "message" : "초대를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -19011,76 +17172,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "INVITATION_ALREADY_ACCEPTED" : {
-                    "description" : "이미 수락된 초대입니다.",
-                    "summary" : "INVITATION_ALREADY_ACCEPTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_ALREADY_ACCEPTED",
-                        "message" : "이미 수락된 초대입니다."
-                      }
-                    }
-                  },
-                  "INVITATION_EXPIRED" : {
-                    "description" : "만료된 초대입니다.",
-                    "summary" : "INVITATION_EXPIRED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_EXPIRED",
-                        "message" : "만료된 초대입니다."
-                      }
-                    }
-                  },
-                  "INVITATION_REVOKED" : {
-                    "description" : "폐기된 초대입니다.",
-                    "summary" : "INVITATION_REVOKED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_REVOKED",
-                        "message" : "폐기된 초대입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
                       }
                     }
                   }
@@ -19138,16 +17229,6 @@
                       "error" : {
                         "code" : "COMMON_BAD_GATEWAY",
                         "message" : "외부 서비스 호출에 실패했습니다."
-                      }
-                    }
-                  },
-                  "INVITATION_EMAIL_SEND_FAILED" : {
-                    "description" : "초대 이메일을 발송하지 못했습니다.",
-                    "summary" : "INVITATION_EMAIL_SEND_FAILED",
-                    "value" : {
-                      "error" : {
-                        "code" : "INVITATION_EMAIL_SEND_FAILED",
-                        "message" : "초대 이메일을 발송하지 못했습니다."
                       }
                     }
                   }
@@ -19244,26 +17325,6 @@
                         "message" : "부여할 수 없는 역할입니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -19352,16 +17413,6 @@
                       }
                     }
                   },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
-                      }
-                    }
-                  },
                   "WORKSPACE_NOT_FOUND" : {
                     "description" : "워크스페이스를 찾을 수 없습니다.",
                     "summary" : "WORKSPACE_NOT_FOUND",
@@ -19407,46 +17458,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
                       }
                     }
                   }
@@ -19580,36 +17591,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVALID_ROLE" : {
-                    "description" : "부여할 수 없는 역할입니다.",
-                    "summary" : "WORKSPACE_INVALID_ROLE",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_ROLE",
-                        "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -19658,26 +17639,6 @@
                         "message" : "권한이 없습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -19695,16 +17656,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -19753,46 +17704,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
                       }
                     }
                   }
@@ -19936,36 +17847,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVALID_ROLE" : {
-                    "description" : "부여할 수 없는 역할입니다.",
-                    "summary" : "WORKSPACE_INVALID_ROLE",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_ROLE",
-                        "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -20012,26 +17893,6 @@
                       "error" : {
                         "code" : "AUTH_FORBIDDEN",
                         "message" : "권한이 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
                       }
                     }
                   }
@@ -20112,16 +17973,6 @@
                       }
                     }
                   },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
                   "WORKSPACE_OWNER_PROTECTED" : {
                     "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
                     "summary" : "WORKSPACE_OWNER_PROTECTED",
@@ -20139,16 +17990,6 @@
                       "error" : {
                         "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
                         "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
                       }
                     }
                   }
@@ -20310,26 +18151,6 @@
                         "message" : "부여할 수 없는 역할입니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -20376,26 +18197,6 @@
                       "error" : {
                         "code" : "AUTH_FORBIDDEN",
                         "message" : "권한이 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
                       }
                     }
                   }
@@ -20476,16 +18277,6 @@
                       }
                     }
                   },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
                   "WORKSPACE_OWNER_PROTECTED" : {
                     "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
                     "summary" : "WORKSPACE_OWNER_PROTECTED",
@@ -20493,26 +18284,6 @@
                       "error" : {
                         "code" : "WORKSPACE_OWNER_PROTECTED",
                         "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
                       }
                     }
                   }
@@ -20656,36 +18427,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVALID_ROLE" : {
-                    "description" : "부여할 수 없는 역할입니다.",
-                    "summary" : "WORKSPACE_INVALID_ROLE",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_ROLE",
-                        "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -20734,26 +18475,6 @@
                         "message" : "권한이 없습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -20771,16 +18492,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -20829,46 +18540,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
                       }
                     }
                   }
@@ -21002,36 +18673,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVALID_ROLE" : {
-                    "description" : "부여할 수 없는 역할입니다.",
-                    "summary" : "WORKSPACE_INVALID_ROLE",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_ROLE",
-                        "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -21080,26 +18721,6 @@
                         "message" : "권한이 없습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -21117,16 +18738,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -21175,46 +18786,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
                       }
                     }
                   }
@@ -21348,36 +18919,6 @@
                         "message" : "요청 값이 유효하지 않습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVALID_ROLE" : {
-                    "description" : "부여할 수 없는 역할입니다.",
-                    "summary" : "WORKSPACE_INVALID_ROLE",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_ROLE",
-                        "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -21426,26 +18967,6 @@
                         "message" : "권한이 없습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -21463,16 +18984,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -21521,46 +19032,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
                       }
                     }
                   }
@@ -21704,26 +19175,6 @@
                       }
                     }
                   },
-                  "SOURCE_OAUTH_INVALID_REQUEST" : {
-                    "description" : "승인 요청에 필요한 값이 없습니다.",
-                    "summary" : "SOURCE_OAUTH_INVALID_REQUEST",
-                    "value" : {
-                      "error" : {
-                        "code" : "SOURCE_OAUTH_INVALID_REQUEST",
-                        "message" : "승인 요청에 필요한 값이 없습니다."
-                      }
-                    }
-                  },
-                  "SOURCE_OAUTH_INVALID_STATE" : {
-                    "description" : "승인 요청을 확인할 수 없습니다.",
-                    "summary" : "SOURCE_OAUTH_INVALID_STATE",
-                    "value" : {
-                      "error" : {
-                        "code" : "SOURCE_OAUTH_INVALID_STATE",
-                        "message" : "승인 요청을 확인할 수 없습니다."
-                      }
-                    }
-                  },
                   "SOURCE_UNSUPPORTED_PROVIDER" : {
                     "description" : "지원하지 않는 provider입니다.",
                     "summary" : "SOURCE_UNSUPPORTED_PROVIDER",
@@ -21731,36 +19182,6 @@
                       "error" : {
                         "code" : "SOURCE_UNSUPPORTED_PROVIDER",
                         "message" : "지원하지 않는 provider입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_ROLE" : {
-                    "description" : "부여할 수 없는 역할입니다.",
-                    "summary" : "WORKSPACE_INVALID_ROLE",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_ROLE",
-                        "message" : "부여할 수 없는 역할입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_INVALID_SLUG" : {
-                    "description" : "사용할 수 없는 slug 형식입니다.",
-                    "summary" : "WORKSPACE_INVALID_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVALID_SLUG",
-                        "message" : "사용할 수 없는 slug 형식입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_RESERVED_SLUG" : {
-                    "description" : "예약어로 지정된 slug입니다.",
-                    "summary" : "WORKSPACE_RESERVED_SLUG",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_RESERVED_SLUG",
-                        "message" : "예약어로 지정된 slug입니다."
                       }
                     }
                   }
@@ -21811,26 +19232,6 @@
                         "message" : "권한이 없습니다."
                       }
                     }
-                  },
-                  "WORKSPACE_INVITEE_NOT_FOUND" : {
-                    "description" : "초대할 사용자를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_INVITEE_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_INVITEE_NOT_FOUND",
-                        "message" : "초대할 사용자를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ROLE_CONFLICT" : {
-                    "description" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ROLE_CONFLICT",
-                        "message" : "이미 다른 역할로 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
                   }
                 }
               }
@@ -21848,26 +19249,6 @@
                       "error" : {
                         "code" : "COMMON_NOT_FOUND",
                         "message" : "요청한 리소스를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "SOURCE_REF_NOT_FOUND" : {
-                    "description" : "source-ref를 찾을 수 없습니다.",
-                    "summary" : "SOURCE_REF_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "SOURCE_REF_NOT_FOUND",
-                        "message" : "source-ref를 찾을 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_NOT_FOUND" : {
-                    "description" : "워크스페이스 멤버를 찾을 수 없습니다.",
-                    "summary" : "WORKSPACE_MEMBER_NOT_FOUND",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_NOT_FOUND",
-                        "message" : "워크스페이스 멤버를 찾을 수 없습니다."
                       }
                     }
                   },
@@ -21916,46 +19297,6 @@
                       "error" : {
                         "code" : "COMMON_CONFLICT",
                         "message" : "요청이 현재 상태와 충돌합니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_MEMBER_ALREADY_EXISTS" : {
-                    "description" : "이미 워크스페이스에 참여 중인 멤버입니다.",
-                    "summary" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_MEMBER_ALREADY_EXISTS",
-                        "message" : "이미 워크스페이스에 참여 중인 멤버입니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_OWNER_PROTECTED" : {
-                    "description" : "owner 멤버는 변경하거나 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_OWNER_PROTECTED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_OWNER_PROTECTED",
-                        "message" : "owner 멤버는 변경하거나 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED" : {
-                    "description" : "자기 자신은 제거할 수 없습니다.",
-                    "summary" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED",
-                        "message" : "자기 자신은 제거할 수 없습니다."
-                      }
-                    }
-                  },
-                  "WORKSPACE_SLUG_ALREADY_EXISTS" : {
-                    "description" : "이미 사용 중인 slug입니다.",
-                    "summary" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                    "value" : {
-                      "error" : {
-                        "code" : "WORKSPACE_SLUG_ALREADY_EXISTS",
-                        "message" : "이미 사용 중인 slug입니다."
                       }
                     }
                   }
@@ -22023,16 +19364,6 @@
                       "error" : {
                         "code" : "COMMON_BAD_GATEWAY",
                         "message" : "외부 서비스 호출에 실패했습니다."
-                      }
-                    }
-                  },
-                  "SOURCE_OAUTH_EXCHANGE_FAILED" : {
-                    "description" : "provider와 토큰을 주고받지 못했습니다.",
-                    "summary" : "SOURCE_OAUTH_EXCHANGE_FAILED",
-                    "value" : {
-                      "error" : {
-                        "code" : "SOURCE_OAUTH_EXCHANGE_FAILED",
-                        "message" : "provider와 토큰을 주고받지 못했습니다."
                       }
                     }
                   }

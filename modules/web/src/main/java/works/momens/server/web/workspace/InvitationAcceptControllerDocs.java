@@ -32,8 +32,19 @@ interface InvitationAcceptControllerDocs {
       responseCode = "200",
       description = "초대 수락 성공",
       content = @Content(schema = @Schema(implementation = AcceptInvitationResponse.class)))
-  @ApiException(InvitationErrorCode.class)
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = InvitationErrorCode.class,
+      codes = {
+        "INVITATION_INVALID_TOKEN",
+        "INVITATION_NOT_FOUND",
+        "INVITATION_ALREADY_ACCEPTED",
+        "INVITATION_REVOKED",
+        "INVITATION_EXPIRED",
+        "INVITATION_EMAIL_MISMATCH"
+      })
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_INVALID_ROLE", "WORKSPACE_MEMBER_ALREADY_EXISTS", "WORKSPACE_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   AcceptInvitationResponse accept(AcceptInvitationRequest request, Principal principal);
 }

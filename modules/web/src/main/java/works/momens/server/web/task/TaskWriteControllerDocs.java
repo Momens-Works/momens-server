@@ -31,8 +31,9 @@ interface TaskWriteControllerDocs {
       responseCode = "201",
       description = "생성 성공",
       content = @Content(schema = @Schema(implementation = WebTaskResponse.class)))
-  @ApiException(ProjectErrorCode.class)
-  @ApiException(TaskErrorCode.class)
+  @ApiException(
+      value = ProjectErrorCode.class,
+      codes = {"PROJECT_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WebTaskResponse create(
       @Parameter(description = "프로젝트 식별자") UUID projectId,
@@ -47,8 +48,9 @@ interface TaskWriteControllerDocs {
       responseCode = "200",
       description = "수정 성공",
       content = @Content(schema = @Schema(implementation = WebTaskResponse.class)))
-  @ApiException(ProjectErrorCode.class)
-  @ApiException(TaskErrorCode.class)
+  @ApiException(
+      value = TaskErrorCode.class,
+      codes = {"TASK_NOT_FOUND", "TASK_CHECKLIST_ITEM_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WebTaskResponse update(
       @Parameter(description = "태스크 식별자") UUID taskId,
@@ -63,8 +65,9 @@ interface TaskWriteControllerDocs {
       responseCode = "200",
       description = "삭제 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiException(ProjectErrorCode.class)
-  @ApiException(TaskErrorCode.class)
+  @ApiException(
+      value = TaskErrorCode.class,
+      codes = {"TASK_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WebMessageResponse delete(@Parameter(description = "태스크 식별자") UUID taskId, Principal principal);
 
@@ -76,8 +79,9 @@ interface TaskWriteControllerDocs {
       responseCode = "201",
       description = "생성 성공",
       content = @Content(schema = @Schema(implementation = UpdateResponse.class)))
-  @ApiException(ProjectErrorCode.class)
-  @ApiException(TaskErrorCode.class)
+  @ApiException(
+      value = TaskErrorCode.class,
+      codes = {"TASK_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   UpdateResponse createUpdate(
       @Parameter(description = "태스크 식별자") UUID taskId,
@@ -92,8 +96,9 @@ interface TaskWriteControllerDocs {
       responseCode = "200",
       description = "삭제 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiException(ProjectErrorCode.class)
-  @ApiException(TaskErrorCode.class)
+  @ApiException(
+      value = TaskErrorCode.class,
+      codes = {"TASK_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WebMessageResponse deleteUpdate(
       @Parameter(description = "태스크 식별자") UUID taskId,

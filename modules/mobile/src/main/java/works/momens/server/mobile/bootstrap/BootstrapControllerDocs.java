@@ -29,7 +29,9 @@ interface BootstrapControllerDocs {
       description =
           "모바일 진입 컨텍스트 조회 성공. 접근 가능한 project가 없으면 default_project_id는 null, projects는 빈 배열입니다.",
       content = @Content(schema = @Schema(implementation = BootstrapResponse.class)))
-  @ApiException(UserErrorCode.class)
+  @ApiException(
+      value = UserErrorCode.class,
+      codes = {"USER_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   BootstrapResponse getBootstrap(Principal principal);
 }

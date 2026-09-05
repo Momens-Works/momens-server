@@ -24,7 +24,9 @@ interface MemoryWriteControllerDocs {
   @ApiResponse(
       responseCode = "201",
       content = @Content(schema = @Schema(implementation = ConfirmedMemoryResponse.class)))
-  @ApiException(MemoryErrorCode.class)
+  @ApiException(
+      value = MemoryErrorCode.class,
+      codes = {"MEMORY_CANDIDATE_NOT_FOUND", "MEMORY_INVALID_STATE"})
   @ApiException(CommonErrorCode.class)
   ConfirmedMemoryResponse confirm(
       @Parameter(description = "메모리 후보 식별자") UUID candidateId, Principal principal);
@@ -33,7 +35,9 @@ interface MemoryWriteControllerDocs {
   @ApiResponse(
       responseCode = "201",
       content = @Content(schema = @Schema(implementation = ConfirmedMemoryResponse.class)))
-  @ApiException(MemoryErrorCode.class)
+  @ApiException(
+      value = MemoryErrorCode.class,
+      codes = {"MEMORY_CANDIDATE_NOT_FOUND", "MEMORY_INVALID_STATE"})
   @ApiException(CommonErrorCode.class)
   ConfirmedMemoryResponse editAndConfirm(
       UUID candidateId, EditAndConfirmMemoryCandidateRequest request, Principal principal);
@@ -42,7 +46,9 @@ interface MemoryWriteControllerDocs {
   @ApiResponse(
       responseCode = "200",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiException(MemoryErrorCode.class)
+  @ApiException(
+      value = MemoryErrorCode.class,
+      codes = {"MEMORY_CANDIDATE_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WebMessageResponse reject(
       UUID candidateId, RejectMemoryCandidateRequest request, Principal principal);
@@ -51,7 +57,9 @@ interface MemoryWriteControllerDocs {
   @ApiResponse(
       responseCode = "200",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiException(MemoryErrorCode.class)
+  @ApiException(
+      value = MemoryErrorCode.class,
+      codes = {"MEMORY_CANDIDATE_NOT_FOUND", "MEMORY_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WebMessageResponse merge(
       UUID candidateId, MergeMemoryCandidateRequest request, Principal principal);
@@ -60,7 +68,9 @@ interface MemoryWriteControllerDocs {
   @ApiResponse(
       responseCode = "200",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiException(MemoryErrorCode.class)
+  @ApiException(
+      value = MemoryErrorCode.class,
+      codes = {"MEMORY_CANDIDATE_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WebMessageResponse expire(UUID candidateId, Principal principal);
 
@@ -68,7 +78,9 @@ interface MemoryWriteControllerDocs {
   @ApiResponse(
       responseCode = "200",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiException(MemoryErrorCode.class)
+  @ApiException(
+      value = MemoryErrorCode.class,
+      codes = {"MEMORY_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WebMessageResponse resolve(UUID memoryId, ResolveMemoryRequest request, Principal principal);
 }

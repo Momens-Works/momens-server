@@ -32,7 +32,9 @@ interface AuthControllerDocs {
       description = "토큰 발급 성공",
       content = @Content(schema = @Schema(implementation = TokenResponse.class)))
   @SecurityRequirements
-  @ApiException(AuthErrorCode.class)
+  @ApiException(
+      value = AuthErrorCode.class,
+      codes = {"AUTH_GOOGLE_TOKEN_INVALID", "AUTH_GOOGLE_EMAIL_NOT_VERIFIED"})
   @ApiException(CommonErrorCode.class)
   TokenResponse loginWithGoogleToken(GoogleTokenRequest request);
 
@@ -45,7 +47,9 @@ interface AuthControllerDocs {
       description = "토큰 재발급 성공",
       content = @Content(schema = @Schema(implementation = TokenResponse.class)))
   @SecurityRequirements
-  @ApiException(AuthErrorCode.class)
+  @ApiException(
+      value = AuthErrorCode.class,
+      codes = {"AUTH_REFRESH_TOKEN_INVALID"})
   @ApiException(CommonErrorCode.class)
   TokenResponse refresh(RefreshTokenRequest request);
 
@@ -55,7 +59,9 @@ interface AuthControllerDocs {
       description = "로그아웃 성공",
       content = @Content(schema = @Schema(implementation = AuthMessageResponse.class)))
   @SecurityRequirements
-  @ApiException(AuthErrorCode.class)
+  @ApiException(
+      value = AuthErrorCode.class,
+      codes = {"AUTH_REFRESH_TOKEN_INVALID"})
   @ApiException(CommonErrorCode.class)
   AuthMessageResponse logout(LogoutRequest request);
 }

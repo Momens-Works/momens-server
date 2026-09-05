@@ -36,7 +36,9 @@ interface DevTokenControllerDocs {
       description = "토큰 발급 성공",
       content = @Content(schema = @Schema(implementation = DevTokenResponse.class)))
   @SecurityRequirements
-  @ApiException(DevTokenErrorCode.class)
+  @ApiException(
+      value = DevTokenErrorCode.class,
+      codes = {"AUTH_DEV_TOKEN_SECRET_INVALID", "AUTH_DEV_TOKEN_EMAIL_NOT_ALLOWED"})
   @ApiException(CommonErrorCode.class)
   DevTokenResponse issueDevToken(String secret, DevTokenRequest request);
 }

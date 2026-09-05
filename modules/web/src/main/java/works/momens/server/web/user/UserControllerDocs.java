@@ -26,7 +26,9 @@ interface UserControllerDocs {
       responseCode = "200",
       description = "내 프로필 조회 성공",
       content = @Content(schema = @Schema(implementation = MeResponse.class)))
-  @ApiException(UserErrorCode.class)
+  @ApiException(
+      value = UserErrorCode.class,
+      codes = {"USER_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   MeResponse getMe(Principal principal);
 
@@ -38,7 +40,9 @@ interface UserControllerDocs {
       responseCode = "200",
       description = "내 프로필 수정 성공",
       content = @Content(schema = @Schema(implementation = MeResponse.class)))
-  @ApiException(UserErrorCode.class)
+  @ApiException(
+      value = UserErrorCode.class,
+      codes = {"USER_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   MeResponse updateMe(Principal principal, UpdateMeRequest request);
 }

@@ -12,7 +12,6 @@ import java.util.UUID;
 import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.project.core.ProjectErrorCode;
-import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.signal.dev.dto.request.CreateDevSignalRequest;
 import works.momens.server.signal.dev.dto.response.CreateDevSignalResponse;
 
@@ -37,8 +36,9 @@ interface DevSignalControllerDocs {
       responseCode = "201",
       description = "생성됨. 생성된 Signal 식별자를 반환합니다.",
       content = @Content(schema = @Schema(implementation = CreateDevSignalResponse.class)))
-  @ApiException(ProjectErrorCode.class)
-  @ApiException(TaskErrorCode.class)
+  @ApiException(
+      value = ProjectErrorCode.class,
+      codes = {"PROJECT_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   CreateDevSignalResponse createSignal(
       @Parameter(description = "project 식별자") UUID projectId,

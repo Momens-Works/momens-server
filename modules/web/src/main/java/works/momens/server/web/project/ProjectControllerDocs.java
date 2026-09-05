@@ -32,7 +32,9 @@ interface ProjectControllerDocs {
       responseCode = "201",
       description = "프로젝트 생성 성공",
       content = @Content(schema = @Schema(implementation = WebProjectResponse.class)))
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WebProjectResponse createProject(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,

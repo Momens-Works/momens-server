@@ -31,7 +31,9 @@ interface SourceRefControllerDocs {
       responseCode = "200",
       description = "source-ref 검증 완료 표시 성공",
       content = @Content(schema = @Schema(implementation = WebSourceRefResponse.class)))
-  @ApiException(SourceErrorCode.class)
+  @ApiException(
+      value = SourceErrorCode.class,
+      codes = {"SOURCE_REF_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WebSourceRefResponse verify(
       @Parameter(description = "source-ref 식별자") UUID sourceRefId, Principal principal);

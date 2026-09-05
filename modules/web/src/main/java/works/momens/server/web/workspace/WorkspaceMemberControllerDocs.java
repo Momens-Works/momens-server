@@ -34,7 +34,9 @@ interface WorkspaceMemberControllerDocs {
       responseCode = "200",
       description = "목록 조회 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceMembersResponse.class)))
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WorkspaceMembersResponse list(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
@@ -47,7 +49,14 @@ interface WorkspaceMemberControllerDocs {
       responseCode = "200",
       description = "수정 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {
+        "WORKSPACE_NOT_FOUND",
+        "WORKSPACE_INVALID_ROLE",
+        "WORKSPACE_MEMBER_NOT_FOUND",
+        "WORKSPACE_OWNER_PROTECTED"
+      })
   @ApiException(CommonErrorCode.class)
   WebMessageResponse update(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
@@ -63,7 +72,14 @@ interface WorkspaceMemberControllerDocs {
       responseCode = "200",
       description = "제거 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {
+        "WORKSPACE_NOT_FOUND",
+        "WORKSPACE_MEMBER_NOT_FOUND",
+        "WORKSPACE_OWNER_PROTECTED",
+        "WORKSPACE_SELF_REMOVAL_NOT_ALLOWED"
+      })
   @ApiException(CommonErrorCode.class)
   WebMessageResponse remove(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,

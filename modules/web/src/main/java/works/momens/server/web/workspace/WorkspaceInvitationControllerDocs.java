@@ -37,8 +37,9 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "200",
       description = "목록 조회 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationsResponse.class)))
-  @ApiException(InvitationErrorCode.class)
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WorkspaceInvitationsResponse list(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId, Principal principal);
@@ -53,8 +54,12 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "201",
       description = "초대 생성 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationResponse.class)))
-  @ApiException(InvitationErrorCode.class)
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = InvitationErrorCode.class,
+      codes = {"INVITATION_INVALID_EMAIL", "INVITATION_EMAIL_SEND_FAILED"})
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND", "WORKSPACE_MEMBER_ALREADY_EXISTS", "WORKSPACE_INVALID_ROLE"})
   @ApiException(CommonErrorCode.class)
   WorkspaceInvitationResponse create(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
@@ -71,8 +76,12 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "200",
       description = "초대 재발송 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationResponse.class)))
-  @ApiException(InvitationErrorCode.class)
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = InvitationErrorCode.class,
+      codes = {"INVITATION_NOT_FOUND", "INVITATION_EMAIL_SEND_FAILED"})
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WorkspaceInvitationResponse resend(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
@@ -87,8 +96,12 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "200",
       description = "초대 폐기 성공",
       content = @Content(schema = @Schema(implementation = WorkspaceInvitationResponse.class)))
-  @ApiException(InvitationErrorCode.class)
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = InvitationErrorCode.class,
+      codes = {"INVITATION_NOT_FOUND"})
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {"WORKSPACE_NOT_FOUND"})
   @ApiException(CommonErrorCode.class)
   WorkspaceInvitationResponse revoke(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
@@ -103,7 +116,14 @@ interface WorkspaceInvitationControllerDocs {
       responseCode = "200",
       description = "멤버 추가 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiException(WorkspaceErrorCode.class)
+  @ApiException(
+      value = WorkspaceErrorCode.class,
+      codes = {
+        "WORKSPACE_NOT_FOUND",
+        "WORKSPACE_INVALID_ROLE",
+        "WORKSPACE_INVITEE_NOT_FOUND",
+        "WORKSPACE_MEMBER_ROLE_CONFLICT"
+      })
   @ApiException(CommonErrorCode.class)
   WebMessageResponse invite(
       @Parameter(description = "워크스페이스 식별자") UUID workspaceId,
