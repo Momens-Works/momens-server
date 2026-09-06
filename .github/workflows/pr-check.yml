@@ -76,7 +76,7 @@ jobs:
           fi
           echo "PR 제목/본문 형식 OK"
 
-      # 아래 두 단계는 별도 job이 아니라 pr-format 안에 둡니다. ruleset(`protected-branches`)의
+      # 아래 두 단계는 별도 job이 아니라 pr-format 안에 둡니다. 보호 ruleset의
       # 필수 체크가 `build`·`pr-format` 둘뿐이라, 새 job으로 두면 실패해도 머지를 막지 못합니다
       # ([Git] docs/rules/git.md). 게이트는 차단해야 의미가 있으므로 이미 필수인 job에 싣습니다.
 

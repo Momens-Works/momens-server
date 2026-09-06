@@ -36,9 +36,6 @@ import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 @AutoConfigureMockMvc
 class OpenApiSnapshotTest extends AbstractPostgresIntegrationTest {
 
-  /** 스냅샷 파일 경로. Gradle이 rootProject 기준 절대경로로 주입해 실행 위치에 의존하지 않는다. */
-  private static final String PATH_PROPERTY = "momens.openapi.snapshot.path";
-
   private static final String WRITE_PROPERTY = "momens.openapi.snapshot.write";
 
   private static final String UPDATE_COMMAND = "./gradlew updateOpenApiSnapshot";
@@ -65,7 +62,7 @@ class OpenApiSnapshotTest extends AbstractPostgresIntegrationTest {
   @Test
   void snapshotMatchesLiveSpec() throws Exception {
     String actual = normalize(fetchApiDocs());
-    Path snapshot = snapshotPath();
+    Path snapshot = OpenApiSnapshotFile.path();
 
     if (Boolean.getBoolean(WRITE_PROPERTY)) {
       Files.createDirectories(snapshot.getParent());
@@ -106,14 +103,6 @@ class OpenApiSnapshotTest extends AbstractPostgresIntegrationTest {
     List<?> sorted = new ArrayList<>(tags);
     sorted.sort(Comparator.comparing(tag -> String.valueOf(((Map<?, ?>) tag).get("name"))));
     document.put("tags", sorted);
-  }
-
-  private Path snapshotPath() {
-    String configured = System.getProperty(PATH_PROPERTY);
-    assertThat(configured)
-        .as("%s 시스템 프로퍼티가 필요합니다. Gradle test task 설정을 확인하세요.", PATH_PROPERTY)
-        .isNotBlank();
-    return Path.of(configured);
   }
 
   private String fetchApiDocs() throws Exception {

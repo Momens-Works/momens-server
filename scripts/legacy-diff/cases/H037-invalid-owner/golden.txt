@@ -1,13 +1,18 @@
 legacy_status: 400
 server_status: 400
 --- body ---
-@@ -1,3 +1,9 @@
+@@ -1,3 +1,14 @@
  {
 -  "error": "owner_user_ids must be workspace members"
 +  "error": {
 +    "code": "COMMON_VALIDATION_FAILED",
 +    "details": {
-+      "field": "owner_user_ids"
++      "fields": [
++        {
++          "field": "owner_user_ids",
++          "reason": "invalid value"
++        }
++      ]
 +    },
 +    "message": "요청 값이 유효하지 않습니다."
 +  }

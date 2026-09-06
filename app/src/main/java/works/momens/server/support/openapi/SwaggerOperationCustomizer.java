@@ -7,42 +7,42 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.customizers.OperationCustomizer;
-import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.web.method.HandlerMethod;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 
-/** controller method 또는 docs interface의 {@link ApiExceptions}를 읽어 실패 응답 예시를 보강합니다. */
+/** 컨트롤러 메서드 또는 docs interface에 선언된 {@link ApiException}을 읽어 OpenAPI 실패 응답 예시를 추가합니다. */
 @RequiredArgsConstructor
 public class SwaggerOperationCustomizer implements OperationCustomizer {
+
+  private final ApiExceptionResolver apiExceptionResolver;
 
   private final SwaggerErrorExampleGenerator swaggerErrorExampleGenerator;
 
   @Override
   public Operation customize(Operation operation, HandlerMethod handlerMethod) {
-    ApiExceptions apiExceptions = findApiExceptions(handlerMethod);
-    if (apiExceptions != null) {
-      swaggerErrorExampleGenerator.addErrorResponses(operation, apiExceptions.value());
+    ApiException[] apiExceptions = findApiExceptions(handlerMethod);
+    if (apiExceptions.length > 0) {
+      swaggerErrorExampleGenerator.addErrorResponses(
+          operation, apiExceptionResolver.resolve(apiExceptions));
     }
     return operation;
   }
 
-  private ApiExceptions findApiExceptions(HandlerMethod handlerMethod) {
-    ApiExceptions apiExceptions = handlerMethod.getMethodAnnotation(ApiExceptions.class);
-    if (apiExceptions != null) {
+  private ApiException[] findApiExceptions(HandlerMethod handlerMethod) {
+    Method method = handlerMethod.getMethod();
+    ApiException[] apiExceptions = method.getAnnotationsByType(ApiException.class);
+    if (apiExceptions.length > 0) {
       return apiExceptions;
     }
 
-    Method method = handlerMethod.getMethod();
     Class<?> beanType = handlerMethod.getBeanType();
     return interfaceTypes(beanType).stream()
         .map(interfaceType -> findInterfaceMethod(interfaceType, method))
         .filter(interfaceMethod -> interfaceMethod != null)
-        .map(
-            interfaceMethod ->
-                AnnotatedElementUtils.findMergedAnnotation(interfaceMethod, ApiExceptions.class))
-        .filter(annotation -> annotation != null)
+        .map(interfaceMethod -> interfaceMethod.getAnnotationsByType(ApiException.class))
+        .filter(annotations -> annotations.length > 0)
         .findFirst()
-        .orElse(null);
+        .orElse(new ApiException[0]);
   }
 
   private Set<Class<?>> interfaceTypes(Class<?> beanType) {

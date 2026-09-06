@@ -598,18 +598,21 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
 
 0. **DB 접속 정보를 Supabase로 교체한다. 아래 어느 단계보다 먼저다.**
 
-   `MOMENS_SERVER_DATABASE_URL`·`_USERNAME`·`_PASSWORD`(`k8s` 리포의 GitHub Secret)가 아직 옛
-   Neon을 가리킨다. **이 상태로 진행하면 소유권 이전과 심기는 Supabase에서 일어나고 Pod는
+   `MOMENS_SERVER_DATABASE_URL`·`_USERNAME`·`_PASSWORD`(`k8s` 리포의 GitHub Secret)가 옛 Neon을
+   가리키고 있었다. **그 상태로 진행하면 소유권 이전과 심기는 Supabase에서 일어나고 Pod는
    Neon에 접속한다.** 토글이 켜지는 순간 Flyway가 이력이 없는 Neon에서 42건을 처음부터
    실행하려 하고, Supabase에는 새 12개 테이블이 생기지 않는다. 어느 쪽도 의도한 결과가 아니다.
 
-   **주소는 direct여야 하고, 판별은 포트가 아니라 host로 한다.** Supabase의 session pooler도
-   `5432`를 쓴다(`aws-0-<region>.pooler.supabase.com`, username에 `.<ref>` 접미사). direct는
-   `db.<ref>.supabase.co`다. 치명적인 것은 transaction pooler(`:6543`)이고 그것은 포트로
-   배제되지만, 어느 쪽인지는 host를 봐야 안다.
+   **주소는 session pooler여야 하고, 판별은 포트로 한다.** 배제할 것은 transaction
+   pooler(`:6543`)다 — 세션을 유지하지 않아 Flyway의 세션 단위 잠금과 `init-sqls`가 성립하지
+   않는다. session pooler는 `5432`를 쓰고 username에 `.<ref>` 접미사가 붙는다.
+
+   direct(`db.<ref>.supabase.co`)는 쓸 수 없다. **IPv6 전용이라 IPv4 노드로 구성된 prod GKE에서
+   도달하지 못한다** — direct host는 A 레코드 없이 AAAA만 반환하고 `k8s`의 GKE Terraform은 IPv4
+   CIDR만 선언한다.
 
    ```
-   jdbc:postgresql://db.<ref>.supabase.co:5432/postgres?sslmode=require
+   jdbc:postgresql://aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
    ```
 
    **교체 후 앱 자격증명으로 대상을 확인하기 전에는 토글을 켜지 않는다.**
@@ -626,9 +629,9 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
    `--verify`로 체크섬을
    대조한다. 심기 목록 전건이 검증돼야
    한다 — 대조되지 못한 항목이 남으면 그 체크섬이 검증 없이 prod로 들어간다.
-   이 리포는 rebase merge를 쓰므로 6단계에서 `main`에 생기는 commit SHA는 달라질 수 있지만,
-   릴리스 내용이 같다면 tree hash는 같아야 한다. base SHA는 검증 뒤 `main`이 바뀌지 않았음을
-   확인하는 기준이다.
+   릴리스 PR은 merge commit으로 들어가므로 6단계에서 `main`에 생기는 commit SHA는
+   `release_head`와 다르지만, 릴리스 내용이 같다면 tree hash는 같아야 한다. base SHA는 검증 뒤
+   `main`이 바뀌지 않았음을 확인하는 기준이다.
 
    ```bash
    release_pr=210
@@ -659,10 +662,9 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
        -p 127.0.0.1:15498:5432 pgvector/pgvector:pg16
      until docker exec verify-db pg_isready -U momens -d verifydb >/dev/null 2>&1; do sleep 1; done
 
-     # prod 프로필은 flyway.enabled=false 라 SPRING_FLYWAY_ENABLED 로 켠다. auth 값은 @NotBlank
+     # prod 프로필은 flyway.enabled=true 라 별도 토글이 필요 없다. auth 값은 @NotBlank
      # 검증만 통과하면 되므로 더미다 — 이 DB는 체크섬 산출에만 쓰고 버린다.
      SPRING_PROFILES_ACTIVE=prod \
-     SPRING_FLYWAY_ENABLED=true \
      DATABASE_URL='jdbc:postgresql://127.0.0.1:15498/verifydb' \
      DATABASE_USERNAME=momens DATABASE_PASSWORD=momens \
      MOMENS_AUTH_JWT_SECRET="$(printf '0%.0s' {1..64})" \
@@ -867,7 +869,7 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
    ```bash
    test "$(gh pr view "$release_pr" --json headRefOid --jq .headRefOid)" = "$release_head"
    test "$(gh pr view "$release_pr" --json baseRefOid --jq .baseRefOid)" = "$release_base"
-   gh pr merge "$release_pr" --rebase --match-head-commit "$release_head"
+   gh pr merge "$release_pr" --merge --match-head-commit "$release_head"
    ```
 
    `main` push는 새 main SHA로 이미지를 만들고 곧바로 `repository_dispatch`로 `Deploy momens-server`를
@@ -886,7 +888,7 @@ Flyway 실행만 막고 Hibernate의 `ddl-auto=validate`는 막지 않는다. �
 7. 기동과 스키마 확인
 8. `out-of-order`·`group`·`init-sqls`를 제거하는 PR 머지 후 같은 main 이미지 SHA로 다시 dispatch
 9. 후속 서버 릴리스로 `application-prod.yml`을 `flyway.enabled: true`로 정본화한 뒤 ConfigMap의
-   `SPRING_FLYWAY_ENABLED` 오버라이드를 제거하고, 대장의 MOM-0909 수기 의무 3행을 제거
+   `SPRING_FLYWAY_ENABLED` 오버라이드를 제거하고, 대장의 MOM-0909 수기 의무 4행을 제거
 
 #### 토글은 수기 변경이 아니라 커밋이어야 한다
 
@@ -1149,7 +1151,7 @@ ADR-0019가 정한 최종 상태는 서버가 prod 스키마를 소유하는 것
 
 ~~**pooler 여부.**~~ **닫혔다** (2026-08-26 관리자 확인). DB 포트가 `5432`다 — 트랜잭션
   pooler(`:6543`)가 아니므로 세션이 유지되고, Flyway의 세션 단위 advisory lock과 `init-sqls`가
-  성립한다. 쌍둥이가 전제한 direct 조건이 맞았고 락 측정값이 그대로 유효하다.
+  성립한다. 쌍둥이가 전제한 것은 세션 유지이고 그 조건이 맞았으므로 락 측정값이 그대로 유효하다.
 - **배포 기전.** `k8s` ConfigMap → 롤아웃 경로는 `momens-k8s-dev`의 dev 클러스터에서 별도 컨펌 후
   확인한다.
 ~~**Supabase 고유 형상.**~~ **닫혔다.** 관측 결과 event trigger 6개와 확장 스키마 분리가 있었고,
@@ -1165,6 +1167,30 @@ Supabase는 `ALTER DEFAULT PRIVILEGES FOR ROLE postgres`로 **`postgres`가 만�
 노출 면에서는 개선이지만, Data API로 서버 소유 테이블을 읽는 소비자가 있다면 부트스트랩 시점에
 조용히 끊긴다. 소비자 목록은 관리자 회신 대기 중이다(MOM-0925).
 
+### 부트스트랩 적용 결과 (MOM-0909, 2026-09-04)
+
+릴리스 #210(`ef06ec1d`)로 prod 에 적용됐다. Pod 로그와 `flyway_schema_history` 로 실측했다.
+
+| 확인 | 결과 |
+| --- | --- |
+| 심기 후 시작 version | `20260823100000` (28건) |
+| 실행 | **14건**, 13건이 `[out of order]` + 보정 `20260823110000` 이 in-order. 실패 0건, 00:00.586s |
+| 최종 이력 | `count = 42`, `max = 20260823110000`, `bool_and(success) = true` |
+| 기동 | `ddl-auto=validate` 통과, 51.0초, ERROR 0건 |
+| 롤아웃 | 61초에 Ready. 이후 재시작 0회 |
+
+리허설이 예측한 분할(심기 28 / 실행 14)과 최종 version 이 그대로 재현됐다.
+
+#### 접속 대상
+
+prod 는 session pooler(`aws-0-ap-southeast-1.pooler.supabase.com:5432`)로 붙는다. direct 는
+IPv6 전용이라 IPv4 노드로 구성된 GKE 에서 도달하지 못한다 — 2026-08-28 배포가 그 경로로
+기동에 실패했고, `MOMENS_SERVER_DATABASE_URL` 을 session pooler 로 바꾼 09-04 재실행에서
+성공했다(8절 0단계).
+
+session pooler 가 세션을 유지하므로 Flyway 의 세션 단위 잠금과 `init-sqls` 가 성립한다 — 위
+실측이 그것을 보인다.
+
 ## 9. 남은 위험
 
 | 위험 | 대응 |
@@ -1174,17 +1200,14 @@ Supabase는 `ALTER DEFAULT PRIVILEGES FOR ROLE postgres`로 **`postgres`가 만�
 | `mirror` 헤더가 더 잘못 붙어 있다 | 2.8이 한 건 드러났다. MOM-0909의 객체 대조가 실행 집합 전체를 다시 판정한다 |
 | local·prod가 완전히 같지 않다 | 2.6의 5개 컬럼. 의도된 것이며 `validate` 대상이 아니다 |
 | 레거시가 만든 20개 테이블에서 local과 prod의 DDL이 갈린다 | 주도권 이전으로 사라지지 않는 위험이다(6절). `persistence.md`의 충실도 규칙이 계속 적용된다 |
-| 게이트를 없앤 뒤 부트스트랩 전에 다른 커밋이 prod에 뜬다 (릴리스 또는 `workflow_dispatch`) | Flyway는 꺼져 있어도 `ddl-auto=validate`가 새 테이블 부재로 기동을 막는다. 대장의 `main` 릴리스 금지 의무를 유지하고, 릴리스 PR head·tree·base와 필수 CI를 머지 직전에 다시 검사한다. 토글 머지와 고정 릴리스 머지 사이에는 다른 `main` 머지와 수동 dispatch를 금지한다 |
 | 리포 설정과 prod 실제 설정이 어긋난 채 방치된다 | 8절 9단계(정본화 PR)를 부트스트랩과 같은 스프린트에서 닫는다. ConfigMap 오버라이드는 임시 상태다 |
-| ConfigMap 환경변수가 바인딩되지 않는다 | `spring.flyway.out-of-order`는 대시 때문에 변환형이 애매하다. 시스템 프로퍼티로 주고 리허설에서 확인한다 |
-| **접속 대상이 Neon인 채로 토글이 켜진다** | 소유권 이전·심기는 Supabase에서, Flyway는 Neon에서 일어난다. 8절 0단계가 교체와 확인을 토글보다 앞에 둔다 |
 | 롤아웃 실패 후 정리가 안 된 채 남는다 | `deploy-service.sh`에 `rollout undo`가 없다. 수동 정리 단계를 절차에 명시한다 |
 | DDL 선행 조건이 빠진 채 전환한다 | 쌍둥이 리허설이 창구의 `SET ROLE` 능력 · 레거시 테이블 20개 소유권 · `extensions` 접근(`USAGE` + `search_path`) 세 가지를 각각 실패로 재현했다. 8절 3단계가 SQL로 적는다 |
 | `momens_server`가 이력 테이블에 권한을 갖지 못한다 | 다음 기동이 `permission denied`로 죽고 심기 시점에는 신호가 없다. `--generate` 생성물이 트랜잭션 안에서 DML을 부여하고(소유권 이전이 아니다 — 8절 4단계), `prod-flyway-bootstrap-verify-test.sh`가 그 줄을 지킨다 |
 | `tasks` 소유권을 되돌리며 DML 재발급을 잊는다 | 기동이 성공해 배포에서 잡히지 않고 첫 요청에서 끊긴다. 7절에 재발급 한 줄을 절차로 적었다 |
 | Data API 소비자가 서버 소유 테이블을 읽고 있다 | 새 12개 테이블은 `momens_server` 소유라 `anon`·`authenticated`에 권한이 붙지 않는다. 소비자 목록은 MOM-0925에서 확인 중이다 |
 | 확장이 `public`이 아닌 스키마에 있다 | `uuid-ossp`가 `extensions`에 있고 실행 집합 2건이 한정 없이 호출한다. 8절 3.5단계의 `USAGE` + `search_path` 두 줄로 닫는다. 파일 수정은 체크섬 때문에 불가능하다 |
-| 접속이 트랜잭션 pooler다 | 해소. 포트가 `5432`라 세션이 유지된다(2026-08-26 확인). 접속 정보를 교체할 때 pooler 주소로 바뀌지 않도록 주의한다 |
+| 접속이 트랜잭션 pooler다 | 해소. prod 는 session pooler(`aws-0-ap-southeast-1.pooler.supabase.com:5432`)를 쓰고 세션이 유지된다(2026-09-04 적용 실측). 접속 정보를 교체할 때 포트가 `6543`(transaction 모드)이 되지 않도록 본다 |
 
 ## 관련 문서
 

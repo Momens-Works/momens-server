@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import works.momens.server.auth.dev.dto.request.DevTokenRequest;
 import works.momens.server.auth.dev.dto.response.DevTokenResponse;
 import works.momens.server.auth.internal.application.DevTokenErrorCode;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 
 /**
@@ -22,6 +22,7 @@ import works.momens.server.common.api.CommonErrorCode;
 interface DevTokenControllerDocs {
 
   @Operation(
+      operationId = "devIssueToken",
       summary = "dev 테스트 사용자 토큰 발급",
       description = "허용된 테스트 사용자의 access token을 발급합니다. dev 계열 프로필에서만 동작하며, 호출자는 공유 시크릿 헤더로 제한합니다.")
   @Parameter(
@@ -35,6 +36,9 @@ interface DevTokenControllerDocs {
       description = "토큰 발급 성공",
       content = @Content(schema = @Schema(implementation = DevTokenResponse.class)))
   @SecurityRequirements
-  @ApiExceptions({DevTokenErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = DevTokenErrorCode.class,
+      codes = {"AUTH_DEV_TOKEN_SECRET_INVALID", "AUTH_DEV_TOKEN_EMAIL_NOT_ALLOWED"})
+  @ApiException(CommonErrorCode.class)
   DevTokenResponse issueDevToken(String secret, DevTokenRequest request);
 }

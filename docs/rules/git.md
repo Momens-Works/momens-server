@@ -40,8 +40,8 @@ Git 워크플로는 GitFlow를 따르고, 커밋·브랜치·PR 형식은 아래
 - 도메인은 소문자로 작성합니다.
 - 커밋 제목에 Momens 작업 라벨을 포함하면 커밋 목록이나 blame에서 해당 변경이 어떤 작업에서
   이루어졌는지 확인할 수 있습니다.
-- rebase merge를 사용하므로 각 커밋이 개별 이력으로 남습니다. 따라서 각 커밋에는 실제로 수행한
-  작업의 라벨을 작성합니다.
+- squash merge를 사용하지 않으므로 각 커밋이 개별 이력으로 남습니다. 따라서 각 커밋에는 실제로
+  수행한 작업의 라벨을 작성합니다.
 - 하나의 PR에서는 하나의 작업만 다루는 것이 원칙이므로, 일반적으로 PR에 포함된 모든 커밋에
   동일한 작업 라벨을 작성합니다. 다른 작업에 해당하는 변경이 함께 남아 있다면 각 커밋에 해당
   작업의 라벨을 작성합니다.
@@ -71,24 +71,32 @@ Git 워크플로는 GitFlow를 따르고, 커밋·브랜치·PR 형식은 아래
 
 ## 리뷰
 
-- PR은 머지 전 **최소 1명의 승인이 필요합니다**(`protected-branches` ruleset 강제, 작성자
+- PR은 머지 전 **최소 1명의 승인이 필요합니다**(보호 ruleset 강제, 작성자
   self-approve 불가). 리뷰어는 PR을 열 때 직접 지정합니다(자동 요청 없음).
 - `LGTM`만 남기지 않고, 확인한 범위·판단 근거를 짧게 남깁니다.
 
 ## 머지
 
-- **rebase merge로 통일** — 머지 커밋 없이 선형 히스토리를 유지합니다.
+- 일반 PR(`*` → `develop`)은 **rebase merge**합니다. `develop`은 머지 커밋 없는 선형 히스토리를
+  유지합니다.
+- 릴리즈 PR(`develop` → `main`)과 hotfix PR(`*` → `main`)은 **merge commit**으로 머지합니다.
+  `main`에는 릴리즈·hotfix 경계인 머지 커밋을 남기고, `develop`의 기존 커밋 SHA를 다시 쓰지
+  않습니다. `main` hotfix는 후속 PR로 `develop`에도 반영합니다.
+- squash merge는 사용하지 않습니다.
 - `develop`/`main`은 PR로만 변경(직접 push 차단).
 - CI(`build`, `pr-format`) 통과 + 리뷰 대화 resolve 후 머지.
-- 머지된 브랜치는 자동 삭제. force-push·브랜치 삭제 차단.
+- 머지된 일반 작업 브랜치는 자동 삭제합니다. 기본 브랜치인 `develop`은 릴리즈 PR 머지 후에도
+  유지합니다. force-push·보호 브랜치 삭제는 차단합니다.
 - PR이 실제로 머지된 뒤 관련 Momens 작업을 `done`으로 변경합니다. PR을 열었거나 승인받은 시점에는
   완료 처리하지 않습니다. PR이 닫혔지만 머지되지 않았다면 `done`으로 변경하지 않고 실제 작업 상태에
   맞게 유지하거나 `cancelled`로 변경합니다.
 - AI 에이전트와 완료 처리할 때는 `finish-work` 스킬로 GitHub의 실제 머지를 검증한 뒤 `done` 전환과
   머지 정보 댓글을 수행합니다.
-- 위 머지 규칙은 GitHub ruleset(`protected-branches`)으로 강제됩니다. 현재 ruleset은
-  `main`/`develop`에 active 상태이며, rebase merge만 허용하고 필수 체크(`build`,
-  `pr-format`)와 리뷰 대화 resolve를 요구합니다.
+- 위 머지 규칙은 GitHub ruleset으로 강제됩니다. `protected-develop`은 rebase merge와 선형
+  히스토리만 허용하고, `protected-main`은 merge commit만 허용하며 선형 히스토리를 요구하지
+  않습니다. 두 ruleset 모두 active 상태이며 필수 체크(`build`, `pr-format`), 승인 1명과 리뷰
+  대화 resolve를 요구합니다. 리포 설정은 rebase merge와 merge commit을 활성화하고 squash
+  merge를 비활성화하며, 브랜치별 허용 방식은 ruleset이 좁힙니다.
 
 ## 릴리즈 노트
 

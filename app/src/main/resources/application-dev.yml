@@ -1,7 +1,6 @@
 # dev 배포 프로필(momens-k8s-dev, 모바일 MVP 검증용).
-# prod와 달리 dev에서는 이 서버가 DB 스키마를 소유합니다: base(application.yml)의
-# flyway.enabled=true 를 그대로 상속해 새 서버 Flyway 가 product/signal 테이블을 만듭니다
-# (prod 는 레거시 momens-api 가 단일 소유라 Flyway off). retrieval projection 등
+# dev에서는 이 서버가 DB 스키마를 소유합니다: base(application.yml)의 flyway.enabled=true 를
+# 그대로 상속해 새 서버 Flyway 가 product/signal 테이블을 만듭니다. retrieval projection 등
 # api-surrogate 스키마는 momens-k8s-dev 의 dev-schema-gap.sql 이 별도로 채웁니다(D42).
 #
 # 이 파일은 최소만 둡니다. 나머지 값은 base + Kubernetes Secret/ConfigMap 환경변수로 주입합니다:
@@ -16,7 +15,7 @@
 #   명시적 501 비활성화는 P2 로 미룹니다.
 spring:
   flyway:
-    # prod 는 off. dev 는 이 서버가 스키마 소유자이므로 명시적으로 on 을 재확인합니다(안전 가드).
+    # dev 는 이 서버가 스키마 소유자이므로 base 의 on 을 명시적으로 재확인합니다(안전 가드).
     enabled: true
 
 momens:

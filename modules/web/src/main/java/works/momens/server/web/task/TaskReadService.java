@@ -17,8 +17,6 @@ import works.momens.server.project.core.ProjectReader;
 import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.project.task.TaskReader;
 import works.momens.server.project.task.TaskSnapshot;
-import works.momens.server.project.taskupdate.TaskUpdateDetail;
-import works.momens.server.project.taskupdate.TaskUpdateReader;
 import works.momens.server.source.LegacySourceRefDetail;
 import works.momens.server.source.SourceRefReader;
 import works.momens.server.workspace.WorkspaceAccess;
@@ -28,7 +26,6 @@ import works.momens.server.workspace.WorkspaceAccess;
 class TaskReadService {
   private final TaskReader taskReader;
   private final ProjectReader projectReader;
-  private final TaskUpdateReader taskUpdateReader;
   private final EntityRelationReader entityRelationReader;
   private final ConfirmedMemoryReader confirmedMemoryReader;
   private final SourceRefReader sourceRefReader;
@@ -53,12 +50,6 @@ class TaskReadService {
     TaskSnapshot task = requireTask(taskId);
     requireMember(task.workspaceId(), userId);
     return task;
-  }
-
-  @Transactional(readOnly = true)
-  public List<TaskUpdateDetail> updates(UUID taskId, UUID userId) {
-    TaskSnapshot task = get(taskId, userId);
-    return taskUpdateReader.listByTaskId(task.id());
   }
 
   @Transactional(readOnly = true)

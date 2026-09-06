@@ -9,14 +9,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.mobile.signal.dto.response.ConvertToTaskResponse;
 import works.momens.server.mobile.signal.dto.response.DismissResponse;
 import works.momens.server.mobile.signal.dto.response.SignalDetailResponse;
 import works.momens.server.mobile.signal.dto.response.SignalListResponse;
 import works.momens.server.project.core.ProjectErrorCode;
-import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.signal.SignalErrorCode;
 
 /**
@@ -30,6 +29,7 @@ import works.momens.server.signal.SignalErrorCode;
 interface SignalControllerDocs {
 
   @Operation(
+      operationId = "mobileListSignals",
       summary = "시그널 목록 조회",
       description =
           "프로젝트의 아직 처리되지 않은 시그널을 생성 시각 내림차순(동률 시 id 내림차순)으로 조회합니다. 처리된 시그널을 다시 보는 흐름은 MVP 이후입니다.")
@@ -37,11 +37,15 @@ interface SignalControllerDocs {
       responseCode = "200",
       description = "미처리 시그널 목록. 없으면 signals는 빈 배열입니다.",
       content = @Content(schema = @Schema(implementation = SignalListResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = ProjectErrorCode.class,
+      codes = {"PROJECT_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   SignalListResponse listSignals(
       @Parameter(description = "project 식별자") UUID projectId, Principal principal);
 
   @Operation(
+      operationId = "mobileGetSignal",
       summary = "시그널 상세 조회",
       description =
           "시그널 상세 bottom sheet에 필요한 근거(대상·변화·영향)와 민수 제안을 조회합니다. 미처리 시그널만 대상이며, 처리·삭제된 시그널은"
@@ -50,11 +54,15 @@ interface SignalControllerDocs {
       responseCode = "200",
       description = "시그널 상세.",
       content = @Content(schema = @Schema(implementation = SignalDetailResponse.class)))
-  @ApiExceptions({SignalErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = SignalErrorCode.class,
+      codes = {"SIGNAL_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   SignalDetailResponse getSignal(
       @Parameter(description = "signal 식별자") UUID signalId, Principal principal);
 
   @Operation(
+      operationId = "mobileConvertSignalToTask",
       summary = "시그널을 태스크로 전환",
       description =
           "시그널을 원탭으로 태스크에 등록합니다. 요청 body는 없습니다(ADR-0011). 서버가 민수 task draft(title은 시그널 제목, role은 pm,"
@@ -68,11 +76,15 @@ interface SignalControllerDocs {
       responseCode = "200",
       description = "같은 action 재요청(멱등 replay).",
       content = @Content(schema = @Schema(implementation = ConvertToTaskResponse.class)))
-  @ApiExceptions({SignalErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = SignalErrorCode.class,
+      codes = {"SIGNAL_NOT_FOUND", "SIGNAL_INVALID_STATE"})
+  @ApiException(CommonErrorCode.class)
   ResponseEntity<ConvertToTaskResponse> convertToTask(
       @Parameter(description = "signal 식별자") UUID signalId, Principal principal);
 
   @Operation(
+      operationId = "mobileDismissSignal",
       summary = "시그널을 처리하지 않고 닫음(dismiss)",
       description =
           "시그널을 태스크로 전환하지 않고 처리 완료로 기록합니다. 물리 삭제가 아니며, 같은 시그널에 dismiss를 재요청하면 기존 결과를 200으로"
@@ -81,7 +93,10 @@ interface SignalControllerDocs {
       responseCode = "200",
       description = "처리 완료(신규 또는 멱등 replay).",
       content = @Content(schema = @Schema(implementation = DismissResponse.class)))
-  @ApiExceptions({SignalErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = SignalErrorCode.class,
+      codes = {"SIGNAL_NOT_FOUND", "SIGNAL_INVALID_STATE"})
+  @ApiException(CommonErrorCode.class)
   DismissResponse dismiss(
       @Parameter(description = "signal 식별자") UUID signalId, Principal principal);
 }

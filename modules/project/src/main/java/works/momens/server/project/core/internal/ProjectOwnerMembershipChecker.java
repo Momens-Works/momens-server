@@ -1,14 +1,12 @@
 package works.momens.server.project.core.internal;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import works.momens.server.common.api.BusinessException;
-import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.common.api.FieldValidationException;
 import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceMembership;
 
@@ -38,7 +36,7 @@ class ProjectOwnerMembershipChecker {
    */
   void requireWorkspaceMembers(UUID workspaceId, List<UUID> ownerUserIds) {
     if (ownerUserIds.isEmpty()) {
-      throw validation(FIELD_OWNER_USER_IDS);
+      throw FieldValidationException.forField(FIELD_OWNER_USER_IDS);
     }
     Set<UUID> members =
         workspaceAccess.listMemberships(workspaceId).stream()
@@ -46,11 +44,7 @@ class ProjectOwnerMembershipChecker {
             .collect(Collectors.toSet());
     long matched = ownerUserIds.stream().distinct().filter(members::contains).count();
     if (matched != ownerUserIds.size()) {
-      throw validation(FIELD_OWNER_USER_IDS);
+      throw FieldValidationException.forField(FIELD_OWNER_USER_IDS);
     }
-  }
-
-  private static BusinessException validation(String field) {
-    return new BusinessException(CommonErrorCode.COMMON_VALIDATION_FAILED, Map.of("field", field));
   }
 }

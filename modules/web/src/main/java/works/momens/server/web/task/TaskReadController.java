@@ -18,6 +18,7 @@ import works.momens.server.web.task.dto.response.WebTaskResponse;
 @RequiredArgsConstructor
 class TaskReadController implements TaskReadControllerDocs {
   private final TaskReadService taskReadService;
+  private final TaskUpdateService taskUpdateService;
 
   @Override
   @GetMapping(path = "/projects/{projectId}/tasks", version = "1")
@@ -34,7 +35,7 @@ class TaskReadController implements TaskReadControllerDocs {
   @Override
   @GetMapping(path = "/tasks/{taskId}/updates", version = "1")
   public TaskUpdateListResponse updates(@PathVariable UUID taskId, Principal principal) {
-    return TaskUpdateListResponse.from(taskReadService.updates(taskId, CurrentUser.id(principal)));
+    return TaskUpdateListResponse.from(taskUpdateService.list(taskId, CurrentUser.id(principal)));
   }
 
   @Override

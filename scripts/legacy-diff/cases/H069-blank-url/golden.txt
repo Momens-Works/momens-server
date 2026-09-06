@@ -9,7 +9,7 @@ server_status: 400
 +    "details": {
 +      "fields": [
 +        {
-+          "field": "sourceUrl",
++          "field": "source_url",
 +          "reason": "must not be blank"
 +        }
 +      ]

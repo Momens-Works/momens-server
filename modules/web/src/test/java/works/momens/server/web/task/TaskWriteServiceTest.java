@@ -21,7 +21,6 @@ import works.momens.server.project.task.PatchTaskCommand;
 import works.momens.server.project.task.TaskReader;
 import works.momens.server.project.task.TaskScope;
 import works.momens.server.project.task.TaskWriter;
-import works.momens.server.project.taskupdate.TaskUpdateWriter;
 import works.momens.server.workspace.WorkspaceAccess;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,7 +35,6 @@ class TaskWriteServiceTest {
   @Mock private TaskReader taskReader;
   @Mock private ProjectReader projectReader;
   @Mock private WorkspaceAccess workspaceAccess;
-  @Mock private TaskUpdateWriter taskUpdateWriter;
   @InjectMocks private TaskWriteService service;
 
   @Test

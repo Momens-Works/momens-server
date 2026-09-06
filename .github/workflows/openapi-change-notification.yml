@@ -1,7 +1,8 @@
 name: OpenAPI change notification
 
-# OpenAPI 스냅샷이 변경된 PR이 머지될 때만 실행한다. 이 저장소는 rebase merge를 사용하므로
-# push를 기준으로 실행하면 여러 커밋이 한 번에 반영될 때 비교 범위가 모호해진다.
+# OpenAPI 스냅샷이 변경된 PR이 머지될 때만 실행한다. 대상 브랜치에 따라 rebase merge 또는
+# merge commit을 사용하므로 push를 기준으로 실행하면 여러 커밋이 한 번에 반영될 때 비교 범위가
+# 모호해진다.
 # 또한 push 이벤트에서는 PR 번호와 링크를 확인할 수 없다.
 on:
   pull_request:
@@ -31,8 +32,13 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
+          # 머지된 브랜치는 자동으로 삭제되고 `develop`에는 rebase merge로 새로운 SHA가 생성되므로, PR이 닫힌 뒤에는
+          # 어떤 브랜치에서도 `head.sha`에 도달할 수 없습니다. GitHub가 브랜치 삭제 후에도 유지하는
+          # `refs/pull/<번호>/head`를 가져와야 `git show`로 해당 커밋을 읽을 수 있습니다.
+          git fetch --no-tags origin "refs/pull/${PR_NUMBER}/head"
           # 스냅샷을 처음 추가한 PR은 base 시점에 파일이 없다. 이 경우 빈 문서를 사용해 모든 항목을 추가된 변경으로 판정한다.
           git show "$BASE_SHA:docs/spec/openapi.json" > "$RUNNER_TEMP/base.json" 2>/dev/null \
             || printf '%s\n' '{"openapi":"3.1.0","info":{"title":"momens-server","version":"v1"},"paths":{}}' \

@@ -8,11 +8,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.UUID;
-import works.momens.server.common.api.ApiExceptions;
+import works.momens.server.common.api.ApiException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.context.ContextErrorCode;
 import works.momens.server.memory.MemoryErrorCode;
-import works.momens.server.project.core.ProjectErrorCode;
 import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.web.dto.response.WebMessageResponse;
 import works.momens.server.web.task.dto.request.CreateTaskSourceRefRequest;
@@ -30,13 +29,16 @@ interface TaskLinkControllerDocs {
       responseCode = "201",
       description = "연결 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({
-    ProjectErrorCode.class,
-    TaskErrorCode.class,
-    MemoryErrorCode.class,
-    ContextErrorCode.class,
-    CommonErrorCode.class
-  })
+  @ApiException(
+      value = TaskErrorCode.class,
+      codes = {"TASK_NOT_FOUND"})
+  @ApiException(
+      value = MemoryErrorCode.class,
+      codes = {"MEMORY_NOT_FOUND"})
+  @ApiException(
+      value = ContextErrorCode.class,
+      codes = {"CONTEXT_CROSS_WORKSPACE_LINK_NOT_ALLOWED"})
+  @ApiException(CommonErrorCode.class)
   WebMessageResponse linkTaskMemory(
       @Parameter(description = "태스크 식별자") UUID taskId,
       @Parameter(description = "메모리 식별자") UUID memoryId,
@@ -50,12 +52,13 @@ interface TaskLinkControllerDocs {
       responseCode = "200",
       description = "해제 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({
-    ProjectErrorCode.class,
-    TaskErrorCode.class,
-    ContextErrorCode.class,
-    CommonErrorCode.class
-  })
+  @ApiException(
+      value = TaskErrorCode.class,
+      codes = {"TASK_NOT_FOUND"})
+  @ApiException(
+      value = ContextErrorCode.class,
+      codes = {"CONTEXT_LINK_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   WebMessageResponse unlinkTaskMemory(
       @Parameter(description = "태스크 식별자") UUID taskId,
       @Parameter(description = "메모리 식별자") UUID memoryId,
@@ -70,7 +73,10 @@ interface TaskLinkControllerDocs {
       responseCode = "201",
       description = "생성 성공",
       content = @Content(schema = @Schema(implementation = CreateTaskSourceRefResponse.class)))
-  @ApiExceptions({ProjectErrorCode.class, TaskErrorCode.class, CommonErrorCode.class})
+  @ApiException(
+      value = TaskErrorCode.class,
+      codes = {"TASK_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   CreateTaskSourceRefResponse createTaskSourceRef(
       @Parameter(description = "태스크 식별자") UUID taskId,
       CreateTaskSourceRefRequest request,
@@ -84,12 +90,13 @@ interface TaskLinkControllerDocs {
       responseCode = "200",
       description = "해제 성공",
       content = @Content(schema = @Schema(implementation = WebMessageResponse.class)))
-  @ApiExceptions({
-    ProjectErrorCode.class,
-    TaskErrorCode.class,
-    ContextErrorCode.class,
-    CommonErrorCode.class
-  })
+  @ApiException(
+      value = TaskErrorCode.class,
+      codes = {"TASK_NOT_FOUND"})
+  @ApiException(
+      value = ContextErrorCode.class,
+      codes = {"CONTEXT_LINK_NOT_FOUND"})
+  @ApiException(CommonErrorCode.class)
   WebMessageResponse unlinkTaskSourceRef(
       @Parameter(description = "태스크 식별자") UUID taskId,
       @Parameter(description = "source-ref 식별자") UUID sourceRefId,

@@ -12,9 +12,10 @@
 #   momens_server          비-superuser · 무소유 · CREATE on public · 레거시 테이블 DML
 #   합성 데이터            tasks 10 만 행
 #
-# 이 쌍둥이는 direct 접속을 전제한다. prod DB 포트가 5432 로 확인돼(2026-08-26) 세션이 유지되므로
-# 그 전제가 맞다. 접속 정보 교체 시 트랜잭션 pooler(:6543) 주소로 바뀌면 세션 단위 잠금과
-# init-sqls 가 성립하지 않아 여기서 얻은 락 결과가 무효가 된다.
+# 이 쌍둥이는 세션이 유지되는 접속을 전제한다. prod 는 session pooler
+# (aws-0-ap-southeast-1.pooler.supabase.com:5432) 를 쓰고 세션이 유지되므로 그 전제가 맞다.
+# 접속 정보 교체 시 트랜잭션 pooler(:6543) 주소로 바뀌면 세션 단위 잠금과 init-sqls 가
+# 성립하지 않아 여기서 얻은 락 결과가 무효가 된다.
 #
 # 결과물은 `twin_base` 데이터베이스다. rehearse.sh 가 시나리오마다 TEMPLATE 으로 복제해
 # 매번 같은 출발점에서 시작한다.

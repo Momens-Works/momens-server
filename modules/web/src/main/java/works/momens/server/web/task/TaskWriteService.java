@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
+import works.momens.server.common.api.FieldValidationException;
 import works.momens.server.project.core.ProjectErrorCode;
 import works.momens.server.project.core.ProjectReader;
 import works.momens.server.project.task.CreateTaskCommand;
@@ -18,8 +19,6 @@ import works.momens.server.project.task.TaskOrigin;
 import works.momens.server.project.task.TaskReader;
 import works.momens.server.project.task.TaskSnapshot;
 import works.momens.server.project.task.TaskWriter;
-import works.momens.server.project.taskupdate.TaskUpdateDetail;
-import works.momens.server.project.taskupdate.TaskUpdateWriter;
 import works.momens.server.workspace.WorkspaceAccess;
 
 @Service
@@ -29,7 +28,6 @@ class TaskWriteService {
   private final TaskReader taskReader;
   private final ProjectReader projectReader;
   private final WorkspaceAccess workspaceAccess;
-  private final TaskUpdateWriter taskUpdateWriter;
 
   @Transactional
   TaskSnapshot create(
@@ -45,7 +43,7 @@ class TaskWriteService {
     UUID workspaceId = requireProject(projectId);
     requireMember(workspaceId, userId);
     if (title == null || title.isBlank()) {
-      throw validation("title");
+      throw FieldValidationException.forField("title");
     }
     return taskWriter.create(
         new CreateTaskCommand(
@@ -83,13 +81,13 @@ class TaskWriteService {
       boolean dueDateSet) {
     requireTaskMember(taskId, userId);
     if (titleSet && title == null) {
-      throw validation("title");
+      throw FieldValidationException.forField("title");
     }
     if (statusSet && status == null) {
-      throw validation("status");
+      throw FieldValidationException.forField("status");
     }
     if (prioritySet && priority == null) {
-      throw validation("priority");
+      throw FieldValidationException.forField("priority");
     }
     boolean effectiveTitleSet = titleSet && !title.isEmpty();
     boolean effectiveStatusSet = statusSet && !status.isEmpty();
@@ -117,15 +115,6 @@ class TaskWriteService {
   void delete(UUID taskId, UUID userId) {
     requireTaskMember(taskId, userId);
     taskWriter.delete(taskId);
-  }
-
-  TaskUpdateDetail createUpdate(
-      UUID taskId, UUID userId, String body, String kind, Map<String, Object> metadata) {
-    return taskUpdateWriter.create(taskId, userId, body, kind, metadata);
-  }
-
-  void deleteUpdate(UUID taskId, UUID updateId, UUID userId) {
-    taskUpdateWriter.delete(taskId, updateId, userId);
   }
 
   private UUID requireProject(UUID projectId) {
@@ -158,7 +147,7 @@ class TaskWriteService {
     return switch (normalized) {
       case "backlog", "todo", "done", "cancelled" -> normalized;
       case "in_progress", "progress", "in-progress" -> "in_progress";
-      default -> throw validation("status");
+      default -> throw FieldValidationException.forField("status");
     };
   }
 
@@ -170,11 +159,7 @@ class TaskWriteService {
     return switch (normalized) {
       case "low", "high", "urgent" -> normalized;
       case "medium", "med" -> "medium";
-      default -> throw validation("priority");
+      default -> throw FieldValidationException.forField("priority");
     };
-  }
-
-  private static BusinessException validation(String field) {
-    return new BusinessException(CommonErrorCode.COMMON_VALIDATION_FAILED, Map.of("field", field));
   }
 }

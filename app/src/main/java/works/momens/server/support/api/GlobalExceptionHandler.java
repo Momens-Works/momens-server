@@ -1,7 +1,7 @@
 package works.momens.server.support.api;
 
 import java.util.List;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
@@ -12,10 +12,13 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import tools.jackson.databind.ObjectMapper;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.common.api.ErrorCode;
 import works.momens.server.common.api.ErrorResponse;
+import works.momens.server.common.api.FieldValidationDetails;
+import works.momens.server.common.api.FieldValidationException;
 
 /**
  * Standard 모드 에러 응답을 한곳에서 렌더링하는 전역 예외 핸들러.
@@ -30,7 +33,10 @@ import works.momens.server.common.api.ErrorResponse;
  */
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+  private final ObjectMapper objectMapper;
 
   @ExceptionHandler(BusinessException.class)
   public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
@@ -55,14 +61,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
       HttpHeaders headers,
       HttpStatusCode status,
       WebRequest request) {
-    List<FieldErrorDetail> fields =
-        ex.getBindingResult().getFieldErrors().stream()
-            .map(GlobalExceptionHandler::toFieldErrorDetail)
-            .toList();
+    List<FieldValidationDetails.FieldViolation> fields =
+        ex.getBindingResult().getFieldErrors().stream().map(this::toFieldErrorDetail).toList();
     log.debug("validation failed fields={}", fields.size());
     ErrorCode errorCode = CommonErrorCode.COMMON_VALIDATION_FAILED;
     Object body =
-        ErrorResponse.of(errorCode.code(), errorCode.defaultMessage(), Map.of("fields", fields));
+        ErrorResponse.of(
+            errorCode.code(), errorCode.defaultMessage(), new FieldValidationDetails(fields));
     return ResponseEntity.status(status).headers(headers).body(body);
   }
 
@@ -107,10 +112,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     };
   }
 
-  private static FieldErrorDetail toFieldErrorDetail(FieldError fieldError) {
-    return new FieldErrorDetail(fieldError.getField(), fieldError.getDefaultMessage());
+  private FieldValidationDetails.FieldViolation toFieldErrorDetail(FieldError fieldError) {
+    String reason = fieldError.getDefaultMessage();
+    return new FieldValidationDetails.FieldViolation(
+        toJsonFieldName(fieldError.getField()),
+        reason == null ? FieldValidationException.DEFAULT_REASON : reason);
   }
 
-  /** {@code details.fields} 원소: 검증 실패한 필드와 사유. */
-  private record FieldErrorDetail(String field, String reason) {}
+  private String toJsonFieldName(String field) {
+    return objectMapper
+        .serializationConfig()
+        .getPropertyNamingStrategy()
+        .nameForField(null, null, field);
+  }
 }

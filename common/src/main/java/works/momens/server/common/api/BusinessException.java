@@ -1,6 +1,5 @@
 package works.momens.server.common.api;
 
-import java.util.Map;
 import lombok.Getter;
 
 /**
@@ -16,13 +15,13 @@ import lombok.Getter;
 public class BusinessException extends RuntimeException {
 
   private final transient ErrorCode errorCode;
-  private final transient Map<String, Object> details;
+  private final transient Object details;
 
   public BusinessException(ErrorCode errorCode) {
     this(errorCode, errorCode.defaultMessage(), null);
   }
 
-  public BusinessException(ErrorCode errorCode, Map<String, Object> details) {
+  public BusinessException(ErrorCode errorCode, Object details) {
     this(errorCode, errorCode.defaultMessage(), details);
   }
 
@@ -30,7 +29,7 @@ public class BusinessException extends RuntimeException {
     this(errorCode, message, null);
   }
 
-  public BusinessException(ErrorCode errorCode, String message, Map<String, Object> details) {
+  public BusinessException(ErrorCode errorCode, String message, Object details) {
     super(message);
     this.errorCode = errorCode;
     this.details = details;
