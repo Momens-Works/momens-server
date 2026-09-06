@@ -40,6 +40,18 @@
     checksum이 어긋나 **다음 배포의 기동이 실패합니다.** 바꿔야 할 것이 있으면 새 마이그레이션을
     추가합니다.
 
+### 값 집합(CHECK 제약과 enum)
+
+- 컬럼의 허용 값 집합은 공유 DB의 CHECK 제약을 기준으로 하며, 이 레포지토리의 Flyway 마이그레이션을 통해서만
+  변경합니다([ADR-0022](../adr/0022-column-value-set-ownership.md)).
+- 테이블을 관리하는 모듈에는 해당 개념을 표현하는 도메인 enum을 하나만 둡니다. CHECK 제약과 enum의 값 집합이
+  다르면 그 차이를 `CheckConstraintEnumLinks`에 선언합니다. 값 집합을 제한하는 모든 CHECK 제약은 해당 목록에
+  등록해야 하며, 등록하지 않으면 `CheckConstraintEnumConsistencyTest`가 실패합니다.
+- mobile과 web 모듈은 값 집합을 별도로 다시 선언하지 않고 도메인 enum을 참조합니다. 표시 순서와 라벨, 레거시
+  입력 별칭은 각 모듈에서 관리합니다.
+- 값을 추가할 때는 Flyway 마이그레이션, 도메인 enum과 `CheckConstraintEnumLinks`를 같은 PR에서 변경합니다. 값을
+  제거할 때는 쓰기 경로에서 해당 값을 먼저 제거하고 기존 데이터를 정리한 뒤 CHECK 제약을 축소합니다.
+
 ### 레거시·worker DDL 동결
 
 공유 DB의 DDL writer는 이 서버 하나가 아닙니다. `momens-api`와 `momens-worker`가 자체 러너로

@@ -214,8 +214,9 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 - 상태는 `TaskStatus` enum에서 정의하며, `tasks.status`의 DB CHECK 제약과 동일한 5가지 값을 사용한다.
 - 진행률 분모는 상태를 개별적으로 나열하지 않고 `TaskStatus` 전체에서 `cancelled`만 제외해 계산한다.
   이렇게 하면 상태가 추가되더라도 별도 수정 없이 계산 대상에 포함된다.
-- 보드의 그룹, 노출 순서, 라벨은 화면 정책이므로 계속 mobile의 `BoardStatus`에서 관리한다. `BoardStatus`와
-  수정 요청 검증(`@Pattern`)을 `TaskStatus`를 기준으로 생성하도록 개선하는 작업은 후속으로 진행한다.
+- 보드의 그룹, 표시 순서와 라벨은 화면 정책이므로 mobile 모듈의 `BoardStatus`에서 관리합니다. `BoardStatus`와
+  수정 요청 검증용 `@Pattern`이 `TaskStatus`를 참조하도록 변경하는 작업은 후속 티켓에서 진행합니다
+  ([ADR-0022](../adr/0022-column-value-set-ownership.md)).
 - 진행률은 task 저장소의 상태별 집계 한 번으로 전체 태스크 수와 `done` 태스크 수를 함께 계산한다. 목록
   조회와 동일한 조건(projectId, status, 소프트 삭제 제외)을 한 쿼리에 고정해 목록과 진행률이 항상 같은 기준을
   쓰게 하고, 개수만 필요하므로 본문과 정렬은 읽지 않는다. 두 값을 각각 조회하면 기준이 갈릴 수 있다
