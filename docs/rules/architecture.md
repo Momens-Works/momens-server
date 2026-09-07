@@ -25,7 +25,9 @@ Gradle 멀티모듈(빌드 타임 컴파일 격리)과 Spring Modulith(런타임
   클래스패스에서 Spring Modulith가 하나로 조립해 검증할 수 있게 합니다.
 - 버전을 명시하는 의존성은 모듈 `build.gradle`이 아니라 **버전 카탈로그**
   (`gradle/libs.versions.toml`)에 추가합니다. Spring Boot BOM이 버전을 관리하는 의존성은
-  카탈로그에 두지 않습니다.
+  카탈로그에 두지 않습니다. 루트 `build.gradle`의 `verifyDependencyVersionsInCatalog` 태스크는
+  모든 프로젝트의 빌드 스크립트에서 버전 카탈로그 외부의 버전 선언을 검사하며, 위반이 있으면
+  `check`를 실패 처리합니다.
 
 ```text
 root
