@@ -89,6 +89,17 @@ Gradle 논리 경로는 `:user`, `:auth`처럼 평면으로 유지합니다.
 - 모듈 간 event 협력에는 persisted event publication registry를 사용합니다(fire-and-forget
   아님). registry 인프라(events-jpa 의존성, `event_publication` Flyway 마이그레이션,
   completion 설정)는 첫 application event 도입 시 함께 추가합니다([데이터](persistence.md)).
+- Spring Modulith는 런타임 클래스패스에 포함하지 않습니다(MOM-0921). main 소스에서는 모듈 경계 선언
+  애너테이션만 사용하므로 `:common`에서 `spring-modulith-api`를 `compileOnlyApi`로 선언합니다. 모듈
+  경계 검증에 필요한 `spring-modulith-core`는 `:app`에 `testImplementation`으로 선언한
+  `spring-modulith-starter-test`를 통해 전이 의존성으로 제공합니다. `spring-modulith-starter-core`는
+  Moments와 같은 런타임 기능을 제공하는 묶음 의존성이므로 사용하지 않습니다.
+- event publication registry, `ApplicationModuleInitializer`, actuator, observability 등 Modulith
+  런타임 기능을 하나라도 도입하면 `:app`에 해당 starter를 `implementation`으로 추가하고 `:common`의
+  의존성은 그대로 유지합니다. 이때 `spring-modulith-moments`가 전이 의존성으로 다시 추가되면
+  `MomentsAutoConfiguration`의 `@EnableScheduling`도 활성화됩니다. 따라서
+  `spring.modulith.moments.enabled=false`를 `application.yml`과 `SchedulingConfigIntegrationTest`에
+  다시 설정하거나, `spring-modulith-moments`를 전이 의존성에서 `exclude`해야 합니다.
 - `allowedDependencies`, `@ApplicationModuleTest`, Documenter는 필요 시점에 점진 도입합니다.
 
 ## Architecture Spike
