@@ -110,9 +110,19 @@ Git 워크플로는 GitFlow를 따르고, 커밋·브랜치·PR 형식은 아래
 
 ## prod 배포
 
-- **prod로 나가는 커밋은 `main`에 있는 것뿐입니다.** `build-and-deploy.yml`은 `main` push로 돌고,
-  `workflow_dispatch`로 다른 ref를 골라 실행하면 첫 스텝에서 거부합니다(MOM-0948). 필수 체크와
-  리뷰는 `pull_request`에서만 돌기 때문에, 배포 대상을 `main`으로 한정해야 prod에 나가는 것이
-  전부 그 관문을 지난 커밋이 됩니다.
+- **prod로 나가는 커밋은 `main`에 있는 것뿐입니다.** 필수 체크와 리뷰는 `pull_request`에서만
+  돌기 때문에, 배포 대상을 `main`으로 한정해야 prod에 나가는 것이 전부 그 관문을 지난 커밋이
+  됩니다.
+- **강제 지점은 워크플로 파일이 아니라 `production` environment입니다**(MOM-0948).
+  `workflow_dispatch`는 **선택한 ref의 워크플로 파일**을 실행하므로, 파일 안의 검사만으로는
+  그 검사가 없던 시절의 브랜치를 골라 우회할 수 있습니다. 두 층으로 막습니다.
+  - environment의 deployment branch policy가 `main`만 허용합니다. 다른 ref로 실행하면 job이
+    runner에 배정되기 전에 막힙니다.
+  - `K8S_REPO_DISPATCH_TOKEN`은 repository secret이 아니라 그 environment의 secret입니다.
+    environment를 선언하지 않은 워크플로 파일은 토큰을 읽지 못하고, `Request production deploy`가
+    빈 토큰으로 건너뛰어 prod로 나가지 않습니다.
+- **남는 것은 이미지 push입니다.** 위 두 층은 배포 요청을 막을 뿐 GHCR push를 막지 않습니다.
+  임의 ref로 만든 이미지를 `k8s`의 `Deploy momens-server`에 직접 dispatch하는 경로는
+  그쪽 워크플로가 닫습니다.
 - 같은 커밋을 다시 배포해야 할 때(설정만 바뀐 경우 등)는 `main`에서 `workflow_dispatch`하거나
   `k8s`의 `Deploy momens-server`를 그 이미지 SHA로 dispatch합니다.

@@ -370,8 +370,8 @@ FK가 부모를 잠근다). 실측으로 확인했다 — `ADD COLUMN NOT NULL D
 
 그리고 **prod로 가는 길이 `main` push 하나가 아니었다.** `build-and-deploy.yml`의
 `workflow_dispatch`에 ref 제한이 없어 어느 브랜치에서 dispatch해도 그 커밋이 prod에 떴고, 릴리스
-게이트도 함께 우회됐다. 이 설계를 쓰던 시점의 형상이며 MOM-0948이 배포 대상을 `main`으로 한정해
-닫았다.
+게이트도 함께 우회됐다. 이 설계를 쓰던 시점의 형상이며, MOM-0948이 `production` environment의
+deployment branch policy와 environment secret으로 배포 요청을 `main`으로 한정해 닫았다.
 
 그래서 "릴리스 시점만 사람이 통제하면 된다"는 완화에 기대지 않는다. **리포에 위험한 상태를 아예
 두지 않는 편이 안전하다.**
