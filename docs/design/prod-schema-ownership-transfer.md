@@ -368,13 +368,13 @@ FK가 부모를 잠근다). 실측으로 확인했다 — `ADD COLUMN NOT NULL D
 이력 INSERT가 끝나기 전에 그 커밋이 prod에 뜨는 순간 Flyway가 40건 전부를 미적용으로 보고 첫 파일부터
 실행하려 한다.
 
-그리고 **prod로 가는 길은 `main` push 하나가 아니다.** `build-and-deploy.yml`에는 `workflow_dispatch`가
-있고, 이미지를 push한 뒤 `k8s`로 배포를 요청하는 `Request production deploy` 스텝은 ref가 아니라
-`K8S_DISPATCH_TOKEN` 존재 여부로만 걸린다. 즉 **어느 브랜치에서 dispatch해도 그 커밋이 prod에 뜬다.**
-릴리스 게이트도 함께 우회된다.
+그리고 **prod로 가는 길이 `main` push 하나가 아니었다.** `build-and-deploy.yml`의
+`workflow_dispatch`에 ref 제한이 없어 어느 브랜치에서 dispatch해도 그 커밋이 prod에 떴고, 릴리스
+게이트도 함께 우회됐다. 이 설계를 쓰던 시점의 형상이며 MOM-0948이 배포 대상을 `main`으로 한정해
+닫았다.
 
-따라서 "릴리스 시점만 사람이 통제하면 된다"는 완화가 성립하지 않는다. dispatch 한 번이면 통제가 무너진다.
-리포에 위험한 상태를 아예 두지 않는 편이 안전하다.
+그래서 "릴리스 시점만 사람이 통제하면 된다"는 완화에 기대지 않는다. **리포에 위험한 상태를 아예
+두지 않는 편이 안전하다.**
 
 대신 **k8s ConfigMap 환경변수로 토글한다.** `k8s` 리포 push 자체는 배포를 시작하지 않는다.
 `k8s/scripts/deploy-service.sh`가 호출됐을 때만 매니페스트를 적용하고, 이미지 변경 여부와 무관하게

@@ -26,6 +26,22 @@ jobs:
       K8S_DISPATCH_TOKEN: ${{ secrets.K8S_REPO_DISPATCH_TOKEN }}
 
     steps:
+      # workflow_dispatch 는 실행 ref 를 사람이 고르므로, 막지 않으면 머지되지 않은 브랜치가
+      # 그대로 prod 로 갑니다. 필수 체크(build·pr-format)와 리뷰는 전부 pull_request 에서만
+      # 도는데 이 경로는 그 전부를 건너뜁니다(MOM-0948).
+      #
+      # main 은 protected-main ruleset 이 PR·승인 1명·필수 체크를 강제하므로, 배포 대상을
+      # main 으로 한정하면 prod 에 나가는 것은 전부 그 관문을 지난 커밋이 됩니다.
+      #
+      # job 레벨 if 로 건너뛰지 않고 스텝에서 실패시킵니다. skip 은 초록으로 보여서 왜 배포가
+      # 안 됐는지 드러나지 않습니다.
+      - name: Refuse to deploy a non-main ref
+        if: ${{ github.ref != 'refs/heads/main' }}
+        run: |
+          echo "::error::prod 배포는 main 에서만 가능합니다. 현재 ref: ${{ github.ref }}"
+          echo "머지되지 않은 커밋을 배포하려면 먼저 PR 로 main 에 올리세요." >&2
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@v7
         with:

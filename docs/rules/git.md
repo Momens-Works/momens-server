@@ -107,3 +107,12 @@ Git 워크플로는 GitFlow를 따르고, 커밋·브랜치·PR 형식은 아래
   `.github/release.yml`을 따릅니다.
 - GitHub Release가 `published`되면 `release-notes-slack` 워크플로가
   `SLACK_RELEASE_WEBHOOK_URL` secret의 Incoming Webhook으로 릴리즈 노트를 Slack에 공유합니다.
+
+## prod 배포
+
+- **prod로 나가는 커밋은 `main`에 있는 것뿐입니다.** `build-and-deploy.yml`은 `main` push로 돌고,
+  `workflow_dispatch`로 다른 ref를 골라 실행하면 첫 스텝에서 거부합니다(MOM-0948). 필수 체크와
+  리뷰는 `pull_request`에서만 돌기 때문에, 배포 대상을 `main`으로 한정해야 prod에 나가는 것이
+  전부 그 관문을 지난 커밋이 됩니다.
+- 같은 커밋을 다시 배포해야 할 때(설정만 바뀐 경우 등)는 `main`에서 `workflow_dispatch`하거나
+  `k8s`의 `Deploy momens-server`를 그 이미지 SHA로 dispatch합니다.
