@@ -4,10 +4,12 @@ import java.util.UUID;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 
 /**
- * workspace 모듈 테스트의 네이티브 SQL 시드 모음.
+ * workspaces와 users 행을 네이티브 SQL로 저장하는 테스트 시드 모음입니다.
  *
- * <p>하위 도메인 테스트는 코어의 {@code WorkspaceRepository}가 package scope 밖이라 FK를 만족할 행을 SQL로 넣습니다. 같은 헬퍼가
- * 테스트마다 복제되지 않도록 모듈 루트에 한 벌만 둡니다.
+ * <p>workspace 모듈의 하위 도메인 테스트는 코어의 {@code WorkspaceRepository}가 package scope로 제한되어 있어 외래 키 제약을
+ * 만족하는 행을 SQL로 저장합니다. 동일한 코드가 테스트마다 중복되지 않도록 testFixtures에서 공용으로 관리합니다. workspaces나 users를 참조하는
+ * 테이블을 가진 다른 모듈(source, context)의 통합 테스트에서도 {@code testFixtures(project(':workspace'))}로 이 클래스를 가져와
+ * 사용할 수 있습니다.
  */
 public final class WorkspaceSeedSql {
 
