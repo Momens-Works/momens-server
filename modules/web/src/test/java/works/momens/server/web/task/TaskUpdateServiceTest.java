@@ -13,21 +13,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.project.task.TaskReader;
+import works.momens.server.project.task.TaskScope;
 import works.momens.server.project.task.TaskSnapshot;
 import works.momens.server.project.taskupdate.TaskUpdateDetail;
 import works.momens.server.project.taskupdate.TaskUpdateReader;
 import works.momens.server.project.taskupdate.TaskUpdateWriter;
-import works.momens.server.workspace.WorkspaceAccess;
+import works.momens.server.web.WorkspaceAccessChecker;
+import works.momens.server.workspace.WorkspaceReader;
+import works.momens.server.workspace.WorkspaceRole;
+import works.momens.server.workspace.WorkspaceRoleReader;
 
 @ExtendWith(MockitoExtension.class)
 class TaskUpdateServiceTest {
@@ -40,20 +44,32 @@ class TaskUpdateServiceTest {
   @Mock private TaskReader taskReader;
   @Mock private TaskUpdateReader taskUpdateReader;
   @Mock private TaskUpdateWriter taskUpdateWriter;
-  @Mock private WorkspaceAccess workspaceAccess;
-  @InjectMocks private TaskUpdateService service;
+  @Mock private WorkspaceReader workspaceReader;
+  @Mock private WorkspaceRoleReader workspaceRoleReader;
+  private TaskUpdateService service;
+
+  @BeforeEach
+  void setUp() {
+    service =
+        new TaskUpdateService(
+            taskReader,
+            taskUpdateReader,
+            taskUpdateWriter,
+            new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader));
+  }
 
   @Test
   void listChecksTaskMembershipBeforeReadingUpdates() {
     when(taskReader.findSnapshot(TASK_ID)).thenReturn(Optional.of(task()));
-    when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
+    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID))
+        .thenReturn(Optional.of(WorkspaceRole.MEMBER));
     when(taskUpdateReader.listByTaskId(TASK_ID)).thenReturn(List.of(update()));
 
     assertThat(service.list(TASK_ID, USER_ID)).containsExactly(update());
 
-    InOrder inOrder = inOrder(taskReader, workspaceAccess, taskUpdateReader);
+    InOrder inOrder = inOrder(taskReader, workspaceRoleReader, taskUpdateReader);
     inOrder.verify(taskReader).findSnapshot(TASK_ID);
-    inOrder.verify(workspaceAccess).isMember(WORKSPACE_ID, USER_ID);
+    inOrder.verify(workspaceRoleReader).roleOf(WORKSPACE_ID, USER_ID);
     inOrder.verify(taskUpdateReader).listByTaskId(TASK_ID);
   }
 
@@ -66,13 +82,13 @@ class TaskUpdateServiceTest {
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(TaskErrorCode.TASK_NOT_FOUND);
 
-    verifyNoInteractions(workspaceAccess, taskUpdateReader);
+    verifyNoInteractions(workspaceRoleReader, taskUpdateReader);
   }
 
   @Test
   void listRejectsNonMemberBeforeReadingUpdates() {
     when(taskReader.findSnapshot(TASK_ID)).thenReturn(Optional.of(task()));
-    when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(false);
+    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.list(TASK_ID, USER_ID))
         .isInstanceOf(BusinessException.class)
@@ -83,7 +99,11 @@ class TaskUpdateServiceTest {
   }
 
   @Test
-  void createAndDeleteDelegateToTaskUpdateWriter() {
+  void createAndDeleteCheckTaskMembershipBeforeDelegating() {
+    when(taskReader.findScope(TASK_ID))
+        .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
+    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID))
+        .thenReturn(Optional.of(WorkspaceRole.MEMBER));
     Map<String, Object> metadata = Map.of("source", "web");
     when(taskUpdateWriter.create(TASK_ID, USER_ID, "내용", "comment", metadata)).thenReturn(update());
 
