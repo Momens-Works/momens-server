@@ -7,12 +7,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
-import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.onboarding.WorkspaceOnboarding;
 import works.momens.server.web.WorkspaceAccessChecker;
 import works.momens.server.workspace.CreateWorkspaceCommand;
 import works.momens.server.workspace.UpdateWorkspaceCommand;
-import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceDetail;
 import works.momens.server.workspace.WorkspaceEditor;
 import works.momens.server.workspace.WorkspaceErrorCode;
@@ -35,7 +33,6 @@ import works.momens.server.workspace.WorkspaceSlugReader;
 class WorkspaceService {
 
   private final WorkspaceReader workspaceReader;
-  private final WorkspaceAccess workspaceAccess;
   private final WorkspaceSlugReader workspaceSlugReader;
   private final WorkspaceEditor workspaceEditor;
   private final WorkspaceAccessChecker workspaceAccessChecker;
@@ -66,10 +63,7 @@ class WorkspaceService {
                     new BusinessException(
                         WorkspaceErrorCode.WORKSPACE_NOT_FOUND,
                         Map.of("workspace_id", workspaceId.toString())));
-    if (!workspaceAccess.isMember(workspaceId, userId)) {
-      throw new BusinessException(
-          CommonErrorCode.AUTH_FORBIDDEN, Map.of("workspace_id", workspaceId.toString()));
-    }
+    workspaceAccessChecker.requireRoleAtLeast(workspaceId, userId, WorkspaceRole.MEMBER);
     return detail;
   }
 

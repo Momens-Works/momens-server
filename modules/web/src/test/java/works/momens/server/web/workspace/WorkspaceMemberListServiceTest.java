@@ -9,18 +9,21 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
+import works.momens.server.web.WorkspaceAccessChecker;
 import works.momens.server.workspace.WorkspaceMembershipDetail;
 import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.WorkspaceReader;
+import works.momens.server.workspace.WorkspaceRoleReader;
 
 /**
  * 멤버 목록 조회 서비스의 동작을 검증합니다.
@@ -39,7 +42,18 @@ class WorkspaceMemberListServiceTest {
 
   @Mock private WorkspaceMembershipReader workspaceMembershipReader;
   @Mock private UserService userService;
-  @InjectMocks private WorkspaceMemberListService workspaceMemberListService;
+  @Mock private WorkspaceReader workspaceReader;
+  @Mock private WorkspaceRoleReader workspaceRoleReader;
+  private WorkspaceMemberListService workspaceMemberListService;
+
+  @BeforeEach
+  void setUp() {
+    workspaceMemberListService =
+        new WorkspaceMemberListService(
+            workspaceMembershipReader,
+            userService,
+            new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader));
+  }
 
   @Test
   @DisplayName("사용자 정보와 멤버십 정보를 결합해 반환한다")

@@ -20,7 +20,6 @@ import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.onboarding.WorkspaceOnboarding;
 import works.momens.server.web.WorkspaceAccessChecker;
 import works.momens.server.workspace.UpdateWorkspaceCommand;
-import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceDetail;
 import works.momens.server.workspace.WorkspaceEditor;
 import works.momens.server.workspace.WorkspaceErrorCode;
@@ -37,7 +36,6 @@ import works.momens.server.workspace.WorkspaceSlugReader;
 class WorkspaceServiceTest {
 
   @Mock private WorkspaceReader workspaceReader;
-  @Mock private WorkspaceAccess workspaceAccess;
   @Mock private WorkspaceSlugReader workspaceSlugReader;
   @Mock private WorkspaceRoleReader workspaceRoleReader;
   @Mock private WorkspaceEditor workspaceEditor;
@@ -49,7 +47,6 @@ class WorkspaceServiceTest {
     workspaceService =
         new WorkspaceService(
             workspaceReader,
-            workspaceAccess,
             workspaceSlugReader,
             workspaceEditor,
             new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader),
@@ -83,7 +80,7 @@ class WorkspaceServiceTest {
   @DisplayName("워크스페이스는 있지만 멤버가 아니면 AUTH_FORBIDDEN을 던진다")
   void getThrowsForbiddenWhenCallerIsNotMember() {
     when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.of(detail()));
-    when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(false);
+    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> workspaceService.get(WORKSPACE_ID, USER_ID))
         .isInstanceOf(BusinessException.class)
@@ -96,7 +93,8 @@ class WorkspaceServiceTest {
   void getReturnsDetailWhenCallerIsMember() {
     WorkspaceDetail detail = detail();
     when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.of(detail));
-    when(workspaceAccess.isMember(WORKSPACE_ID, USER_ID)).thenReturn(true);
+    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID))
+        .thenReturn(Optional.of(WorkspaceRole.MEMBER));
 
     assertThat(workspaceService.get(WORKSPACE_ID, USER_ID)).isEqualTo(detail);
   }
