@@ -21,11 +21,12 @@ FE 기준선: `momens-fe@c230e82670856b5dda11367947680128b86c49b4`
 컷오버를 **실행하는 사람**을 위한 문서다. 무엇을 어떤 순서로 뒤집고, 무엇을 보고, 어떻게
 되돌리는지만 담는다.
 
-웹 실사용 Product API 33개는 원장 기준으로 모두 `implemented`이고, FE는
-`VITE_API_BASE_URL` 하나로 모든 XHR을 보낸다. 이 상태에서 capability별 혼합 전환을 하려면 FE에
-없는 endpoint별 라우팅 계층을 새로 만들어야 하는데 얻는 이득이 없어 기각했다. 인증 진입점과
-로그아웃은 Product API base와 독립된 명시적 URL로 분리할 수 있으므로 2단계로 둔다. 상세 결정
-이력은 `MOM-0911`에 있다.
+웹 실사용 Product API 33개는 원장 기준으로 모두 `implemented`라 Product capability별 혼합 전환은
+하지 않는다. 다만 같은 `MomensApiClient`를 쓰는 OAuth interaction·MCP grant UI
+(H009~H011·H035·H036)는 Product API가 아니며 신규 서버에 이관되지 않았다. 2단계부터 이 표면만
+`VITE_LEGACY_API_BASE_URL`로 격리하고, 나머지 XHR은 `VITE_API_BASE_URL`로 함께 전환한다. 이는
+일반 endpoint 라우팅 계층이 아니라 이관하지 않기로 명시한 레거시 OAuth/MCP UI 하나의 한시적
+예외다. 상세 결정 이력은 `MOM-0911`에 있다.
 
 사용자는 현재 내부 팀 10명뿐이다. **전환 중 일시적인 인증 실패와 전원 재로그인을 허용하고 세션
 연속성을 보장하지 않는다.** 다만 사용자가 명시적으로 로그아웃했는데 인증 상태가 남는 것은 세션
@@ -36,7 +37,7 @@ FE 기준선: `momens-fe@c230e82670856b5dda11367947680128b86c49b4`
 
 | | 1단계 인증 | 2단계 Product API |
 | --- | --- | --- |
-| 뒤집는 스위치 | `VITE_AUTH_LOGIN_URL`, `VITE_AUTH_LOGOUT_URL` | `VITE_API_BASE_URL` |
+| 뒤집는 스위치 | `VITE_AUTH_LOGIN_URL`, `VITE_AUTH_LOGOUT_URL` | `VITE_API_BASE_URL`, `VITE_LEGACY_API_BASE_URL` |
 | 움직이는 writer | `users` | 나머지 전 aggregate |
 | 선행 게이트 | 3절 | 5절 |
 | 저장소 밖 전제 | Google callback URI 병행 등록 | source provider callback URI 병행 등록 |
@@ -54,10 +55,11 @@ FE 기준선: `momens-fe@c230e82670856b5dda11367947680128b86c49b4`
 | `VITE_AUTH_LOGIN_URL` | 로그인 진입점. 브라우저 내비게이션이라 API client를 타지 않는다 | `src/api/config.ts:18` |
 | `VITE_AUTH_LOGOUT_URL` | 로그아웃 요청만 신규 서버로 보낸다. 1단계에서 추가할 명시적 auth URL이다 | `MOM-0906` |
 | `VITE_API_BASE_URL` | `MomensApiClient`의 모든 XHR. endpoint별 분기가 없다 | `src/api/config.ts:9`, `src/api/client.ts:58` |
+| `VITE_LEGACY_API_BASE_URL` | H009~H011·H035·H036만 레거시 서버로 보낸다. 2단계에서 추가할 한시적 base다 | `MOM-0906` |
 | Google callback URI 허용 목록 | 신규·레거시 로그인 callback을 provider가 허용하는가 | Google Cloud 콘솔 |
 | source provider callback URI 허용 목록 | 신규·레거시 소스 연결 callback을 provider가 허용하는가 | GitHub·Slack·Notion·Figma 콘솔 |
 
-Vite가 빌드 타임에 앞의 세 값을 굽는다. 전환은 FE 재빌드·재배포이고, 긴급 롤백은 Cloudflare의
+Vite가 빌드 타임에 앞의 네 값을 굽는다. 전환은 FE 재빌드·재배포이고, 긴급 롤백은 Cloudflare의
 직전 deployment rollback으로 먼저 닫은 뒤 Git의 컷오버 커밋을 revert한다(7.4).
 
 login env와 API base의 독립은 조건부다. `VITE_AUTH_LOGIN_URL`이 비면 `baseUrl`에서 파생된다
@@ -84,7 +86,7 @@ login env와 API base의 독립은 조건부다. `VITE_AUTH_LOGIN_URL`이 비면
    쿠키 하나만 읽으므로(`momens-api/internal/platform/httpx/middleware.go:74`) 이것 없이
    로그인만 전환하면 레거시 Product API와 MCP 재인증에 쓰는 consent·grant API
    (H009~H011·H035·H036)가 401이 된다. MCP를 계속 사용하므로 사용자 재로그인을 허용해도 이
-   호환은 필요하다.
+   호환은 필요하다. 2단계 뒤에도 이 표면은 레거시로 가므로 G4가 해소될 때까지 유지한다.
 4. **`MOM-0905` 신규 logout의 레거시 `session_token` 만료.** 1단계부터 FE 로그아웃을
    `POST /api/auth/web/logout`으로 직접 보내며, 신규 서버는 `access_token`(`Path=/`)과
    `refresh_token`(`Path=/api/auth`)을 각각 올바른 경로로 만료하고 refresh token을 폐기한다. 이때
@@ -128,13 +130,14 @@ login env와 API base의 독립은 조건부다. `VITE_AUTH_LOGIN_URL`이 비면
 **1단계가 가져가는 것은 `VITE_AUTH_LOGIN_URL`과 별도 `VITE_AUTH_LOGOUT_URL` 전환이다.** logout은
 명시적 신규 URL로 보내고, API client의 `/auth/logout` 경로는 쓰지 않는다. `/auth/me` → `/api/me`
 수정은 base가 신규 서버를 가리킬 때에만 의미가 있고 먼저 적용하면 레거시에 없는 경로를 불러 404가
-난다. Product API 경로 수정은 2단계와 같은 배포에 묶는다.
+난다. Product API 경로 수정과 `VITE_LEGACY_API_BASE_URL` 도입은 2단계와 같은 배포에 묶는다.
 
 ## 5. 2단계 게이트
 
-**미해소 게이트가 셋이라 지금 착수할 수 없다.** 착수 전에 `MOM-0906`을 4.2에 맞춰 쪼갠다.
+**미해소 게이트가 넷이라 지금 착수할 수 없다.** 착수 전에 `MOM-0906`을 4.2와 G4에 맞춰
+쪼갠다.
 
-### G1 — retrieval 투영 공백 (`MOM-0898`)
+### G1 — retrieval 투영 공백 (`MOM-0898`, `MOM-0956`, `MOM-0957`)
 
 레거시는 task·decision·blocker·memory 쓰기를 같은 트랜잭션에서 retrieval 문서로 인라인
 투영한다(`momens-api/internal/bootstrap/app.go:155`, `internal/retrieval/projection.go`). 신규
@@ -145,7 +148,19 @@ login env와 API base의 독립은 조건부다. `VITE_AUTH_LOGIN_URL`이 비면
 기준 폴백 전용이거나 호출처가 없다.
 
 **이 실패는 조용하다.** write는 성공하므로 5xx도 401도 나지 않고 6절의 관측 창에서 잡히지
-않는다. prod에서 소비가 동작하는 것을 확인한 뒤 2단계를 연다.
+않는다. `MOM-0898` 완료만으로 이 게이트를 닫지 않는다. 공통 consumer와 aggregate별 projector는
+다음 체인 전체를 통과해야 한다.
+
+1. `MOM-0898` — 공통 outbox polling·claim, offset, retry와 DLQ 또는 동등한 실패 격리
+2. `MOM-0956` — task event hydrate·projector와 task별 prod E2E 투영 확인
+3. `MOM-0957` — memory event hydrate·projector와 memory별 prod E2E 투영 확인
+4. 검증 event가 처리 완료 상태가 되고 consumer offset이 전진함
+5. retry 대기나 DLQ 또는 동등한 실패 격리 저장소에 검증 event가 남지 않음
+6. retrieval 조회에서 task·memory 변경 결과를 확인함
+
+현재 prod에는 시계열 수집이 없으므로 lag graph만으로 판정하지 않는다. `MOM-0898`과 두 projector
+작업이 정한 조회 수단으로 event 처리 상태·offset·실패 잔여를 직접 확인하고, task와 memory의
+증거를 각각 `MOM-0956`·`MOM-0957`에 남긴 뒤 2단계를 연다.
 
 ### G2 — `tasks`의 비-웹 레거시 writer (`MOM-0953`)
 
@@ -153,9 +168,10 @@ login env와 API base의 독립은 조건부다. `VITE_AUTH_LOGIN_URL`이 비면
 민수 액션(`internal/minsu/action/create_task.go`). `internal/slackbot/action.go`는 민수
 `action.Dispatcher`에 위임하는 라우팅 래퍼이므로 별도 writer가 아니다.
 
-두 표면은 ADR-0018로 컷오버 후에도 레거시에 남는다(원장 미결정 2번). FE base는 하나뿐이라 2단계
-에서 웹 write가 함께 넘어가므로 `tasks`에 두 서버 writer가 공존한다. 원장의 「`tasks` target
-writer 구현과 운영 활성화」가 별도 결정과 rollback 조건을 먼저 기록하도록 요구한다.
+두 표면은 ADR-0018로 컷오버 후에도 레거시에 남는다(원장 미결정 2번). Product API base는
+하나뿐이라 2단계에서 웹 write가 함께 넘어가므로 `tasks`에 두 서버 writer가 공존한다. 원장의
+「`tasks` target writer 구현과 운영 활성화」가 별도 결정과 rollback 조건을 먼저 기록하도록
+요구한다.
 
 ### G3 — source provider OAuth 미배선 (`MOM-0954`)
 
@@ -173,11 +189,40 @@ G1과 달리 5xx로 드러나지만, 2단계에서 base를 뒤집는 순간 **�
 `/api` 접두사가 붙어 주소가 다르므로 네 provider 콘솔의 등록도 바꿔야 한다. **두 주소를 병행
 등록해 두고 전환한다** — 신규만 등록한 채 되돌리면 레거시 콜백이 깨진다.
 
+### G4 — 레거시 OAuth/MCP UI 라우팅 (`MOM-0906`)
+
+FE의 OAuth interaction 조회·승인·거절(H009~H011)과 MCP grant 조회·폐기(H035·H036)는
+`MomensApiClient`를 쓰지만 신규 서버에는 구현되지 않았다. 2단계에서 `VITE_API_BASE_URL`을
+`https://api.momens.works/api`로 바꾸기만 하면 이 요청도 `/api` ingress를 타고 신규 서버로 가서
+404가 된다.
+
+`MOM-0906`에서 `VITE_LEGACY_API_BASE_URL=https://api.momens.works`을 추가하고 이 다섯 메서드만
+legacy client를 쓰게 한다. 나머지 Product API에 endpoint별 분기를 허용하지 않는다. 이 한시적
+base가 있는 동안 한 웹 세션이 두 서버를 호출하므로 `MOM-0904`의 신규 `access_token` 수용을
+유지한다.
+
+2단계 전환 전 두 client의 실제 요청 URL을 확인하고, 신규 MCP 연결 승인·MCP 재인증·grant 조회와
+폐기를 각각 한 번 통과시킨다. 이 표면을 신규 서버로 이관할 때 legacy base와 `MOM-0904` 제거 조건을
+별도로 기록한다.
+
 ### 함께 확인할 것
 
 - **`MOM-0883` write 배포 후 검증 방침.** 2단계는 웹 write 전체를 옮기므로 이 결정이 없으면
   배포 후 확인 수단이 없다.
 - 전략 문서 「롤백」의 데이터 호환성 6항목. 7.2를 따른다.
+
+### 2단계 실행 순서
+
+```text
+1. G1~G4, MOM-0883과 데이터 호환성 6항목이 모두 닫힌 것을 확인
+2. 검증용 workspace와 6.1의 task·memory smoke 데이터를 준비하고 ID를 MOM-0911에 기록
+3. source provider의 신규·레거시 callback URI가 병행 등록된 것을 확인
+4. task·memory projector가 prod에서 실행 중이고 offset·실패 잔여 조회 수단이 동작하는지 확인
+5. FE: VITE_API_BASE_URL은 신규 /api, VITE_LEGACY_API_BASE_URL은 레거시 root로 설정
+   → /auth/me를 신규 /api/me 계약에 맞추고 H009~H011·H035~H036만 legacy client로 분리
+6. FE 재빌드·재배포 뒤 두 client의 실제 요청 URL을 확인
+7. 6절의 2단계 smoke와 관측 창 진입
+```
 
 ## 6. 관측
 
@@ -201,7 +246,11 @@ rollback 신호로 세지 않는다.
 | 단계 | 필수 smoke |
 | --- | --- |
 | 1단계 | Google 재로그인 → `/auth/me` → 워크스페이스 목록 → MCP grant 목록 → MCP 재인증 1회 → 로그아웃 → 보호 경로 401 → 재로그인 |
-| 2단계 | Google 재로그인 → `/api/me` → workspace snapshot → 검증용 workspace에서 task·memory 생성/수정/삭제 → source 연결 1회 |
+| 2단계 | Google 재로그인 → `/api/me` → workspace snapshot → task 생성·수정·삭제 → H084 confirm → H088 edit-and-confirm → H093 resolve → 각 task·memory의 retrieval 반영 확인 → source 연결 1회 → MCP 신규 연결 승인·재인증·grant 조회·폐기 |
+
+2단계 전에 검증용 workspace와 서로 다른 pending memory 두 건(H084·H088), resolve 대상과 해결에
+사용할 confirmed memory 두 건(H093)의 ID를 준비해 `MOM-0911`에 기록한다. 상태 전이가 끝난 레코드를
+다른 smoke에 재사용하지 않는다.
 
 smoke 요청의 기대 상태가 한 번이라도 어긋나면 즉시 되돌린다. 집중 관측 중 실제 사용에서 아래 신호가
 나오면 같은 동작을 한 번만 재시도하고, 재현되면 되돌린다. 10분과 2명 중 하나라도 채우지 못하면
@@ -253,6 +302,8 @@ Cloudflare에서 직전 FE deployment로 롤백해 로그인과 로그아웃 요
 
 - **provider redirect URI는 FE env가 아니다.** G3의 병행 등록을 해 두지 않고 신규 주소만
   등록한 채 되돌리면 레거시 콜백이 깨진다.
+- **legacy base 분기는 FE와 함께 되돌린다.** 직전 deployment는 모든 XHR이 레거시 base를 쓰므로
+  별도 라우팅 복구가 필요 없다. `MOM-0904`의 token bridge는 되돌리지 않는다.
 - **write는 데이터 호환성이 확인되지 않으면 되돌릴 수 없다.** 전략 문서의 6항목을 2단계
   게이트에서 항목별로 확인해 원장에 기록한다. 확인되지 않은 항목이 있으면 writer rollback
   가능하다고 적지 않는다.
