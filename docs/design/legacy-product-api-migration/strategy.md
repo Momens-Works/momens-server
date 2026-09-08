@@ -359,7 +359,7 @@ prod 배포 전에는 [prod 운영 준비 대장](../../prod-readiness-ledger.md
 ## 롤백
 
 이 절은 원칙만 정한다. 웹 컷오버의 단계별 실행·롤백 절차는
-[웹 컷오버 전환 단위와 rollback runbook](cutover.md)에 있다.
+[웹 컷오버 실행과 rollback runbook](cutover.md)에 있다.
 
 롤백은 deploy rollback과 writer rollback을 구분한다.
 
