@@ -109,9 +109,9 @@ tasks.register('verifyDependencyVersionsInCatalog') {
         // 한 규칙에 정의된 모든 패턴이 같은 줄에서 일치하면 위반으로 판정합니다. 규칙을 추가할 때는 목록에
         // 항목 하나를 추가합니다.
         List<Map> rules = [
-            [name: '좌표 문자열', patterns: [~/(?:\(|\s)\s*['"]${part}:${part}:${versionPart}['"]/]],
+            [name: '좌표 문자열', patterns: [~/(?:\(|[\s,])\s*['"]${part}:${part}:${versionPart}['"]/]],
             [name: '키워드 인자', patterns: ['group', 'name', 'version'].collect { key ->
-                ~/(?:^|[\s,(])${key}\s*[:=]\s*['"]/
+                ~/(?:^|[\s,(\[])${key}\s*[:=]\s*['"]/
             }],
             [name: '플러그인 버전', patterns: [
                 ~/(?:^|\s)(?:id|kotlin)(?:\s+['"]${part}['"]|\(['"]${part}['"]\)).*\bversion\s+['"]?${versionPart}/
