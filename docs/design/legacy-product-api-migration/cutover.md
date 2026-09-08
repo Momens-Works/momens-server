@@ -31,15 +31,31 @@ Product API를 한 번에 전환할지 — 를 확정하고, 전략 문서가 �
 매칭이 `/api/*`를 `momens-server`로, `/`를 `momens-api`로 보낸다
 (`k8s/manifests/apps/momens-server/ingress.yaml`).
 
-따라서 전환 스위치는 서버나 라우팅 규칙이 아니라 **FE 번들에 박히는 env 두 개**다.
+따라서 전환 스위치는 서버나 라우팅 규칙이 아니라 **FE 번들에 박히는 env 두 개와, 저장소 밖에
+있는 provider 콘솔의 redirect URI**다.
 
-| env | 무엇을 결정하는가 | FE 참조 |
+| 스위치 | 무엇을 결정하는가 | 위치 |
 | --- | --- | --- |
 | `VITE_AUTH_LOGIN_URL` | 로그인 진입점. 브라우저 내비게이션이라 API client를 타지 않는다 | `src/api/config.ts:18` |
 | `VITE_API_BASE_URL` | `MomensApiClient`의 모든 XHR. endpoint별 분기가 없다 | `src/api/config.ts:9`, `src/api/client.ts:58` |
+| source provider redirect URI | 소스 연동 콜백이 어느 서버로 돌아오는가 | GitHub·Slack·Notion·Figma 콘솔 |
 
-Vite가 빌드 타임에 값을 굽는다. **되돌리는 것은 설정 플립이 아니라 재빌드·재배포다.** 이것이
-아래 롤백 절차의 소요 시간을 지배한다.
+Vite가 빌드 타임에 앞의 두 값을 굽는다. **되돌리는 것은 설정 플립이 아니라 재빌드·재배포다.**
+이것이 아래 롤백 절차의 소요 시간을 지배한다. 세 번째는 저장소에도 클러스터에도 없으므로
+5.3에서 따로 다룬다.
+
+두 env의 독립은 **조건부다.** `VITE_AUTH_LOGIN_URL`이 비어 있으면 `baseUrl`에서 파생된다.
+
+```ts
+// src/api/config.ts:18-20
+authLoginUrl:
+  import.meta.env.VITE_AUTH_LOGIN_URL ||
+  `${baseUrl.replace(/\/$/, '')}/auth/google/login`,
+```
+
+`.env.production`이 값을 명시하고 있어서 지금 독립이 성립하는 것이지 코드 구조가 독립인 것은
+아니다. **이 문서의 2단계 분할 전체가 그 명시에 걸려 있으므로, 값을 비우거나 지우면 `baseUrl`
+전환이 로그인 진입점까지 함께 옮긴다.**
 
 ## 3. 전환 단위 — 인증과 Product API를 2단계로 나눈다
 
@@ -55,9 +71,9 @@ FE에 없는 endpoint별 라우팅 계층을 새로 만들어야 한다. aggrega
 
 | | 1단계 인증 | 2단계 Product API |
 | --- | --- | --- |
-| 뒤집는 env | `VITE_AUTH_LOGIN_URL` | `VITE_API_BASE_URL` |
+| 뒤집는 스위치 | `VITE_AUTH_LOGIN_URL` | `VITE_API_BASE_URL` + provider redirect URI |
 | 움직이는 writer | `users` | 나머지 전 aggregate |
-| 주 위험 | 서명 키 불일치로 인한 전면 401 | retrieval 투영 공백, `tasks` 두 writer |
+| 주 위험 | 서명 키 불일치로 인한 전면 401 | retrieval 투영 공백, `tasks` 두 writer, source OAuth 미배선 |
 | 선행 게이트 | 4절 | 5절 |
 | 착수 가능 여부 | 가능 | 게이트 미해소 |
 
@@ -72,10 +88,13 @@ FE에 없는 endpoint별 라우팅 계층을 새로 만들어야 한다. aggrega
 
 순서대로 닫는다.
 
-1. **`MOM-0873` 두 서버 JWT 서명 키 동일성 확인.** 값이 다르면 전환 즉시 웹 전체가 401을 받는다.
-   테스트로 잡히지 않는 실패 모드이므로 배포된 시크릿 값을 환경별로 직접 확인한다.
+1. **`MOM-0873` 두 서버 JWT 서명 키 동일성 확인.** 확인 대상은 리포에 불변식으로 적혀 있다 —
+   `k8s/manifests/apps/momens-server/secret.example.yaml:25-28`의
+   *"TRANSITION INVARIANT: keep this EQUAL to momens-api's JWT_SECRET during the dual-run"*.
+   값이 다르면 전환 즉시 웹 전체가 401을 받는다. 테스트로 잡히지 않는 실패 모드이므로 배포된
+   시크릿 값을 환경별로 직접 확인한다.
 2. **`MOM-0904` 레거시 `RequireAuth`의 신규 `access_token` 수용.** 레거시는 `session_token`
-   쿠키 하나만 읽으므로(`momens-api/internal/platform/httpx/middleware.go:73`) 이것 없이
+   쿠키 하나만 읽으므로(`momens-api/internal/platform/httpx/middleware.go:74`) 이것 없이
    로그인만 전환하면 레거시 Product API 전체가 401이 된다.
 3. **레거시 `Logout`의 신규 쿠키 만료.** 아래 4.2를 따른다.
 
@@ -113,9 +132,21 @@ FE의 `logout()`은 `MomensApiClient`를 타므로 `VITE_API_BASE_URL`, 즉 **�
 3단계 전에 2단계 배포가 prod에 반영된 것을 확인한다. 순서가 뒤집히면 신규 로그인 사용자가
 레거시 Product API에서 401을 받는다.
 
+### 4.5 `MOM-0906`은 1단계에 통째로 적용하지 않는다
+
+`MOM-0906`은 이 문서 이전에 세운 티켓이라 컷오버를 전부-아니면-전무 스위치로 보고 **env 두 개
+전환과 경로 수정(`/auth/me` → `/api/me`, `/auth/logout` → `/api/auth/web/logout`)을 한 묶음**으로
+잡고 있다. 그대로 배포하면 1단계 상태에서 FE가 `/api/me`를 부르는데 base는 아직 레거시이므로
+`https://api.momens.works/api/me`가 아니라 레거시의 없는 경로가 되어 404가 난다.
+
+**1단계가 가져가는 것은 `VITE_AUTH_LOGIN_URL` 전환뿐이다.** `VITE_API_BASE_URL` 전환과 경로
+수정은 둘 다 2단계에 속한다. 경로 수정은 base가 신규 서버를 가리킬 때에만 의미가 있고, 그 전에
+적용하면 4.3이 "회귀가 아니다"라고 닫아 둔 `/auth/me`·`/auth/logout`의 레거시 경유를 깨뜨린다.
+
 ## 5. 2단계 — Product API 전환
 
-**미해소 게이트가 둘 있어 지금 착수할 수 없다.** 이 문서는 게이트를 명시하는 데까지만 간다.
+**미해소 게이트가 셋 있어 지금 착수할 수 없다.** 이 문서는 게이트를 명시하는 데까지만 간다.
+2단계 착수 전에 `MOM-0906`을 4.5에 맞춰 쪼갠다.
 
 ### 5.1 G1 — retrieval 투영 공백
 
@@ -131,22 +162,59 @@ FE의 `logout()`은 `MomensApiClient`를 타므로 `VITE_API_BASE_URL`, 즉 **�
 `MOM-0898`(worker 공통 outbox consumer 기반)이 이 게이트다. prod에서 소비가 동작하는 것을
 확인한 뒤 2단계를 연다.
 
+레거시가 인라인 투영하는 것은 task·decision·blocker·memory 넷이지만 **웹 컷오버로 실제
+움직이는 것은 task와 memory 둘이다.** decision·blocker의 웹 endpoint는 원장 기준 폴백 전용이거나
+호출처가 없어 컷오버 범위 밖이다.
+
 ### 5.2 G2 — `tasks`의 비-웹 레거시 writer
 
-레거시에서 `task.Service`를 쓰는 곳은 웹 핸들러만이 아니다. MCP 서버(`create_task`·
-`update_task`·`create_comment`와 milestone 3종, `internal/mcpserver/tools.go`), 민수 Slack
-액션(`internal/minsu/action/create_task.go`), slackbot 액션(`internal/slackbot/action.go`)이
-같은 aggregate를 쓴다. 이 표면들은 ADR-0018로 컷오버 후에도 레거시에 남는다(원장 미결정 2번).
+레거시에서 `task.Service`를 쓰는 곳은 웹 핸들러만이 아니다. 구분되는 write 경로는 둘이다 —
+MCP 서버(`create_task`·`update_task`·`create_comment`와 milestone 3종,
+`internal/mcpserver/tools.go`)와 민수 액션(`internal/minsu/action/create_task.go`). slackbot의
+`internal/slackbot/action.go`는 `routingAnswerer`로 민수 `action.Dispatcher`에 위임하는 라우팅
+래퍼이며 `task.Service`를 직접 쓰지 않는다. 별도 writer가 아니라 민수 액션의 Slack 진입
+표면이다.
+
+이 표면들은 ADR-0018로 컷오버 후에도 레거시에 남는다(원장 미결정 2번).
 
 FE base는 하나뿐이므로 2단계에서 웹 write는 반드시 함께 넘어가고, 그 결과 `tasks`에 두 서버
 writer가 공존한다. 원장의 「`tasks` target writer 구현과 운영 활성화」가 이 상황에 대해 암묵적
 예외가 아니라 별도 결정과 rollback 조건을 먼저 기록하도록 요구한다.
 
-**이 결정은 이 문서의 범위가 아니다.** 웹 컷오버가 만드는 문제가 아니라 드러내는 문제이고 —
+`MOM-0953`이 이 게이트다. **이 결정은 이 문서의 범위가 아니다.** 웹 컷오버가 만드는 문제가 아니라 드러내는 문제이고 —
 지금도 레거시 안에서 셋이 같은 aggregate를 쓴다 — 판단에 MCP/OAuth 표면 이관(원장 미결정 2번)이
 얽힌다. 2단계의 선행 게이트로만 걸고 별도 작업으로 뺀다.
 
-### 5.3 함께 확인할 것
+### 5.3 G3 — source provider OAuth가 prod에 배선되지 않았다
+
+`H041`(소스 연결 설치)과 `H082`(provider 콜백)는 원장의 실사용이다. 그런데 신규 서버의 provider
+OAuth는 prod에 값이 없다. `k8s/manifests/apps/momens-server/configmap.yaml`과
+`secret.example.yaml` 어디에도 `MOMENS_SOURCE_OAUTH_*`가 없고, `application.yml:138-153`의
+기본값이 전부 빈 문자열이다.
+
+`OAuthProviderRegistry`는 provider를 찾아 주지만 자격 증명이 빈 채로 온다. 막는 것은
+`SourceInstallerImpl.configuredProvider`의 `isConfigured()` 검사이고, 걸리면
+`SOURCE_PROVIDER_UNCONFIGURED`를 던진다. 이 코드는 **500**이다
+(`modules/source/src/main/java/works/momens/server/source/SourceErrorCode.java:18`).
+
+**G1과 성격이 다르다.** G1은 조용히 낡지만 G3는 6.3의 5xx 신호에 잡힌다. 그래도 게이트인 이유는
+2단계에서 `VITE_API_BASE_URL`을 뒤집는 순간 **소스 연동 기능이 통째로 죽기 때문**이고, 관측으로
+아는 것과 사전에 막는 것은 다르기 때문이다.
+
+**저장소 밖 작업이 딸려 있다.** 레거시 콜백은
+`https://api.momens.works/source-connections/oauth/callback`이고
+(`k8s/manifests/apps/momens-api/configmap.yaml:26`) 신규 서버는 `/api` 접두사가 붙으므로 주소가
+다르다. 원장 H082 행이 이미 *"이관 시점에 provider 관리 화면에 등록된 redirect URI도 함께
+변경해야 한다"* 고 적어 두었다. GitHub·Slack·Notion·Figma 네 콘솔의 등록이 2절의 세 번째
+스위치다.
+
+**두 주소를 병행 등록해 두고 전환한다.** provider가 허용하는 한 그렇게 해야 7.3의 롤백이
+성립한다. 신규 주소만 등록한 채 되돌리면 레거시 콜백이 깨진다. 병행 등록 자체가 2단계 선행
+절차이며, 컷오버가 안정된 뒤 레거시 주소를 지운다.
+
+`MOM-0954`가 이 게이트다.
+
+### 5.4 함께 확인할 것
 
 - **write 배포 후 검증 방침(`MOM-0883`).** 2단계는 웹 write 전체를 옮기므로 이 결정이 없으면
   배포 후 확인 수단 없이 진행된다.
@@ -191,6 +259,12 @@ writer가 공존한다. 원장의 「`tasks` target writer 구현과 운영 활�
 전면 401과 write 실패에 임계값을 두지 않는 것은 의도한 것이다. 둘 다 정상 상태에서 0이고,
 1건이 보이면 그 뒤로 같은 실패가 모든 사용자에게 일어난다.
 
+**2단계에서 404는 연쇄로 나타날 수 있다.** FE의 `loadWorkspaceSnapshotLegacy` 폴백은 snapshot이
+404일 때만 동작하는데, 그 폴백이 부르는 H038·H039·H042·H044·H051은 신규 서버에 endpoint가
+없다(원장 기준 `traced`). 즉 **snapshot 하나가 404를 내면 폴백이 켜지면서 5개 경로의 404가 함께
+나타난다.** 관측하는 사람이 원인을 다섯 개로 세지 않도록, 404가 무더기로 보이면 snapshot부터
+확인한다.
+
 관측 창의 길이는 실제 사용자 트래픽이 한 바퀴 도는 데 걸리는 시간으로 잡고, 전환 직후 집중
 관측 뒤 같은 날 안에 한 번 더 확인한다. 로그가 보존되지 않으므로 **판정에 쓴 근거는 그 자리에서
 갈무리해 이 문서 또는 `MOM-0911` 후속 작업에 남긴다.**
@@ -219,8 +293,13 @@ aggregate writer를 레거시로 되돌리는 것이다. **웹 컷오버의 롤�
 
 ### 7.3 2단계 롤백
 
-`VITE_API_BASE_URL`을 되돌리는 것으로 read는 닫히지만, **write는 데이터 호환성이 확인되지
-않으면 되돌릴 수 없다.** 전략 문서의 6항목을 2단계 게이트에서 항목별로 확인하고 결과를 원장에
+`VITE_API_BASE_URL`을 되돌리는 것으로 read는 닫히지만, 그것만으로 전부 닫히지는 않는다.
+
+**source provider redirect URI는 FE env가 아니다.** 5.3의 병행 등록을 해 두지 않고 신규 주소만
+등록한 채 되돌리면 레거시 콜백이 깨진다. 병행 등록이 되어 있으면 이 절의 롤백은 env 되돌리기로
+닫히고, 안정된 뒤에 레거시 주소를 지운다.
+
+**write는 데이터 호환성이 확인되지 않으면 되돌릴 수 없다.** 전략 문서의 6항목을 2단계 게이트에서 항목별로 확인하고 결과를 원장에
 기록한다. 확인되지 않은 항목이 있으면 writer rollback 가능하다고 적지 않는다.
 
 G1이 열려 있는 동안 2단계를 실행하면 outbox에 쌓인 이벤트는 롤백해도 사라지지 않는다. 되돌린
