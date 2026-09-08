@@ -437,7 +437,7 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 
 1. ~~웹 트래픽을 capability별로 혼합 전환할지, 신규 인증과 준비된 Product API를 한 번에 전환할지~~
    — 해소. capability별 혼합 전환을 기각하고 인증과 Product API를 2단계로 나눴다. 두 단계의
-   게이트와 롤백 절차는 [웹 컷오버 전환 단위와 rollback runbook](cutover.md)에 있다(`MOM-0911`)
+   게이트와 롤백 절차는 [웹 컷오버 실행과 rollback runbook](cutover.md)에 있다(`MOM-0911`)
 2. MCP transport·OAuth authorization server의 target Gradle module과 grant/token 이전 방식
    — 미결정으로 남는다. 다만 **웹 컷오버 시점의 동작만은 분리해 결정했다**. 레거시가 신규
    `access_token`을 수용해 H009~H011·H035·H036을 유지한다
