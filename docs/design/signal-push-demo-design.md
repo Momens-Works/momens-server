@@ -159,6 +159,7 @@ Signal 상세 API의 evidence 카드는 이 필드를 반환하지 않고 `sourc
 
 - Signal ID
 - source ref ID
+- `source_refs.source_object_type`(`UNKNOWN`)과 `source_object_id`(생성한 source ref ID)
 - `workspace_id`
 - evidence `sort_order`
 - `created_at`, `updated_at`
