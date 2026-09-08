@@ -78,7 +78,8 @@ rg --files ../momens-api/cmd
 그 결과 MCP tool 11개, startup migration runner, retrieval backfill·embedding loop, Slack 비동기
 처리, HTTP server lifecycle, 오프라인 CLI 3개를 확인했다. 별도 cron/scheduler 등록은 없었다.
 
-현재 HTTP 항목은 `implemented` 10개(H001, H014~H018, H020~H022, H024), `traced` 86개다. 비-HTTP·tool 항목 19개는 모두 `traced` 상태다. `cutover_ready` 이상인 항목은 아직 없다.
+현재 HTTP 항목은 `implemented` 46개, `traced` 50개다. 비-HTTP·tool 항목 19개는 모두
+`traced` 상태다. `cutover_ready` 이상인 항목은 아직 없다.
 
 ## 공통 전환 규칙
 
@@ -452,7 +453,8 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
 6. offline CLI 3개의 유지·대체·폐기와 소유 저장소
 7. `MOM-0773` task 계약, `MOM-0774` source-ref 관계, `MOM-0845` workspace scope
 8. ~~Product JSON별 실제 웹 사용 여부~~ — 해소. 위 [웹 FE 사용 실태](#웹-fe-사용-실태)에 기록했다
-   (`MOM-0856`). 컷오버 관측 기간은 [컷오버 문서](cutover.md) 6절이 정했다(`MOM-0911`)
+   (`MOM-0856`). [컷오버 문서](cutover.md) 6절은 전환 직후 판정 창을 정했고, 전환기 코드 제거에
+   필요한 시계열 관찰 기간은 `MOM-0875`가 `MOM-0834` 이후 정한다
 
 ## 후속 작업 제안
 
@@ -468,9 +470,9 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
    - offset, idempotency, retry, DLQ와 관측성만 소유
 4. aggregate별 projection 작업
    - task, decision, blocker, memory 이벤트 계약·hydrate·projector를 각각 분리
-5. ~~`[Docs] 웹 인증·Product API 컷오버 단위와 rollback runbook`~~ — `MOM-0911`에서 완료.
-   [컷오버 문서](cutover.md)가 2단계 분할과 롤백 절차를 잠갔다. 혼합 트래픽은 기각했으므로
-   세션 공존 ADR은 쓰지 않는다
+5. `[Docs] 웹 인증·Product API 컷오버 단위와 rollback runbook` — `MOM-0911`에서 전환 단위와
+   롤백 절차를 정했다. [컷오버 문서](cutover.md) 7.4의 FE 배포 주체·절차·소요 시간을 채우면
+   완료한다. 혼합 트래픽은 기각했으므로 세션 공존 ADR은 쓰지 않는다
 6. `[Docs] 레거시 offline CLI disposition 결정`
    - N006~N008 유지·이동·폐기와 실행 주체 확정
 
