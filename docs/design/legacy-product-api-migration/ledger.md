@@ -470,9 +470,9 @@ HTTP 인증이 없는 항목도 실행 주체와 자격증명을 적고, prod/cl
    - offset, idempotency, retry, DLQ와 관측성만 소유
 4. aggregate별 projection 작업
    - task, decision, blocker, memory 이벤트 계약·hydrate·projector를 각각 분리
-5. `[Docs] 웹 인증·Product API 컷오버 단위와 rollback runbook` — `MOM-0911`에서 전환 단위와
-   롤백 절차를 정했다. [컷오버 문서](cutover.md) 7.4의 FE 배포 주체·절차·소요 시간을 채우면
-   완료한다. 혼합 트래픽은 기각했으므로 세션 공존 ADR은 쓰지 않는다
+5. ~~`[Docs] 웹 인증·Product API 컷오버 단위와 rollback runbook`~~ — `MOM-0911`에서 전환 단위,
+   관측 기준과 FE 배포·롤백 절차를 정했다. 실행 절차는 [컷오버 문서](cutover.md)에 있다. 혼합
+   트래픽은 기각했으므로 세션 공존 ADR은 쓰지 않는다
 6. `[Docs] 레거시 offline CLI disposition 결정`
    - N006~N008 유지·이동·폐기와 실행 주체 확정
 
