@@ -6,7 +6,7 @@
 
 레거시 기준선: `Momens-Works/momens-api@71bbd07614fd2aef4dec726bafdf86c1bd097ba6`
 
-FE 기준선: `momens-fe@d76a2d5`
+FE 기준선: `momens-fe@c230e82670856b5dda11367947680128b86c49b4`
 
 관련 작업: `MOM-0911`
 
@@ -23,24 +23,24 @@ FE 기준선: `momens-fe@d76a2d5`
 
 웹 실사용 Product API 33개는 원장 기준으로 모두 `implemented`이고, FE는
 `VITE_API_BASE_URL` 하나로 모든 XHR을 보낸다. 이 상태에서 capability별 혼합 전환을 하려면 FE에
-없는 endpoint별 라우팅 계층을 새로 만들어야 하는데 얻는 이득이 없어 기각했다. 인증은 독립된
-`VITE_AUTH_LOGIN_URL`이 있어 Product API와 나눌 수 있으므로 2단계로 둔다. 상세 결정 이력은
-`MOM-0911`에 있다.
+없는 endpoint별 라우팅 계층을 새로 만들어야 하는데 얻는 이득이 없어 기각했다. 인증 진입점과
+로그아웃은 Product API base와 독립된 명시적 URL로 분리할 수 있으므로 2단계로 둔다. 상세 결정
+이력은 `MOM-0911`에 있다.
 
 사용자는 현재 내부 팀 10명뿐이다. **전환 중 일시적인 인증 실패와 전원 재로그인을 허용하고 세션
-연속성을 보장하지 않는다.** 구현과 검증은 두 단계로 나누되, 사용자 불편을 없애기 위한 교차
-로그아웃 호환은 게이트로 두지 않는다.
+연속성을 보장하지 않는다.** 다만 사용자가 명시적으로 로그아웃했는데 인증 상태가 남는 것은 세션
+연속성과 다른 보안 동작이므로 허용하지 않는다.
 
 **확정한 전환 단위는 인증 → Product API 2단계다.** 두 단계는 서로 다른 스위치를 뒤집고 서로
 다른 게이트를 가진다.
 
 | | 1단계 인증 | 2단계 Product API |
 | --- | --- | --- |
-| 뒤집는 스위치 | `VITE_AUTH_LOGIN_URL` | `VITE_API_BASE_URL` |
+| 뒤집는 스위치 | `VITE_AUTH_LOGIN_URL`, `VITE_AUTH_LOGOUT_URL` | `VITE_API_BASE_URL` |
 | 움직이는 writer | `users` | 나머지 전 aggregate |
 | 선행 게이트 | 3절 | 5절 |
 | 저장소 밖 전제 | Google callback URI 병행 등록 | source provider callback URI 병행 등록 |
-| 롤백 | FE 재배포 + 재로그인 허용 | 데이터 호환성 확인 필요 |
+| 롤백 | FE deployment rollback + 재로그인 허용 | 데이터 호환성 확인 필요 |
 | 착수 | 게이트 미해소 | 게이트 미해소 |
 
 ## 2. 전환 스위치
@@ -52,14 +52,15 @@ FE 기준선: `momens-fe@d76a2d5`
 | 스위치 | 무엇을 결정하는가 | 위치 |
 | --- | --- | --- |
 | `VITE_AUTH_LOGIN_URL` | 로그인 진입점. 브라우저 내비게이션이라 API client를 타지 않는다 | `src/api/config.ts:18` |
+| `VITE_AUTH_LOGOUT_URL` | 로그아웃 요청만 신규 서버로 보낸다. 1단계에서 추가할 명시적 auth URL이다 | `MOM-0906` |
 | `VITE_API_BASE_URL` | `MomensApiClient`의 모든 XHR. endpoint별 분기가 없다 | `src/api/config.ts:9`, `src/api/client.ts:58` |
 | Google callback URI 허용 목록 | 신규·레거시 로그인 callback을 provider가 허용하는가 | Google Cloud 콘솔 |
 | source provider callback URI 허용 목록 | 신규·레거시 소스 연결 callback을 provider가 허용하는가 | GitHub·Slack·Notion·Figma 콘솔 |
 
-Vite가 빌드 타임에 앞의 두 값을 굽는다. **되돌리는 것은 설정 플립이 아니라 재빌드·재배포다.**
-롤백 소요 시간이 곧 FE 재배포 시간이다.
+Vite가 빌드 타임에 앞의 세 값을 굽는다. 전환은 FE 재빌드·재배포이고, 긴급 롤백은 Cloudflare의
+직전 deployment rollback으로 먼저 닫은 뒤 Git의 컷오버 커밋을 revert한다(7.4).
 
-두 env의 독립은 조건부다. `VITE_AUTH_LOGIN_URL`이 비면 `baseUrl`에서 파생된다
+login env와 API base의 독립은 조건부다. `VITE_AUTH_LOGIN_URL`이 비면 `baseUrl`에서 파생된다
 (`src/api/config.ts:18-20`). `.env.production`이 값을 명시하고 있어서 독립이 성립하므로,
 **그 값을 비우거나 지우면 `baseUrl` 전환이 로그인 진입점까지 함께 옮긴다.** 2단계 분할 전체가
 이 한 줄에 걸려 있다.
@@ -84,28 +85,36 @@ Vite가 빌드 타임에 앞의 두 값을 굽는다. **되돌리는 것은 설�
    로그인만 전환하면 레거시 Product API와 MCP 재인증에 쓰는 consent·grant API
    (H009~H011·H035·H036)가 401이 된다. MCP를 계속 사용하므로 사용자 재로그인을 허용해도 이
    호환은 필요하다.
+4. **`MOM-0905` 신규 logout의 레거시 `session_token` 만료.** 1단계부터 FE 로그아웃을
+   `POST /api/auth/web/logout`으로 직접 보내며, 신규 서버는 `access_token`(`Path=/`)과
+   `refresh_token`(`Path=/api/auth`)을 각각 올바른 경로로 만료하고 refresh token을 폐기한다. 이때
+   남은 `session_token`으로 레거시 보호 경로가 다시 인증되면 안 되므로 세 쿠키 만료를 배포 전에
+   검증한다.
 
-레거시 `Logout`이 신규 `access_token`·`refresh_token`까지 만료시키는 것은 게이트로 두지 않는다.
-1단계 동안 로그아웃 상태가 즉시 반영되지 않을 수 있음을 전환 공지에 포함하고, 사용자는 필요하면
-브라우저 쿠키를 지우거나 2단계 뒤 신규 logout을 사용한다.
+레거시 `Logout`을 교차 쿠키에 맞추지 않는다. `refresh_token`은 `Path=/api/auth`라 레거시
+`/auth/logout` 요청에 실리지 않아 서버 측 폐기까지 할 수 없다. endpoint별 Product API 라우팅 계층을
+만드는 대신 auth logout URL 하나만 분리한다.
 
 ## 4. 1단계 실행
 
 ```text
-1. MOM-0873 확인 + Google OAuth 운영 설정·신규 로그인 smoke test
+1. MOM-0873 확인 + Google OAuth 운영 설정 확인 뒤 깨끗한 브라우저 프로필에서 신규 로그인 smoke test
 2. momens-api 배포 (RequireAuth의 access_token 수용)
    → 기존 session_token 경로가 회귀 없이 동작하는 것을 확인
-3. 내부 사용자에게 일시적인 인증 실패·전원 재로그인 가능성을 공지
-4. FE: VITE_AUTH_LOGIN_URL만 신규 서버로 전환, 재빌드·재배포
-5. 6절의 관측 창 진입
+3. 1번에서 받은 access_token만으로 레거시 /auth/me, GET /workspaces,
+   GET /workspaces/:id/mcp-grants와 MCP 재인증 1회를 통과하는지 확인
+4. momens-server 배포 (MOM-0905의 session_token 만료)
+5. 내부 사용자에게 일시적인 인증 실패·전원 재로그인 가능성을 공지
+6. FE: VITE_AUTH_LOGIN_URL과 VITE_AUTH_LOGOUT_URL만 신규 서버로 전환, 재빌드·재배포
+7. 6절의 관측 창 진입
 ```
 
-4번 전에 2번의 배포가 prod에 반영된 것을 확인한다. **순서가 뒤집히면 신규 로그인 사용자가
+6번 전에 2번과 4번의 배포가 prod에 반영된 것을 확인한다. **순서가 뒤집히면 신규 로그인 사용자가
 레거시 Product API에서 401을 받는다.**
 
 ### 4.1 건드리지 않는 것
 
-- **`/auth/me`·`PATCH /auth/me`는 계속 레거시로 간다.** 게이트 2 이후 `access_token`으로
+- **`/auth/me`·`PATCH /auth/me`는 계속 레거시로 간다.** 게이트 3 이후 `access_token`으로
   통과한다. `PATCH`는 `users` write지만 ADR-0016의 한시 예외 범위 안이다.
 - **자동 refresh를 넣지 않는다.** 레거시 세션도 24시간, 신규 access TTL도 24시간이라 만료 시
   재로그인 동작이 지금과 같다.
@@ -116,9 +125,10 @@ Vite가 빌드 타임에 앞의 두 값을 굽는다. **되돌리는 것은 설�
 전환과 경로 수정(`/auth/me` → `/api/me`, `/auth/logout` → `/api/auth/web/logout`)을 한 묶음**으로
 잡고 있다.
 
-**1단계가 가져가는 것은 `VITE_AUTH_LOGIN_URL` 전환뿐이다.** 경로 수정은 base가 신규 서버를
-가리킬 때에만 의미가 있고, 먼저 적용하면 FE가 레거시 base에 `/api/me`를 불러 404가 난다. 4.1이
-닫아 둔 전제를 깨뜨린다.
+**1단계가 가져가는 것은 `VITE_AUTH_LOGIN_URL`과 별도 `VITE_AUTH_LOGOUT_URL` 전환이다.** logout은
+명시적 신규 URL로 보내고, API client의 `/auth/logout` 경로는 쓰지 않는다. `/auth/me` → `/api/me`
+수정은 base가 신규 서버를 가리킬 때에만 의미가 있고 먼저 적용하면 레거시에 없는 경로를 불러 404가
+난다. Product API 경로 수정은 2단계와 같은 배포에 묶는다.
 
 ## 5. 2단계 게이트
 
@@ -184,15 +194,24 @@ G1과 달리 5xx로 드러나지만, 2단계에서 base를 뒤집는 순간 **�
 
 **전환을 실행한 사람이 그 자리에서 지켜본다.** 자리를 뜬 채로 전환하지 않는다.
 
-내부 사용자에게 재로그인을 요청해 Google 로그인·워크스페이스 조회·MCP 재인증을 직접 확인한다.
-전환 공지에 포함한 재로그인 자체와 두 FE 배포 사이의 일시적인 인증 실패는 rollback 신호로 세지
-않는다. 재로그인 뒤에도 같은 실패가 재현될 때 아래 기준을 적용한다.
+각 단계 배포 직후 **최소 10분** 집중 관측하고 실행자와 다른 팀원 한 명, 총 2명이 아래 smoke를
+독립적으로 완료한다. 전환 공지에 포함한 재로그인 자체와 두 FE 배포 사이의 일시적인 인증 실패는
+rollback 신호로 세지 않는다.
+
+| 단계 | 필수 smoke |
+| --- | --- |
+| 1단계 | Google 재로그인 → `/auth/me` → 워크스페이스 목록 → MCP grant 목록 → MCP 재인증 1회 → 로그아웃 → 보호 경로 401 → 재로그인 |
+| 2단계 | Google 재로그인 → `/api/me` → workspace snapshot → 검증용 workspace에서 task·memory 생성/수정/삭제 → source 연결 1회 |
+
+smoke 요청의 기대 상태가 한 번이라도 어긋나면 즉시 되돌린다. 집중 관측 중 실제 사용에서 아래 신호가
+나오면 같은 동작을 한 번만 재시도하고, 재현되면 되돌린다. 10분과 2명 중 하나라도 채우지 못하면
+단계 완료로 판정하지 않는다.
 
 | 신호 | 보는 곳 | 되돌리는 값 |
 | --- | --- | --- |
 | 전면 401 | 두 서버 pod 로그, ingress 액세스 로그의 상태 코드 | 로그인 성공 세션이 보호 경로에서 401을 받는 것이 **1건이라도** |
 | 404 | 같은 곳 | 전환 전에 없던 경로의 404가 나타나면 |
-| 5xx | 같은 곳 | 전환 전 기준선을 넘는 5xx가 지속되면 |
+| 5xx | 같은 곳 | 전환한 경로의 같은 동작에서 1회 재시도에도 재현되면 |
 | write 실패 | pod 로그의 예외, DB constraint 위반 | 1건이라도 |
 
 전면 401과 write 실패에 임계값을 두지 않는다. 둘 다 정상 상태에서 0이고, 1건이 보이면 그 뒤로
@@ -203,9 +222,9 @@ G1과 달리 5xx로 드러나지만, 2단계에서 base를 뒤집는 순간 **�
 snapshot 하나가 404를 내면 5개 경로의 404가 함께 나타나므로, **404가 무더기로 보이면
 snapshot부터 확인한다.**
 
-관측 창의 길이는 실제 사용자 트래픽이 한 바퀴 도는 데 걸리는 시간으로 잡고, 전환 직후 집중
-관측 뒤 같은 날 안에 한 번 더 확인한다. 로그가 보존되지 않으므로 **판정 근거는 그 자리에서
-갈무리해 `MOM-0911`에 남긴다.**
+집중 관측을 통과한 뒤 같은 날 안에 두 사람이 필수 smoke를 한 번 더 실행한다. 로그가 보존되지
+않으므로 실행 시각·사용한 workspace·각 항목 결과·관련 로그를 그 자리에서 갈무리해 `MOM-0911`에
+남긴다.
 
 ## 7. 롤백
 
@@ -214,7 +233,8 @@ deploy rollback과 writer rollback을 구분한다(전략 문서 「롤백」). 
 
 ### 7.1 1단계
 
-`VITE_AUTH_LOGIN_URL`을 레거시로 되돌려 FE를 재빌드·재배포한다.
+Cloudflare에서 직전 FE deployment로 롤백해 로그인과 로그아웃 요청 대상을 함께 레거시 상태로
+되돌린다.
 
 - 사용자는 레거시 로그인으로 `session_token`을 다시 발급받는다. 신규 서버는 ADR-0017에 따라 그
   쿠키를 계속 수용한다. 기존 세션의 연속성은 보장하지 않으며 필요하면 다시 로그인한다.
@@ -241,13 +261,33 @@ deploy rollback과 writer rollback을 구분한다(전략 문서 「롤백」). 
 
 ### 7.3 결정권
 
-- **되돌림의 트리거는 전환을 실행한 사람이 당긴다.** 6.1의 값을 넘으면 상의 없이 되돌린다.
+- **되돌림의 트리거는 전환을 실행한 사람이 당긴다.** 6.1의 기준에 걸리면 상의 없이 되돌린다.
   되돌림은 되돌릴 수 있는 행위이고, 판단을 미루는 동안의 손실이 더 크다.
 - 되돌린 뒤에 원인 분석과 재시도 여부를 상의한다.
 
 ### 7.4 FE 배포·롤백 경로
 
-- **FE 배포·롤백 경로가 아직 비어 있다.** `momens-fe`에는 CI 워크플로만 있고 배포 워크플로가
-  없어 배포 주체와 소요 시간을 저장소에서 확인할 수 없다. **롤백 소요 시간이 곧 FE 재배포
-  시간이다.** 1단계 착수 전에 TL과 확인해 배포 주체·명령 또는 화면·예상 소요 시간·완료 확인
-  방법을 이 절에 채운다.
+`momens-fe`는 [Cloudflare Workers의 GitHub 연동](https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/)으로
+배포된다. `wrangler.jsonc`의 Worker 이름은 `momens-fe`, custom domain은 `app.momens.works`, 정적
+산출물은 `dist`다. FE TL이 실행하고 컷오버 실행자가 함께 확인한다.
+
+**배포**
+
+1. 컷오버 변경을 `momens-fe`의 `main`에 merge한다.
+2. 해당 commit의 GitHub check `Workers Builds: momens-fe`가 `success`가 될 때까지 기다린다. 최근
+   기준선 commit `c230e826`에서 이 check가 성공한 것을 확인했다.
+3. **5분 안에 success가 되지 않거나 failure/cancelled면 단계에 진입하지 않는다.** 성공하면
+   `https://app.momens.works`를 새로 열어 6.1의 해당 단계 smoke를 시작한다.
+
+**긴급 롤백**
+
+1. Cloudflare의 [dashboard rollback 절차](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)에
+   따라 **Workers & Pages → momens-fe → Deployments**로 이동한다.
+2. 컷오버 직전의 known-good deployment 오른쪽 메뉴에서 **Rollback**을 실행한다.
+3. active deployment가 직전 version으로 바뀌고 `app.momens.works`에서 해당 단계의 로그인과 첫
+   보호 API가 성공하는지 확인한다. **5분 안에 확인되지 않으면 FE TL이 Cloudflare 상태와 route를
+   직접 점검하고 컷오버를 중단한 상태로 유지한다.**
+4. Git의 컷오버 commit도 revert해 다음 `main` push가 실패한 설정을 다시 배포하지 않게 한다.
+
+실행 전에 Cloudflare dashboard 접근 권한, 기준선 deployment의 version ID, 컷오버 commit SHA를
+`MOM-0911`에 남긴다. 이 셋이 없으면 배포를 시작하지 않는다.
