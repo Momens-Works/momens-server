@@ -25,6 +25,7 @@ import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.project.task.TaskReader;
 import works.momens.server.project.task.TaskScope;
 import works.momens.server.project.task.TaskSnapshot;
+import works.momens.server.project.taskupdate.CreateTaskUpdateCommand;
 import works.momens.server.project.taskupdate.TaskUpdateDetail;
 import works.momens.server.project.taskupdate.TaskUpdateReader;
 import works.momens.server.project.taskupdate.TaskUpdateWriter;
@@ -105,12 +106,15 @@ class TaskUpdateServiceTest {
     when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID))
         .thenReturn(Optional.of(WorkspaceRole.MEMBER));
     Map<String, Object> metadata = Map.of("source", "web");
-    when(taskUpdateWriter.create(TASK_ID, USER_ID, "내용", "comment", metadata)).thenReturn(update());
+    CreateTaskUpdateCommand command =
+        new CreateTaskUpdateCommand(
+            TASK_ID, WORKSPACE_ID, PROJECT_ID, USER_ID, "내용", "comment", metadata);
+    when(taskUpdateWriter.create(command)).thenReturn(update());
 
     assertThat(service.create(TASK_ID, USER_ID, "내용", "comment", metadata)).isEqualTo(update());
     service.delete(TASK_ID, UPDATE_ID, USER_ID);
 
-    verify(taskUpdateWriter).create(TASK_ID, USER_ID, "내용", "comment", metadata);
+    verify(taskUpdateWriter).create(command);
     verify(taskUpdateWriter).delete(TASK_ID, UPDATE_ID, USER_ID);
   }
 
