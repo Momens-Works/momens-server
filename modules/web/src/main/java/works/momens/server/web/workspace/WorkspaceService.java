@@ -79,13 +79,4 @@ class WorkspaceService {
     workspaceAccessChecker.requireRoleAtLeast(workspaceId, userId, WorkspaceRole.ADMIN);
     return workspaceEditor.update(new UpdateWorkspaceCommand(workspaceId, name, description, slug));
   }
-
-  /** 워크스페이스가 없으면 WORKSPACE_NOT_FOUND를 던집니다. */
-
-  /**
-   * 사용자의 역할이 요구 수준을 충족하지 않으면 AUTH_FORBIDDEN을 던집니다.
-   *
-   * <p>멤버가 아닌 경우와 멤버이지만 권한이 부족한 경우를 같은 에러 코드로 처리합니다. 필요한 역할은 details의 {@code required_role}로 전달하므로
-   * 역할이 추가되더라도 에러 코드는 유지할 수 있습니다.
-   */
 }
