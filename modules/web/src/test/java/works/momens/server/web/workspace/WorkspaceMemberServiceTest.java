@@ -23,10 +23,10 @@ import works.momens.server.workspace.ChangeMembershipRoleCommand;
 import works.momens.server.workspace.RemoveMembershipCommand;
 import works.momens.server.workspace.WorkspaceDetail;
 import works.momens.server.workspace.WorkspaceErrorCode;
+import works.momens.server.workspace.WorkspaceMembershipReader;
 import works.momens.server.workspace.WorkspaceMembershipWriter;
 import works.momens.server.workspace.WorkspaceReader;
 import works.momens.server.workspace.WorkspaceRole;
-import works.momens.server.workspace.WorkspaceRoleReader;
 
 /**
  * 워크스페이스 멤버 조합 서비스의 동작을 검증합니다.
@@ -38,7 +38,7 @@ import works.momens.server.workspace.WorkspaceRoleReader;
 class WorkspaceMemberServiceTest {
 
   @Mock private WorkspaceReader workspaceReader;
-  @Mock private WorkspaceRoleReader workspaceRoleReader;
+  @Mock private WorkspaceMembershipReader workspaceMembershipReader;
   @Mock private WorkspaceMemberListService workspaceMemberListService;
   @Mock private WorkspaceMembershipWriter workspaceMembershipWriter;
   private WorkspaceMemberService workspaceMemberService;
@@ -47,7 +47,7 @@ class WorkspaceMemberServiceTest {
   void setUp() {
     workspaceMemberService =
         new WorkspaceMemberService(
-            new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader),
+            new WorkspaceAccessChecker(workspaceReader, workspaceMembershipReader),
             workspaceMemberListService,
             workspaceMembershipWriter);
   }
@@ -158,6 +158,6 @@ class WorkspaceMemberServiceTest {
   }
 
   private void callerHasRole(WorkspaceRole role) {
-    when(workspaceRoleReader.roleOf(WORKSPACE_ID, CALLER_ID)).thenReturn(Optional.of(role));
+    when(workspaceMembershipReader.roleOf(WORKSPACE_ID, CALLER_ID)).thenReturn(Optional.of(role));
   }
 }

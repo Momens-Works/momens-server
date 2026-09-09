@@ -23,7 +23,6 @@ import works.momens.server.web.WorkspaceAccessChecker;
 import works.momens.server.workspace.WorkspaceMembershipDetail;
 import works.momens.server.workspace.WorkspaceMembershipReader;
 import works.momens.server.workspace.WorkspaceReader;
-import works.momens.server.workspace.WorkspaceRoleReader;
 
 /**
  * 멤버 목록 조회 서비스의 동작을 검증합니다.
@@ -43,7 +42,6 @@ class WorkspaceMemberListServiceTest {
   @Mock private WorkspaceMembershipReader workspaceMembershipReader;
   @Mock private UserService userService;
   @Mock private WorkspaceReader workspaceReader;
-  @Mock private WorkspaceRoleReader workspaceRoleReader;
   private WorkspaceMemberListService workspaceMemberListService;
 
   @BeforeEach
@@ -52,13 +50,13 @@ class WorkspaceMemberListServiceTest {
         new WorkspaceMemberListService(
             workspaceMembershipReader,
             userService,
-            new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader));
+            new WorkspaceAccessChecker(workspaceReader, workspaceMembershipReader));
   }
 
   @Test
   @DisplayName("사용자 정보와 멤버십 정보를 결합해 반환한다")
   void listMapsProfileAndMembershipFields() {
-    when(workspaceMembershipReader.listDetailsByWorkspaceId(WORKSPACE_ID))
+    when(workspaceMembershipReader.listMembershipDetails(WORKSPACE_ID))
         .thenReturn(List.of(membership(CALLER_ID, "admin")));
     when(userService.getProfiles(any()))
         .thenReturn(List.of(profile(CALLER_ID, "jinsu@momens.works", "신진수")));
@@ -77,7 +75,7 @@ class WorkspaceMemberListServiceTest {
   @Test
   @DisplayName("이름 순서와 관계없이 조회 결과의 순서를 유지한다")
   void listKeepsReaderOrder() {
-    when(workspaceMembershipReader.listDetailsByWorkspaceId(WORKSPACE_ID))
+    when(workspaceMembershipReader.listMembershipDetails(WORKSPACE_ID))
         .thenReturn(List.of(membership(OTHER_ID, "owner"), membership(CALLER_ID, "member")));
     when(userService.getProfiles(any()))
         .thenReturn(
@@ -93,7 +91,7 @@ class WorkspaceMemberListServiceTest {
   @Test
   @DisplayName("요청자가 멤버가 아니면 사용자 정보를 조회하지 않고 거부한다")
   void listRejectsCallerWhoIsNotMember() {
-    when(workspaceMembershipReader.listDetailsByWorkspaceId(WORKSPACE_ID))
+    when(workspaceMembershipReader.listMembershipDetails(WORKSPACE_ID))
         .thenReturn(List.of(membership(OTHER_ID, "owner")));
 
     assertThatThrownBy(() -> workspaceMemberListService.list(WORKSPACE_ID, CALLER_ID))

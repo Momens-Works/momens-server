@@ -8,9 +8,9 @@ import org.springframework.stereotype.Component;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.workspace.WorkspaceErrorCode;
+import works.momens.server.workspace.WorkspaceMembershipReader;
 import works.momens.server.workspace.WorkspaceReader;
 import works.momens.server.workspace.WorkspaceRole;
-import works.momens.server.workspace.WorkspaceRoleReader;
 
 /**
  * 워크스페이스 존재 여부와 요청자의 역할이 필요한 수준 이상인지 확인합니다.
@@ -28,7 +28,7 @@ import works.momens.server.workspace.WorkspaceRoleReader;
 public class WorkspaceAccessChecker {
 
   private final WorkspaceReader workspaceReader;
-  private final WorkspaceRoleReader workspaceRoleReader;
+  private final WorkspaceMembershipReader workspaceMembershipReader;
 
   public void requireWorkspaceExists(UUID workspaceId) {
     if (workspaceReader.findById(workspaceId).isEmpty()) {
@@ -38,7 +38,8 @@ public class WorkspaceAccessChecker {
   }
 
   public void requireRoleAtLeast(UUID workspaceId, UUID userId, WorkspaceRole required) {
-    requireRoleAtLeast(workspaceId, workspaceRoleReader.roleOf(workspaceId, userId), required);
+    requireRoleAtLeast(
+        workspaceId, workspaceMembershipReader.roleOf(workspaceId, userId), required);
   }
 
   /**

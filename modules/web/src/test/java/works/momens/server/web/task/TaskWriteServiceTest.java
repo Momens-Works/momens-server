@@ -22,9 +22,9 @@ import works.momens.server.project.task.TaskReader;
 import works.momens.server.project.task.TaskScope;
 import works.momens.server.project.task.TaskWriter;
 import works.momens.server.web.WorkspaceAccessChecker;
+import works.momens.server.workspace.WorkspaceMembershipReader;
 import works.momens.server.workspace.WorkspaceReader;
 import works.momens.server.workspace.WorkspaceRole;
-import works.momens.server.workspace.WorkspaceRoleReader;
 
 @ExtendWith(MockitoExtension.class)
 class TaskWriteServiceTest {
@@ -38,7 +38,7 @@ class TaskWriteServiceTest {
   @Mock private TaskReader taskReader;
   @Mock private ProjectReader projectReader;
   @Mock private WorkspaceReader workspaceReader;
-  @Mock private WorkspaceRoleReader workspaceRoleReader;
+  @Mock private WorkspaceMembershipReader workspaceMembershipReader;
   private TaskWriteService service;
 
   @BeforeEach
@@ -48,13 +48,13 @@ class TaskWriteServiceTest {
             taskWriter,
             taskReader,
             projectReader,
-            new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader));
+            new WorkspaceAccessChecker(workspaceReader, workspaceMembershipReader));
   }
 
   @Test
   void createNormalizesLegacyAliasesBeforeCallingDomain() {
     when(projectReader.workspaceIdOf(PROJECT_ID)).thenReturn(Optional.of(WORKSPACE_ID));
-    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID))
+    when(workspaceMembershipReader.roleOf(WORKSPACE_ID, USER_ID))
         .thenReturn(Optional.of(WorkspaceRole.MEMBER));
 
     service.create(
@@ -72,7 +72,7 @@ class TaskWriteServiceTest {
   void patchPreservesLegacyEmptyAndNullSemantics() {
     when(taskReader.findScope(TASK_ID))
         .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
-    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID))
+    when(workspaceMembershipReader.roleOf(WORKSPACE_ID, USER_ID))
         .thenReturn(Optional.of(WorkspaceRole.MEMBER));
 
     service.update(

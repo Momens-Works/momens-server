@@ -30,9 +30,9 @@ import works.momens.server.project.taskupdate.TaskUpdateDetail;
 import works.momens.server.project.taskupdate.TaskUpdateReader;
 import works.momens.server.project.taskupdate.TaskUpdateWriter;
 import works.momens.server.web.WorkspaceAccessChecker;
+import works.momens.server.workspace.WorkspaceMembershipReader;
 import works.momens.server.workspace.WorkspaceReader;
 import works.momens.server.workspace.WorkspaceRole;
-import works.momens.server.workspace.WorkspaceRoleReader;
 
 @ExtendWith(MockitoExtension.class)
 class TaskUpdateServiceTest {
@@ -46,7 +46,7 @@ class TaskUpdateServiceTest {
   @Mock private TaskUpdateReader taskUpdateReader;
   @Mock private TaskUpdateWriter taskUpdateWriter;
   @Mock private WorkspaceReader workspaceReader;
-  @Mock private WorkspaceRoleReader workspaceRoleReader;
+  @Mock private WorkspaceMembershipReader workspaceMembershipReader;
   private TaskUpdateService service;
 
   @BeforeEach
@@ -56,21 +56,21 @@ class TaskUpdateServiceTest {
             taskReader,
             taskUpdateReader,
             taskUpdateWriter,
-            new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader));
+            new WorkspaceAccessChecker(workspaceReader, workspaceMembershipReader));
   }
 
   @Test
   void listChecksTaskMembershipBeforeReadingUpdates() {
     when(taskReader.findSnapshot(TASK_ID)).thenReturn(Optional.of(task()));
-    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID))
+    when(workspaceMembershipReader.roleOf(WORKSPACE_ID, USER_ID))
         .thenReturn(Optional.of(WorkspaceRole.MEMBER));
     when(taskUpdateReader.listByTaskId(TASK_ID)).thenReturn(List.of(update()));
 
     assertThat(service.list(TASK_ID, USER_ID)).containsExactly(update());
 
-    InOrder inOrder = inOrder(taskReader, workspaceRoleReader, taskUpdateReader);
+    InOrder inOrder = inOrder(taskReader, workspaceMembershipReader, taskUpdateReader);
     inOrder.verify(taskReader).findSnapshot(TASK_ID);
-    inOrder.verify(workspaceRoleReader).roleOf(WORKSPACE_ID, USER_ID);
+    inOrder.verify(workspaceMembershipReader).roleOf(WORKSPACE_ID, USER_ID);
     inOrder.verify(taskUpdateReader).listByTaskId(TASK_ID);
   }
 
@@ -83,13 +83,13 @@ class TaskUpdateServiceTest {
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(TaskErrorCode.TASK_NOT_FOUND);
 
-    verifyNoInteractions(workspaceRoleReader, taskUpdateReader);
+    verifyNoInteractions(workspaceMembershipReader, taskUpdateReader);
   }
 
   @Test
   void listRejectsNonMemberBeforeReadingUpdates() {
     when(taskReader.findSnapshot(TASK_ID)).thenReturn(Optional.of(task()));
-    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID)).thenReturn(Optional.empty());
+    when(workspaceMembershipReader.roleOf(WORKSPACE_ID, USER_ID)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.list(TASK_ID, USER_ID))
         .isInstanceOf(BusinessException.class)
@@ -103,7 +103,7 @@ class TaskUpdateServiceTest {
   void createAndDeleteCheckTaskMembershipBeforeDelegating() {
     when(taskReader.findScope(TASK_ID))
         .thenReturn(Optional.of(new TaskScope(WORKSPACE_ID, PROJECT_ID)));
-    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID))
+    when(workspaceMembershipReader.roleOf(WORKSPACE_ID, USER_ID))
         .thenReturn(Optional.of(WorkspaceRole.MEMBER));
     Map<String, Object> metadata = Map.of("source", "web");
     CreateTaskUpdateCommand command =

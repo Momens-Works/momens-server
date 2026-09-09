@@ -6,10 +6,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
 import works.momens.server.user.UserService;
-import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceInvitationAcceptor;
 import works.momens.server.workspace.WorkspaceInvitationReader;
 import works.momens.server.workspace.WorkspaceInvitationWriter;
+import works.momens.server.workspace.WorkspaceMembershipReader;
 import works.momens.server.workspace.WorkspaceMembershipWriter;
 import works.momens.server.workspace.WorkspaceReader;
 import works.momens.server.workspace.email.InvitationEmailSender;
@@ -28,7 +28,7 @@ class InvitationConfig {
       JdbcClient jdbcClient,
       TransactionTemplate transactionTemplate,
       WorkspaceReader workspaceReader,
-      WorkspaceAccess workspaceAccess,
+      WorkspaceMembershipReader workspaceMembershipReader,
       UserService userService,
       InvitationEmailSender emailSender) {
     return new WorkspaceInvitationWriterImpl(
@@ -36,7 +36,7 @@ class InvitationConfig {
         new PendingInvitationUpserter(jdbcClient),
         transactionTemplate,
         workspaceReader,
-        workspaceAccess,
+        workspaceMembershipReader,
         userService,
         emailSender,
         Clock.systemUTC());
