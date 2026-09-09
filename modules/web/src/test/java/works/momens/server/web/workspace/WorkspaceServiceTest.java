@@ -23,9 +23,9 @@ import works.momens.server.workspace.UpdateWorkspaceCommand;
 import works.momens.server.workspace.WorkspaceDetail;
 import works.momens.server.workspace.WorkspaceEditor;
 import works.momens.server.workspace.WorkspaceErrorCode;
+import works.momens.server.workspace.WorkspaceMembershipReader;
 import works.momens.server.workspace.WorkspaceReader;
 import works.momens.server.workspace.WorkspaceRole;
-import works.momens.server.workspace.WorkspaceRoleReader;
 import works.momens.server.workspace.WorkspaceSlugReader;
 
 /**
@@ -37,7 +37,7 @@ class WorkspaceServiceTest {
 
   @Mock private WorkspaceReader workspaceReader;
   @Mock private WorkspaceSlugReader workspaceSlugReader;
-  @Mock private WorkspaceRoleReader workspaceRoleReader;
+  @Mock private WorkspaceMembershipReader workspaceMembershipReader;
   @Mock private WorkspaceEditor workspaceEditor;
   @Mock private WorkspaceOnboarding workspaceOnboarding;
   private WorkspaceService workspaceService;
@@ -49,7 +49,7 @@ class WorkspaceServiceTest {
             workspaceReader,
             workspaceSlugReader,
             workspaceEditor,
-            new WorkspaceAccessChecker(workspaceReader, workspaceRoleReader),
+            new WorkspaceAccessChecker(workspaceReader, workspaceMembershipReader),
             workspaceOnboarding);
   }
 
@@ -80,7 +80,7 @@ class WorkspaceServiceTest {
   @DisplayName("워크스페이스는 있지만 멤버가 아니면 AUTH_FORBIDDEN을 던진다")
   void getThrowsForbiddenWhenCallerIsNotMember() {
     when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.of(detail()));
-    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID)).thenReturn(Optional.empty());
+    when(workspaceMembershipReader.roleOf(WORKSPACE_ID, USER_ID)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> workspaceService.get(WORKSPACE_ID, USER_ID))
         .isInstanceOf(BusinessException.class)
@@ -93,7 +93,7 @@ class WorkspaceServiceTest {
   void getReturnsDetailWhenCallerIsMember() {
     WorkspaceDetail detail = detail();
     when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.of(detail));
-    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID))
+    when(workspaceMembershipReader.roleOf(WORKSPACE_ID, USER_ID))
         .thenReturn(Optional.of(WorkspaceRole.MEMBER));
 
     assertThat(workspaceService.get(WORKSPACE_ID, USER_ID)).isEqualTo(detail);
@@ -108,14 +108,14 @@ class WorkspaceServiceTest {
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).getErrorCode())
         .isEqualTo(WorkspaceErrorCode.WORKSPACE_NOT_FOUND);
-    verifyNoInteractions(workspaceRoleReader, workspaceEditor);
+    verifyNoInteractions(workspaceMembershipReader, workspaceEditor);
   }
 
   @Test
   @DisplayName("멤버가 아니면 AUTH_FORBIDDEN을 던지고 수정을 시도하지 않는다")
   void updateThrowsForbiddenWhenCallerIsNotMember() {
     when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.of(detail()));
-    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID)).thenReturn(Optional.empty());
+    when(workspaceMembershipReader.roleOf(WORKSPACE_ID, USER_ID)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> workspaceService.update(WORKSPACE_ID, USER_ID, "새 이름", null, null))
         .isInstanceOf(BusinessException.class)
@@ -128,7 +128,7 @@ class WorkspaceServiceTest {
   @DisplayName("멤버의 역할이 admin 미만이면 AUTH_FORBIDDEN을 던지고 수정을 시도하지 않는다")
   void updateThrowsForbiddenWhenCallerIsMemberWithoutAdminRole() {
     when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.of(detail()));
-    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID))
+    when(workspaceMembershipReader.roleOf(WORKSPACE_ID, USER_ID))
         .thenReturn(Optional.of(WorkspaceRole.MEMBER));
 
     assertThatThrownBy(() -> workspaceService.update(WORKSPACE_ID, USER_ID, "새 이름", null, null))
@@ -143,7 +143,7 @@ class WorkspaceServiceTest {
   void updateDelegatesToEditorForAdminAndOwner() {
     WorkspaceDetail updated = detail();
     when(workspaceReader.findById(WORKSPACE_ID)).thenReturn(Optional.of(detail()));
-    when(workspaceRoleReader.roleOf(WORKSPACE_ID, USER_ID))
+    when(workspaceMembershipReader.roleOf(WORKSPACE_ID, USER_ID))
         .thenReturn(Optional.of(WorkspaceRole.ADMIN));
     when(workspaceEditor.update(new UpdateWorkspaceCommand(WORKSPACE_ID, "새 이름", null, "momens-2")))
         .thenReturn(updated);

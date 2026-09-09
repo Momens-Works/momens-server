@@ -17,13 +17,14 @@ import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.workspace.WorkspaceMembershipDetail;
 import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.WorkspaceRole;
 import works.momens.server.workspace.WorkspaceSeedSql;
 
 /**
  * 멤버십 조회 public API를 검증합니다.
  *
  * <p>PostgreSQL에서 역할과 감사 시각을 함께 반환하는지, 다른 워크스페이스의 멤버가 결과에 포함되지 않는지, 확정된 기준에 따라 정렬되는지 확인합니다. 정렬을
- * SQL에서 처리하므로 실제 데이터베이스를 사용해 검증합니다.
+ * SQL에서 처리하므로 실제 데이터베이스를 사용해 검증합니다. 역할 조회 결과가 저장된 값을 그대로 반환하는지도 함께 검증합니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -45,7 +46,7 @@ class WorkspaceMembershipReaderIntegrationTest extends AbstractPostgresIntegrati
     entityManager.flush();
 
     List<WorkspaceMembershipDetail> details =
-        workspaceMembershipReader.listDetailsByWorkspaceId(workspaceId);
+        workspaceMembershipReader.listMembershipDetails(workspaceId);
 
     assertThat(details).hasSize(2);
     assertThat(details)
@@ -70,7 +71,7 @@ class WorkspaceMembershipReaderIntegrationTest extends AbstractPostgresIntegrati
     addMember(otherWorkspaceId, otherMember, "member");
     entityManager.flush();
 
-    assertThat(workspaceMembershipReader.listDetailsByWorkspaceId(workspaceId))
+    assertThat(workspaceMembershipReader.listMembershipDetails(workspaceId))
         .extracting(WorkspaceMembershipDetail::userId)
         .containsExactly(member);
   }
@@ -80,7 +81,7 @@ class WorkspaceMembershipReaderIntegrationTest extends AbstractPostgresIntegrati
   void listDetailsIsEmptyForWorkspaceWithoutMembers() {
     UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-nobody");
 
-    assertThat(workspaceMembershipReader.listDetailsByWorkspaceId(workspaceId)).isEmpty();
+    assertThat(workspaceMembershipReader.listMembershipDetails(workspaceId)).isEmpty();
   }
 
   @Test
@@ -100,9 +101,50 @@ class WorkspaceMembershipReaderIntegrationTest extends AbstractPostgresIntegrati
     insertMember(workspaceId, signBitSet, "owner", Instant.parse("2026-08-01T00:00:00Z"));
     insertMember(workspaceId, signBitClear, "member", Instant.parse("2026-08-01T00:00:00Z"));
 
-    assertThat(workspaceMembershipReader.listDetailsByWorkspaceId(workspaceId))
+    assertThat(workspaceMembershipReader.listMembershipDetails(workspaceId))
         .extracting(WorkspaceMembershipDetail::userId)
         .containsExactly(signBitClear, signBitSet, joinedLater);
+  }
+
+  @Test
+  @DisplayName("멤버십에 저장된 역할을 그대로 반환한다")
+  void roleOfReturnsStoredRole() {
+    UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-role");
+    UUID owner = WorkspaceSeedSql.insertUser(entityManager, "role-owner@momens.works");
+    UUID member = WorkspaceSeedSql.insertUser(entityManager, "role-member@momens.works");
+    addMember(workspaceId, owner, "owner");
+    addMember(workspaceId, member, "member");
+    entityManager.flush();
+    entityManager.clear();
+
+    assertThat(workspaceMembershipReader.roleOf(workspaceId, owner)).contains(WorkspaceRole.OWNER);
+    assertThat(workspaceMembershipReader.roleOf(workspaceId, member))
+        .contains(WorkspaceRole.MEMBER);
+  }
+
+  @Test
+  @DisplayName("멤버가 아니면 빈 Optional을 반환한다")
+  void roleOfIsEmptyWhenUserIsNotMember() {
+    UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-stranger");
+    UUID stranger = WorkspaceSeedSql.insertUser(entityManager, "stranger@momens.works");
+    entityManager.flush();
+    entityManager.clear();
+
+    assertThat(workspaceMembershipReader.roleOf(workspaceId, stranger)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("요청한 워크스페이스의 멤버 식별자만 반환합니다")
+  void listMemberUserIdsReturnsMembersOfGivenWorkspace() {
+    UUID workspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-ids");
+    UUID otherWorkspaceId = WorkspaceSeedSql.insertWorkspace(entityManager, "momens-ids-other");
+    UUID member = WorkspaceSeedSql.insertUser(entityManager, "ids-mine@momens.works");
+    UUID otherMember = WorkspaceSeedSql.insertUser(entityManager, "ids-other@momens.works");
+    addMember(workspaceId, member, "member");
+    addMember(otherWorkspaceId, otherMember, "member");
+    entityManager.flush();
+
+    assertThat(workspaceMembershipReader.listMemberUserIds(workspaceId)).containsExactly(member);
   }
 
   private void insertUser(UUID userId, String email) {

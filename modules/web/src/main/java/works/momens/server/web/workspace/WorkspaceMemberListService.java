@@ -48,7 +48,7 @@ class WorkspaceMemberListService {
   @Transactional(readOnly = true)
   public List<WorkspaceMemberView> list(UUID workspaceId, UUID requesterId) {
     List<WorkspaceMembershipDetail> memberships =
-        workspaceMembershipReader.listDetailsByWorkspaceId(workspaceId);
+        workspaceMembershipReader.listMembershipDetails(workspaceId);
     workspaceAccessChecker.requireRoleAtLeast(
         workspaceId, requesterRoleOf(memberships, requesterId), WorkspaceRole.MEMBER);
     Map<UUID, UserProfile> profiles =

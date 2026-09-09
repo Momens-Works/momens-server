@@ -15,12 +15,11 @@ import works.momens.server.workspace.CreateInvitationCommand;
 import works.momens.server.workspace.InvitationErrorCode;
 import works.momens.server.workspace.ResendInvitationCommand;
 import works.momens.server.workspace.RevokeInvitationCommand;
-import works.momens.server.workspace.WorkspaceAccess;
 import works.momens.server.workspace.WorkspaceDetail;
 import works.momens.server.workspace.WorkspaceErrorCode;
 import works.momens.server.workspace.WorkspaceInvitationDetail;
 import works.momens.server.workspace.WorkspaceInvitationWriter;
-import works.momens.server.workspace.WorkspaceMembership;
+import works.momens.server.workspace.WorkspaceMembershipReader;
 import works.momens.server.workspace.WorkspaceReader;
 import works.momens.server.workspace.email.EmailSendFailedException;
 import works.momens.server.workspace.email.InvitationEmail;
@@ -43,7 +42,7 @@ class WorkspaceInvitationWriterImpl implements WorkspaceInvitationWriter {
   private final PendingInvitationUpserter upserter;
   private final TransactionTemplate transactionTemplate;
   private final WorkspaceReader workspaceReader;
-  private final WorkspaceAccess workspaceAccess;
+  private final WorkspaceMembershipReader workspaceMembershipReader;
   private final UserService userService;
   private final InvitationEmailSender emailSender;
   private final Clock clock;
@@ -53,7 +52,7 @@ class WorkspaceInvitationWriterImpl implements WorkspaceInvitationWriter {
       PendingInvitationUpserter upserter,
       TransactionTemplate transactionTemplate,
       WorkspaceReader workspaceReader,
-      WorkspaceAccess workspaceAccess,
+      WorkspaceMembershipReader workspaceMembershipReader,
       UserService userService,
       InvitationEmailSender emailSender,
       Clock clock) {
@@ -61,7 +60,7 @@ class WorkspaceInvitationWriterImpl implements WorkspaceInvitationWriter {
     this.upserter = upserter;
     this.transactionTemplate = transactionTemplate;
     this.workspaceReader = workspaceReader;
-    this.workspaceAccess = workspaceAccess;
+    this.workspaceMembershipReader = workspaceMembershipReader;
     this.userService = userService;
     this.emailSender = emailSender;
     this.clock = clock;
@@ -183,11 +182,9 @@ class WorkspaceInvitationWriterImpl implements WorkspaceInvitationWriter {
   }
 
   private void requireNotMember(UUID workspaceId, String normalizedEmail) {
-    List<WorkspaceMembership> memberships = workspaceAccess.listMemberships(workspaceId);
+    List<UUID> memberUserIds = workspaceMembershipReader.listMemberUserIds(workspaceId);
     boolean alreadyMember =
-        userService
-            .getProfiles(memberships.stream().map(WorkspaceMembership::userId).toList())
-            .stream()
+        userService.getProfiles(memberUserIds).stream()
             .anyMatch(profile -> normalizeEmail(profile.email()).equals(normalizedEmail));
     if (alreadyMember) {
       throw new BusinessException(

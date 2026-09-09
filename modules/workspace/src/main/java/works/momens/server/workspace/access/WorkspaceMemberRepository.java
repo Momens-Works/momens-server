@@ -24,8 +24,6 @@ interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember, Works
 
   List<WorkspaceMember> findByUserId(UUID userId);
 
-  boolean existsByWorkspaceIdAndUserId(UUID workspaceId, UUID userId);
-
   /**
    * 사용자가 아직 워크스페이스 멤버가 아닌 경우에만 멤버십을 추가하고, 실제로 추가된 행 수를 반환합니다.
    *
