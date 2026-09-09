@@ -35,6 +35,14 @@ FE 기준선: `momens-fe@c230e82670856b5dda11367947680128b86c49b4`
 **확정한 전환 단위는 인증 → Product API 2단계다.** 두 단계는 서로 다른 스위치를 뒤집고 서로
 다른 게이트를 가진다.
 
+이 순서는 ADR-0017에서 기각한 "웹 로그인을 먼저 신규 서버로 전환한다"는 대안과 판단 시점과
+대상이 다르다. ADR-0017은 첫 workspace read 슬라이스를 인증 전환과 묶지 않고 가장 작은 read부터
+독립적으로 전환하기 위한 결정이었다. 이 runbook은 웹 실사용 Product API 33개가 구현된 뒤 최종 FE
+컷오버 단위를 정한다. 그사이 ADR-0018의 역방향 호환 bridge, 내부 사용자 전원 재로그인 허용,
+Cloudflare FE deployment rollback 절차가 확정되어 당시의 "첫 슬라이스가 인증과 묶이고 로그인을
+되돌리기 어렵다"는 기각 근거가 더는 현재 단계의 전제가 아니다. ADR-0017의 레거시
+`session_token` 수용 결정 자체는 폐기하지 않으며, 1단계 rollback 경로가 열려 있는 동안 유지한다.
+
 | | 1단계 인증 | 2단계 Product API |
 | --- | --- | --- |
 | 뒤집는 스위치 | `VITE_AUTH_LOGIN_URL`, `VITE_AUTH_LOGOUT_URL` | `VITE_API_BASE_URL`, `VITE_LEGACY_API_BASE_URL` |
