@@ -22,6 +22,7 @@ public class WebAuthCookies {
 
   private static final String STATE_COOKIE = "oauth_state";
   private static final String PKCE_VERIFIER_COOKIE = "oauth_pkce_verifier";
+  private static final String LEGACY_SESSION_COOKIE = "session_token";
 
   private static final Duration HANDSHAKE_TTL = Duration.ofMinutes(10);
   private static final String HANDSHAKE_SAME_SITE = "Lax";
@@ -46,6 +47,10 @@ public class WebAuthCookies {
 
   public ResponseCookie clearRefreshToken() {
     return base(cookie().refreshName(), "", REFRESH_PATH, Duration.ZERO).build();
+  }
+
+  public ResponseCookie clearLegacySessionToken() {
+    return base(LEGACY_SESSION_COOKIE, "", ACCESS_PATH, Duration.ZERO).build();
   }
 
   /** 설정된 refresh 쿠키 이름으로 요청에서 refresh token 값을 읽습니다(쿠키명 지식을 한곳에 둡니다). */
