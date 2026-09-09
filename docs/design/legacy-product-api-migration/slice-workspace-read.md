@@ -218,7 +218,7 @@ modules/workspace/src/main/java/works/momens/server/workspace/
   이름은 설정으로 두지 않고 전환기 상수로 둔다. 제거 조건을 주석에 남긴다.
 - `WorkspaceRepository`에 멤버십 조인 목록 조회를 추가한다. 정렬은 쿼리에서 고정한다. 단건 조회는
   `JpaRepository.findById`를 그대로 쓰므로 추가할 메서드가 없다.
-- 권한 판정은 `WorkspaceAccess.isMember`를 재사용한다.
+- 권한 판정은 `WorkspaceMembershipReader.roleOf`를 재사용한다.
 - 목록은 멤버십 조인이 필터라 별도 권한 검사를 하지 않는다.
 - 쓰기가 없어 트랜잭션 경계와 outbox는 이 슬라이스의 범위 밖이다.
 - `:web` `build.gradle`에 `spring-boot-starter-webmvc`(main)와
