@@ -9,7 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.project.task.TaskReader;
+import works.momens.server.project.task.TaskScope;
 import works.momens.server.project.task.TaskSnapshot;
+import works.momens.server.project.taskupdate.CreateTaskUpdateCommand;
 import works.momens.server.project.taskupdate.TaskUpdateDetail;
 import works.momens.server.project.taskupdate.TaskUpdateReader;
 import works.momens.server.project.taskupdate.TaskUpdateWriter;
@@ -40,8 +42,10 @@ class TaskUpdateService {
   @Transactional
   TaskUpdateDetail create(
       UUID taskId, UUID userId, String body, String kind, Map<String, Object> metadata) {
-    requireTaskMember(taskId, userId);
-    return taskUpdateWriter.create(taskId, userId, body, kind, metadata);
+    TaskScope task = requireTaskMember(taskId, userId);
+    return taskUpdateWriter.create(
+        new CreateTaskUpdateCommand(
+            taskId, task.workspaceId(), task.projectId(), userId, body, kind, metadata));
   }
 
   @Transactional
@@ -56,12 +60,12 @@ class TaskUpdateService {
    * <p>{@code list}는 {@code findSnapshot}으로 조회한 소속 프로젝트의 워크스페이스를 기준으로 삼지만, 이 메서드는 {@code
    * findScope}가 태스크 행에서 조회한 워크스페이스를 기준으로 삼습니다. 두 기준을 통일하는 작업은 MOM-0854에서 다룹니다.
    */
-  private void requireTaskMember(UUID taskId, UUID userId) {
-    UUID workspaceId =
+  private TaskScope requireTaskMember(UUID taskId, UUID userId) {
+    TaskScope task =
         taskReader
             .findScope(taskId)
-            .orElseThrow(() -> new BusinessException(TaskErrorCode.TASK_NOT_FOUND))
-            .workspaceId();
-    workspaceAccessChecker.requireRoleAtLeast(workspaceId, userId, WorkspaceRole.MEMBER);
+            .orElseThrow(() -> new BusinessException(TaskErrorCode.TASK_NOT_FOUND));
+    workspaceAccessChecker.requireRoleAtLeast(task.workspaceId(), userId, WorkspaceRole.MEMBER);
+    return task;
   }
 }
