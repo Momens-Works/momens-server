@@ -184,6 +184,12 @@ class WebAuthSessionImplTest {
         .anyMatch(c -> c.startsWith("session_token=") && c.contains("Path=/;"))
         .allMatch(c -> c.contains("Max-Age=0"))
         .hasSize(3);
+    String legacySessionCookie =
+        result.setCookieHeaders().stream()
+            .filter(c -> c.startsWith("session_token="))
+            .findFirst()
+            .orElseThrow();
+    assertThat(legacySessionCookie).doesNotContain("Domain=");
   }
 
   @Test
@@ -236,7 +242,8 @@ class WebAuthSessionImplTest {
                 null,
                 null,
                 null),
-            new AuthProperties.Web.Cookie(false, "Strict", "access_token", "refresh_token", null),
+            new AuthProperties.Web.Cookie(
+                false, "Strict", "access_token", "refresh_token", "momens.works"),
             new AuthProperties.Web.Redirect(SUCCESS_URI, FAILURE_URI)));
   }
 }
