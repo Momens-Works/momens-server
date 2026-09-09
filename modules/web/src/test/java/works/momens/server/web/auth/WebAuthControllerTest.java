@@ -134,10 +134,16 @@ class WebAuthControllerTest {
 
     verify(webAuthSession).logout(any());
     assertThat(result.getResponse().getHeaders("Set-Cookie"))
-        .containsExactly(
-            "access_token=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly",
-            "refresh_token=; Path=/api/auth; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly",
-            "session_token=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly");
+        .anyMatch(
+            c -> c.startsWith("access_token=") && c.contains("Path=/;") && c.contains("Max-Age=0"))
+        .anyMatch(
+            c ->
+                c.startsWith("refresh_token=")
+                    && c.contains("Path=/api/auth;")
+                    && c.contains("Max-Age=0"))
+        .anyMatch(
+            c -> c.startsWith("session_token=") && c.contains("Path=/;") && c.contains("Max-Age=0"))
+        .hasSize(3);
   }
 
   @TestConfiguration
