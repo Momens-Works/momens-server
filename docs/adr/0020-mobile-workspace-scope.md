@@ -388,6 +388,8 @@ Spring Modulith는 모듈의 public API를 패키지와 접근 제어자를 기�
 `workspace` 모듈에는 HTTP 컨트롤러를 추가하지 않는다. `/api/mobile/*` API는 `mobile` 모듈이 소유한다는 기존
 경계를 유지한다.
 
+> `WorkspaceAccess`와 `WorkspaceRoleReader`는 MOM-0885에서 `WorkspaceMembershipReader` 하나로 통합했다. 이 문서는 2026-08-14 시점의 기록이므로 본문은 수정하지 않았다.
+
 ### 초안 결정 8. bootstrap 응답이 보장해야 하는 불변식을 계약으로 명시한다
 
 결정 3에서 앱이 수행하는 워크스페이스 대조는 하나의 bootstrap 응답 안에서 워크스페이스와 프로젝트의 관계가

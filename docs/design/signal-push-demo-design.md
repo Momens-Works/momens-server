@@ -343,7 +343,7 @@ API-Version: 1
 
 1. outbox event의 `aggregate_id`로 Signal을 조회한다.
 2. Signal의 `project_id`로 Project를 조회한다.
-3. 소비 시점의 `workspace_id` 전체 구성원을 `WorkspaceAccess.listMemberships`로 조회한다.
+3. 소비 시점의 `workspace_id`에 속한 모든 구성원의 사용자 식별자를 `WorkspaceMembershipReader.listMemberUserIds`를 통해 조회한다.
 4. 구성원들의 `active=true`, `platform=android` 설치를 모두 조회한다.
 5. 한 사용자의 여러 활성 설치에 모두 발송한다.
 
@@ -469,7 +469,7 @@ presentation이 소유하고 notification의 public API에 위임한다. 앱이 
   필터). 기존 public API는 쓰기(`OutboxAppender`)뿐이다.
 - notification → signal: `SignalReader`로 Signal을 hydrate한다.
 - notification → project: Signal의 project 해석과 프로젝트명을 조회한다.
-- notification → workspace: `WorkspaceAccess.listMemberships`로 수신자를 결정한다.
+- notification → workspace: `WorkspaceMembershipReader.listMemberUserIds`로 수신자를 결정한다.
 
 세 테이블은 레거시 미러가 아니라 이 서버가 소유하는 신규 상태다. prod 스키마 반영 경로는 prod 배포와 함께
 범위 밖이며, 반영 시점에 별도로 확정한다.

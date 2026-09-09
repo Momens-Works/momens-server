@@ -81,7 +81,7 @@
   dev 쓰기 public API(`DevSourceRefWriter`)에도 위임한다.
 - `notification`은 `outbox`의 조회 public API(`OutboxEventReader`)로 `signal.created`를 소비하고,
   `signal`의 `SignalReader`로 Signal을 hydrate하며, `project`의 프로젝트명 조회와 `workspace`의
-  `WorkspaceAccess.listMemberships`로 수신자를 결정한다. `outbox`는 다른 도메인 모듈을 참조하지 않는다.
+  `WorkspaceMembershipReader.listMemberUserIds`로 수신자를 결정한다. `outbox`는 다른 도메인 모듈을 참조하지 않는다.
 - `retrieval`은 `project`·`memory`의 도메인 write 이후 발행(event 또는 public API)을 받는다.
 - `onboarding`은 `workspace`, `project`, `memory`의 public API를 조합해 워크스페이스 생성 작업을 하나의
   트랜잭션으로 묶는다. 해당 조합을 `workspace`에 두면 `project`와 `memory`가 이미 `workspace`를 참조하고 있어
@@ -236,7 +236,7 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
   있게 createdAt을 포함한다(MOM-67). 쓰기 public API는 `TaskWriter` 하나이며, 표면별 생성 정책은
   `CreateTaskCommand`로 전달한다. 생성 시 workspace의 `LabelAllocator`로 MOM 라벨을 발급한다.
   태스크 소속 확인은 `TaskReader.findScope`가 workspaceId와 projectId만 projection한다(MOM-0923).
-- project 목록 조회는 호출하는 쪽이 멤버십 조회(`WorkspaceAccess.listUserMemberships`)로
+- project 목록 조회는 호출하는 쪽이 멤버십 조회(`WorkspaceMembershipReader.listUserMemberships`)로
   확정한 workspace id 목록을 받아 자기 테이블에서 조회한다. 멤버십을 이 모듈이 다시 읽지
   않아서 호출 쪽 멤버십 스냅샷과 목록 기준이 항상 같다. 접근 범위(멤버십)는 여전히 호출 쪽이
   넘기지만, task 생성이 `LabelAllocator`를 쓰면서 project는 workspace public API에 런타임으로
@@ -329,7 +329,7 @@ dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패
 기록)는 dispatch가 소유하고, Firebase SDK 타입은 `fcm` 밖으로 새지 않는다.
 - 의존 방향: `mobile`이 기기 등록·해제 HTTP 표면을 이 모듈의 public API에 위임하고, 이 모듈은
   `outbox`(`OutboxEventReader`), `signal`(`SignalReader` hydrate), `project`(프로젝트명 조회),
-  `workspace`(`WorkspaceAccess.listMemberships` 수신자 결정)의 public API를 사용한다.
+  `workspace`(`WorkspaceMembershipReader.listMemberUserIds` 수신자 결정)의 public API를 사용한다.
 
 ### mobile
 
