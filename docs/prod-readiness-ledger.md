@@ -52,6 +52,7 @@ CI가 실제 Secret·ConfigMap의 존재나 값을 조회해 증명하지는 않
 | 의무 | 현재 상태 | 확인 근거·다음 행동 |
 | --- | --- | --- |
 | MOM-0836 `users.email` UNIQUE 제거 | `required` | 서버 코드를 먼저 배포한 뒤 제약을 제거합니다. 선행 배포는 `MOM-0914`에서 `ON CONFLICT (email)`을 제거하는 작업입니다. 이후 웹 로그인 요청이 신규 서버로 전환되어 `momens-server`가 `users`에 쓰는 유일한 서버가 되고, `MOM-0908`에서 마이그레이션 소유 레포지토리가 정해지면 `MOM-0836`에서 제약을 제거합니다. 선행 배포와 제약 제거가 모두 완료되면 해당 행을 갱신합니다 |
+| 두 서버 JWT 서명 키 동일성 (`MOM-0873`) | `확인 완료` | 별도 dev 배포 환경은 운영하지 않아 비교 대상이 없습니다. prod는 2026-09-10에 `k8s` 저장소 `production` Environment의 `MOMENS_API_JWT_SECRET`과 `MOMENS_SERVER_AUTH_JWT_SECRET`을 동일한 새 값으로 갱신하고 두 서버를 재기동했습니다. 재기동 뒤 레거시 로그인으로 발급된 `session_token`만 사용해 신규 `GET /api/workspaces`가 200을 반환하는 것을 확인했습니다. 실제 값과 해시는 기록하지 않습니다 |
 | Google OAuth redirect URI 등록 | `확인 필요` | Kubernetes 값은 `https://api.momens.works/api/auth/google/callback`입니다. Google Cloud 콘솔 등록 상태는 저장소에서 확인할 수 없습니다 |
 | 모바일·웹 client ID와 audiences 일치 | `확인 필요` | 실제 secret 값과 Google OAuth client ID 목록을 배포 전에 대조합니다 |
 | FCM 프로젝트·ADC 자격증명 | `비활성` | push 기본값은 꺼져 있습니다. 활성화할 때 `MOMENS_NOTIFICATION_PUSH_FIREBASE_PROJECT_ID`와 ADC를 확인합니다 |
