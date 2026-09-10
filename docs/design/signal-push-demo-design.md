@@ -67,7 +67,7 @@ Signal 생성 API에 `X-Dev-Token-Secret`을 직접 보내지 않는다. 기존 
 먼저 발급받는다.
 
 ```http
-POST /api/auth/dev/token
+POST /api/dev/auth/token
 X-Dev-Token-Secret: {dev-secret}
 API-Version: 1
 ```
