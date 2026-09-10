@@ -58,7 +58,7 @@
   - `/api/auth`와 `/api/me`는 이 원칙보다 먼저 만들어져 capability 모듈에 있었고 `MOM-0852`에서
     표면별로 갈랐다. 웹 로그인·세션 갱신·로그아웃은 `web`, 모바일 토큰 교환·재발급·로그아웃은
     `mobile`, `/api/me` 조회·수정은 `web`이 소유하며 `auth`·`user`는 도메인과 public API만 소유한다.
-  - 예외는 dev 도구 표면 하나다. `POST /api/auth/dev/token`은 클라이언트가 호출하는 표면이 아니라
+  - 예외는 dev 도구 표면 하나다. `POST /api/dev/auth/token`은 클라이언트가 호출하는 표면이 아니라
     테스트 도구이고 운영과 같은 발급 경로를 재사용해야 해서 `auth`(`auth.dev`)가 계속 소유한다.
     `signal`의 dev Signal 생성(`signal.dev`)과 같은 취급이다.
 - `web`·`mobile` → `auth` public API. 표면은 인증 결과만 응답으로 옮기고, 토큰 정책과 웹 전송 정책
@@ -146,7 +146,7 @@
 - JWT 발급/검증
 - SecurityFilterChain, 인증 필터, 공개/보호 엔드포인트 분리
 - logout
-- dev 전용 토큰 발급 엔드포인트(`POST /api/auth/dev/token`, MOM-90). dev 계열 프로필(`@DevOnly`)에서만 등록되고 공유 시크릿 헤더와 테스트 사용자 allowlist로 제한한다. prod에는 존재하지 않는다. 클라이언트 표면이 아니라 테스트 도구라 표면 모듈로 옮기지 않고 `auth.dev`에 둔다(MOM-0852).
+- dev 전용 토큰 발급 엔드포인트(`POST /api/dev/auth/token`, MOM-90). dev 계열 프로필(`@DevOnly`)에서만 등록되고 공유 시크릿 헤더와 테스트 사용자 allowlist로 제한한다. prod에는 존재하지 않는다. 클라이언트 표면이 아니라 테스트 도구라 표면 모듈로 옮기지 않고 `auth.dev`에 둔다(MOM-0852).
 - 웹·모바일 인증 public API(`WebAuthSession`, `MobileAuthService`). 클라이언트가 호출하는 HTTP 표면은 `web`·`mobile`이 소유하고(MOM-0852), 이 모듈은 인증 로직과 토큰·쿠키·리다이렉트 정책을 소유한다.
 
 프로필 정책은 `user`가 소유하고, `auth`는 세션·보안만 책임진다. 인증 세션·전송
