@@ -189,8 +189,8 @@ repository를 직접 참조하지 않는다.
   `membership`으로, `invitation`에서 `core`, `membership`, `email`로 향하는 경우가 유일합니다.
 - 사용자가 속한 워크스페이스를 조회할 때는 `membership`의 공개 계약으로 워크스페이스 ID를 확정한 뒤,
   `core`가 자신의 테이블을 조회합니다. `workspace_members`를 직접 조인하지 않습니다(MOM-0894).
-- 하위 도메인마다 aggregate가 하나씩이고(`WorkspaceMember`, `WorkspaceLabelSequence`,
-  `Workspace`) 트랜잭션은 자기 aggregate 안에 닫힌다. 예외는 라벨 발급 한 곳으로, 발급이
+- 각 하위 도메인은 하나의 aggregate(`Workspace`, `WorkspaceMember`, `WorkspaceInvitation`,
+  `WorkspaceLabelSequence`)를 가지며, 트랜잭션 경계는 해당 aggregate 내부로 한정합니다. 예외는 라벨 발급 한 곳으로, 발급이
   단일 문장(UPSERT)으로 호출자 트랜잭션에 참여한다(MANDATORY). 라벨이 INSERT되는 행에 동기
   반환값으로 들어가고 실패 시 번호가 함께 되돌아가야 해서이고, 레거시 `BEFORE INSERT` 트리거와
   같은 시맨틱을 유지하는 의도된 예외다.
