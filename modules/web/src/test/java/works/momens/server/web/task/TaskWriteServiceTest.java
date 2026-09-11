@@ -22,9 +22,9 @@ import works.momens.server.project.task.TaskReader;
 import works.momens.server.project.task.TaskScope;
 import works.momens.server.project.task.TaskWriter;
 import works.momens.server.web.WorkspaceAccessChecker;
-import works.momens.server.workspace.WorkspaceMembershipReader;
-import works.momens.server.workspace.WorkspaceReader;
-import works.momens.server.workspace.WorkspaceRole;
+import works.momens.server.workspace.core.WorkspaceReader;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceRole;
 
 @ExtendWith(MockitoExtension.class)
 class TaskWriteServiceTest {

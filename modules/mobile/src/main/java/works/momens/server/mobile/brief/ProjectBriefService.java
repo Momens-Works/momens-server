@@ -24,7 +24,7 @@ import works.momens.server.signal.SignalDigestReader;
 import works.momens.server.signal.SignalListService;
 import works.momens.server.signal.SignalSummary;
 import works.momens.server.signal.SignalSummaryPage;
-import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /**
  * 모바일 브리프 표면의 조합 서비스. project(스냅샷, 태스크), signal(당일 시그널 요약), workspace(멤버십) public API를 조합하고 도메인 정책을

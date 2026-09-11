@@ -9,15 +9,15 @@ import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.onboarding.WorkspaceOnboarding;
 import works.momens.server.web.WorkspaceAccessChecker;
-import works.momens.server.workspace.CreateWorkspaceCommand;
-import works.momens.server.workspace.UpdateWorkspaceCommand;
-import works.momens.server.workspace.WorkspaceDetail;
-import works.momens.server.workspace.WorkspaceEditor;
 import works.momens.server.workspace.WorkspaceErrorCode;
-import works.momens.server.workspace.WorkspaceReader;
-import works.momens.server.workspace.WorkspaceRole;
-import works.momens.server.workspace.WorkspaceSlugAvailability;
-import works.momens.server.workspace.WorkspaceSlugReader;
+import works.momens.server.workspace.core.CreateWorkspaceCommand;
+import works.momens.server.workspace.core.UpdateWorkspaceCommand;
+import works.momens.server.workspace.core.WorkspaceDetail;
+import works.momens.server.workspace.core.WorkspaceEditor;
+import works.momens.server.workspace.core.WorkspaceReader;
+import works.momens.server.workspace.core.WorkspaceSlugAvailability;
+import works.momens.server.workspace.core.WorkspaceSlugReader;
+import works.momens.server.workspace.membership.WorkspaceRole;
 
 /**
  * 워크스페이스 조합 서비스입니다. 도메인 public API를 조합하며 정책은 소유하지 않습니다.

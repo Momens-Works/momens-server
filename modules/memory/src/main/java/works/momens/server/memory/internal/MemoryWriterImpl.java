@@ -18,8 +18,8 @@ import works.momens.server.memory.ConfirmedMemoryDetail;
 import works.momens.server.memory.MemoryErrorCode;
 import works.momens.server.memory.MemoryWriter;
 import works.momens.server.outbox.OutboxAppender;
-import works.momens.server.workspace.LabelAllocator;
-import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.label.LabelAllocator;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /**
  * 레거시 {@code memory/service.go}의 후보 리뷰·메모리 해결 write 경로를 옮긴 구현입니다.

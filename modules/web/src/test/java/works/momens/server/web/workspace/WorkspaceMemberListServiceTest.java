@@ -20,9 +20,9 @@ import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 import works.momens.server.web.WorkspaceAccessChecker;
-import works.momens.server.workspace.WorkspaceMembershipDetail;
-import works.momens.server.workspace.WorkspaceMembershipReader;
-import works.momens.server.workspace.WorkspaceReader;
+import works.momens.server.workspace.core.WorkspaceReader;
+import works.momens.server.workspace.membership.WorkspaceMembershipDetail;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /**
  * 멤버 목록 조회 서비스의 동작을 검증합니다.

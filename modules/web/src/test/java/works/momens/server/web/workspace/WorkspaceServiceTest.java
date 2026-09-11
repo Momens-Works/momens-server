@@ -19,14 +19,14 @@ import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.onboarding.WorkspaceOnboarding;
 import works.momens.server.web.WorkspaceAccessChecker;
-import works.momens.server.workspace.UpdateWorkspaceCommand;
-import works.momens.server.workspace.WorkspaceDetail;
-import works.momens.server.workspace.WorkspaceEditor;
 import works.momens.server.workspace.WorkspaceErrorCode;
-import works.momens.server.workspace.WorkspaceMembershipReader;
-import works.momens.server.workspace.WorkspaceReader;
-import works.momens.server.workspace.WorkspaceRole;
-import works.momens.server.workspace.WorkspaceSlugReader;
+import works.momens.server.workspace.core.UpdateWorkspaceCommand;
+import works.momens.server.workspace.core.WorkspaceDetail;
+import works.momens.server.workspace.core.WorkspaceEditor;
+import works.momens.server.workspace.core.WorkspaceReader;
+import works.momens.server.workspace.core.WorkspaceSlugReader;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceRole;
 
 /**
  * 워크스페이스 조회 조합 규칙 검증. workspace public API는 각자 통합 테스트에서 검증하므로 여기서는 모두 mock으로 두고 에러 선택 규칙(404 vs 403

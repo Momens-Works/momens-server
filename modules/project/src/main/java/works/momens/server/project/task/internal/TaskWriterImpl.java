@@ -23,8 +23,8 @@ import works.momens.server.project.task.TaskErrorCode;
 import works.momens.server.project.task.TaskSnapshot;
 import works.momens.server.project.task.TaskWriter;
 import works.momens.server.project.task.UpdateTaskCommand;
-import works.momens.server.workspace.LabelAllocator;
-import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.label.LabelAllocator;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 @Service
 @RequiredArgsConstructor

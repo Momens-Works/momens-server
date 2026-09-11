@@ -30,9 +30,9 @@ import works.momens.server.project.taskupdate.TaskUpdateDetail;
 import works.momens.server.project.taskupdate.TaskUpdateReader;
 import works.momens.server.project.taskupdate.TaskUpdateWriter;
 import works.momens.server.web.WorkspaceAccessChecker;
-import works.momens.server.workspace.WorkspaceMembershipReader;
-import works.momens.server.workspace.WorkspaceReader;
-import works.momens.server.workspace.WorkspaceRole;
+import works.momens.server.workspace.core.WorkspaceReader;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceRole;
 
 @ExtendWith(MockitoExtension.class)
 class TaskUpdateServiceTest {

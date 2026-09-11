@@ -11,8 +11,8 @@ import works.momens.server.mobile.bootstrap.BootstrapContext.AccessibleProject;
 import works.momens.server.project.core.ProjectReader;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
-import works.momens.server.workspace.UserWorkspaceMembership;
-import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.UserWorkspaceMembership;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /**
  * 모바일 진입 컨텍스트 조합 서비스. 도메인 모듈 public API 3개(user, project, workspace)만 조합하고 도메인 정책을 소유하지 않습니다.

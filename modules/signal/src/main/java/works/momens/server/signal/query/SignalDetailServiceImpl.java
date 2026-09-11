@@ -15,7 +15,7 @@ import works.momens.server.signal.SignalDetailService;
 import works.momens.server.signal.SignalErrorCode;
 import works.momens.server.source.SourceRefReader;
 import works.momens.server.source.SourceRefView;
-import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /**
  * Signal 상세 조회 서비스.
