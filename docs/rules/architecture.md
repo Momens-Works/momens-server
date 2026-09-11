@@ -86,7 +86,7 @@ Gradle 논리 경로는 `:user`, `:auth`처럼 평면으로 유지합니다.
   module은 다른 상위 모듈이 직접 참조할 수 없으므로 외부 공개 API 분리 수단으로 사용하지 않습니다.
 - `NamedInterface`로 나눈 하위 도메인은 Modulith가 여전히 한 모듈로 보므로 하위 도메인 사이의 의존
   방향과 순환은 검증되지 않습니다. 이 공백은 ArchUnit slice 규칙으로 메웁니다
-  (`ProjectSubDomainBoundaryTests`). 하위 도메인 경계를 새로 만들면 같은 형태의 방향 테스트를 함께
+  (`ProjectSubDomainBoundaryTests`, `WorkspaceSubDomainBoundaryTests`). 하위 도메인 경계를 새로 만들면 같은 형태의 방향 테스트를 함께
   둡니다.
 - 모듈 간 event 협력에는 persisted event publication registry를 사용합니다(fire-and-forget
   아님). registry 인프라(events-jpa 의존성, `event_publication` Flyway 마이그레이션,

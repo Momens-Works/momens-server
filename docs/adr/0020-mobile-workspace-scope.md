@@ -363,6 +363,8 @@ v1을 불필요하게 계속 유지해야 한다.
 
 모듈 root에 인터페이스를 두고 구현을 `internal`에 배치하는 방식이 이 경계를 유지하는 구조이다.
 
+> `workspace` 모듈의 공개 계약은 MOM-0894에서 하위 도메인별 named interface로 이동했습니다. `WorkspaceReader`는 `core` 패키지에 있고, 구현은 `core/internal` 패키지에 있습니다. 이 문서는 2026-08-14 시점의 기록이므로 본문은 수정하지 않았습니다.
+
 공개 계약은 다음과 같이 정의한다.
 
 - `WorkspaceReader.listByIds(Collection<UUID>)`
