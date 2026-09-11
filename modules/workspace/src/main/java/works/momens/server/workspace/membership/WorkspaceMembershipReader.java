@@ -9,8 +9,8 @@ import java.util.UUID;
  *
  * <p>다른 모듈이 {@code workspace} 내부 레포지토리를 직접 참조하지 않고 멤버십을 조회할 수 있도록 합니다({@code
  * docs/rules/code-conventions.md}의 「보호 API」 절 참고). 이 API는 멤버십 조회만 담당하며, 권한이 부족할 때 반환할 오류는 호출하는 쪽에서
- * 결정합니다. project나 task가 어느 workspace에 속하는지 판단하는 것은 이 API의 책임이 아닙니다. 멤버십 레포지토리는 {@code access} 하위
- * 도메인에 있습니다.
+ * 결정합니다. project나 task가 어느 workspace에 속하는지 판단하는 것은 이 API의 책임이 아닙니다. 멤버십 레포지토리는 {@code
+ * membership.internal} 패키지에 있습니다.
  *
  * <p>{@code WorkspaceAccess}와 {@code WorkspaceRoleReader}는 MOM-0885에서 이 인터페이스로 통합되었습니다. 멤버십 조회 메서드는
  * 모두 같은 테이블을 조회하고 함께 변경되므로 하나의 인터페이스에서 관리합니다.
