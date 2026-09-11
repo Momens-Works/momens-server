@@ -178,10 +178,17 @@ project나 task가 속한 workspace를 찾는 책임은 해당 리소스를 소�
 권한 확인·라벨 발급이 필요할 때 `workspace`의 public API를 사용하고, `workspace` 내부
 repository를 직접 참조하지 않는다.
 
-내부는 도메인 하위 경계로 논리 분리했다(MOM-70).
+내부는 하위 도메인별 named interface로 논리적으로 분리했습니다(MOM-70, MOM-0894).
 
-- 멤버십(`access`)과 라벨 발급(`label`)은 Spring Modulith nested 논리 모듈이고, 워크스페이스
-  코어는 `internal`에 둔다. 공개 계약은 모듈 root의 public API 그대로다.
+- 공개 계약은 `core`(워크스페이스와 slug), `membership`(멤버십과 권한), `invitation`(초대),
+  `label`(라벨 발급) 4개 패키지에 두고, 구현은 각 하위 도메인의 `internal` 패키지에 둡니다. 모듈
+  루트에는 세 하위 도메인이 공통으로 사용하는 상수인 `WorkspaceErrorCode`만 남깁니다. 초대 이메일
+  발송을 담당하는 `email`은 외부에 공개할 계약이 없으므로 nested 모듈로 유지합니다.
+- Modulith는 named interface로 분리한 하위 도메인 간 의존 방향을 검증하지 못하므로
+  `WorkspaceSubDomainBoundaryTests`에서 이를 고정합니다. 허용되는 의존 방향은 `core`에서
+  `membership`으로, `invitation`에서 `core`, `membership`, `email`로 향하는 경우가 유일합니다.
+- 사용자가 속한 워크스페이스를 조회할 때는 `membership`의 공개 계약으로 워크스페이스 ID를 확정한 뒤,
+  `core`가 자신의 테이블을 조회합니다. `workspace_members`를 직접 조인하지 않습니다(MOM-0894).
 - 하위 도메인마다 aggregate가 하나씩이고(`WorkspaceMember`, `WorkspaceLabelSequence`,
   `Workspace`) 트랜잭션은 자기 aggregate 안에 닫힌다. 예외는 라벨 발급 한 곳으로, 발급이
   단일 문장(UPSERT)으로 호출자 트랜잭션에 참여한다(MANDATORY). 라벨이 INSERT되는 행에 동기
@@ -380,8 +387,8 @@ dispatch`(`PushDispatcher`: 수신 설치별 발송 기록 enqueue와 발송 패
   모듈에 두고 해당 도메인의 public API에 위임한다.
 
 내부는 화면(entry point) 단위로 논리 분리한다(MOM-0799). `bootstrap`·`roster`·`board`·`brief`·
-`signal`·`pushdevice`는 각각 Spring Modulith nested 논리 모듈이고, `workspace`/`signal`의 nested
-분리(MOM-70·MOM-65)나 `project`의 하위 도메인 분리(MOM-71·MOM-0887)와 달리 aggregate가 아니라 화면 단위
+`signal`·`pushdevice`는 각각 Spring Modulith nested 논리 모듈이고, `workspace`의 하위 도메인
+분리(MOM-70, MOM-0894)나 `signal`의 nested 분리(MOM-65)나 `project`의 하위 도메인 분리(MOM-71·MOM-0887)와 달리 aggregate가 아니라 화면 단위
 조합 슬라이스다. 다른 모듈에 공개할
 계약이 없으므로 각 nested 패키지는 Controller·Docs·조합 서비스·DTO를 한곳에 모은다. 조합 서비스처럼
 같은 nested 패키지 안에서만 쓰는 타입은 package-private으로 닫아 두고, `dto` 서브패키지가 참조하는
