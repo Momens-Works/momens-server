@@ -31,7 +31,7 @@ import works.momens.server.notification.dispatch.PushDispatcher;
 import works.momens.server.outbox.OutboxEventReader;
 import works.momens.server.outbox.OutboxEventView;
 import works.momens.server.signal.SignalReader;
-import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /**
  * signal.created 소비의 수신자 결정(발송 위임), watermark 전진·시드를 실제 PostgreSQL(offset 원장)로 검증합니다.

@@ -36,9 +36,9 @@ import works.momens.server.memory.MemoryErrorCode;
 import works.momens.server.memory.MemorySeedSql;
 import works.momens.server.memory.MemoryWriter;
 import works.momens.server.outbox.OutboxAppender;
-import works.momens.server.workspace.LabelAllocator;
-import works.momens.server.workspace.WorkspaceMembershipReader;
-import works.momens.server.workspace.WorkspaceRole;
+import works.momens.server.workspace.label.LabelAllocator;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceRole;
 
 /**
  * 후보 리뷰·메모리 해결 write 계약을 레거시 {@code memory/service.go} 기준으로 검증합니다.

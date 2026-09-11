@@ -17,8 +17,8 @@ import works.momens.server.project.core.ProjectReader;
 import works.momens.server.project.core.ProjectSnapshot;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
-import works.momens.server.workspace.UserWorkspaceMembership;
-import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.UserWorkspaceMembership;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /**
  * bootstrap 조합 규칙 검증. 도메인 모듈 public API는 각자 통합 테스트에서 검증하므로 여기서는 모두 mock으로 두고 조합 규칙(기본 project 선정,

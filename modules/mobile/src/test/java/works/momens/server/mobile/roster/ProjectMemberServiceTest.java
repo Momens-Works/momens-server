@@ -19,7 +19,7 @@ import works.momens.server.project.core.ProjectErrorCode;
 import works.momens.server.project.core.ProjectReader;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
-import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /**
  * 프로젝트 멤버 조회 조합 규칙 검증. 도메인 모듈 public API는 각자 통합 테스트에서 검증하므로 여기서는 모두 mock으로 두고 조합 규칙(권한 검사 순서, 검색,

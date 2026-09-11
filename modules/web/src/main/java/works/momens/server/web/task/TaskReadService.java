@@ -19,7 +19,7 @@ import works.momens.server.project.task.TaskSnapshot;
 import works.momens.server.source.LegacySourceRefDetail;
 import works.momens.server.source.SourceRefReader;
 import works.momens.server.web.WorkspaceAccessChecker;
-import works.momens.server.workspace.WorkspaceRole;
+import works.momens.server.workspace.membership.WorkspaceRole;
 
 @Service
 @RequiredArgsConstructor

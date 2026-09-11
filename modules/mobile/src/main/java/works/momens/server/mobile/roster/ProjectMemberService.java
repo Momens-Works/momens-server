@@ -14,7 +14,7 @@ import works.momens.server.project.core.ProjectErrorCode;
 import works.momens.server.project.core.ProjectReader;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
-import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /**
  * 프로젝트 멤버 조회 조합 서비스. 도메인 모듈 public API 3개(project, workspace, user)만 조합하고 도메인 정책을 소유하지 않습니다.

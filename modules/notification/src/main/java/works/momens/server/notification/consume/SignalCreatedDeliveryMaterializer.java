@@ -12,7 +12,7 @@ import works.momens.server.notification.dispatch.PushDispatcher;
 import works.momens.server.outbox.OutboxEventReader;
 import works.momens.server.outbox.OutboxEventView;
 import works.momens.server.signal.SignalReader;
-import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /**
  * {@code signal.created} outbox event를 기기별 pending delivery로 materialize하는 consumer

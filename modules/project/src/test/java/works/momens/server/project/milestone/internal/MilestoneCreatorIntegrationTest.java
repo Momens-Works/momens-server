@@ -19,7 +19,7 @@ import works.momens.server.project.core.ProjectOwnerReader;
 import works.momens.server.project.milestone.CreateMilestoneCommand;
 import works.momens.server.project.milestone.MilestoneCreator;
 import works.momens.server.project.milestone.MilestoneDetail;
-import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /**
  * 마일스톤 생성 public API의 동작을 검증합니다.

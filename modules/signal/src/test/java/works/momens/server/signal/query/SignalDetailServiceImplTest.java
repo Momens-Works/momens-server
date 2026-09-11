@@ -25,8 +25,8 @@ import works.momens.server.signal.SignalDetailService;
 import works.momens.server.signal.SignalErrorCode;
 import works.momens.server.source.SourceRefReader;
 import works.momens.server.source.SourceRefView;
-import works.momens.server.workspace.WorkspaceMembershipReader;
-import works.momens.server.workspace.WorkspaceRole;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceRole;
 
 /**
  * Signal 상세 조립 검증. 접근 검사와 source hydrate(각각 mock), 근거의 의미 값(대상·변화·영향)과 정렬·원본 누락 제외, 처리·삭제된 Signal의

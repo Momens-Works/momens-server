@@ -20,7 +20,7 @@ import works.momens.server.signal.SignalActionResult;
 import works.momens.server.signal.SignalActionService;
 import works.momens.server.signal.SignalErrorCode;
 import works.momens.server.signal.SignalReader;
-import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /**
  * Signal action 멱등·충돌 정책 facade.

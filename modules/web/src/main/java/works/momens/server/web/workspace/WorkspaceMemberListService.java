@@ -12,9 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
 import works.momens.server.web.WorkspaceAccessChecker;
-import works.momens.server.workspace.WorkspaceMembershipDetail;
-import works.momens.server.workspace.WorkspaceMembershipReader;
-import works.momens.server.workspace.WorkspaceRole;
+import works.momens.server.workspace.membership.WorkspaceMembershipDetail;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceRole;
 
 /**
  * 워크스페이스 멤버 목록을 구성하는 조회 서비스입니다.

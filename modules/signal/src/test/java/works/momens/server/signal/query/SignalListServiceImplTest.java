@@ -26,8 +26,8 @@ import works.momens.server.project.core.ProjectReader;
 import works.momens.server.signal.SignalListService;
 import works.momens.server.signal.SignalSummary;
 import works.momens.server.signal.SignalSummaryPage;
-import works.momens.server.workspace.WorkspaceMembershipReader;
-import works.momens.server.workspace.WorkspaceRole;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceRole;
 
 /**
  * Signal 목록 서비스 검증.

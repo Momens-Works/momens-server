@@ -21,8 +21,8 @@ import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.core.ProjectErrorCode;
 import works.momens.server.project.core.ProjectReader;
 import works.momens.server.signal.SignalDigestReader;
-import works.momens.server.workspace.WorkspaceMembershipReader;
-import works.momens.server.workspace.WorkspaceRole;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
+import works.momens.server.workspace.membership.WorkspaceRole;
 
 /**
  * 시그널 요약 문단 조회 서비스 검증.

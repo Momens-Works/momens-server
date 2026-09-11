@@ -24,8 +24,8 @@ import works.momens.server.project.ProjectSeedSql;
 import works.momens.server.project.core.CreateProjectCommand;
 import works.momens.server.project.core.ProjectCreator;
 import works.momens.server.project.core.ProjectDetail;
-import works.momens.server.workspace.LabelAllocator;
-import works.momens.server.workspace.WorkspaceMembershipReader;
+import works.momens.server.workspace.label.LabelAllocator;
+import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /**
  * 프로젝트 생성 public API의 동작을 검증합니다.
