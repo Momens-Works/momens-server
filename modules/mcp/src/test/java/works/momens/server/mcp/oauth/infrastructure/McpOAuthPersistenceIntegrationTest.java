@@ -16,6 +16,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringBootConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
@@ -353,7 +355,7 @@ class McpOAuthPersistenceIntegrationTest extends AbstractPostgresIntegrationTest
     }
   }
 
-  @org.springframework.boot.SpringBootConfiguration
-  @org.springframework.boot.autoconfigure.EnableAutoConfiguration
+  @SpringBootConfiguration
+  @EnableAutoConfiguration
   static class TestApplication {}
 }
