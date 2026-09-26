@@ -47,7 +47,7 @@ class TaskWriterImpl implements TaskWriter {
     Task task = Task.create(command, label);
     taskRepository.save(task);
     appendCreatedEvent(task);
-    return TaskSnapshotMapper.toTaskWorkspaceSnapshot(task);
+    return TaskSnapshotMapper.toSnapshot(task);
   }
 
   @Override
@@ -96,7 +96,7 @@ class TaskWriterImpl implements TaskWriter {
         command.assigneeSet(),
         command.dueDate(),
         command.dueDateSet());
-    return TaskSnapshotMapper.toTaskWorkspaceSnapshot(task);
+    return TaskSnapshotMapper.toSnapshot(task);
   }
 
   @Override

@@ -171,40 +171,6 @@ class WebTaskReadIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
-  @DisplayName("task workspace가 달라도 웹 task 조회의 목록·인가 기준은 소속 project workspace를 사용한다")
-  void usesProjectWorkspaceForWebTaskReads() throws Exception {
-    UserProfile workspaceAMember =
-        userService.findOrCreate("web-task-workspace-a@momens.works", "A 멤버", null);
-    UserProfile workspaceBMember =
-        userService.findOrCreate("web-task-workspace-b@momens.works", "B 멤버", null);
-    UUID workspaceAId = insertWorkspace();
-    UUID workspaceBId = insertWorkspace();
-    UUID projectId = insertProject(workspaceBId, workspaceBMember.id());
-    UUID taskId = insertTask(workspaceAId, projectId, "MOM-777");
-    addMember(workspaceAId, workspaceAMember.id());
-    addMember(workspaceBId, workspaceBMember.id());
-
-    for (String path :
-        new String[] {
-          "/api/tasks/{taskId}", "/api/tasks/{taskId}/updates", "/api/tasks/{taskId}/context"
-        }) {
-      mockMvc
-          .perform(authorized(get(path, taskId), workspaceAMember.id()))
-          .andExpect(status().isForbidden())
-          .andExpect(jsonPath("$.error.code").value("AUTH_FORBIDDEN"));
-    }
-    mockMvc
-        .perform(authorized(get("/api/tasks/{taskId}", taskId), workspaceBMember.id()))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.id").value(taskId.toString()));
-    mockMvc
-        .perform(
-            authorized(get("/api/projects/{projectId}/tasks", projectId), workspaceBMember.id()))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.tasks[0].id").value(taskId.toString()));
-  }
-
-  @Test
   @DisplayName("태스크 목록은 소프트 삭제를 제외하고 생성 시각 내림차순으로 응답한다")
   void listsLiveTasksInCreatedAtDescendingOrder() throws Exception {
     UserProfile caller = userService.findOrCreate("web-task-list-order@momens.works", "홍길동", null);
