@@ -59,7 +59,7 @@ class SignalActionExecutor {
     // 응답의 draft_status는 이 반환값이고 원장을 다시 읽지 않는다(7.3절). 재조회하면 아래 title(방금 쓴
     // fallback)과 짝이 맞지 않는 ready가 나올 수 있다.
     DraftStatus draftStatus =
-        taskDraftGenerator.enroll(prepared, created.id(), signal.workspaceId());
+        taskDraftGenerator.enroll(prepared, created.id(), created.workspaceId());
     signalActionRepository.save(
         SignalAction.builder()
             .workspaceId(signal.workspaceId())

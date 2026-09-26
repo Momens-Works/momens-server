@@ -58,8 +58,9 @@ class TaskUpdateService {
   /**
    * 태스크가 속한 워크스페이스를 조회한 뒤 요청자가 해당 워크스페이스의 멤버인지 확인합니다.
    *
-   * <p>{@code list}는 {@code findSnapshot}으로 조회한 소속 프로젝트의 워크스페이스를 기준으로 삼지만, 이 메서드는 {@code
-   * findScope}가 태스크 행에서 조회한 워크스페이스를 기준으로 삼습니다. 두 기준을 통일하는 작업은 MOM-0854에서 다룹니다.
+   * <p>{@code list}는 소속 프로젝트가 soft delete된 태스크를 제외하는 {@code findSnapshot}을 사용하지만, 이 메서드는 프로젝트의 삭제
+   * 여부를 확인하지 않는 {@code findScope}를 사용합니다. 두 경로 모두 태스크 행의 workspace를 기준으로 합니다. 프로젝트의 삭제 여부를 확인하는 기준은
+   * MOM-1000에서 통일합니다.
    */
   private TaskScope requireTaskMember(UUID taskId, UUID userId) {
     TaskScope task =
