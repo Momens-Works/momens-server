@@ -272,6 +272,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
     assertThat(output.getAll())
         .doesNotContain(
             code,
+            digest,
             access,
             nextAccess,
             pair.get("refresh_token").stringValue(),
