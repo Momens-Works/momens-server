@@ -64,7 +64,7 @@ class TaskReaderImpl implements TaskReader {
   public Optional<TaskSnapshot> findSnapshotInWorkspace(UUID workspaceId, UUID taskId) {
     return taskRepository
         .findByWorkspaceIdAndIdAndDeletedAtIsNull(workspaceId, taskId)
-        .map(TaskSnapshotMapper::toTaskWorkspaceSnapshot);
+        .map(TaskSnapshotMapper::toSnapshot);
   }
 
   @Override
@@ -72,7 +72,7 @@ class TaskReaderImpl implements TaskReader {
   public Optional<TaskSnapshot> findSnapshotByLabel(UUID workspaceId, String label) {
     return taskRepository
         .findByWorkspaceIdAndLabelAndDeletedAtIsNull(workspaceId, label)
-        .map(TaskSnapshotMapper::toTaskWorkspaceSnapshot);
+        .map(TaskSnapshotMapper::toSnapshot);
   }
 
   @Override
