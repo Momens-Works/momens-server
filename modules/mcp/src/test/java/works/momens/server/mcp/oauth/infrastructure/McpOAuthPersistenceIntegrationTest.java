@@ -3,6 +3,7 @@ package works.momens.server.mcp.oauth.infrastructure;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -18,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -52,6 +54,48 @@ class McpOAuthPersistenceIntegrationTest extends AbstractPostgresIntegrationTest
   @Autowired private OAuth2AuthorizationService authorizationService;
   @Autowired private OAuth2AuthorizationConsentService consentService;
   @Autowired private JdbcTemplate jdbcTemplate;
+
+  @Test
+  @DisplayName("Flyway는 access token 타임스탬프 제약의 기존 행 검증까지 완료한다")
+  void migrationValidatesExistingAccessTokenTimestamps() {
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT convalidated FROM pg_constraint WHERE conrelid = 'oauth2_authorization'::regclass AND conname = 'chk_mcp_access_token_timestamps'",
+                Boolean.class))
+        .isTrue();
+  }
+
+  @Test
+  @DisplayName("제약 추가는 기존 위반 행 검사를 미루고 별도 검증 migration은 이를 거부한다")
+  void separateValidationRejectsExistingMalformedAccessTokens() throws IOException {
+    jdbcTemplate.execute(
+        "ALTER TABLE oauth2_authorization DROP CONSTRAINT chk_mcp_access_token_timestamps");
+    jdbcTemplate.update(
+        "INSERT INTO oauth2_authorization (id, registered_client_id, principal_name, authorization_grant_type, access_token_value) VALUES (?, ?, ?, ?, ?)",
+        "malformed-authorization",
+        "registered-client",
+        "user-1",
+        "authorization_code",
+        sha256("access-token"));
+
+    jdbcTemplate.execute(
+        new ClassPathResource(
+                "db/migration/V20260927020000__require_mcp_access_token_timestamps.sql")
+            .getContentAsString(StandardCharsets.UTF_8));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT convalidated FROM pg_constraint WHERE conrelid = 'oauth2_authorization'::regclass AND conname = 'chk_mcp_access_token_timestamps'",
+                Boolean.class))
+        .isFalse();
+
+    String validation =
+        new ClassPathResource(
+                "db/migration/V20260927020100__validate_mcp_access_token_timestamps.sql")
+            .getContentAsString(StandardCharsets.UTF_8);
+    assertThatThrownBy(() -> jdbcTemplate.execute(validation))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("chk_mcp_access_token_timestamps");
+  }
 
   @Test
   @DisplayName("access token 발급 전 authorization은 토큰 타임스탬프 없이 저장할 수 있다")
