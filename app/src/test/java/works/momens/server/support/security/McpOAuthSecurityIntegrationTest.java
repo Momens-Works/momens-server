@@ -1,6 +1,7 @@
 package works.momens.server.support.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -157,9 +158,7 @@ class McpOAuthSecurityIntegrationTest extends AbstractPostgresIntegrationTest {
                 .value("1 project(s):\n- PRJ-0991 MCP project [active]"));
     mvc.perform(toolRequest(token, "list_members", Map.of()))
         .andExpect(status().isOk())
-        .andExpect(
-            jsonPath("$.result.content[0].text")
-                .value(org.hamcrest.Matchers.containsString("OAuth user")));
+        .andExpect(jsonPath("$.result.content[0].text").value(containsString("OAuth user")));
     mvc.perform(toolRequest(token, "list_milestones", Map.of()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.result.content[0].text").value("No milestones match."));

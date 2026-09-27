@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.InputStream;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -22,6 +23,7 @@ import org.springframework.core.io.ClassPathResource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import works.momens.server.mcp.grant.McpGrantDetail;
 import works.momens.server.mcp.grant.McpGrantReader;
 import works.momens.server.mcp.grant.McpScope;
@@ -85,13 +87,11 @@ class McpReadToolServiceTest {
           .put("description", tool.description())
           .set("inputSchema", tool.inputSchema());
     }
-    try (java.io.InputStream input =
-        new ClassPathResource("mcp/read-tools-golden.json").getInputStream()) {
+    try (InputStream input = new ClassPathResource("mcp/read-tools-golden.json").getInputStream()) {
       assertThat(actual).isEqualTo(mapper.readTree(input));
     }
     assertThat(service.list(context)).isEqualTo(service.list(context));
-    ((tools.jackson.databind.node.ObjectNode) service.list(context).getFirst().inputSchema())
-        .put("type", "array");
+    ((ObjectNode) service.list(context).getFirst().inputSchema()).put("type", "array");
     assertThat(service.list(context).getFirst().inputSchema().path("type").asText())
         .isEqualTo("object");
     McpAuthenticationContext limited =
@@ -177,6 +177,46 @@ class McpReadToolServiceTest {
         .isEqualTo(
             "MOM-0991 · Read tools\nstatus: todo · priority: medium · project: PRJ-0003 Sprint · milestone: Release · assignee: Alice · due: 2026-10-01\n\nDescription\n\ncomments (1):\n- [2026-09-27 03:04] Comment");
     verify(tasks).findSnapshotByLabel(workspaceId, "MOM-0991");
+  }
+
+  @Test
+  void taskFiltersExcludeNonMatchingProjectsAndAssigneesIndependently() {
+    seed();
+    TaskSnapshot matching = tasks.listSnapshotsByWorkspaceId(workspaceId).getFirst();
+    TaskSnapshot otherProject = taskWithAssignment("MOM-0992", UUID.randomUUID(), userId);
+    TaskSnapshot otherAssignee = taskWithAssignment("MOM-0993", projectId, UUID.randomUUID());
+    TaskSnapshot unassigned = taskWithAssignment("MOM-0994", projectId, null);
+    when(tasks.listSnapshotsByWorkspaceId(workspaceId))
+        .thenReturn(List.of(matching, otherProject, otherAssignee, unassigned));
+
+    assertThat(text(call("list_tasks", "{}")))
+        .contains("4 task(s):", "MOM-0991", "MOM-0992", "MOM-0993", "MOM-0994");
+    assertThat(text(call("list_tasks", "{\"project\":\"PRJ-0003\"}")))
+        .contains("3 task(s):", "MOM-0991", "MOM-0993", "MOM-0994")
+        .doesNotContain("MOM-0992");
+    assertThat(text(call("list_tasks", "{\"assignee\":\"me\"}")))
+        .contains("2 task(s):", "MOM-0991", "MOM-0992")
+        .doesNotContain("MOM-0993", "MOM-0994");
+    assertThat(text(call("list_tasks", "{\"project\":\"PRJ-0003\",\"assignee\":\"me\"}")))
+        .isEqualTo("1 task(s):\n- MOM-0991 · Read tools [todo] — PRJ-0003 Sprint");
+  }
+
+  private TaskSnapshot taskWithAssignment(String label, UUID taskProjectId, UUID assigneeId) {
+    return new TaskSnapshot(
+        UUID.randomUUID(),
+        workspaceId,
+        taskProjectId,
+        null,
+        label,
+        "Other task",
+        null,
+        "todo",
+        "medium",
+        "implementation",
+        assigneeId,
+        null,
+        now,
+        now);
   }
 
   @Test
