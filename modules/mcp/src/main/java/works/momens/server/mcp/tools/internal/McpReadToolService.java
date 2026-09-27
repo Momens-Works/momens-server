@@ -263,7 +263,8 @@ class McpReadToolService implements McpToolCatalog, McpToolExecutor {
         projects.listDetailsByWorkspaceId(context.workspaceId()).stream()
             .filter(candidate -> candidate.id().equals(task.projectId()))
             .findFirst()
-            .orElse(null);
+            .orElseThrow(
+                () -> new McpToolInputException("No task in this workspace: " + reference));
     String milestoneName =
         task.milestoneId() == null
             ? ""

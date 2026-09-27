@@ -178,6 +178,16 @@ class McpOAuthSecurityIntegrationTest extends AbstractPostgresIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.result.isError").doesNotExist());
 
+    jdbc.update("UPDATE projects SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", projectId);
+    for (String reference : List.of(taskId.toString(), "mom-0991")) {
+      mvc.perform(toolRequest(token, "get_task", Map.of("task", reference)))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.result.isError").value(true))
+          .andExpect(
+              jsonPath("$.result.content[0].text")
+                  .value("No task in this workspace: " + reference));
+    }
+
     mvc.perform(mcpRequest(cookie.getValue())).andExpect(status().isUnauthorized());
     mvc.perform(mcpRequest(null).cookie(cookie)).andExpect(status().isUnauthorized());
     mvc.perform(get("/api/me").header("Authorization", "Bearer " + token))
