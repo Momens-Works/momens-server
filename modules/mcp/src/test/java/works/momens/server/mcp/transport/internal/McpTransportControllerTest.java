@@ -1,5 +1,6 @@
 package works.momens.server.mcp.transport.internal;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -17,8 +18,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -328,8 +334,12 @@ class McpTransportControllerTest {
     verify(toolExecutor).call("list_projects", mapper.createObjectNode(), AUTHENTICATION_CONTEXT);
   }
 
-  @Test
-  void hidesUnexpectedToolFailureDetails() throws Exception {
+  @ParameterizedTest
+  @ValueSource(strings = {"list_projects", "unregistered-private-input"})
+  @ExtendWith(OutputCaptureExtension.class)
+  void hidesUnexpectedToolFailureDetails(String toolName, CapturedOutput output) throws Exception {
+    when(toolCatalog.list(AUTHENTICATION_CONTEXT))
+        .thenReturn(List.of(new McpToolDefinition("list_projects", "List projects", schema())));
     when(bearerTokenVerifier.verify("token")).thenReturn(Optional.of(AUTHENTICATION_CONTEXT));
     when(toolExecutor.call(
             org.mockito.ArgumentMatchers.anyString(),
@@ -342,13 +352,18 @@ class McpTransportControllerTest {
                 .header("Authorization", "Bearer token")
                 .header("MCP-Protocol-Version", "2026-07-28")
                 .header("Mcp-Method", "tools/call")
-                .header("Mcp-Name", "list_projects")
+                .header("Mcp-Name", toolName)
                 .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_EVENT_STREAM)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(requestWithName("tools/call", 10, "list_projects")))
+                .content(requestWithName("tools/call", 10, toolName)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.error.code").value(-32603))
         .andExpect(jsonPath("$.error.message").value("Internal error"));
+    assertThat(output.getAll())
+        .contains(
+            "MCP tool execution failed tool="
+                + (toolName.equals("list_projects") ? "list_projects" : "unknown"))
+        .doesNotContain("SQL secret", "unregistered-private-input");
   }
 
   private static String discoverRequest() {

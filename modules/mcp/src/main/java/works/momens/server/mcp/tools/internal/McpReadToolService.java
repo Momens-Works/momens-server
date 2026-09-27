@@ -177,7 +177,7 @@ class McpReadToolService implements McpToolCatalog, McpToolExecutor {
             .toList());
   }
 
-  private List<Member> members(McpAuthenticationContext context) {
+  private List<Member> findMembers(McpAuthenticationContext context) {
     List<WorkspaceMembershipDetail> found =
         memberships.listMembershipDetails(context.workspaceId());
     Map<UUID, UserProfile> profiles =
@@ -193,7 +193,7 @@ class McpReadToolService implements McpToolCatalog, McpToolExecutor {
     return lines(
         "member",
         "No members found.",
-        members(context).stream()
+        findMembers(context).stream()
             .map(
                 member ->
                     member.profile().name()
@@ -207,7 +207,8 @@ class McpReadToolService implements McpToolCatalog, McpToolExecutor {
 
   private String listMilestones(McpAuthenticationContext context, String reference) {
     List<ProjectDetail> found = projects.listDetailsByWorkspaceId(context.workspaceId());
-    UUID projectId = reference.isEmpty() ? null : McpToolReferences.project(found, reference).id();
+    UUID projectId =
+        reference.isEmpty() ? null : McpToolReferences.resolveProject(found, reference).id();
     Map<UUID, ProjectDetail> index = projectIndex(found);
     return lines(
         "milestone",
@@ -223,7 +224,7 @@ class McpReadToolService implements McpToolCatalog, McpToolExecutor {
     List<ProjectDetail> found = projects.listDetailsByWorkspaceId(context.workspaceId());
     String projectRef = argument(arguments, "project");
     UUID projectId =
-        projectRef.isEmpty() ? null : McpToolReferences.project(found, projectRef).id();
+        projectRef.isEmpty() ? null : McpToolReferences.resolveProject(found, projectRef).id();
     String assigneeRef = argument(arguments, "assignee");
     UUID assigneeId = resolveAssignee(context, assigneeRef);
     String status = argument(arguments, "status").toLowerCase(Locale.ROOT);
@@ -244,8 +245,8 @@ class McpReadToolService implements McpToolCatalog, McpToolExecutor {
       case "", "none", "unassign", "unassigned" -> null;
       case "me" -> context.userId();
       default ->
-          McpToolReferences.assignee(
-              members(context).stream().map(Member::profile).toList(), reference);
+          McpToolReferences.resolveAssignee(
+              findMembers(context).stream().map(Member::profile).toList(), reference);
     };
   }
 
@@ -274,7 +275,7 @@ class McpReadToolService implements McpToolCatalog, McpToolExecutor {
     String assigneeName =
         task.assigneeId() == null
             ? ""
-            : members(context).stream()
+            : findMembers(context).stream()
                 .map(Member::profile)
                 .filter(profile -> profile.id().equals(task.assigneeId()))
                 .map(UserProfile::name)

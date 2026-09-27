@@ -46,14 +46,23 @@ class McpTransportMethodHandler {
     }
     JsonNode arguments =
         params.has("arguments") ? params.get("arguments") : objectMapper.createObjectNode();
+    String name = params.get("name").asText();
+    String registeredToolName = "unknown";
     try {
+      registeredToolName =
+          toolCatalog.list(context).stream()
+              .map(McpToolDefinition::name)
+              .filter(name::equals)
+              .findFirst()
+              .orElse("unknown");
       return toolExecutor
-          .call(params.get("name").asText(), arguments, context)
+          .call(name, arguments, context)
           .map(result -> responseFactory.jsonRpcResult(id, result))
           .orElseGet(() -> responseFactory.jsonRpcError(id, -32602, "Unknown tool"));
     } catch (RuntimeException exception) {
       log.error(
-          "MCP tool execution failed grantId={} workspaceId={} exceptionType={}",
+          "MCP tool execution failed tool={} grantId={} workspaceId={} exceptionType={}",
+          registeredToolName,
           context.grantId(),
           context.workspaceId(),
           exception.getClass().getSimpleName());

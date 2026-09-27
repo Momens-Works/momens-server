@@ -19,7 +19,7 @@ final class McpToolReferences {
     }
   }
 
-  static ProjectDetail project(List<ProjectDetail> projects, String reference) {
+  static ProjectDetail resolveProject(List<ProjectDetail> projects, String reference) {
     Optional<UUID> id = uuid(reference);
     if (id.isPresent()) {
       return projects.stream()
@@ -55,7 +55,7 @@ final class McpToolReferences {
             : "This reference matches several projects — use the PRJ-label");
   }
 
-  static UUID assignee(List<UserProfile> members, String reference) {
+  static UUID resolveAssignee(List<UserProfile> members, String reference) {
     Optional<UUID> id = uuid(reference);
     if (id.isPresent()) {
       return members.stream()
