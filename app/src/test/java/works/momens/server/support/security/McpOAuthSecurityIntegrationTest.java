@@ -2,6 +2,8 @@ package works.momens.server.support.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,18 +13,21 @@ import jakarta.servlet.http.Cookie;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
 import tools.jackson.databind.ObjectMapper;
 import works.momens.server.auth.AccessTokenTestFactory;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
+import works.momens.server.project.milestone.MilestoneReader;
 
 @SpringBootTest(properties = "momens.mcp.oauth.consent-uri=https://app.example.com/oauth/authorize")
 @AutoConfigureMockMvc
@@ -31,6 +36,7 @@ class McpOAuthSecurityIntegrationTest extends AbstractPostgresIntegrationTest {
   @Autowired ObjectMapper mapper;
   @Autowired JdbcTemplate jdbc;
   @Autowired AccessTokenTestFactory accessTokens;
+  @MockitoSpyBean MilestoneReader milestones;
 
   @Test
   void consentUsesTheExistingUserCookieAndMcpTokensCannotAuthenticateUserApis() throws Exception {
@@ -150,7 +156,7 @@ class McpOAuthSecurityIntegrationTest extends AbstractPostgresIntegrationTest {
         projectId);
     mvc.perform(mcpRequest(token))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.result.tools.length()").value(5));
+        .andExpect(jsonPath("$.result.tools.length()").value(11));
     mvc.perform(toolRequest(token, "list_projects", Map.of()))
         .andExpect(status().isOk())
         .andExpect(
@@ -177,6 +183,8 @@ class McpOAuthSecurityIntegrationTest extends AbstractPostgresIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.result.isError").doesNotExist());
 
+    exerciseWriteTools(token, workspaceId, projectId, userId);
+
     jdbc.update("UPDATE projects SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", projectId);
     for (String reference : List.of(taskId.toString(), "mom-0991")) {
       mvc.perform(toolRequest(token, "get_task", Map.of("task", reference)))
@@ -202,8 +210,309 @@ class McpOAuthSecurityIntegrationTest extends AbstractPostgresIntegrationTest {
     mvc.perform(get("/api/me").cookie(cookie)).andExpect(status().isOk());
   }
 
+  private void exerciseWriteTools(String token, UUID workspaceId, UUID projectId, UUID userId)
+      throws Exception {
+    callWrite(
+        token,
+        "create_milestone",
+        Map.of(
+            "project",
+            "PRJ-0991",
+            "name",
+            "Write milestone",
+            "description",
+            "Keep description",
+            "summary",
+            "Keep summary",
+            "target_date",
+            "2026-10-01"));
+    UUID milestoneId =
+        jdbc.queryForObject(
+            "SELECT id FROM milestones WHERE project_id = ? AND name = 'Write milestone'",
+            UUID.class,
+            projectId);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT owner_user_id FROM milestone_owners WHERE milestone_id = ?",
+                UUID.class,
+                milestoneId))
+        .isEqualTo(userId);
+    callWrite(
+        token,
+        "update_milestone",
+        Map.of(
+            "milestone",
+            milestoneId.toString(),
+            "status",
+            "active",
+            "health_status",
+            "on_track",
+            "progress",
+            40));
+    mvc.perform(
+            toolRequest(
+                token,
+                "update_milestone",
+                Map.of(
+                    "milestone",
+                    milestoneId.toString(),
+                    "name",
+                    "Rejected name",
+                    "health_status",
+                    "invalid")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.result.isError").value(true));
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT name FROM milestones WHERE id = ?", String.class, milestoneId))
+        .isEqualTo("Write milestone");
+    int eventsBeforeFailure =
+        jdbc.queryForObject(
+            "SELECT count(*) FROM outbox_events WHERE workspace_id = ?",
+            Integer.class,
+            workspaceId);
+    AtomicInteger lookups = new AtomicInteger();
+    doAnswer(
+            invocation -> {
+              if (lookups.incrementAndGet() == 2) {
+                throw new IllegalStateException("private SQL diagnostic");
+              }
+              return invocation.callRealMethod();
+            })
+        .when(milestones)
+        .listDetailsByWorkspaceId(workspaceId);
+    try {
+      mvc.perform(
+              toolRequest(
+                  token,
+                  "create_task",
+                  Map.of(
+                      "project",
+                      "PRJ-0991",
+                      "title",
+                      "Rollback task",
+                      "milestone",
+                      milestoneId.toString())))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.error.code").value(-32603))
+          .andExpect(jsonPath("$.error.message").value("Internal error"));
+      assertThat(
+              jdbc.queryForObject(
+                  "SELECT count(*) FROM tasks WHERE project_id = ? AND title = 'Rollback task'",
+                  Integer.class,
+                  projectId))
+          .isZero();
+      assertThat(
+              jdbc.queryForObject(
+                  "SELECT count(*) FROM outbox_events WHERE workspace_id = ?",
+                  Integer.class,
+                  workspaceId))
+          .isEqualTo(eventsBeforeFailure);
+    } finally {
+      doCallRealMethod().when(milestones).listDetailsByWorkspaceId(workspaceId);
+    }
+    Object milestoneUpdatedAt =
+        jdbc.queryForObject(
+            "SELECT updated_at FROM milestones WHERE id = ?", Object.class, milestoneId);
+    callWrite(
+        token,
+        "update_milestone",
+        Map.of(
+            "milestone",
+            milestoneId.toString(),
+            "status",
+            "active",
+            "description",
+            "",
+            "summary",
+            "",
+            "target_date",
+            ""));
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT description FROM milestones WHERE id = ?", String.class, milestoneId))
+        .isEqualTo("Keep description");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT updated_at FROM milestones WHERE id = ?", Object.class, milestoneId))
+        .isEqualTo(milestoneUpdatedAt);
+
+    callWrite(
+        token,
+        "create_task",
+        Map.of(
+            "project",
+            "PRJ-0991",
+            "title",
+            "Write task",
+            "description",
+            "Description",
+            "due_date",
+            "2026-10-02",
+            "assignee",
+            "me",
+            "milestone",
+            milestoneId.toString()));
+    UUID id =
+        jdbc.queryForObject(
+            "SELECT id FROM tasks WHERE project_id = ? AND title = 'Write task'",
+            UUID.class,
+            projectId);
+    String label = jdbc.queryForObject("SELECT label FROM tasks WHERE id = ?", String.class, id);
+    assertThat(jdbc.queryForObject("SELECT status FROM tasks WHERE id = ?", String.class, id))
+        .isEqualTo("backlog");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM outbox_events WHERE aggregate_id = ? AND event_type = 'task.created'",
+                Integer.class,
+                id.toString()))
+        .isEqualTo(1);
+    callWrite(
+        token,
+        "update_task",
+        Map.of("task", label.toLowerCase(), "status", "progress", "priority", "med"));
+    assertThat(jdbc.queryForObject("SELECT description FROM tasks WHERE id = ?", String.class, id))
+        .isEqualTo("Description");
+    callWrite(
+        token,
+        "update_task",
+        Map.of(
+            "task",
+            id.toString(),
+            "description",
+            "",
+            "due_date",
+            "",
+            "assignee",
+            "none",
+            "milestone",
+            "none"));
+    Map<String, Object> cleared =
+        jdbc.queryForMap(
+            "SELECT description, due_date, assignee_id, milestone_id FROM tasks WHERE id = ?", id);
+    assertThat(cleared.values()).containsOnlyNulls();
+    Object updatedAt =
+        jdbc.queryForObject("SELECT updated_at FROM tasks WHERE id = ?", Object.class, id);
+    callWrite(token, "update_task", Map.of("task", id.toString(), "status", "in_progress"));
+    assertThat(jdbc.queryForObject("SELECT updated_at FROM tasks WHERE id = ?", Object.class, id))
+        .isEqualTo(updatedAt);
+    callWrite(token, "create_comment", Map.of("task", label, "body", " Comment "));
+    Map<String, Object> comment =
+        jdbc.queryForMap(
+            "SELECT workspace_id, project_id, author_id, body, kind FROM task_updates WHERE task_id = ?",
+            id);
+    assertThat(comment)
+        .containsEntry("workspace_id", workspaceId)
+        .containsEntry("project_id", projectId)
+        .containsEntry("author_id", userId)
+        .containsEntry("body", "Comment")
+        .containsEntry("kind", "comment");
+    // A repeated create is a new mutation; JSON-RPC ids are not idempotency keys.
+    callWrite(token, "create_comment", Map.of("task", label, "body", " Comment "));
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM task_updates WHERE task_id = ?", Integer.class, id))
+        .isEqualTo(2);
+    for (int attempt = 0; attempt < 2; attempt++) {
+      callWrite(token, "create_task", Map.of("project", "PRJ-0991", "title", "Repeated task"));
+      callWrite(
+          token, "create_milestone", Map.of("project", "PRJ-0991", "name", "Repeated milestone"));
+    }
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM tasks WHERE project_id = ? AND title = 'Repeated task'",
+                Integer.class,
+                projectId))
+        .isEqualTo(2);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM milestones WHERE project_id = ? AND name = 'Repeated milestone'",
+                Integer.class,
+                projectId))
+        .isEqualTo(2);
+    callWrite(token, "delete_milestone", Map.of("milestone", milestoneId.toString()));
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT deleted_at IS NOT NULL FROM milestones WHERE id = ?",
+                Boolean.class,
+                milestoneId))
+        .isTrue();
+    mvc.perform(toolRequest(token, "delete_milestone", Map.of("milestone", milestoneId.toString())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.result.isError").value(true));
+
+    UUID otherWorkspace = UUID.randomUUID();
+    UUID otherProject = UUID.randomUUID();
+    UUID otherTask = UUID.randomUUID();
+    UUID otherMilestone = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO workspaces (id, name, slug) VALUES (?, 'Other', ?)",
+        otherWorkspace,
+        otherWorkspace.toString());
+    jdbc.update(
+        "INSERT INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, 'member')",
+        otherWorkspace,
+        userId);
+    jdbc.update(
+        "INSERT INTO projects (id, workspace_id, name, owner_id) VALUES (?, ?, 'Other project', ?)",
+        otherProject,
+        otherWorkspace,
+        userId);
+    jdbc.update(
+        "INSERT INTO tasks (id, workspace_id, project_id, title) VALUES (?, ?, ?, 'Other task')",
+        otherTask,
+        otherWorkspace,
+        otherProject);
+    jdbc.update(
+        "INSERT INTO milestones (id, project_id, name) VALUES (?, ?, 'Other milestone')",
+        otherMilestone,
+        otherProject);
+    for (String tool : List.of("update_task", "create_comment")) {
+      Map<String, String> args =
+          tool.equals("update_task")
+              ? Map.of("task", otherTask.toString(), "title", "Unauthorized")
+              : Map.of("task", otherTask.toString(), "body", "Unauthorized");
+      mvc.perform(toolRequest(token, tool, args))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.result.isError").value(true));
+    }
+    for (String tool : List.of("update_milestone", "delete_milestone")) {
+      mvc.perform(toolRequest(token, tool, Map.of("milestone", otherMilestone.toString())))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.result.isError").value(true));
+    }
+    mvc.perform(
+            toolRequest(
+                token,
+                "create_task",
+                Map.of("project", otherProject.toString(), "title", "Unauthorized")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.result.isError").value(true));
+    mvc.perform(
+            toolRequest(
+                token,
+                "create_milestone",
+                Map.of("project", otherProject.toString(), "name", "Unauthorized")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.result.isError").value(true));
+    assertThat(jdbc.queryForObject("SELECT title FROM tasks WHERE id = ?", String.class, otherTask))
+        .isEqualTo("Other task");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM task_updates WHERE task_id = ?", Integer.class, otherTask))
+        .isZero();
+  }
+
+  private void callWrite(String token, String name, Map<String, ?> args) throws Exception {
+    mvc.perform(toolRequest(token, name, args))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.error").doesNotExist())
+        .andExpect(jsonPath("$.result.isError").doesNotExist())
+        .andExpect(jsonPath("$.result.content[0].type").value("text"));
+  }
+
   private MockHttpServletRequestBuilder toolRequest(
-      String token, String name, Map<String, String> arguments) {
+      String token, String name, Map<String, ?> arguments) {
     return post("/api/mcp")
         .header("Authorization", "Bearer " + token)
         .header("MCP-Protocol-Version", "2026-07-28")

@@ -18,9 +18,7 @@ import tools.jackson.databind.node.ObjectNode;
 import works.momens.server.mcp.grant.McpGrantReader;
 import works.momens.server.mcp.grant.McpScope;
 import works.momens.server.mcp.transport.McpAuthenticationContext;
-import works.momens.server.mcp.transport.McpToolCatalog;
 import works.momens.server.mcp.transport.McpToolDefinition;
-import works.momens.server.mcp.transport.McpToolExecutor;
 import works.momens.server.project.core.ProjectDetail;
 import works.momens.server.project.core.ProjectDetailReader;
 import works.momens.server.project.milestone.MilestoneDetail;
@@ -34,7 +32,7 @@ import works.momens.server.workspace.membership.WorkspaceMembershipDetail;
 import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 @Service
-class McpReadToolService implements McpToolCatalog, McpToolExecutor {
+class McpReadToolService {
   private static final Map<String, McpScope> SCOPES =
       Map.of(
           "list_projects", McpScope.PROJECTS_READ,
@@ -84,7 +82,6 @@ class McpReadToolService implements McpToolCatalog, McpToolExecutor {
     }
   }
 
-  @Override
   public List<McpToolDefinition> list(McpAuthenticationContext context) {
     return definitions.stream()
         .filter(tool -> context.scopes().contains(SCOPES.get(tool.name()).value()))
@@ -95,7 +92,6 @@ class McpReadToolService implements McpToolCatalog, McpToolExecutor {
         .toList();
   }
 
-  @Override
   public Optional<JsonNode> call(
       String name, JsonNode arguments, McpAuthenticationContext context) {
     McpScope scope = SCOPES.get(name);
