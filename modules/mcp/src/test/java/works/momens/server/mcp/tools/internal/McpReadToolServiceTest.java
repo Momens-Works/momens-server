@@ -187,6 +187,22 @@ class McpReadToolServiceTest {
     verifyNoInteractions(updates, projects, milestones, users);
   }
 
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void rejectsTaskInDeletedProjectBeforeReadingComments(boolean useId) {
+    seed();
+    TaskSnapshot task = tasks.listSnapshotsByWorkspaceId(workspaceId).getFirst();
+    when(tasks.findSnapshotInWorkspace(workspaceId, taskId)).thenReturn(Optional.of(task));
+    when(projects.listDetailsByWorkspaceId(workspaceId)).thenReturn(List.of());
+    String reference = useId ? taskId.toString() : "mom-0991";
+
+    JsonNode result = call("get_task", "{\"task\":\"" + reference + "\"}");
+
+    assertThat(result.path("isError").asBoolean()).isTrue();
+    assertThat(text(result)).isEqualTo("No task in this workspace: " + reference);
+    verifyNoInteractions(updates, milestones, users);
+  }
+
   @Test
   void distinguishesUnknownToolsFromInvalidArguments() {
     assertThat(service.call("create_task", mapper.createObjectNode(), context)).isEmpty();
@@ -266,6 +282,7 @@ class McpReadToolServiceTest {
 
   @Test
   void taskWithoutOptionalFieldsKeepsMinimalText() {
+    seed();
     TaskSnapshot task =
         new TaskSnapshot(
             taskId,
@@ -284,11 +301,14 @@ class McpReadToolServiceTest {
             now);
     when(tasks.findSnapshotInWorkspace(workspaceId, taskId)).thenReturn(Optional.of(task));
     when(tasks.listSnapshotsByWorkspaceId(workspaceId)).thenReturn(List.of(task));
+    when(updates.listByTaskId(taskId)).thenReturn(List.of());
     JsonNode detail = call("get_task", "{\"task\":\"" + taskId + "\"}");
     assertThat(detail.path("isError").asBoolean()).isFalse();
-    assertThat(text(detail)).isEqualTo(taskId + " · Read tools\nstatus: todo · priority: medium");
+    assertThat(text(detail))
+        .isEqualTo(
+            taskId + " · Read tools\nstatus: todo · priority: medium · project: PRJ-0003 Sprint");
     assertThat(text(call("list_tasks", "{}")))
-        .isEqualTo("1 task(s):\n- " + taskId + " · Read tools [todo]");
+        .isEqualTo("1 task(s):\n- " + taskId + " · Read tools [todo] — PRJ-0003 Sprint");
     verifyNoInteractions(milestones, users);
   }
 
