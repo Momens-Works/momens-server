@@ -5,5 +5,7 @@
  * 구현은 {@code internal} 패키지에 둡니다. 라벨 발급이 호출자의 트랜잭션에 참여하는 이유는 {@code docs/design/module-map.md}의
  * workspace 절에 설명되어 있습니다.
  */
-@org.springframework.modulith.NamedInterface
+@NamedInterface
 package works.momens.server.workspace.label;
+
+import org.springframework.modulith.NamedInterface;

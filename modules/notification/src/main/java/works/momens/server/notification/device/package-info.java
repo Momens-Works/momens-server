@@ -7,5 +7,7 @@
  * 조회·비활성화만 {@link works.momens.server.notification.device.PushInstallationDirectory}로 엽니다.
  * 엔티티·리포지토리는 이 패키지에 은닉합니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.notification.device;
+
+import org.springframework.modulith.ApplicationModule;

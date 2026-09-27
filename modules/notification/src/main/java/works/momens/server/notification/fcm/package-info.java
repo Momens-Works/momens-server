@@ -6,5 +6,7 @@
  * {@link works.momens.server.notification.fcm.PushMessage} 계약만 열고, Firebase SDK 타입은 이 패키지 밖으로 새지
  * 않습니다. push 비활성 환경(local·test 기본)에서는 배선용 구현이 대신 등록됩니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.notification.fcm;
+
+import org.springframework.modulith.ApplicationModule;

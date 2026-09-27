@@ -9,5 +9,7 @@
  * 담당하고, 태스크와 다른 엔티티 사이의 연결은 {@code TaskLinkController}가 담당합니다. 앞의 두 컨트롤러는 태스크 행의 컬럼을 읽고 쓰지만 {@code
  * TaskLinkController}는 {@code entity_relations} 행을 생성하고 삭제하므로 변경 대상이 다릅니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.web.task;
+
+import org.springframework.modulith.ApplicationModule;

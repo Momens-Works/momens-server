@@ -10,7 +10,9 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -149,8 +151,7 @@ class McpOAuthPersistenceIntegrationTest extends AbstractPostgresIntegrationTest
   void tokenAndGrantLookupsCanUseIndexes() {
     jdbcTemplate.execute("SET LOCAL enable_seqscan = off");
     for (String column :
-        java.util.List.of(
-            "authorization_code_value", "access_token_value", "refresh_token_value")) {
+        List.of("authorization_code_value", "access_token_value", "refresh_token_value")) {
       String index =
           switch (column) {
             case "authorization_code_value" -> "idx_mcp_authorization_code";
@@ -173,7 +174,7 @@ class McpOAuthPersistenceIntegrationTest extends AbstractPostgresIntegrationTest
                 jdbcTemplate.queryForList(
                     "EXPLAIN SELECT authorization_id FROM mcp_token_families WHERE grant_id = ? ORDER BY authorization_id",
                     String.class,
-                    java.util.UUID.randomUUID())))
+                    UUID.randomUUID())))
         .contains("idx_mcp_token_families_grant");
   }
 

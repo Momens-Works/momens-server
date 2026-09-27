@@ -5,5 +5,7 @@
  * 명시합니다(MOM-0799). 다른 nested 모듈과 마찬가지로 aggregate가 아니라 화면 단위 조합 슬라이스라, 외부에 공개하는 계약이 없고 Controller·조합
  * 서비스·DTO를 이 패키지 하나에 함께 둡니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.mobile.bootstrap;
+
+import org.springframework.modulith.ApplicationModule;

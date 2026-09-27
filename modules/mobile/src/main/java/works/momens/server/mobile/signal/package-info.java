@@ -7,5 +7,7 @@
  * works.momens.server.signal.SignalDetailService}, {@link
  * works.momens.server.signal.SignalActionService})에 위임만 하는 얇은 Controller와 응답 DTO만 둡니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.mobile.signal;
+
+import org.springframework.modulith.ApplicationModule;

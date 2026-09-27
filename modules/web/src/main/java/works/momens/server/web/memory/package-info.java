@@ -6,5 +6,7 @@
  * memory} 모듈의 public API를 호출할 뿐 리뷰 정책을 직접 소유하지 않으므로 외부에 공개하는 계약은 없습니다. Controller, 조합 서비스, DTO는 이
  * 패키지에서 함께 관리합니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.web.memory;
+
+import org.springframework.modulith.ApplicationModule;

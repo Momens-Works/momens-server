@@ -6,5 +6,7 @@
  * workspace의 멤버십 개념과 헷갈리지 않도록 {@code members}가 아닌 {@code roster}로 이름 붙였습니다. 외부에 공개하는 계약이 없고
  * Controller·조합 서비스·DTO를 이 패키지 하나에 함께 둡니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.mobile.roster;
+
+import org.springframework.modulith.ApplicationModule;

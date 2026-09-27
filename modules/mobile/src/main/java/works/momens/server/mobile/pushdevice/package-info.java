@@ -6,5 +6,7 @@
  * notification의 public API({@link works.momens.server.notification.PushDeviceRegistrar})에 위임만 하는 얇은
  * Controller와 요청 DTO만 둡니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.mobile.pushdevice;
+
+import org.springframework.modulith.ApplicationModule;

@@ -5,5 +5,7 @@
  * Spring Modulith nested 모듈로 명시합니다(mobile 모듈의 MOM-0799 전례). workspace의 public API만 조합할 뿐 도메인 정책을
  * 소유하지 않으므로, 외부에 공개하는 계약이 없고 Controller·조합 서비스·DTO를 이 패키지 하나에 함께 둡니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.web.workspace;
+
+import org.springframework.modulith.ApplicationModule;

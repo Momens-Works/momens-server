@@ -1,3 +1,5 @@
 /** Public MCP grant contracts. */
-@org.springframework.modulith.NamedInterface("grant")
+@NamedInterface("grant")
 package works.momens.server.mcp.grant;
+
+import org.springframework.modulith.NamedInterface;
