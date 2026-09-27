@@ -78,6 +78,7 @@ public class OpenApiConfig {
                 parameter ->
                     "API-Version".equals(parameter.getName()) && "header".equals(parameter.getIn()))
             .map(Parameter::getSchema)
+            .filter(schema -> schema.getDefault() != null)
             .forEach(schema -> schema.setDefault("1"));
   }
 
