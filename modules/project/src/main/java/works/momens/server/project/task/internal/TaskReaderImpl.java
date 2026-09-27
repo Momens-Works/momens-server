@@ -61,6 +61,22 @@ class TaskReaderImpl implements TaskReader {
 
   @Override
   @Transactional(readOnly = true)
+  public Optional<TaskSnapshot> findSnapshotInWorkspace(UUID workspaceId, UUID taskId) {
+    return taskRepository
+        .findByWorkspaceIdAndIdAndDeletedAtIsNull(workspaceId, taskId)
+        .map(TaskSnapshotMapper::toTaskWorkspaceSnapshot);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<TaskSnapshot> findSnapshotByLabel(UUID workspaceId, String label) {
+    return taskRepository
+        .findByWorkspaceIdAndLabelAndDeletedAtIsNull(workspaceId, label)
+        .map(TaskSnapshotMapper::toTaskWorkspaceSnapshot);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
   public List<TaskSnapshot> listSnapshotsByProjectId(UUID projectId) {
     return taskRepository.findByProjectIdAndDeletedAtIsNullOrderByCreatedAtDesc(projectId).stream()
         .map(TaskSnapshotMapper::toSnapshot)

@@ -52,6 +52,11 @@ import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.mcp.grant.McpGrantWriter;
 import works.momens.server.mcp.transport.McpAuthenticationContext;
 import works.momens.server.mcp.transport.McpBearerTokenVerifier;
+import works.momens.server.project.core.ProjectDetailReader;
+import works.momens.server.project.milestone.MilestoneReader;
+import works.momens.server.project.task.TaskReader;
+import works.momens.server.project.taskupdate.TaskUpdateReader;
+import works.momens.server.user.UserService;
 import works.momens.server.workspace.core.WorkspaceReader;
 import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 import works.momens.server.workspace.membership.WorkspaceRole;
@@ -73,6 +78,11 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   @Autowired JdbcTemplate jdbc;
   @Autowired McpGrantWriter grants;
   @Autowired McpBearerTokenVerifier tokenVerifier;
+  @MockitoBean ProjectDetailReader projects;
+  @MockitoBean MilestoneReader milestones;
+  @MockitoBean TaskReader tasks;
+  @MockitoBean TaskUpdateReader updates;
+  @MockitoBean UserService users;
   @MockitoBean WorkspaceMembershipReader memberships;
   @MockitoBean WorkspaceReader workspaces;
   UUID userId;
@@ -249,7 +259,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
         .andExpect(jsonPath("$.result.supportedVersions[0]").value("2026-07-28"));
     mvc.perform(mcpRequest(access, "tools/list"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.result.tools").isEmpty());
+        .andExpect(jsonPath("$.result.tools[0].name").value("list_projects"));
     String digest =
         jdbc.queryForObject(
             "SELECT access_token_value FROM oauth2_authorization WHERE principal_name = ?",

@@ -1,0 +1,73 @@
+[
+  {
+    "name": "get_task",
+    "description": "Get a task's details and comments by its MOM-label or id.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "task": {
+          "type": "string",
+          "description": "the task to fetch: its MOM-label or id"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "task"
+      ]
+    }
+  },
+  {
+    "name": "list_members",
+    "description": "List the members of your workspace (name, email, role) so you can pick an assignee.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_milestones",
+    "description": "List milestones in your workspace, optionally filtered by project.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string",
+          "description": "filter by project: its PRJ-label, exact name, or id"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_projects",
+    "description": "List the projects in your workspace (PRJ-label, name, status). Use this to find the project to create a task in.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_tasks",
+    "description": "List tasks in your workspace, optionally filtered by project, assignee, or status. Use assignee \"me\" for your own tasks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string",
+          "description": "filter by project: its PRJ-label, name, or id"
+        },
+        "assignee": {
+          "type": "string",
+          "description": "filter by assignee: me, a member name, or an email"
+        },
+        "status": {
+          "type": "string",
+          "description": "filter by status: backlog, todo, in_progress, done, or cancelled"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+]

@@ -34,6 +34,12 @@ public interface TaskReader {
   /** 표면 응답으로 매핑할 태스크 저장값 한 건을 조회합니다. */
   Optional<TaskSnapshot> findSnapshot(UUID taskId);
 
+  /** MCP 조회용으로 태스크 자체의 workspace를 제한합니다. 소프트 삭제된 태스크는 제외합니다. */
+  Optional<TaskSnapshot> findSnapshotInWorkspace(UUID workspaceId, UUID taskId);
+
+  /** MCP의 MOM-label 조회입니다. 호출자는 label을 대문자로 정규화합니다. */
+  Optional<TaskSnapshot> findSnapshotByLabel(UUID workspaceId, String label);
+
   /** 프로젝트에 속한 태스크 저장값을 생성 시각 내림차순으로 조회합니다. */
   List<TaskSnapshot> listSnapshotsByProjectId(UUID projectId);
 

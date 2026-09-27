@@ -47,6 +47,31 @@ class TaskReaderIntegrationTest extends AbstractPostgresIntegrationTest {
   @MockitoBean private ProjectReader projectReader;
 
   @Test
+  void mcpLookupUsesTaskWorkspaceAndHidesDeletedTasks() {
+    UUID ownerId = ProjectSeedSql.insertUser(entityManager, "mcp-reader@momens.works");
+    UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "mcp-reader");
+    UUID otherWorkspace = ProjectSeedSql.insertWorkspace(entityManager, "mcp-other");
+    UUID projectId = ProjectSeedSql.insertProject(entityManager, workspaceId, ownerId);
+    UUID id =
+        saveTask(
+            workspaceId, projectId, "MCP task", TaskStatus.TODO, TaskPriority.MEDIUM, TaskRole.PM);
+    entityManager
+        .getEntityManager()
+        .createNativeQuery("UPDATE tasks SET label = 'MOM-0991' WHERE id = ?1")
+        .setParameter(1, id)
+        .executeUpdate();
+    entityManager.clear();
+    assertThat(taskReader.findSnapshotInWorkspace(workspaceId, id)).isPresent();
+    assertThat(taskReader.findSnapshotByLabel(workspaceId, "MOM-0991")).isPresent();
+    assertThat(taskReader.findSnapshotInWorkspace(otherWorkspace, id)).isEmpty();
+    assertThat(taskReader.findSnapshotByLabel(otherWorkspace, "MOM-0991")).isEmpty();
+    softDelete(id);
+    entityManager.clear();
+    assertThat(taskReader.findSnapshotInWorkspace(workspaceId, id)).isEmpty();
+    assertThat(taskReader.findSnapshotByLabel(workspaceId, "MOM-0991")).isEmpty();
+  }
+
+  @Test
   void listTasksByStatusReturnsOnlyGivenStatuses() {
     UUID ownerId = ProjectSeedSql.insertUser(entityManager, "board-owner@momens.works");
     UUID workspaceId = ProjectSeedSql.insertWorkspace(entityManager, "board");
