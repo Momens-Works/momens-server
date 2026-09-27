@@ -1,6 +1,7 @@
 package works.momens.server.mcp.oauth.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +23,9 @@ import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
@@ -37,7 +42,7 @@ import works.momens.server.mcp.transport.McpAuthenticationContext;
 import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 import works.momens.server.workspace.membership.WorkspaceRole;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith({MockitoExtension.class, OutputCaptureExtension.class})
 class McpReferenceTokenVerifierTest {
   private static final Instant NOW = Instant.parse("2026-09-27T00:00:00Z");
   private static final String RESOURCE = "https://api.momens.works/api/mcp";
@@ -59,9 +64,12 @@ class McpReferenceTokenVerifierTest {
   @Mock McpGrantReader grants;
   @Mock WorkspaceMembershipReader memberships;
   McpReferenceTokenVerifier verifier;
+  private CapturedOutput output;
+  private int rejectionCount;
 
   @BeforeEach
-  void setup() {
+  void setup(CapturedOutput output) {
+    this.output = output;
     verifier =
         new McpReferenceTokenVerifier(
             authorizations,
@@ -95,31 +103,31 @@ class McpReferenceTokenVerifierTest {
   @NullAndEmptySource
   @ValueSource(strings = " ")
   void rejectsEmptyTokensWithoutLookup(String token) {
-    assertThat(verifier.verify(token)).isEmpty();
+    assertRejection(token, "empty_token");
     verifyNoInteractions(authorizations, families, grants, clients, memberships);
   }
 
   @Test
   void rejectsUnknownTokens() {
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "access_token_not_found");
     verifyNoInteractions(families, grants, clients, memberships);
   }
 
   @Test
   void rejectsExpiredTokenAtTheExactExpiryBoundary() {
     stubToken(authorization(NOW.minusSeconds(60), NOW).build());
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "token_expired");
     verifyNoInteractions(families, grants);
   }
 
   @Test
   void rejectsFutureAndInvalidatedTokens() {
     stubToken(authorization(NOW.plusSeconds(1), NOW.plusSeconds(60)).build());
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "token_not_yet_valid");
     OAuth2Authorization active = authorization(NOW.minusSeconds(1), NOW.plusSeconds(60)).build();
     stubToken(
         OAuth2Authorization.from(active).invalidate(active.getAccessToken().getToken()).build());
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "token_invalidated");
     verifyNoInteractions(families, grants);
   }
 
@@ -130,21 +138,21 @@ class McpReferenceTokenVerifierTest {
             .attribute(
                 OAuth2AuthorizationRequest.class.getName(), request("https://other.example/mcp"))
             .build());
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "resource_mismatch_or_missing");
     stubToken(
         authorization(NOW.minusSeconds(1), NOW.plusSeconds(60))
             .attributes(attributes -> attributes.remove(OAuth2AuthorizationRequest.class.getName()))
             .build());
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "resource_mismatch_or_missing");
     verifyNoInteractions(families, grants);
   }
 
   @Test
   void rejectsMissingOrRevokedFamilyAndGrant() {
     stubToken(authorization(NOW.minusSeconds(1), NOW.plusSeconds(60)).build());
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "active_family_not_found");
     when(families.grantId("authorization")).thenReturn(grantId);
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "active_grant_not_found");
     verifyNoInteractions(clients, memberships);
   }
 
@@ -152,7 +160,7 @@ class McpReferenceTokenVerifierTest {
   void rejectsDifferentGrantUser() {
     stubToken(authorization(NOW.minusSeconds(1), NOW.plusSeconds(60)).build());
     stubGrant(UUID.randomUUID(), "public-client", List.of(READ));
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "grant_user_mismatch");
     verifyNoInteractions(clients, memberships);
   }
 
@@ -160,9 +168,9 @@ class McpReferenceTokenVerifierTest {
   void rejectsDifferentOrMissingClient() {
     stubToken(authorization(NOW.minusSeconds(1), NOW.plusSeconds(60)).build());
     stubGrant(userId, "another-client", List.of(READ));
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "client_not_found");
     when(clients.findById(client.getId())).thenReturn(client);
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "grant_client_mismatch");
     verifyNoInteractions(memberships);
   }
 
@@ -171,13 +179,13 @@ class McpReferenceTokenVerifierTest {
     stubToken(authorization(NOW.minusSeconds(1), NOW.plusSeconds(60)).build());
     stubGrant(userId, "public-client", List.of(McpScope.TASKS_WRITE.value()));
     when(clients.findById(client.getId())).thenReturn(client);
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "scopes_outside_grant");
     stubGrant(userId, "public-client", List.of(READ));
     stubToken(
         authorization(NOW.minusSeconds(1), NOW.plusSeconds(60))
             .authorizedScopes(Set.of(McpScope.TASKS_WRITE.value()))
             .build());
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "scopes_outside_authorization");
     verifyNoInteractions(memberships);
   }
 
@@ -186,7 +194,55 @@ class McpReferenceTokenVerifierTest {
     stubToken(authorization(NOW.minusSeconds(1), NOW.plusSeconds(60)).build());
     stubGrant(userId, "public-client", List.of(READ));
     when(clients.findById(client.getId())).thenReturn(client);
-    assertThat(verifier.verify(RAW)).isEmpty();
+    assertRejection(RAW, "workspace_membership_not_found");
+  }
+
+  @Test
+  void rejectsEmptyScopes() {
+    stubToken(
+        authorization(NOW.minusSeconds(1), NOW.plusSeconds(60))
+            .accessToken(
+                new OAuth2AccessToken(
+                    OAuth2AccessToken.TokenType.BEARER,
+                    RAW,
+                    NOW.minusSeconds(1),
+                    NOW.plusSeconds(60),
+                    Set.of()))
+            .build());
+    stubGrant(userId, "public-client", List.of(READ));
+    when(clients.findById(client.getId())).thenReturn(client);
+    assertRejection(RAW, "token_scopes_empty");
+    verifyNoInteractions(memberships);
+  }
+
+  @Test
+  void propagatesDatabaseFailuresWithoutLoggingAuthenticationRejection() {
+    DataAccessResourceFailureException failure =
+        new DataAccessResourceFailureException("database unavailable");
+    when(authorizations.findByToken(RAW, OAuth2TokenType.ACCESS_TOKEN)).thenThrow(failure);
+    assertThatThrownBy(() -> verifier.verify(RAW)).isSameAs(failure);
+    verifyNoInteractions(families, grants, clients, memberships);
+  }
+
+  @AfterEach
+  void logsOnlyExpectedRejectionsWithoutTokenMaterial() {
+    assertThat(rejectionLogs()).hasSize(rejectionCount);
+    assertThat(output.getAll()).doesNotContain(RAW);
+  }
+
+  private void assertRejection(String token, String reason) {
+    assertThat(verifier.verify(token)).isEmpty();
+    rejectionCount++;
+    assertThat(rejectionLogs()).hasSize(rejectionCount);
+    assertThat(rejectionLogs().getLast()).endsWith("outcome=rejected reason=" + reason);
+  }
+
+  private List<String> rejectionLogs() {
+    return output
+        .getAll()
+        .lines()
+        .filter(line -> line.contains("event=mcp_oauth_access_verification"))
+        .toList();
   }
 
   private void stubToken(OAuth2Authorization authorization) {
