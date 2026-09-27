@@ -24,11 +24,12 @@ class McpSubDomainBoundaryTests {
 
   @Test
   void capabilitiesDependOnlyInAllowedDirections() {
-    deny("grant", "oauth", "transport", "configuration");
+    deny("grant", "oauth", "transport", "configuration", "tools");
     deny("configuration", "oauth", "transport", "grant");
     // OAuth implements the transport's public bearer verifier port.
-    deny("oauth", "transport.internal", "grant.internal");
-    deny("transport", "oauth", "grant.internal");
+    deny("oauth", "transport.internal", "grant.internal", "tools");
+    deny("tools", "oauth", "grant.internal", "transport.internal");
+    deny("transport", "oauth", "grant.internal", "tools");
   }
 
   @Test

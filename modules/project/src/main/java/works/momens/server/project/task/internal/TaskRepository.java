@@ -15,6 +15,10 @@ interface TaskRepository extends JpaRepository<Task, UUID> {
   /** 상세용 단건 조회. 소프트 삭제된 태스크는 제외합니다. */
   Optional<Task> findByIdAndDeletedAtIsNull(UUID taskId);
 
+  Optional<Task> findByWorkspaceIdAndIdAndDeletedAtIsNull(UUID workspaceId, UUID taskId);
+
+  Optional<Task> findByWorkspaceIdAndLabelAndDeletedAtIsNull(UUID workspaceId, String label);
+
   /**
    * draft 반영용 단건 조회. 조회한 행을 잠가 조건 검사와 갱신 사이에 다른 트랜잭션의 수정이 끼어들지 않게 합니다.
    *

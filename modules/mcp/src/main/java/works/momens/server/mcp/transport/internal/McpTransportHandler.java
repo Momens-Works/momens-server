@@ -48,6 +48,6 @@ public class McpTransportHandler {
     if (!requestValidator.hasValidClientMetadata(request)) {
       return responseFactory.jsonRpcError(id, -32602, "Invalid params");
     }
-    return methodHandler.handle(method, id, authentication.get());
+    return methodHandler.handle(method, id, request.path("params"), authentication.get());
   }
 }

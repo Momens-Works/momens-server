@@ -33,6 +33,7 @@ import works.momens.server.mcp.transport.McpBearerTokenVerifier;
 import works.momens.server.mcp.transport.McpProtectedResourceMetadataController;
 import works.momens.server.mcp.transport.McpToolCatalog;
 import works.momens.server.mcp.transport.McpToolDefinition;
+import works.momens.server.mcp.transport.McpToolExecutor;
 import works.momens.server.mcp.transport.McpTransportController;
 
 @WebMvcTest({McpTransportController.class, McpProtectedResourceMetadataController.class})
@@ -59,6 +60,8 @@ class McpTransportControllerTest {
   @MockitoBean private McpBearerTokenVerifier bearerTokenVerifier;
 
   @MockitoBean private McpToolCatalog toolCatalog;
+
+  @MockitoBean private McpToolExecutor toolExecutor;
 
   @Test
   void rejectsUnauthenticatedRequestWithResourceMetadataHint() throws Exception {
@@ -295,8 +298,57 @@ class McpTransportControllerTest {
                 .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_EVENT_STREAM)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestWithName("tools/call", 5, "get_weather")))
-        .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.error.code").value(-32601));
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.error.code").value(-32602));
+  }
+
+  @Test
+  void dispatchesToolCallWithArgumentsAndVerifiedContext() throws Exception {
+    when(bearerTokenVerifier.verify("token")).thenReturn(Optional.of(AUTHENTICATION_CONTEXT));
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode result =
+        mapper.readTree(
+            "{\"resultType\":\"complete\",\"content\":[{\"type\":\"text\",\"text\":\"Projects\"}]}");
+    when(toolExecutor.call(
+            eq("list_projects"), eq(mapper.createObjectNode()), eq(AUTHENTICATION_CONTEXT)))
+        .thenReturn(Optional.of(result));
+    mockMvc
+        .perform(
+            post("/api/mcp")
+                .header("Authorization", "Bearer token")
+                .header("MCP-Protocol-Version", "2026-07-28")
+                .header("Mcp-Method", "tools/call")
+                .header("Mcp-Name", "list_projects")
+                .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_EVENT_STREAM)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestWithName("tools/call", 10, "list_projects")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(10))
+        .andExpect(jsonPath("$.result.content[0].text").value("Projects"));
+    verify(toolExecutor).call("list_projects", mapper.createObjectNode(), AUTHENTICATION_CONTEXT);
+  }
+
+  @Test
+  void hidesUnexpectedToolFailureDetails() throws Exception {
+    when(bearerTokenVerifier.verify("token")).thenReturn(Optional.of(AUTHENTICATION_CONTEXT));
+    when(toolExecutor.call(
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any()))
+        .thenThrow(new IllegalStateException("SQL secret"));
+    mockMvc
+        .perform(
+            post("/api/mcp")
+                .header("Authorization", "Bearer token")
+                .header("MCP-Protocol-Version", "2026-07-28")
+                .header("Mcp-Method", "tools/call")
+                .header("Mcp-Name", "list_projects")
+                .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_EVENT_STREAM)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestWithName("tools/call", 10, "list_projects")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.error.code").value(-32603))
+        .andExpect(jsonPath("$.error.message").value("Internal error"));
   }
 
   private static String discoverRequest() {

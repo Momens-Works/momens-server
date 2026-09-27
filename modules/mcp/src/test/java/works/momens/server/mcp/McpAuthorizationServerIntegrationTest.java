@@ -39,6 +39,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.mcp.grant.McpScope;
+import works.momens.server.project.core.ProjectDetailReader;
+import works.momens.server.project.milestone.MilestoneReader;
+import works.momens.server.project.task.TaskReader;
+import works.momens.server.project.taskupdate.TaskUpdateReader;
+import works.momens.server.user.UserService;
 import works.momens.server.workspace.core.WorkspaceReader;
 import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
@@ -60,6 +65,11 @@ class McpAuthorizationServerIntegrationTest extends AbstractPostgresIntegrationT
   @Autowired private ObjectMapper objectMapper;
   @Autowired private RegisteredClientRepository registeredClientRepository;
 
+  @MockitoBean ProjectDetailReader projects;
+  @MockitoBean MilestoneReader milestones;
+  @MockitoBean TaskReader tasks;
+  @MockitoBean TaskUpdateReader updates;
+  @MockitoBean UserService users;
   @MockitoBean private WorkspaceMembershipReader workspaceMembershipReader;
   @MockitoBean private WorkspaceReader workspaceReader;
 

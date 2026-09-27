@@ -135,7 +135,49 @@ class McpOAuthSecurityIntegrationTest extends AbstractPostgresIntegrationTest {
             .getContentAsString();
     String token = mapper.readTree(pair).get("access_token").stringValue();
     assertThat(mapper.readTree(pair).get("refresh_token").stringValue()).isNotBlank();
-    mvc.perform(mcpRequest(token)).andExpect(status().isOk());
+    UUID projectId = UUID.randomUUID();
+    UUID taskId = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO projects (id, workspace_id, name, owner_id, label) VALUES (?, ?, 'MCP project', ?, 'PRJ-0991')",
+        projectId,
+        workspaceId,
+        userId);
+    jdbc.update(
+        "INSERT INTO tasks (id, workspace_id, project_id, title, status, priority, label) VALUES (?, ?, ?, 'Read tools', 'todo', 'medium', 'MOM-0991')",
+        taskId,
+        workspaceId,
+        projectId);
+    mvc.perform(mcpRequest(token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.result.tools.length()").value(5));
+    mvc.perform(toolRequest(token, "list_projects", Map.of()))
+        .andExpect(status().isOk())
+        .andExpect(
+            jsonPath("$.result.content[0].text")
+                .value("1 project(s):\n- PRJ-0991 MCP project [active]"));
+    mvc.perform(toolRequest(token, "list_members", Map.of()))
+        .andExpect(status().isOk())
+        .andExpect(
+            jsonPath("$.result.content[0].text")
+                .value(org.hamcrest.Matchers.containsString("OAuth user")));
+    mvc.perform(toolRequest(token, "list_milestones", Map.of()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.result.content[0].text").value("No milestones match."));
+    mvc.perform(toolRequest(token, "list_tasks", Map.of("project", "PRJ-0991")))
+        .andExpect(status().isOk())
+        .andExpect(
+            jsonPath("$.result.content[0].text")
+                .value("1 task(s):\n- MOM-0991 · Read tools [todo] — PRJ-0991 MCP project"));
+    mvc.perform(toolRequest(token, "get_task", Map.of("task", "mom-0991")))
+        .andExpect(status().isOk())
+        .andExpect(
+            jsonPath("$.result.content[0].text")
+                .value(
+                    "MOM-0991 · Read tools\nstatus: todo · priority: medium · project: PRJ-0991 MCP project"));
+    mvc.perform(toolRequest(token, "get_task", Map.of("task", taskId.toString())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.result.isError").doesNotExist());
+
     mvc.perform(mcpRequest(cookie.getValue())).andExpect(status().isUnauthorized());
     mvc.perform(mcpRequest(null).cookie(cookie)).andExpect(status().isUnauthorized());
     mvc.perform(get("/api/me").header("Authorization", "Bearer " + token))
@@ -149,6 +191,38 @@ class McpOAuthSecurityIntegrationTest extends AbstractPostgresIntegrationTest {
         .andExpect(status().isOk());
     mvc.perform(mcpRequest(token)).andExpect(status().isUnauthorized());
     mvc.perform(get("/api/me").cookie(cookie)).andExpect(status().isOk());
+  }
+
+  private MockHttpServletRequestBuilder toolRequest(
+      String token, String name, Map<String, String> arguments) {
+    return post("/api/mcp")
+        .header("Authorization", "Bearer " + token)
+        .header("MCP-Protocol-Version", "2026-07-28")
+        .header("Mcp-Method", "tools/call")
+        .header("Mcp-Name", name)
+        .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_EVENT_STREAM)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(
+            mapper.writeValueAsString(
+                Map.of(
+                    "jsonrpc",
+                    "2.0",
+                    "id",
+                    2,
+                    "method",
+                    "tools/call",
+                    "params",
+                    Map.of(
+                        "name",
+                        name,
+                        "arguments",
+                        arguments,
+                        "_meta",
+                        Map.of(
+                            "io.modelcontextprotocol/protocolVersion",
+                            "2026-07-28",
+                            "io.modelcontextprotocol/clientCapabilities",
+                            Map.of())))));
   }
 
   private MockHttpServletRequestBuilder mcpRequest(String token) {
