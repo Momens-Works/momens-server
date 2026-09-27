@@ -11,6 +11,7 @@
 - 인증 header: `Authorization: Bearer {access_token}`
 - Content-Type: `application/json`
 - 필드 표기: `snake_case`
+- 시각 값: ISO 8601 UTC의 `Z` 표기로 반환하며, 표시 시간대 변환은 클라이언트가 담당합니다.
 - 성공 응답: 별도 wrapper 없이 응답 DTO 그대로 반환
 
 인증 API 중 로그인과 토큰 갱신은 `Authorization` 헤더가 필요하지 않습니다.
@@ -343,7 +344,7 @@ Signal과 함께 생산하고, worker가 준비되지 않은 MVP 환경에서는
     {
       "source_ref_id": "source-ref-uuid",
       "source": "figma",
-      "occurred_at": "2026-06-28T09:48:00+09:00",
+      "occurred_at": "2026-06-28T00:48:00Z",
       "details": {
         "target": "권한 요청 화면",
         "change": "권한 요청 단계 이탈률 증가",
@@ -781,7 +782,7 @@ title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-0
       "title": "회원가입 에러 메시지 정책 초안",
       "summary": "회원가입의 MVP 완료율과 온보딩 품질에 영향을 줄 수 있습니다.",
       "source": "figma",
-      "occurred_at": "2026-06-28T09:48:00+09:00",
+      "occurred_at": "2026-06-28T00:48:00Z",
       "source_url": "https://..."
     }
   ],
