@@ -5,5 +5,7 @@
  * interface는 이 root의 public 타입 전부를 공개하므로, 외부에 노출할 계약만 여기 두고 구현은 {@code internal}에 둡니다. 태스크 생성 트랜잭션에
  * 라벨 발급이 참여하는 이유는 docs/design/module-map.md workspace 절에 있습니다.
  */
-@org.springframework.modulith.NamedInterface
+@NamedInterface
 package works.momens.server.project.task;
+
+import org.springframework.modulith.NamedInterface;

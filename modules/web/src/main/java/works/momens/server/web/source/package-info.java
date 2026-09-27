@@ -6,5 +6,7 @@
  * 명시합니다. {@code source}와 {@code workspace} 모듈의 public API만 사용하며 연동 정책은 소유하지 않으므로 외부에 공개하는 계약은 없습니다.
  * Controller, 조합 서비스, DTO는 이 패키지에서 함께 관리합니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.web.source;
+
+import org.springframework.modulith.ApplicationModule;

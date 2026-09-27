@@ -5,5 +5,7 @@
  * internal} 패키지에 둡니다. MOM-70에서는 {@code access}라는 이름으로 만들었으며, MOM-0894에서 공개 계약의 용어에 맞춰 {@code
  * membership}으로 변경했습니다.
  */
-@org.springframework.modulith.NamedInterface
+@NamedInterface
 package works.momens.server.workspace.membership;
+
+import org.springframework.modulith.NamedInterface;

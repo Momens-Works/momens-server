@@ -9,5 +9,7 @@
  * {@code brief}와 공유하는 규칙이라 모듈 root의 {@link works.momens.server.mobile.MobileTaskPriority}를 그대로
  * 참조합니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.mobile.board;
+
+import org.springframework.modulith.ApplicationModule;

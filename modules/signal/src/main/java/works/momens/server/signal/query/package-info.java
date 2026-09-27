@@ -5,5 +5,7 @@
  * root의 {@link works.momens.server.signal.SignalListService}와 {@link
  * works.momens.server.signal.SignalDetailService}로만 공개합니다. 엔티티·리포지토리·구현체는 이 패키지 안에 은닉합니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.signal.query;
+
+import org.springframework.modulith.ApplicationModule;

@@ -10,5 +10,7 @@
  * 발행은 같은 트랜잭션에서 {@code OutboxAppender}를 호출합니다. 앱이 호출하는 {@code /api/mobile/*} 표면과 달리 dev 도구 표면이라
  * mobile 모듈로 옮기지 않습니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.signal.dev;
+
+import org.springframework.modulith.ApplicationModule;

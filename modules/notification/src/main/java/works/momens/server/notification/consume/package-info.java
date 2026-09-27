@@ -8,5 +8,7 @@
  * works.momens.server.notification.device.PushInstallationDirectory}로 읽습니다. 폴링 스케줄러도 소비 주기의 소유자라 이
  * 패키지에 둡니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.notification.consume;
+
+import org.springframework.modulith.ApplicationModule;

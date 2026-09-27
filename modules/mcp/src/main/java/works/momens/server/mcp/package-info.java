@@ -1,3 +1,5 @@
 /** MCP authorization and transport functionality. */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.mcp;
+
+import org.springframework.modulith.ApplicationModule;

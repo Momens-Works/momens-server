@@ -6,5 +6,7 @@
  * ledger 엔티티·리포지토리·구현체는 이 패키지 안에 은닉합니다. {@code convert-to-task}·{@code dismiss} 트랜잭션은 {@code
  * SignalActionExecutor}가 소유하며, MOM-66의 outbox 이벤트 insert가 이 트랜잭션에 합류할 seam이 됩니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.signal.action;
+
+import org.springframework.modulith.ApplicationModule;

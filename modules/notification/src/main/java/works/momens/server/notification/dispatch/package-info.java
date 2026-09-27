@@ -8,5 +8,7 @@
  * device의 {@link works.momens.server.notification.device.PushInstallationDirectory}로 읽으며, FCM 전송은
  * fcm의 {@link works.momens.server.notification.fcm.FcmClient} 경계 뒤에서 수행합니다.
  */
-@org.springframework.modulith.ApplicationModule
+@ApplicationModule
 package works.momens.server.notification.dispatch;
+
+import org.springframework.modulith.ApplicationModule;
