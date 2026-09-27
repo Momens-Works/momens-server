@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import works.momens.server.project.core.ProjectDetail;
+import works.momens.server.project.milestone.MilestoneDetail;
 import works.momens.server.user.UserProfile;
 
 final class McpToolReferences {
@@ -53,6 +54,42 @@ final class McpToolReferences {
         matches.isEmpty()
             ? "No project matching this reference. Use list_projects."
             : "This reference matches several projects — use the PRJ-label");
+  }
+
+  static MilestoneDetail resolveMilestone(List<MilestoneDetail> milestones, String reference) {
+    Optional<UUID> id = uuid(reference);
+    if (id.isPresent()) {
+      return milestones.stream()
+          .filter(milestone -> milestone.id().equals(id.get()))
+          .findFirst()
+          .orElseThrow(
+              () ->
+                  new McpToolInputException(
+                      "No milestone with this id in this workspace or project"));
+    }
+    List<MilestoneDetail> exact =
+        milestones.stream()
+            .filter(milestone -> milestone.name().strip().equalsIgnoreCase(reference))
+            .toList();
+    List<MilestoneDetail> matches =
+        exact.isEmpty()
+            ? milestones.stream()
+                .filter(
+                    milestone ->
+                        milestone
+                            .name()
+                            .strip()
+                            .toLowerCase(Locale.ROOT)
+                            .contains(reference.toLowerCase(Locale.ROOT)))
+                .toList()
+            : exact;
+    if (matches.size() == 1) {
+      return matches.getFirst();
+    }
+    throw new McpToolInputException(
+        matches.isEmpty()
+            ? "No milestone matching this reference. Use list_milestones."
+            : "This reference matches several milestones — use the id");
   }
 
   static UUID resolveAssignee(List<UserProfile> members, String reference) {

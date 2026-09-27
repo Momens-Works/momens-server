@@ -29,7 +29,15 @@ final class ExceptionCatchingTryBlocks {
           new RegisteredTryBlock(
               "works.momens.server.auth.internal.web.WebAuthSessionImpl.completeLogin(jakarta.servlet.http.HttpServletRequest, java.lang.String, java.lang.String)",
               Handling.TRANSLATES,
-              "Google OAuth 로그인이 실패하면 예외를 잡아 JSON 에러 응답 대신 실패 주소로 리다이렉트합니다."));
+              "Google OAuth 로그인이 실패하면 예외를 잡아 JSON 에러 응답 대신 실패 주소로 리다이렉트합니다."),
+          new RegisteredTryBlock(
+              "works.momens.server.mcp.tools.internal.McpToolService.call(java.lang.String, tools.jackson.databind.JsonNode, works.momens.server.mcp.transport.McpAuthenticationContext)",
+              Handling.RETHROWS,
+              "알려진 쓰기 검증·권한·미존재 오류만 tool error로 바꾸고 나머지 BusinessException은 다시 던집니다."),
+          new RegisteredTryBlock(
+              "works.momens.server.mcp.transport.internal.McpTransportMethodHandler.callTool(tools.jackson.databind.JsonNode, tools.jackson.databind.JsonNode, works.momens.server.mcp.transport.McpAuthenticationContext)",
+              Handling.TRANSLATES,
+              "도구에서 전파된 RuntimeException을 일반 JSON-RPC Internal error로 바꾸므로 도메인 에러 코드를 노출하지 않습니다."));
 
   private ExceptionCatchingTryBlocks() {}
 

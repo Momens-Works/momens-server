@@ -438,14 +438,14 @@ eval set·retrieval 주소·접근 권한과 선택적 Vertex ADC가 필요하�
 | N009 | MCP tool | `list_projects` → `mcpserver.listProjects` | `MCP` → `project` | read-only | `traced`; H012와 같은 전환 단위 |
 | N010 | MCP tool | `list_members` → `mcpserver.listMembers` | `MCP` → `workspace` | read-only | `traced`; H012와 같은 전환 단위 |
 | N011 | MCP tool | `list_milestones` → `mcpserver.listMilestones` | `MCP` → `project` | read-only | `traced`; H012와 같은 전환 단위 |
-| N012 | MCP tool | `create_milestone` → `mcpserver.createMilestone` | `MCP` → `project` | milestone writer | `traced`; REST milestone writer와 함께 전환 |
-| N013 | MCP tool | `update_milestone` → `mcpserver.updateMilestone` | `MCP` → `project` | milestone writer | `traced`; REST milestone writer와 함께 전환 |
-| N014 | MCP tool | `delete_milestone` → `mcpserver.deleteMilestone` | `MCP` → `project` | milestone writer | `traced`; REST milestone writer와 함께 전환 |
-| N015 | MCP tool | `create_task` → `mcpserver.createTask` | `MCP` → `project` | task writer | `traced`; REST·Slack task writer와 projection을 함께 전환 |
-| N016 | MCP tool | `update_task` → `mcpserver.updateTask` | `MCP` → `project` | task writer | `traced`; REST·Slack task writer와 projection을 함께 전환 |
+| N012 | MCP tool | `create_milestone` → `mcpserver.createMilestone` | `MCP` → `project` | milestone writer | `implemented` (`MOM-0993`); `MilestoneWriter.create` 연결. REST milestone writer와 함께 전환 |
+| N013 | MCP tool | `update_milestone` → `mcpserver.updateMilestone` | `MCP` → `project` | milestone writer | `implemented` (`MOM-0993`); `MilestoneWriter.update` 연결. 선택 필드 삭제는 `MOM-1007` |
+| N014 | MCP tool | `delete_milestone` → `mcpserver.deleteMilestone` | `MCP` → `project` | milestone writer | `implemented` (`MOM-0993`); `MilestoneWriter.delete` 연결. soft delete, REST milestone writer와 함께 전환 |
+| N015 | MCP tool | `create_task` → `mcpserver.createTask` | `MCP` → `project` | task writer | `implemented` (`MOM-0993`); `TaskWriter.create` 연결. 운영 전환은 `MOM-0898`·`MOM-1002`·`MOM-0956`·`MOM-0953` gate 필요 |
+| N016 | MCP tool | `update_task` → `mcpserver.updateTask` | `MCP` → `project` | task writer | `implemented` (`MOM-0993`); `TaskWriter.patch` 연결. 수정 outbox는 `MOM-1002`, 운영 projection gate 유지 |
 | N017 | MCP tool | `get_task` → `mcpserver.getTask` | `MCP` → `project` | task·updates read | `traced`; H012와 같은 전환 단위 |
 | N018 | MCP tool | `list_tasks` → `mcpserver.listTasks` | `MCP` → `project` | read-only | `traced`; H012와 같은 전환 단위 |
-| N019 | MCP tool | `create_comment` → `mcpserver.createComment` | `MCP` → `project` | task update writer | `traced`; REST task update writer와 함께 전환 |
+| N019 | MCP tool | `create_comment` → `mcpserver.createComment` | `MCP` → `project` | task update writer | `implemented` (`MOM-0993`); `TaskUpdateWriter.create` 연결. REST task update writer와 함께 전환 |
 
 ## 첫 수직 슬라이스 후보 비교
 
