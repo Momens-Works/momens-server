@@ -240,6 +240,58 @@ class McpReadToolServiceTest {
         .isTrue();
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {"Alice", "Ali"})
+  void ambiguousAssigneeRequiresEmail(String reference) {
+    UUID otherUserId = UUID.randomUUID();
+    when(memberships.listMembershipDetails(workspaceId))
+        .thenReturn(
+            List.of(
+                new WorkspaceMembershipDetail(userId, "member", now, now),
+                new WorkspaceMembershipDetail(otherUserId, "member", now, now)));
+    when(users.getProfiles(List.of(userId, otherUserId)))
+        .thenReturn(
+            List.of(
+                new UserProfile(userId, "alice@example.com", "Alice", null, null, now, now),
+                new UserProfile(otherUserId, "other@example.com", "Alice", null, null, now, now)));
+    JsonNode result = call("list_tasks", "{\"assignee\":\"" + reference + "\"}");
+    assertThat(result.path("isError").asBoolean()).isTrue();
+    assertThat(text(result)).isEqualTo("This reference matches several members — use their email");
+    verifyNoInteractions(tasks);
+    assertThat(
+            call("list_tasks", "{\"assignee\":\"alice@example.com\"}").path("isError").asBoolean())
+        .isFalse();
+    verify(tasks).listSnapshotsByWorkspaceId(workspaceId);
+  }
+
+  @Test
+  void taskWithoutOptionalFieldsKeepsMinimalText() {
+    TaskSnapshot task =
+        new TaskSnapshot(
+            taskId,
+            workspaceId,
+            projectId,
+            null,
+            null,
+            "Read tools",
+            null,
+            "todo",
+            "medium",
+            "implementation",
+            null,
+            null,
+            now,
+            now);
+    when(tasks.findSnapshotInWorkspace(workspaceId, taskId)).thenReturn(Optional.of(task));
+    when(tasks.listSnapshotsByWorkspaceId(workspaceId)).thenReturn(List.of(task));
+    JsonNode detail = call("get_task", "{\"task\":\"" + taskId + "\"}");
+    assertThat(detail.path("isError").asBoolean()).isFalse();
+    assertThat(text(detail)).isEqualTo(taskId + " · Read tools\nstatus: todo · priority: medium");
+    assertThat(text(call("list_tasks", "{}")))
+        .isEqualTo("1 task(s):\n- " + taskId + " · Read tools [todo]");
+    verifyNoInteractions(milestones, users);
+  }
+
   private McpGrantDetail grant(List<String> scopes) {
     return new McpGrantDetail(
         context.grantId(), userId, "client", workspaceId, scopes, now, null, now);
