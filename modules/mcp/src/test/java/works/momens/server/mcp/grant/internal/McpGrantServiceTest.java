@@ -150,16 +150,23 @@ class McpGrantServiceTest {
   @DisplayName("Grant를 철회하고 연결된 token family도 철회한다")
   void revokingGrantAlsoRevokesItsTokenFamily() {
     UUID grantId = UUID.randomUUID();
-    McpGrant grant =
-        McpGrant.create(
-            new CreateMcpGrantCommand(
-                UUID.randomUUID(), "client-1", UUID.randomUUID(), List.of("mcp:tasks:read")),
-            NOW);
-    when(mcpGrantRepository.findByIdAndRevokedAtIsNull(grantId)).thenReturn(Optional.of(grant));
+    when(mcpGrantRepository.revokeActive(grantId, NOW.plusSeconds(30))).thenReturn(1);
 
     service.revoke(grantId, NOW.plusSeconds(30));
 
-    assertThat(grant.getRevokedAt()).isEqualTo(NOW.plusSeconds(30));
     verify(tokenFamilyRevoker).revokeByGrantId(grantId, NOW.plusSeconds(30));
+  }
+
+  @Test
+  @DisplayName("동시 폐기에 패배한 요청은 token family를 다시 폐기하지 않는다")
+  void rejectsAlreadyRevokedGrantWithoutRevokingTokensAgain() {
+    UUID grantId = UUID.randomUUID();
+    assertThatThrownBy(() -> service.revoke(grantId, null))
+        .isInstanceOfSatisfying(
+            BusinessException.class,
+            exception ->
+                assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.COMMON_NOT_FOUND));
+    verify(mcpGrantRepository).revokeActive(grantId, NOW);
+    verify(tokenFamilyRevoker, never()).revokeByGrantId(any(), any());
   }
 }

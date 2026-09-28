@@ -9,7 +9,6 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import works.momens.server.common.persistence.BaseEntity;
@@ -18,7 +17,6 @@ import works.momens.server.mcp.grant.McpScope;
 
 @Getter
 @Entity
-@DynamicUpdate
 @Table(name = "mcp_grants")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 class McpGrant extends BaseEntity {
@@ -53,11 +51,5 @@ class McpGrant extends BaseEntity {
     grant.scopes = List.copyOf(McpScope.normalize(command.scopes()));
     grant.approvedAt = approvedAt;
     return grant;
-  }
-
-  void revoke(Instant revokedAt) {
-    if (this.revokedAt == null) {
-      this.revokedAt = revokedAt;
-    }
   }
 }

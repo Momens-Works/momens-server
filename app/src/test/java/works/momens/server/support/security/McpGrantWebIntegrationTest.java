@@ -19,6 +19,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +30,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -44,6 +48,7 @@ class McpGrantWebIntegrationTest extends AbstractPostgresIntegrationTest {
   @Autowired MockMvc mvc;
   @Autowired ObjectMapper mapper;
   @Autowired JdbcTemplate jdbc;
+  @Autowired DataSource dataSource;
   @Autowired AccessTokenTestFactory accessTokens;
   @MockitoSpyBean McpTokenFamilyRevoker revoker;
 
@@ -190,6 +195,93 @@ class McpGrantWebIntegrationTest extends AbstractPostgresIntegrationTest {
         .isTrue();
     mvc.perform(mcp(session.access())).andExpect(status().isOk());
     mvc.perform(refresh(session)).andExpect(status().isOk());
+  }
+
+  @Test
+  @DisplayName("동시에 읽은 활성 연결의 폐기는 한 요청만 성공하고 최초 폐기 시각을 보존한다")
+  void concurrentDeletesHaveOneWinner() throws Exception {
+    UUID user = user();
+    UUID workspace = workspace(user);
+    Session session = authorize(user, workspace);
+    Cookie cookie = cookie(user);
+    mvc.perform(mcp(session.access())).andExpect(status().isOk());
+    Instant used = lastUsed(session.grant());
+
+    try (var connection = dataSource.getConnection()) {
+      connection.setAutoCommit(false);
+      JdbcTemplate locker = new JdbcTemplate(new SingleConnectionDataSource(connection, true));
+      int lockerPid = locker.queryForObject("SELECT pg_backend_pid()", Integer.class);
+      // Both implementations must read an active grant before either can commit:
+      // entity-based revoke waits on authorization, conditional UPDATE waits on the grant.
+      locker.queryForList("SELECT id FROM mcp_grants WHERE id = ? FOR UPDATE", session.grant());
+      locker.queryForList(
+          "SELECT id FROM oauth2_authorization WHERE id IN "
+              + "(SELECT authorization_id FROM mcp_token_families WHERE grant_id = ?) FOR UPDATE",
+          session.grant());
+      try (var executor = Executors.newFixedThreadPool(2)) {
+        var first =
+            executor.submit(
+                () ->
+                    mvc.perform(delete(path(workspace) + "/" + session.grant()).cookie(cookie))
+                        .andReturn()
+                        .getResponse());
+        var second =
+            executor.submit(
+                () ->
+                    mvc.perform(delete(path(workspace) + "/" + session.grant()).cookie(cookie))
+                        .andReturn()
+                        .getResponse());
+        try {
+          long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
+          int blocked;
+          do {
+            blocked =
+                jdbc.queryForObject(
+                    "WITH RECURSIVE blocked AS ("
+                        + "SELECT pid FROM pg_stat_activity WHERE ? = ANY(pg_blocking_pids(pid)) "
+                        + "UNION SELECT a.pid FROM pg_stat_activity a JOIN blocked b "
+                        + "ON b.pid = ANY(pg_blocking_pids(a.pid))) SELECT count(*) FROM blocked",
+                    Integer.class,
+                    lockerPid);
+            if (blocked >= 2) {
+              break;
+            }
+            Thread.sleep(20);
+          } while (System.nanoTime() < deadline);
+          assertThat(blocked)
+              .as("both DELETE transactions reached their database lock")
+              .isEqualTo(2);
+        } finally {
+          connection.rollback();
+        }
+        var responses = List.of(first.get(20, TimeUnit.SECONDS), second.get(20, TimeUnit.SECONDS));
+        assertThat(responses)
+            .extracting(response -> response.getStatus())
+            .containsExactlyInAnyOrder(204, 403);
+        String rejected =
+            responses.stream()
+                .filter(response -> response.getStatus() == 403)
+                .findFirst()
+                .orElseThrow()
+                .getContentAsString();
+        assertThat(mapper.readTree(rejected).path("error").stringValue()).isEqualTo("forbidden");
+      }
+    }
+    Timestamp revokedAt =
+        jdbc.queryForObject(
+            "SELECT revoked_at FROM mcp_grants WHERE id = ?", Timestamp.class, session.grant());
+    assertThat(revokedAt)
+        .isNotNull()
+        .isEqualTo(
+            jdbc.queryForObject(
+                "SELECT revoked_at FROM mcp_token_families WHERE grant_id = ?",
+                Timestamp.class,
+                session.grant()));
+    assertThat(lastUsed(session.grant())).isEqualTo(used);
+    mvc.perform(mcp(session.access())).andExpect(status().isUnauthorized());
+    mvc.perform(refresh(session))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error").value("invalid_grant"));
   }
 
   private OpenApiInteractionValidator validator() throws Exception {
