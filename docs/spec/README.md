@@ -10,3 +10,4 @@
 | [API 응답과 에러 코드](api-response-error-codes.md) | 성공 응답 형태, 에러 body, 에러 코드 네이밍과 HTTP status 매핑 |
 | [모바일 API 명세](mobile-api.md) | 모바일 MVP HTTP API 계약과 request/response 예시 |
 | [MCP 쓰기 도구](mcp-write-tools.md) | 쓰기 도구 6개의 scope·참조·필드 삭제·재시도 계약과 운영 전제 |
+| [MCP 연결 조회·폐기 웹 API](mcp-grants.md) | H035·H036, 사용자 권한·응답·사용 시각 계약 |

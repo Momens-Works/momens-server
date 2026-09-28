@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.mcp.configuration.McpEndpointProperties;
 import works.momens.server.mcp.grant.McpGrantDetail;
 import works.momens.server.mcp.grant.McpGrantReader;
+import works.momens.server.mcp.grant.McpGrantWriter;
 import works.momens.server.mcp.transport.McpAuthenticationContext;
 import works.momens.server.mcp.transport.McpBearerTokenVerifier;
 import works.momens.server.workspace.membership.WorkspaceMembershipReader;
@@ -32,12 +33,13 @@ public class McpReferenceTokenVerifier implements McpBearerTokenVerifier {
   private final RegisteredClientRepository clients;
   private final McpTokenFamilies families;
   private final McpGrantReader grants;
+  private final McpGrantWriter grantWriter;
   private final WorkspaceMembershipReader memberships;
   private final McpEndpointProperties endpoints;
   private final Clock clock;
 
   @Override
-  @Transactional(readOnly = true)
+  @Transactional
   public Optional<McpAuthenticationContext> verify(String bearerToken) {
     if (bearerToken == null || bearerToken.isBlank()) {
       return reject("empty_token");
@@ -98,6 +100,9 @@ public class McpReferenceTokenVerifier implements McpBearerTokenVerifier {
     }
     if (memberships.roleOf(grant.workspaceId(), grant.userId()).isEmpty()) {
       return reject("workspace_membership_not_found");
+    }
+    if (!grantWriter.recordUsage(grant.id(), now)) {
+      return reject("active_grant_not_found");
     }
     return Optional.of(
         new McpAuthenticationContext(

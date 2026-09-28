@@ -1,14 +1,31 @@
 package works.momens.server.mcp.grant.internal;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 interface McpGrantRepository extends JpaRepository<McpGrant, UUID> {
 
   Optional<McpGrant> findByIdAndRevokedAtIsNull(UUID id);
+
+  List<McpGrant> findByWorkspaceIdAndUserIdAndRevokedAtIsNullOrderByCreatedAtDescIdAsc(
+      UUID workspaceId, UUID userId);
+
+  @Modifying(flushAutomatically = true)
+  @Query(
+      """
+      UPDATE McpGrant g
+      SET g.lastUsedAt = CASE WHEN g.lastUsedAt IS NULL OR g.lastUsedAt < :usedAt
+          THEN :usedAt ELSE g.lastUsedAt END,
+          g.updatedAt = CASE WHEN g.updatedAt < :usedAt THEN :usedAt ELSE g.updatedAt END
+      WHERE g.id = :grantId AND g.revokedAt IS NULL
+      """)
+  int recordUsage(@Param("grantId") UUID grantId, @Param("usedAt") Instant usedAt);
 
   Optional<McpGrant> findByUserIdAndClientIdAndWorkspaceIdAndRevokedAtIsNull(
       UUID userId, String clientId, UUID workspaceId);

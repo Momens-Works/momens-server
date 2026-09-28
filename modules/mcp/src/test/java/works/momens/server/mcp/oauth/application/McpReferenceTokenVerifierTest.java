@@ -2,6 +2,7 @@ package works.momens.server.mcp.oauth.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -16,6 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,6 +39,7 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import works.momens.server.mcp.configuration.McpEndpointProperties;
 import works.momens.server.mcp.grant.McpGrantDetail;
 import works.momens.server.mcp.grant.McpGrantReader;
+import works.momens.server.mcp.grant.McpGrantWriter;
 import works.momens.server.mcp.grant.McpScope;
 import works.momens.server.mcp.transport.McpAuthenticationContext;
 import works.momens.server.workspace.membership.WorkspaceMembershipReader;
@@ -62,6 +65,7 @@ class McpReferenceTokenVerifierTest {
   @Mock RegisteredClientRepository clients;
   @Mock McpTokenFamilies families;
   @Mock McpGrantReader grants;
+  @Mock McpGrantWriter grantWriter;
   @Mock WorkspaceMembershipReader memberships;
   McpReferenceTokenVerifier verifier;
   private CapturedOutput output;
@@ -76,6 +80,7 @@ class McpReferenceTokenVerifierTest {
             clients,
             families,
             grants,
+            grantWriter,
             memberships,
             new McpEndpointProperties(URI.create(RESOURCE), List.of()),
             Clock.fixed(NOW, ZoneOffset.UTC));
@@ -87,6 +92,7 @@ class McpReferenceTokenVerifierTest {
     stubGrant(userId, "public-client", List.of(READ, McpScope.TASKS_WRITE.value()));
     when(clients.findById(client.getId())).thenReturn(client);
     when(memberships.roleOf(workspaceId, userId)).thenReturn(Optional.of(WorkspaceRole.MEMBER));
+    when(grantWriter.recordUsage(grantId, NOW)).thenReturn(true);
     McpAuthenticationContext context = verifier.verify(RAW).orElseThrow();
     assertThat(context.grantId()).isEqualTo(grantId);
     assertThat(context.userId()).isEqualTo(userId);
@@ -97,6 +103,7 @@ class McpReferenceTokenVerifierTest {
     assertThat(context.permits(UUID.randomUUID(), McpScope.TASKS_READ)).isFalse();
     assertThat(context.permits(workspaceId, McpScope.TASKS_WRITE)).isFalse();
     assertThat(context.toString()).doesNotContain(RAW);
+    verify(grantWriter).recordUsage(grantId, NOW);
   }
 
   @ParameterizedTest
@@ -224,6 +231,19 @@ class McpReferenceTokenVerifierTest {
     verifyNoInteractions(families, grants, clients, memberships);
   }
 
+  @Test
+  @DisplayName("검증 중 폐기된 grant에는 사용 시각을 기록하거나 인증을 허용하지 않는다")
+  void rejectsGrantRevokedBeforeUsageUpdate() {
+    stubToken(authorization(NOW.minusSeconds(1), NOW.plusSeconds(60)).build());
+    stubGrant(userId, "public-client", List.of(READ));
+    when(clients.findById(client.getId())).thenReturn(client);
+    when(memberships.roleOf(workspaceId, userId)).thenReturn(Optional.of(WorkspaceRole.MEMBER));
+    assertThat(verifier.verify(RAW)).isEmpty();
+    verify(grantWriter).recordUsage(grantId, NOW);
+    rejectionCount++;
+    assertThat(rejectionLogs().getLast()).endsWith("reason=active_grant_not_found");
+  }
+
   @AfterEach
   void logsOnlyExpectedRejectionsWithoutTokenMaterial() {
     assertThat(rejectionLogs()).hasSize(rejectionCount);
@@ -232,6 +252,7 @@ class McpReferenceTokenVerifierTest {
 
   private void assertRejection(String token, String reason) {
     assertThat(verifier.verify(token)).isEmpty();
+    verifyNoInteractions(grantWriter);
     rejectionCount++;
     assertThat(rejectionLogs()).hasSize(rejectionCount);
     assertThat(rejectionLogs().getLast()).endsWith("outcome=rejected reason=" + reason);
