@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,6 +32,7 @@ import works.momens.server.project.milestone.MilestoneReader;
 
 @SpringBootTest(properties = "momens.mcp.oauth.consent-uri=https://app.example.com/oauth/authorize")
 @AutoConfigureMockMvc
+@DisplayName("MCP OAuth 인증 경계와 도구 호출 통합 테스트")
 class McpOAuthSecurityIntegrationTest extends AbstractPostgresIntegrationTest {
   @Autowired MockMvc mvc;
   @Autowired ObjectMapper mapper;
@@ -39,6 +41,7 @@ class McpOAuthSecurityIntegrationTest extends AbstractPostgresIntegrationTest {
   @MockitoSpyBean MilestoneReader milestones;
 
   @Test
+  @DisplayName("사용자 쿠키로 동의하고 MCP 토큰으로 도구를 호출하며 사용자 API 인증과 분리한다")
   void consentUsesTheExistingUserCookieAndMcpTokensCannotAuthenticateUserApis() throws Exception {
     UUID userId = UUID.randomUUID();
     UUID workspaceId = UUID.randomUUID();
