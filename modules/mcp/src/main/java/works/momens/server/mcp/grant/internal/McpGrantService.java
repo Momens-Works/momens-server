@@ -51,10 +51,11 @@ class McpGrantService implements McpGrantWriter, McpGrantReader {
         .ifPresent(
             grant -> {
               Instant now = clock.instant();
-              grant.revoke(now);
-              tokenFamilyRevoker.revokeByGrantId(grant.getId(), now);
-              // Release the partial unique key before Hibernate inserts the replacement.
-              mcpGrantRepository.flush();
+              // Use the same grant-before-token lock order as explicit revocation.
+              // A concurrent revoke may already have closed this lifecycle.
+              if (mcpGrantRepository.revokeActive(grant.getId(), now) == 1) {
+                tokenFamilyRevoker.revokeByGrantId(grant.getId(), now);
+              }
             });
     return createValidated(command);
   }
@@ -98,15 +99,10 @@ class McpGrantService implements McpGrantWriter, McpGrantReader {
   @Override
   @Transactional
   public void revoke(UUID grantId, Instant revokedAt) {
-    McpGrant grant =
-        mcpGrantRepository
-            .findByIdAndRevokedAtIsNull(grantId)
-            .orElseThrow(
-                () ->
-                    new BusinessException(
-                        CommonErrorCode.COMMON_NOT_FOUND, Map.of("grant_id", grantId)));
     Instant effectiveRevokedAt = revokedAt != null ? revokedAt : clock.instant();
-    grant.revoke(effectiveRevokedAt);
+    if (mcpGrantRepository.revokeActive(grantId, effectiveRevokedAt) != 1) {
+      throw new BusinessException(CommonErrorCode.COMMON_NOT_FOUND, Map.of("grant_id", grantId));
+    }
     tokenFamilyRevoker.revokeByGrantId(grantId, effectiveRevokedAt);
   }
 

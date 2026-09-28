@@ -52,7 +52,9 @@ rollback한다. 커밋 후 해당 token의 MCP 접근·refresh를 거부하며 �
 다른 연결은 유지한다.
 
 없는 연결, 이미 폐기한 연결, 다른 사용자·workspace의 연결은 모두 `403`이다. 삭제 재시도를
-성공으로 바꾸지 않는다. 레거시에서 빠져 있던 폐기 시점의 membership 검사를 추가한다.
+성공으로 바꾸지 않는다. 동시 DELETE도 `revoked_at IS NULL` 조건의 원자적 UPDATE로 한 요청만
+성공한다. 패배한 요청은 `403`이며 최초 폐기 시각을 덮어쓰지 않는다. 레거시에서 빠져 있던
+폐기 시점의 membership 검사를 추가한다.
 
 ## 오류
 
@@ -74,11 +76,13 @@ rollback한다. 커밋 후 해당 token의 MCP 접근·refresh를 거부하며 �
 
 reference token·resource·grant·scope·membership 검증을 모두 통과한 뒤 사용 시각을 기록한다.
 목록 조회, 실패한 인증, OAuth 갱신만으로는 기록하지 않는다. 원자적 컬럼 UPDATE로 시간이
-뒤로 가지 않게 하고, 폐기된 행에는 기록하지 않는다. grant 폐기는 변경 컬럼만 UPDATE해
-동시 사용 시각 갱신을 덮어쓰지 않는다. 각 성공 인증에 DB 쓰기 한 번이 추가된다.
+뒤로 가지 않게 하고, 폐기된 행에는 기록하지 않는다. grant 폐기는 폐기·감사 시각만 조건부
+UPDATE해 동시 사용 시각 갱신을 덮어쓰지 않는다. 명시적 폐기와 재동의 교체는 모두 grant를
+먼저 변경한 뒤 token family를 잠근다. 각 성공 인증에 DB 쓰기 한 번이 추가된다.
 
 ## 검증
 
 실제 PostgreSQL과 HTTP OAuth 흐름으로 사용자·workspace 격리, 사용 시각, 폐기 후
-access/refresh 거부, 폐기 저장 실패 시 rollback을 검증한다. verifier 단위 테스트는
+access/refresh 거부, 폐기 저장 실패 시 rollback을 검증한다. PostgreSQL 잠금으로 두 DELETE가
+동시에 활성 연결을 읽는 상황을 만들고 `204 / 403`과 최초 폐기 시각 보존도 검증한다. verifier 단위 테스트는
 거부된 인증에서 사용 시각 기록을 호출하지 않는지도 검사한다.

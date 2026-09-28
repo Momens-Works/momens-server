@@ -27,6 +27,14 @@ interface McpGrantRepository extends JpaRepository<McpGrant, UUID> {
       """)
   int recordUsage(@Param("grantId") UUID grantId, @Param("usedAt") Instant usedAt);
 
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query(
+      """
+      UPDATE McpGrant g SET g.revokedAt = :revokedAt, g.updatedAt = :revokedAt
+      WHERE g.id = :grantId AND g.revokedAt IS NULL
+      """)
+  int revokeActive(@Param("grantId") UUID grantId, @Param("revokedAt") Instant revokedAt);
+
   Optional<McpGrant> findByUserIdAndClientIdAndWorkspaceIdAndRevokedAtIsNull(
       UUID userId, String clientId, UUID workspaceId);
 
