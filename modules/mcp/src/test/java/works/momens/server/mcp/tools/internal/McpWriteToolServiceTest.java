@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -62,6 +63,7 @@ import works.momens.server.workspace.membership.WorkspaceMembershipDetail;
 import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 import works.momens.server.workspace.membership.WorkspaceRole;
 
+@DisplayName("MCP 쓰기 도구 서비스 단위 테스트")
 class McpWriteToolServiceTest {
   private final ObjectMapper mapper = new ObjectMapper();
   private final McpGrantReader grants = mock(McpGrantReader.class);
@@ -117,6 +119,7 @@ class McpWriteToolServiceTest {
   }
 
   @Test
+  @DisplayName("쓰기 도구 schema는 golden과 일치하고 통합 목록은 이름순 정렬과 scope 필터를 적용한다")
   void catalogMatchesGoldenAndCombinedCatalogIsSortedAndScopeFiltered() throws Exception {
     ArrayNode actual = mapper.createArrayNode();
     for (McpToolDefinition tool : writes.list(context)) {
@@ -167,6 +170,7 @@ class McpWriteToolServiceTest {
         "update_milestone",
         "delete_milestone"
       })
+  @DisplayName("철회된 grant는 도메인 접근 전에 모든 쓰기 도구 호출을 차단한다")
   void revokedGrantBlocksAllWritesBeforeDomainAccess(String name) {
     when(grants.findActive(context.grantId())).thenReturn(Optional.empty());
     assertThat(call(name, "{}").path("isError").asBoolean()).isTrue();
@@ -175,6 +179,7 @@ class McpWriteToolServiceTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"membership", "scope", "user", "client", "workspace", "token_scope"})
+  @DisplayName("쓰기 호출마다 membership·grant 정보와 token scope를 재검증한다")
   void revalidatesEveryAuthorizationDimension(String dimension) {
     McpGrantDetail grant = grant(context.scopes());
     switch (dimension) {
@@ -232,12 +237,14 @@ class McpWriteToolServiceTest {
         "{\"project\":\"p\",\"title\":\"t\",\"extra\":true}",
         "[]"
       })
+  @DisplayName("입력 schema에 맞지 않는 요청은 writer 호출 전에 거부한다")
   void invalidShapeCannotReachWriter(String args) {
     assertThat(call("create_task", args).path("isError").asBoolean()).isTrue();
     verifyNoInteractions(projects, taskWriter);
   }
 
   @Test
+  @DisplayName("쓰기 scope만으로 기존 기본값과 참조 해석을 적용해 태스크를 생성한다")
   void createsTaskWithLegacyDefaultsAndReferencesUsingWriteScopeAlone() {
     seed();
     when(taskWriter.create(any())).thenReturn(task());
@@ -267,6 +274,7 @@ class McpWriteToolServiceTest {
 
   @ParameterizedTest
   @CsvSource({"progress,med", "in-progress,MED", "IN_PROGRESS,medium"})
+  @DisplayName("태스크 상태와 우선순위의 기존 별칭을 유지한다")
   void preservesTaskStatusAndPriorityAliases(String status, String priority) {
     seed();
     when(taskWriter.patch(any())).thenReturn(task());
@@ -285,6 +293,7 @@ class McpWriteToolServiceTest {
   }
 
   @Test
+  @DisplayName("태스크 수정에서 생략한 필드와 명시적으로 삭제한 필드를 구분한다")
   void separatesOmittedFieldsFromExplicitClears() {
     seed();
     when(taskWriter.patch(any())).thenReturn(task());
@@ -308,6 +317,7 @@ class McpWriteToolServiceTest {
   }
 
   @Test
+  @DisplayName("태스크 수정에서 생략한 선택 필드는 삭제하지 않는다")
   void omittedOptionalFieldsAreNotCleared() {
     seed();
     when(taskWriter.patch(any())).thenReturn(task());
@@ -331,6 +341,7 @@ class McpWriteToolServiceTest {
         "{\"milestone\":\"absent\"}",
         "{\"assignee\":\"absent\"}"
       })
+  @DisplayName("잘못된 태스크 값이나 참조는 writer 호출 전에 거부한다")
   void invalidTaskValuesCannotReachWriter(String fields) {
     seed();
     ObjectNode args = (ObjectNode) mapper.readTree(fields);
@@ -341,6 +352,7 @@ class McpWriteToolServiceTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"update_task", "create_comment"})
+  @DisplayName("프로젝트가 없거나 삭제되면 UUID와 label을 통한 태스크 쓰기를 차단한다")
   void missingOrDeletedProjectBlocksTaskWritesByUuidAndLabel(String name) {
     seed();
     when(projects.listDetailsByWorkspaceId(workspaceId)).thenReturn(List.of());
@@ -355,6 +367,7 @@ class McpWriteToolServiceTest {
   }
 
   @Test
+  @DisplayName("다른 프로젝트의 마일스톤 참조와 중복 이름을 거부한다")
   void rejectsMilestoneFromAnotherProjectAndAmbiguousNames() {
     seed();
     when(milestones.listDetailsByWorkspaceId(workspaceId))
@@ -377,6 +390,7 @@ class McpWriteToolServiceTest {
   }
 
   @Test
+  @DisplayName("태스크 소속을 확인하고 인증된 사용자를 작성자로 댓글을 생성한다")
   void createsCommentUsingAuthenticatedAuthorAndTaskOwnership() {
     seed();
     assertThat(text(call("create_comment", "{\"task\":\"mom-0993\",\"body\":\" Comment \"}")))
@@ -388,6 +402,7 @@ class McpWriteToolServiceTest {
   }
 
   @Test
+  @DisplayName("마일스톤 생성·수정·삭제 시 기존 텍스트 응답을 유지한다")
   void createsUpdatesAndDeletesMilestonesWithLegacyText() {
     seed();
     when(milestoneWriter.create(any())).thenReturn(milestone(milestoneId, projectId, "Release"));
@@ -421,6 +436,7 @@ class McpWriteToolServiceTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"-1", "101", "1.5", "2147483648", "null", "\"10\""})
+  @DisplayName("범위나 타입이 잘못된 마일스톤 진행률을 거부한다")
   void invalidProgressIsRejected(String value) {
     seed();
     assertThat(
@@ -432,6 +448,7 @@ class McpWriteToolServiceTest {
   }
 
   @Test
+  @DisplayName("예상한 writer 오류는 상세를 숨겨 변환하고 내부 오류는 전파한다")
   void mapsExpectedWriterErrorsWithoutExposingDetailsAndPropagatesInternalErrors() {
     seed();
     when(taskWriter.patch(any()))

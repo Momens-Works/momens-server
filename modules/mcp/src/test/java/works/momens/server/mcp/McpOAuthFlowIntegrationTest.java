@@ -25,6 +25,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,6 +73,7 @@ import works.momens.server.workspace.membership.WorkspaceRole;
     })
 @Import(JpaAuditingConfig.class)
 @AutoConfigureMockMvc
+@DisplayName("MCP OAuth 인가·토큰 수명주기 통합 테스트")
 class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   private static final String RESOURCE = "https://api.momens.works/api/mcp";
   private static final String REDIRECT = "http://localhost:3000/callback";
@@ -124,6 +126,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("코드와 토큰 원문을 저장하지 않고 public client 토큰을 발급·갱신·폐기한다")
   void authorizesRotatesAndRevokesPublicClientTokensWithoutStoringSecrets() throws Exception {
     String code = approve(begin());
     JsonNode pair = exchange(code);
@@ -150,6 +153,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("refresh token 재사용 시 현재 token family와 access token을 폐기한다")
   void refreshReuseRevokesTheCurrentFamilyAndAccessToken() throws Exception {
     JsonNode pair = exchange(approve(begin()));
     String refresh = pair.get("refresh_token").stringValue();
@@ -174,6 +178,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("인가 코드 재사용과 잘못된 verifier·resource·redirect URI를 거부한다")
   void rejectsCodeReplayAndWrongVerifierResourceRedirectOrClient() throws Exception {
     String code = approve(begin());
     mvc.perform(
@@ -207,6 +212,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("거부되거나 만료된 동의 요청에는 인가 코드를 발급하지 않는다")
   void deniesAndExpiresInteractionsWithoutIssuingCode() throws Exception {
     String id = begin();
     mvc.perform(post("/api/oauth/interactions/" + id + "/deny").with(user(userId.toString())))
@@ -236,6 +242,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("grant 철회 시 실제 token family 어댑터를 통해 토큰을 폐기한다")
   void grantRevocationUsesTheRealFamilyAdapter() throws Exception {
     JsonNode pair = exchange(approve(begin()));
     String access = pair.get("access_token").stringValue();
@@ -250,6 +257,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Test
   @ExtendWith(OutputCaptureExtension.class)
+  @DisplayName("reference token으로 MCP를 인증하고 갱신 후 이전 access token을 거부한다")
   void referenceTokensAuthenticateTransportAndRotationRejectsThePreviousAccessToken(
       CapturedOutput output) throws Exception {
     String code = approve(begin());
@@ -296,6 +304,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("MCP 호출마다 토큰 만료와 멤버십 삭제를 확인해 접근을 거부한다")
   void transportRejectsExpiredTokensAndRemovedMembershipWithoutCaching() throws Exception {
     String access = exchange(approve(begin())).get("access_token").stringValue();
     mvc.perform(mcpRequest(access, "tools/list")).andExpect(status().isOk());
@@ -309,6 +318,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("grant나 token family가 별도로 철회되면 활성 토큰의 MCP 접근을 거부한다")
   void transportRejectsAnActiveTokenWhenTheGrantOrFamilyIsRevokedIndependently() throws Exception {
     String access = exchange(approve(begin())).get("access_token").stringValue();
     mvc.perform(mcpRequest(access, "tools/list")).andExpect(status().isOk());
@@ -349,6 +359,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("잘못된 principal은 표준 AUTH_INVALID_TOKEN 오류로 응답한다")
   void malformedPrincipalPreservesStandardAuthError() throws Exception {
     mvc.perform(get("/api/oauth/interactions/" + UUID.randomUUID()).with(user("not-a-uuid")))
         .andExpect(status().isUnauthorized())
@@ -356,6 +367,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("존재하지 않는 동의 요청은 기존 invalid_interaction 오류로 거부한다")
   void rejectsUnknownInteractionWithLegacyError() throws Exception {
     mvc.perform(approveRequest(UUID.randomUUID().toString()))
         .andExpect(status().isBadRequest())
@@ -363,6 +375,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("워크스페이스 비멤버의 동의 승인을 거부한다")
   void rejectsNonMemberConsent() throws Exception {
     String id = begin();
     when(memberships.roleOf(workspaceId, userId)).thenReturn(Optional.empty());
@@ -372,6 +385,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("동의 화면으로 이동하기 전에 client와 redirect URI를 검증한다")
   void validatesAuthorizeBeforeRedirectingToConsent() throws Exception {
     mvc.perform(authorizeRequest(Map.of("redirect_uri", "https://evil.example/callback")))
         .andExpect(status().isBadRequest());
@@ -381,6 +395,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("잘못된 resource와 scope의 구체적인 인가 오류를 유지한다")
   void preservesSpecificAuthorizationErrors() throws Exception {
     mvc.perform(authorizeRequest(Map.of("resource", "https://wrong.example/api/mcp")))
         .andExpect(status().isFound())
@@ -391,6 +406,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("잘못된 PKCE·resource·scope·request_uri와 미등록 loopback 포트를 거부한다")
   void rejectsPlainPkceWrongResourceAndUnregisteredLoopbackPort() throws Exception {
     for (Map<String, String> values :
         List.of(
@@ -408,6 +424,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("다른 client의 토큰 사용을 거부하고 원래 소유자의 token family를 유지한다")
   void rejectsForeignClientWithoutRevokingTheOwnersFamily() throws Exception {
     JsonNode pair = exchange(approve(begin()));
     String refresh = pair.get("refresh_token").stringValue();
@@ -445,6 +462,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("토큰 갱신 시 scope 확대와 멤버십 삭제를 감지해 거부한다")
   void rejectsScopeEscalationAndRemovedMembership() throws Exception {
     String refresh = exchange(approve(begin())).get("refresh_token").stringValue();
     mvc.perform(refreshRequest(refresh).param("scope", "mcp:tasks:write"))
@@ -457,6 +475,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("같은 인가 코드의 동시 교환은 한 번만 성공한다")
   void concurrentCodeExchangeSucceedsOnlyOnce() throws Exception {
     String code = approve(begin());
     try (var executor = Executors.newFixedThreadPool(2)) {
@@ -475,6 +494,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("동시 토큰 갱신에서 재사용을 감지하고 먼저 발급된 토큰도 폐기한다")
   void concurrentRefreshDetectsReuseAndRevokesTheWinner() throws Exception {
     String refresh = exchange(approve(begin())).get("refresh_token").stringValue();
     try (var executor = Executors.newFixedThreadPool(2)) {
@@ -505,6 +525,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("재승인 시 기존 grant를 교체하고 연결된 토큰을 폐기한다")
   void reapprovalReplacesTheGrantAndRevokesItsTokens() throws Exception {
     String id = begin();
     String previousCode = approve(id);
@@ -534,6 +555,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("동시 재승인 후 활성 grant는 하나만 남는다")
   void concurrentReapprovalsLeaveExactlyOneActiveGrant() throws Exception {
     String firstId = begin();
     String secondId = begin();
@@ -569,6 +591,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("서로 다른 워크스페이스의 동시 최초 승인은 모두 성공한다")
   void concurrentFirstApprovalsInDifferentWorkspacesBothSucceed() throws Exception {
     UUID otherWorkspace = UUID.randomUUID();
     jdbc.update(
@@ -625,6 +648,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("만료된 인가 코드는 토큰으로 교환할 수 없다")
   void expiredCodeCannotBeExchanged() throws Exception {
     String code = approve(begin());
     jdbc.update(
@@ -636,6 +660,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("만료된 refresh token으로 토큰을 갱신할 수 없다")
   void expiredRefreshCannotBeRotated() throws Exception {
     String refresh = exchange(approve(begin())).get("refresh_token").stringValue();
     jdbc.update(
@@ -647,6 +672,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("등록된 redirect URI의 쿼리와 state 원문을 보존한다")
   void preservesRegisteredQueryAndOpaqueState() throws Exception {
     String callback = REDIRECT + "?fixed=a%2Fb";
     String registered =
@@ -687,6 +713,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("client 인증 정보가 없으면 OAuth 오류를 반환하고 코드는 유지한다")
   void missingClientAuthenticationReturnsAnOAuthError() throws Exception {
     String code = approve(begin());
     mvc.perform(
@@ -702,6 +729,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("토큰 갱신은 최초 승인된 resource에만 허용한다")
   void tokensRemainBoundToTheOriginallyApprovedResource() throws Exception {
     String refresh = exchange(approve(begin())).get("refresh_token").stringValue();
     jdbc.update(
