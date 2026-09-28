@@ -111,6 +111,49 @@ class McpGrantIntegrationTest extends AbstractPostgresIntegrationTest {
     verify(tokenFamilyRevoker).revokeByGrantId(created.id(), revokedAt);
   }
 
+  @Test
+  @DisplayName("사용 시각은 앞으로만 갱신하며 폐기한 grant에는 쓰지 않는다")
+  void recordsUsageWithoutMovingTimeBackwardsOrRevivingRevokedGrant() {
+    McpGrantDetail grant = createGrant();
+    Instant usedAt = NOW.plusSeconds(60);
+    assertThat(mcpGrantWriter.recordUsage(grant.id(), usedAt)).isTrue();
+    assertThat(mcpGrantWriter.recordUsage(grant.id(), NOW)).isTrue();
+    entityManager.clear();
+    assertThat(mcpGrantReader.findActiveConnections(workspaceId, userId).getFirst().lastUsedAt())
+        .isEqualTo(usedAt);
+    mcpGrantWriter.revoke(grant.id(), NOW.plusSeconds(90));
+    entityManager.flush();
+    assertThat(mcpGrantWriter.recordUsage(grant.id(), NOW.plusSeconds(120))).isFalse();
+    entityManager.clear();
+    assertThat(entityManager.find(McpGrant.class, grant.id()).getLastUsedAt()).isEqualTo(usedAt);
+    assertThat(mcpGrantReader.findActiveConnections(workspaceId, userId)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("활성 연결 목록은 사용자와 워크스페이스로 제한한다")
+  void connectionListIsScopedToOwnerAndWorkspace() {
+    McpGrantDetail grant = createGrant();
+    assertThat(mcpGrantReader.findActiveConnections(workspaceId, userId))
+        .extracting(connection -> connection.id())
+        .containsExactly(grant.id());
+    assertThat(mcpGrantReader.findActiveConnections(workspaceId, UUID.randomUUID())).isEmpty();
+    assertThat(mcpGrantReader.findActiveConnections(UUID.randomUUID(), userId)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("이미 읽은 grant를 폐기해도 별도로 기록된 사용 시각을 덮어쓰지 않는다")
+  void revokePreservesUsageWrittenAfterEntityWasLoaded() {
+    McpGrantDetail grant = createGrant();
+    Instant usedAt = NOW.plusSeconds(60);
+    mcpGrantWriter.recordUsage(grant.id(), usedAt);
+    mcpGrantWriter.revoke(grant.id(), NOW.plusSeconds(90));
+    entityManager.flush();
+    entityManager.clear();
+    McpGrant revoked = entityManager.find(McpGrant.class, grant.id());
+    assertThat(revoked.getLastUsedAt()).isEqualTo(usedAt);
+    assertThat(revoked.getRevokedAt()).isNotNull();
+  }
+
   private McpGrantDetail createGrant() {
     return mcpGrantWriter.create(
         new CreateMcpGrantCommand(

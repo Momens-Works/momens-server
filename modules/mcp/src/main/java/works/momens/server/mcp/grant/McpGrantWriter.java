@@ -12,4 +12,7 @@ public interface McpGrantWriter {
   McpGrantDetail replace(CreateMcpGrantCommand command);
 
   void revoke(UUID grantId, Instant revokedAt);
+
+  /** Records successful verification without changing revoked grants or moving time backwards. */
+  boolean recordUsage(UUID grantId, Instant usedAt);
 }

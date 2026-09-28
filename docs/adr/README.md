@@ -28,4 +28,5 @@
 | [0020](0020-mobile-workspace-scope.md) | 모바일 워크스페이스 범위: bootstrap의 워크스페이스 표현과 선택 소유권 | Proposed |
 | [0021](0021-operation-id-naming-convention.md) | 엔드포인트 operationId 명명 규칙 | Accepted |
 | [0022](0022-column-value-set-ownership.md) | 컬럼 허용 값의 관리 기준과 도메인 enum의 역할 | Accepted |
-| [0023](0023-mcp-oauth-migration-boundary-and-cutover.md) | MCP OAuth 인가 서버 모듈 경계와 재연결 전환 | Accepted |
+| [0023](0023-mcp-oauth-migration-boundary-and-cutover.md) | MCP OAuth 인가 서버 모듈 경계와 재연결 전환 | Accepted (grant 관리 HTTP 표면은 [0024](0024-mcp-grant-web-surface.md)로 대체) |
+| [0024](0024-mcp-grant-web-surface.md) | MCP grant 관리의 웹 HTTP 표면 분리 | Accepted |

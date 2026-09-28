@@ -23,7 +23,7 @@
 | `common` | 영속성 베이스·공유 확장·테스트 fixture (최소) | `mobile`, `web` | — |
 | `user` | 사용자 엔티티·로그인 수단·프로필, FindOrCreate public API | `mobile`, `web` | `domain.User` |
 | `auth` | OAuth 로그인·JWT·SecurityFilterChain·logout, dev 토큰 발급 | `mobile`, `web` | `auth` |
-| `mcp` | MCP OAuth protocol·Grant authorization·token·transport 경계. OAuth protocol state와 `McpGrant`를 분리 소유 | — | `mcpauth`·`mcpserver` |
+| `mcp` | MCP OAuth protocol·Grant authorization·token·transport 경계. OAuth protocol state와 `McpGrant`를 분리 소유 | `web` | `mcpauth`·`mcpserver` |
 | `workspace` | workspace·멤버·초대·RBAC·label 발급 (중심 모듈) | `mobile`, `web` | `workspace`·`access`·`label` |
 | `project` | project·milestone·task·decision·blocker 운영 흐름 | `mobile`, `web` | 동명 5개 패키지 |
 | `signal` | 모바일 Signal 원본 조회·사용자 action ledger·Signal action outbox | `mobile` | 신규 |
@@ -67,6 +67,8 @@
   - 예외는 dev 도구 표면 하나다. `POST /api/dev/auth/token`은 클라이언트가 호출하는 표면이 아니라
     테스트 도구이고 운영과 같은 발급 경로를 재사용해야 해서 `auth`(`auth.dev`)가 계속 소유한다.
     `signal`의 dev Signal 생성(`signal.dev`)과 같은 취급이다.
+- `web` → `mcp` public API: grant 목록·폐기 HTTP 표면은 `web`이 소유하고 grant·token lifecycle은
+  `mcp`가 소유한다([ADR-0024](../adr/0024-mcp-grant-web-surface.md), `MOM-0999`).
 - `web`·`mobile` → `auth` public API. 표면은 인증 결과만 응답으로 옮기고, 토큰 정책과 웹 전송 정책
   (쿠키 속성·리다이렉트 대상·실패 코드 매핑)은 `auth`가 소유한다. 웹 흐름의 결과는 `auth`가 완성한
   `Set-Cookie` 헤더와 리다이렉트 대상으로 넘어가므로 표면은 쿠키 이름을 알지 못한다(`MOM-0852`).

@@ -2,6 +2,7 @@ package works.momens.server.mcp.grant.internal;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.mcp.grant.CreateMcpGrantCommand;
+import works.momens.server.mcp.grant.McpGrantConnection;
 import works.momens.server.mcp.grant.McpGrantDetail;
 import works.momens.server.mcp.grant.McpGrantReader;
 import works.momens.server.mcp.grant.McpGrantWriter;
@@ -112,6 +114,31 @@ class McpGrantService implements McpGrantWriter, McpGrantReader {
   @Transactional(readOnly = true)
   public Optional<McpGrantDetail> findActive(UUID grantId) {
     return mcpGrantRepository.findByIdAndRevokedAtIsNull(grantId).map(McpGrantService::toDetail);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<McpGrantConnection> findActiveConnections(UUID workspaceId, UUID userId) {
+    return mcpGrantRepository
+        .findByWorkspaceIdAndUserIdAndRevokedAtIsNullOrderByCreatedAtDescIdAsc(workspaceId, userId)
+        .stream()
+        .map(
+            grant ->
+                new McpGrantConnection(
+                    grant.getId(),
+                    grant.getClientId(),
+                    grant.getUserId(),
+                    grant.getWorkspaceId(),
+                    grant.getScopes(),
+                    grant.getLastUsedAt(),
+                    grant.getCreatedAt()))
+        .toList();
+  }
+
+  @Override
+  @Transactional
+  public boolean recordUsage(UUID grantId, Instant usedAt) {
+    return mcpGrantRepository.recordUsage(grantId, usedAt) == 1;
   }
 
   private void requireWorkspaceMember(UUID userId, UUID workspaceId) {
