@@ -96,13 +96,9 @@ class McpWriteToolServiceTest {
             mapper,
             grants,
             memberships,
-            users,
-            projects,
-            milestones,
-            tasks,
-            taskWriter,
-            milestoneWriter,
-            updates);
+            new McpTaskToolService(
+                memberships, users, projects, milestones, tasks, taskWriter, updates),
+            new McpMilestoneToolService(projects, milestones, milestoneWriter));
     service =
         new McpToolService(
             new McpReadToolService(

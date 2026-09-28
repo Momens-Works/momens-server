@@ -20,6 +20,12 @@ final class McpToolReferences {
     }
   }
 
+  static void requireProject(List<ProjectDetail> projects, UUID projectId) {
+    if (projects.stream().noneMatch(project -> project.id().equals(projectId))) {
+      throw new McpToolInputException("Resource not found in this workspace.");
+    }
+  }
+
   static ProjectDetail resolveProject(List<ProjectDetail> projects, String reference) {
     Optional<UUID> id = uuid(reference);
     if (id.isPresent()) {
