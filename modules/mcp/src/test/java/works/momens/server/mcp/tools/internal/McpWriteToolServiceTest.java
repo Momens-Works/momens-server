@@ -173,7 +173,9 @@ class McpWriteToolServiceTest {
   @DisplayName("철회된 grant는 도메인 접근 전에 모든 쓰기 도구 호출을 차단한다")
   void revokedGrantBlocksAllWritesBeforeDomainAccess(String name) {
     when(grants.findActive(context.grantId())).thenReturn(Optional.empty());
-    assertThat(call(name, "{}").path("isError").asBoolean()).isTrue();
+    JsonNode result = call(name, "{}");
+    assertThat(result.path("isError").asBoolean()).isTrue();
+    assertThat(text(result)).isEqualTo("You don't have access to this tool.");
     verifyNoInteractions(projects, tasks, milestones, users, taskWriter, milestoneWriter, updates);
   }
 
@@ -217,13 +219,9 @@ class McpWriteToolServiceTest {
     when(grants.findActive(context.grantId())).thenReturn(Optional.of(grant));
     McpAuthenticationContext caller =
         dimension.equals("token_scope") ? withScopes(Set.of(McpScope.TASKS_READ.value())) : context;
-    assertThat(
-            service
-                .call("create_task", mapper.readTree("{}"), caller)
-                .orElseThrow()
-                .path("isError")
-                .asBoolean())
-        .isTrue();
+    JsonNode result = service.call("create_task", mapper.readTree("{}"), caller).orElseThrow();
+    assertThat(result.path("isError").asBoolean()).isTrue();
+    assertThat(text(result)).isEqualTo("You don't have access to this tool.");
     verifyNoInteractions(projects, tasks, milestones, taskWriter, milestoneWriter, updates);
   }
 
