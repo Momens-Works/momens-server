@@ -1,0 +1,13 @@
+name: PR review request notification
+
+# PR에 리뷰어가 지정되면 디스코드로 해당 리뷰어를 멘션해 알린다.
+# 알림 로직은 조직 공용 워크플로에 있으므로 문구나 동작 변경은 momens-works/.github에서 한다.
+on:
+  pull_request:
+    types: [review_requested]
+
+jobs:
+  notify:
+    uses: momens-works/.github/.github/workflows/pr-review-discord-notify.yml@main
+    secrets:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_PR_REVIEW_WEBHOOK_URL }}
