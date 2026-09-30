@@ -17,8 +17,9 @@ MOM-1003은 `list_tasks_v2`를 추가한다. 2026-09-30 사용자 결정과 ADR-
 | 알 수 없는 `status` | 정상 빈 목록 | 도구 오류와 허용값 안내 |
 
 문자열은 앞뒤 공백을 제거한다. 상태와 담당자 별칭은 대소문자를 구분하지 않는다.
-상태 schema의 enum은 정규화된 `TaskStatus` 값인 `backlog`, `todo`, `in_progress`, `done`,
-`cancelled`를 안내한다. 실행 시에는 기존 대소문자·공백 정규화를 허용한 뒤 이 집합을 검증한다.
+상태 schema는 문자열 타입과 설명으로 `TaskStatus` 값인 `backlog`, `todo`, `in_progress`,
+`done`, `cancelled`를 안내한다. 클라이언트가 공백·대소문자 변형을 호출 전에 차단하지 않도록
+`enum`은 두지 않는다. 서버가 입력을 정규화한 뒤 이 집합을 검증한다.
 `progress`·`in-progress` 별칭은 읽기 도구에서 허용하지 않는다.
 명시적 null, 문자열이 아닌 값, 정의되지 않은 필드는 도구 오류다.
 

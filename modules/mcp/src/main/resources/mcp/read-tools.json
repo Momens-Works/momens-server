@@ -86,14 +86,7 @@
         },
         "status": {
           "type": "string",
-          "description": "filter by TaskStatus; whitespace is trimmed and matching is case-insensitive. Omit for all statuses; blank or unknown values return a tool error.",
-          "enum": [
-            "backlog",
-            "todo",
-            "in_progress",
-            "done",
-            "cancelled"
-          ]
+          "description": "filter by status: backlog, todo, in_progress, done, or cancelled. Whitespace is trimmed and matching is case-insensitive. Omit for all statuses; blank or unknown values return a tool error."
         }
       },
       "additionalProperties": false

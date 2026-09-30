@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -308,8 +309,8 @@ class McpReadToolServiceTest {
   }
 
   @Test
-  @DisplayName("v2 상태 schema는 도메인 상태 집합과 일치하고 모든 상태를 실행할 수 있다")
-  void v2SchemaMatchesDomainStatuses() {
+  @DisplayName("v2 상태 schema는 정규화 입력을 제한하지 않고 서버는 모든 도메인 상태를 허용한다")
+  void v2SchemaAllowsNormalizedDomainStatuses() {
     JsonNode schema =
         service.list(context).stream()
             .filter(tool -> tool.name().equals("list_tasks_v2"))
@@ -317,18 +318,19 @@ class McpReadToolServiceTest {
             .orElseThrow()
             .inputSchema()
             .path("properties")
-            .path("status")
-            .path("enum");
-    assertThat(schema.size()).isEqualTo(TaskStatus.values().length);
+            .path("status");
+    assertThat(schema.propertyNames()).containsExactlyInAnyOrder("type", "description");
+    assertThat(schema.path("type").asText()).isEqualTo("string");
     for (TaskStatus status : TaskStatus.values()) {
-      assertThat(schema).anyMatch(value -> value.asText().equals(status.value()));
-      assertThat(
-              call(
-                      "list_tasks_v2",
-                      mapper.createObjectNode().put("status", status.value()).toString())
-                  .path("isError")
-                  .asBoolean())
-          .isFalse();
+      assertThat(schema.path("description").asText()).contains(status.value());
+      for (String value :
+          List.of(status.value(), " " + status.value().toUpperCase(Locale.ROOT) + " ")) {
+        assertThat(
+                call("list_tasks_v2", mapper.createObjectNode().put("status", value).toString())
+                    .path("isError")
+                    .asBoolean())
+            .isFalse();
+      }
     }
   }
 
