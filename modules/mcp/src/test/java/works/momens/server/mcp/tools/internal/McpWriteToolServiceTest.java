@@ -145,6 +145,7 @@ class McpWriteToolServiceTest {
             "list_milestones",
             "list_projects",
             "list_tasks",
+            "list_tasks_v2",
             "update_milestone",
             "update_task");
     assertThat(service.list(context)).isEqualTo(service.list(context));

@@ -69,5 +69,34 @@
       },
       "additionalProperties": false
     }
+  },
+  {
+    "name": "list_tasks_v2",
+    "description": "List tasks with explicit unassigned filtering and validated status. Prefer this tool for new calls; list_tasks retains its legacy filter behavior.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string",
+          "description": "filter by project: its PRJ-label, name, or id"
+        },
+        "assignee": {
+          "type": "string",
+          "description": "filter by assignee: me, member UUID, name, or email; none/unassign/unassigned means unassigned only. Omit or leave blank for all assignees. Whitespace is trimmed and matching is case-insensitive."
+        },
+        "status": {
+          "type": "string",
+          "description": "filter by TaskStatus; whitespace is trimmed and matching is case-insensitive. Omit for all statuses; blank or unknown values return a tool error.",
+          "enum": [
+            "backlog",
+            "todo",
+            "in_progress",
+            "done",
+            "cancelled"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
   }
 ]
