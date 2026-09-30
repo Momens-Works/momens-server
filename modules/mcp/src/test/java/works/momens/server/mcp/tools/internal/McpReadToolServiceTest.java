@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -35,6 +36,7 @@ import works.momens.server.project.milestone.MilestoneDetail;
 import works.momens.server.project.milestone.MilestoneReader;
 import works.momens.server.project.task.TaskReader;
 import works.momens.server.project.task.TaskSnapshot;
+import works.momens.server.project.task.TaskStatus;
 import works.momens.server.project.taskupdate.TaskUpdateDetail;
 import works.momens.server.project.taskupdate.TaskUpdateReader;
 import works.momens.server.user.UserProfile;
@@ -99,12 +101,19 @@ class McpReadToolServiceTest {
             context.grantId(), userId, "client", workspaceId, Set.of(McpScope.TASKS_READ.value()));
     assertThat(service.list(limited))
         .extracting(McpToolDefinition::name)
-        .containsExactly("get_task", "list_tasks");
+        .containsExactly("get_task", "list_tasks", "list_tasks_v2");
   }
 
   @ParameterizedTest
   @ValueSource(
-      strings = {"list_projects", "list_members", "list_milestones", "list_tasks", "get_task"})
+      strings = {
+        "list_projects",
+        "list_members",
+        "list_milestones",
+        "list_tasks",
+        "list_tasks_v2",
+        "get_task"
+      })
   void revokedGrantBlocksEveryToolBeforeDomainReads(String name) {
     when(grants.findActive(context.grantId())).thenReturn(Optional.empty());
     assertThat(call(name, "{}").path("isError").asBoolean()).isTrue();
@@ -199,6 +208,178 @@ class McpReadToolServiceTest {
         .doesNotContain("MOM-0993", "MOM-0994");
     assertThat(text(call("list_tasks", "{\"project\":\"PRJ-0003\",\"assignee\":\"me\"}")))
         .isEqualTo("1 task(s):\n- MOM-0991 · Read tools [todo] — PRJ-0003 Sprint");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"none", "unassign", " UNASSIGNED "})
+  @DisplayName("v2 미할당 별칭은 미할당만 조회하고 기존 도구는 전체 조회를 유지한다")
+  void v2UnassignedAliasesPreserveLegacyContract(String alias) {
+    seed();
+    TaskSnapshot assigned = tasks.listSnapshotsByWorkspaceId(workspaceId).getFirst();
+    when(tasks.listSnapshotsByWorkspaceId(workspaceId))
+        .thenReturn(List.of(assigned, taskWithAssignment("MOM-1003", projectId, null)));
+    String args = mapper.createObjectNode().put("assignee", alias).toString();
+    assertThat(text(call("list_tasks_v2", args)))
+        .contains("1 task(s):", "MOM-1003")
+        .doesNotContain("MOM-0991");
+    assertThat(text(call("list_tasks", args))).contains("2 task(s):", "MOM-0991", "MOM-1003");
+    assertThat(text(call("list_tasks_v2", "{}"))).contains("2 task(s):", "MOM-0991", "MOM-1003");
+    assertThat(text(call("list_tasks_v2", "{\"assignee\":\"  \"}"))).contains("2 task(s):");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"me", " ALICE@example.com ", "alice", "Ali"})
+  @DisplayName("v2는 담당자 참조의 정규화와 특정 담당자 조회를 유지한다")
+  void v2ResolvesMemberReferences(String reference) {
+    seed();
+    TaskSnapshot assigned = tasks.listSnapshotsByWorkspaceId(workspaceId).getFirst();
+    when(tasks.listSnapshotsByWorkspaceId(workspaceId))
+        .thenReturn(List.of(assigned, taskWithAssignment("MOM-1003", projectId, null)));
+    for (String value : List.of(reference, userId.toString())) {
+      assertThat(
+              text(
+                  call(
+                      "list_tasks_v2",
+                      mapper.createObjectNode().put("assignee", value).toString())))
+          .contains("1 task(s):", "MOM-0991")
+          .doesNotContain("MOM-1003");
+    }
+  }
+
+  @Test
+  @DisplayName("v2 프로젝트·담당자·상태 필터는 개별 및 조합으로 적용된다")
+  void v2FiltersIndependentlyAndTogether() {
+    seed();
+    TaskSnapshot assigned = tasks.listSnapshotsByWorkspaceId(workspaceId).getFirst();
+    TaskSnapshot done =
+        new TaskSnapshot(
+            UUID.randomUUID(),
+            workspaceId,
+            projectId,
+            null,
+            "MOM-1006",
+            "Done task",
+            null,
+            "done",
+            "medium",
+            "implementation",
+            null,
+            null,
+            now,
+            now);
+    when(tasks.listSnapshotsByWorkspaceId(workspaceId))
+        .thenReturn(
+            List.of(
+                assigned,
+                taskWithAssignment("MOM-1003", projectId, null),
+                taskWithAssignment("MOM-1004", UUID.randomUUID(), null),
+                done));
+    assertThat(text(call("list_tasks_v2", "{\"project\":\"PRJ-0003\"}")))
+        .contains("3 task(s):", "MOM-0991", "MOM-1003", "MOM-1006")
+        .doesNotContain("MOM-1004");
+    assertThat(text(call("list_tasks_v2", "{\"status\":\" DONE \"}")))
+        .contains("1 task(s):", "MOM-1006")
+        .doesNotContain("MOM-0991", "MOM-1003", "MOM-1004");
+    assertThat(
+            text(
+                call(
+                    "list_tasks_v2",
+                    "{\"project\":\"PRJ-0003\",\"assignee\":\"none\",\"status\":\" TODO \"}")))
+        .contains("1 task(s):", "MOM-1003")
+        .doesNotContain("MOM-0991", "MOM-1004", "MOM-1006");
+    assertThat(
+            text(
+                call(
+                    "list_tasks_v2",
+                    "{\"project\":\"PRJ-0003\",\"assignee\":\"me\",\"status\":\"done\"}")))
+        .isEqualTo("No tasks match.");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"unknown", "", "  ", "in-progress", "progress"})
+  @DisplayName("v2는 잘못된 상태를 수정 가능한 도구 오류로 반환한다")
+  void v2RejectsInvalidStatusBeforeDomainReads(String status) {
+    JsonNode result =
+        call("list_tasks_v2", mapper.createObjectNode().put("status", status).toString());
+    assertThat(result.path("isError").asBoolean()).isTrue();
+    assertThat(text(result))
+        .contains("Invalid status", "backlog, todo, in_progress, done, or cancelled");
+    verifyNoInteractions(projects, tasks, users);
+  }
+
+  @Test
+  @DisplayName("v2 상태 schema는 도메인 상태 집합과 일치하고 모든 상태를 실행할 수 있다")
+  void v2SchemaMatchesDomainStatuses() {
+    JsonNode schema =
+        service.list(context).stream()
+            .filter(tool -> tool.name().equals("list_tasks_v2"))
+            .findFirst()
+            .orElseThrow()
+            .inputSchema()
+            .path("properties")
+            .path("status")
+            .path("enum");
+    assertThat(schema.size()).isEqualTo(TaskStatus.values().length);
+    for (TaskStatus status : TaskStatus.values()) {
+      assertThat(schema).anyMatch(value -> value.asText().equals(status.value()));
+      assertThat(
+              call(
+                      "list_tasks_v2",
+                      mapper.createObjectNode().put("status", status.value()).toString())
+                  .path("isError")
+                  .asBoolean())
+          .isFalse();
+    }
+  }
+
+  @Test
+  @DisplayName("v2는 다른 워크스페이스와 부족한 scope의 호출을 조회 전에 거부한다")
+  void v2RejectsWorkspaceAndScopeMismatch() {
+    for (McpAuthenticationContext denied :
+        List.of(
+            new McpAuthenticationContext(
+                context.grantId(), userId, "client", UUID.randomUUID(), context.scopes()),
+            new McpAuthenticationContext(
+                context.grantId(),
+                userId,
+                "client",
+                workspaceId,
+                Set.of(McpScope.PROJECTS_READ.value())))) {
+      assertThat(
+              service
+                  .call("list_tasks_v2", mapper.createObjectNode(), denied)
+                  .orElseThrow()
+                  .path("isError")
+                  .asBoolean())
+          .isTrue();
+    }
+    verifyNoInteractions(projects, tasks, users);
+  }
+
+  @Test
+  @DisplayName("v2는 탈퇴한 멤버와 읽기 scope가 제거된 grant를 거부한다")
+  void v2RejectsRemovedMembershipAndGrantScope() {
+    when(memberships.roleOf(workspaceId, userId)).thenReturn(Optional.empty());
+    assertThat(call("list_tasks_v2", "{}").path("isError").asBoolean()).isTrue();
+    when(memberships.roleOf(workspaceId, userId)).thenReturn(Optional.of(WorkspaceRole.MEMBER));
+    when(grants.findActive(context.grantId()))
+        .thenReturn(Optional.of(grant(List.of(McpScope.PROJECTS_READ.value()))));
+    assertThat(call("list_tasks_v2", "{}").path("isError").asBoolean()).isTrue();
+    verifyNoInteractions(projects, tasks, users);
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"status\":null}",
+        "{\"status\":42}",
+        "{\"assignee\":null}",
+        "{\"workspace_id\":\"other\"}"
+      })
+  @DisplayName("v2는 null·잘못된 타입·정의되지 않은 입력을 거부한다")
+  void v2RejectsInvalidArgumentTypes(String args) {
+    assertThat(call("list_tasks_v2", args).path("isError").asBoolean()).isTrue();
+    verifyNoInteractions(projects, tasks, users);
   }
 
   private TaskSnapshot taskWithAssignment(String label, UUID taskProjectId, UUID assigneeId) {

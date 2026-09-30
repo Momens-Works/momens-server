@@ -159,7 +159,7 @@ class McpOAuthSecurityIntegrationTest extends AbstractPostgresIntegrationTest {
         projectId);
     mvc.perform(mcpRequest(token))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.result.tools.length()").value(11));
+        .andExpect(jsonPath("$.result.tools.length()").value(12));
     mvc.perform(toolRequest(token, "list_projects", Map.of()))
         .andExpect(status().isOk())
         .andExpect(
@@ -176,6 +176,13 @@ class McpOAuthSecurityIntegrationTest extends AbstractPostgresIntegrationTest {
         .andExpect(
             jsonPath("$.result.content[0].text")
                 .value("1 task(s):\n- MOM-0991 · Read tools [todo] — PRJ-0991 MCP project"));
+    mvc.perform(toolRequest(token, "list_tasks_v2", Map.of("assignee", "none", "status", "todo")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.result.isError").doesNotExist())
+        .andExpect(jsonPath("$.result.content[0].text").value(containsString("MOM-0991")));
+    mvc.perform(toolRequest(token, "list_tasks_v2", Map.of("status", "unknown")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.result.isError").value(true));
     mvc.perform(toolRequest(token, "get_task", Map.of("task", "mom-0991")))
         .andExpect(status().isOk())
         .andExpect(

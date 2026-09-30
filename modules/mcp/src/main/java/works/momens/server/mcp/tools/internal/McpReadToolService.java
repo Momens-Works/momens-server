@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -25,6 +26,7 @@ import works.momens.server.project.milestone.MilestoneDetail;
 import works.momens.server.project.milestone.MilestoneReader;
 import works.momens.server.project.task.TaskReader;
 import works.momens.server.project.task.TaskSnapshot;
+import works.momens.server.project.task.TaskStatus;
 import works.momens.server.project.taskupdate.TaskUpdateReader;
 import works.momens.server.user.UserProfile;
 import works.momens.server.user.UserService;
@@ -39,7 +41,8 @@ class McpReadToolService {
           "list_members", McpScope.MEMBERS_READ,
           "list_milestones", McpScope.MILESTONES_READ,
           "get_task", McpScope.TASKS_READ,
-          "list_tasks", McpScope.TASKS_READ);
+          "list_tasks", McpScope.TASKS_READ,
+          "list_tasks_v2", McpScope.TASKS_READ);
 
   private final ObjectMapper mapper;
   private final McpGrantReader grants;
@@ -108,7 +111,8 @@ class McpReadToolService {
             case "list_projects" -> listProjects(context);
             case "list_members" -> listMembers(context);
             case "list_milestones" -> listMilestones(context, argument(arguments, "project"));
-            case "list_tasks" -> listTasks(context, arguments);
+            case "list_tasks" -> listTasks(context, arguments, false);
+            case "list_tasks_v2" -> listTasks(context, arguments, true);
             case "get_task" -> getTask(context, argument(arguments, "task"));
             default -> throw new IllegalStateException("Unregistered read tool");
           };
@@ -216,21 +220,34 @@ class McpReadToolService {
             .toList());
   }
 
-  private String listTasks(McpAuthenticationContext context, JsonNode arguments) {
+  private String listTasks(
+      McpAuthenticationContext context, JsonNode arguments, boolean versionTwo) {
+    String status = argument(arguments, "status").toLowerCase(Locale.ROOT);
+    if (versionTwo && arguments.has("status") && TaskStatus.from(status).isEmpty()) {
+      throw new McpToolInputException(
+          "Invalid status. Use backlog, todo, in_progress, done, or cancelled; omit status for all tasks.");
+    }
     List<ProjectDetail> found = projects.listDetailsByWorkspaceId(context.workspaceId());
     String projectRef = argument(arguments, "project");
     UUID projectId =
         projectRef.isEmpty() ? null : McpToolReferences.resolveProject(found, projectRef).id();
     String assigneeRef = argument(arguments, "assignee");
     UUID assigneeId = resolveAssignee(context, assigneeRef);
-    String status = argument(arguments, "status").toLowerCase(Locale.ROOT);
+    boolean unassignedOnly =
+        versionTwo
+            && Set.of("none", "unassign", "unassigned")
+                .contains(assigneeRef.toLowerCase(Locale.ROOT));
     Map<UUID, ProjectDetail> index = projectIndex(found);
     return lines(
         "task",
         "No tasks match.",
         tasks.listSnapshotsByWorkspaceId(context.workspaceId()).stream()
             .filter(task -> projectId == null || projectId.equals(task.projectId()))
-            .filter(task -> assigneeId == null || assigneeId.equals(task.assigneeId()))
+            .filter(
+                task ->
+                    unassignedOnly
+                        ? task.assigneeId() == null
+                        : assigneeId == null || assigneeId.equals(task.assigneeId()))
             .filter(task -> status.isEmpty() || status.equals(task.status()))
             .map(task -> McpReadToolText.taskLine(task, index.get(task.projectId())))
             .toList());
