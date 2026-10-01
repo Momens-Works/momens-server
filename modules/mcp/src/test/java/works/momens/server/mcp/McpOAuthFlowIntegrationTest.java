@@ -178,6 +178,62 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @DisplayName("access token 만료 후 여러 차례 갱신해도 재동의 없이 MCP를 계속 사용한다")
+  void consecutiveRefreshesKeepTheGrantUsable() throws Exception {
+    JsonNode pair = exchange(approve(begin()));
+    for (int attempt = 0; attempt < 3; attempt++) {
+      String previousAccess = pair.get("access_token").stringValue();
+      jdbc.update(
+          "UPDATE oauth2_authorization SET access_token_issued_at = now() - interval '1 hour', access_token_expires_at = now() - interval '1 second' WHERE principal_name = ?",
+          userId.toString());
+      mvc.perform(mcpRequest(previousAccess, "tools/list")).andExpect(status().isUnauthorized());
+      pair = refresh(pair.get("refresh_token").stringValue());
+      mvc.perform(mcpRequest(pair.get("access_token").stringValue(), "tools/list"))
+          .andExpect(status().isOk());
+    }
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM mcp_grants WHERE user_id = ? AND revoked_at IS NULL",
+                Integer.class,
+                userId))
+        .isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("한 MCP client의 refresh 재사용은 다른 client의 연결을 폐기하지 않는다")
+  void refreshReuseDoesNotRevokeAnotherClient() throws Exception {
+    String firstClient = clientId;
+    JsonNode first = exchange(approve(begin()));
+    String body =
+        mvc.perform(
+                post("/api/oauth2/register")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        mapper.writeValueAsString(
+                            Map.of("client_name", "test", "redirect_uris", List.of(REDIRECT)))))
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String secondClient = mapper.readTree(body).get("client_id").stringValue();
+    clientId = secondClient;
+    JsonNode second = exchange(approve(begin()));
+
+    clientId = firstClient;
+    JsonNode firstRotated = refresh(first.get("refresh_token").stringValue());
+    mvc.perform(refreshRequest(first.get("refresh_token").stringValue()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error").value("invalid_grant"));
+    mvc.perform(mcpRequest(firstRotated.get("access_token").stringValue(), "tools/list"))
+        .andExpect(status().isUnauthorized());
+
+    clientId = secondClient;
+    JsonNode rotated = refresh(second.get("refresh_token").stringValue());
+    mvc.perform(mcpRequest(rotated.get("access_token").stringValue(), "tools/list"))
+        .andExpect(status().isOk());
+  }
+
+  @Test
   @DisplayName("인가 코드 재사용과 잘못된 verifier·resource·redirect URI를 거부한다")
   void rejectsCodeReplayAndWrongVerifierResourceRedirectOrClient() throws Exception {
     String code = approve(begin());
