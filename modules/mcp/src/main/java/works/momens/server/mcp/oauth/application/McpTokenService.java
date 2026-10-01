@@ -1,7 +1,12 @@
 package works.momens.server.mcp.oauth.application;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -19,6 +24,7 @@ import works.momens.server.mcp.grant.McpGrantReader;
 import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 
 /** Serializes each SAS family across code exchange, rotation, reuse and revocation. */
+@Slf4j
 public final class McpTokenService {
   private final OAuth2AuthorizationService authorizations;
   private final McpTokenFamilies families;
@@ -122,6 +128,14 @@ public final class McpTokenService {
     OAuth2Authorization presented = authorizations.findByToken(raw, type);
     if (refresh && (presented == null || !presented.getRefreshToken().isActive())) {
       families.revoke(id, Instant.now());
+      log.warn(
+          "event=mcp_oauth_refresh outcome=family_revoked reason=refresh_token_reused authorization_id={} grant_id={} presented_token_id={} current_token_issued_at={}",
+          id,
+          grantId,
+          tokenId(raw),
+          current.getRefreshToken() == null
+              ? null
+              : current.getRefreshToken().getToken().getIssuedAt());
       throw new OAuth2AuthenticationException("invalid_grant");
     }
     Authentication result = delegate.authenticate(authentication);
@@ -129,7 +143,28 @@ public final class McpTokenService {
     if (saved.getRefreshToken() != null) {
       families.rememberRefresh(saved.getRefreshToken().getToken().getTokenValue(), id);
     }
+    if (refresh) {
+      log.info(
+          "event=mcp_oauth_refresh outcome=succeeded authorization_id={} grant_id={} presented_token_id={} presented_token_issued_at={} next_token_id={} next_token_issued_at={}",
+          id,
+          grantId,
+          tokenId(raw),
+          presented.getRefreshToken().getToken().getIssuedAt(),
+          saved.getRefreshToken().getToken().getTokenValue().substring(0, 16),
+          saved.getRefreshToken().getToken().getIssuedAt());
+    }
     return result;
+  }
+
+  private static String tokenId(String raw) {
+    // Short digest for correlating rotations; never log the raw token or its full persisted hash.
+    try {
+      byte[] digest =
+          MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8));
+      return HexFormat.of().formatHex(digest, 0, 8);
+    } catch (NoSuchAlgorithmException exception) {
+      throw new IllegalStateException("SHA-256 is not available", exception);
+    }
   }
 
   private void validateResource(Object requested) {

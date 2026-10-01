@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Clock;
 import java.util.Base64;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -153,8 +154,9 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
+  @ExtendWith(OutputCaptureExtension.class)
   @DisplayName("refresh token 재사용 시 현재 token family와 access token을 폐기한다")
-  void refreshReuseRevokesTheCurrentFamilyAndAccessToken() throws Exception {
+  void refreshReuseRevokesTheCurrentFamilyAndAccessToken(CapturedOutput output) throws Exception {
     JsonNode pair = exchange(approve(begin()));
     String refresh = pair.get("refresh_token").stringValue();
     JsonNode rotated = refresh(refresh);
@@ -175,6 +177,29 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
                 String.class,
                 userId.toString()))
         .contains("invalidated", "true");
+    String presentedTokenId =
+        HexFormat.of()
+            .formatHex(
+                MessageDigest.getInstance("SHA-256")
+                    .digest(refresh.getBytes(StandardCharsets.UTF_8)),
+                0,
+                8);
+    String nextTokenId =
+        HexFormat.of()
+            .formatHex(
+                MessageDigest.getInstance("SHA-256")
+                    .digest(
+                        rotated
+                            .get("refresh_token")
+                            .stringValue()
+                            .getBytes(StandardCharsets.UTF_8)),
+                0,
+                8);
+    assertThat(output.getAll())
+        .contains("event=mcp_oauth_refresh outcome=succeeded")
+        .contains("event=mcp_oauth_refresh outcome=family_revoked reason=refresh_token_reused")
+        .contains("presented_token_id=" + presentedTokenId, "next_token_id=" + nextTokenId)
+        .doesNotContain(refresh, rotated.get("refresh_token").stringValue());
   }
 
   @Test
