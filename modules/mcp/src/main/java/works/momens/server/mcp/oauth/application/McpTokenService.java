@@ -14,6 +14,7 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequ
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AccessTokenAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2RefreshTokenAuthenticationToken;
@@ -144,13 +145,14 @@ public final class McpTokenService {
       families.rememberRefresh(saved.getRefreshToken().getToken().getTokenValue(), id);
     }
     if (refresh) {
+      OAuth2AccessTokenAuthenticationToken issued = (OAuth2AccessTokenAuthenticationToken) result;
       log.info(
           "event=mcp_oauth_refresh outcome=succeeded authorization_id={} grant_id={} presented_token_id={} presented_token_issued_at={} next_token_id={} next_token_issued_at={}",
           id,
           grantId,
           tokenId(raw),
           presented.getRefreshToken().getToken().getIssuedAt(),
-          saved.getRefreshToken().getToken().getTokenValue().substring(0, 16),
+          tokenId(issued.getRefreshToken().getTokenValue()),
           saved.getRefreshToken().getToken().getIssuedAt());
     }
     return result;
