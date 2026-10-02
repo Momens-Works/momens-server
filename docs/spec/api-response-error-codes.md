@@ -126,7 +126,7 @@ Standard 모드의 에러 응답은 아래 형태를 사용합니다.
 
 이 문서에는 구현된 에러 코드를 별도로 나열하지 않습니다. 공통 에러 코드는 `CommonErrorCode`에, 도메인 에러 코드는 각 모듈의 `ErrorCode` enum에 정의합니다. 엔드포인트별로 반환할 수 있는 Standard 모드 에러 코드와 HTTP status는 [OpenAPI 스냅샷](openapi.json)의 operation별 실패 응답 예시에서 확인합니다.
 
-엔드포인트의 호출 경로에서 도달할 수 있는 도메인 에러 코드와 `@ApiException` 선언이 일치하지 않으면 `ApiExceptionConsistencyTest`가 실패합니다. 검증 범위와 조건은 [OpenAPI](openapi.md)의 「선언 검증」 절을 따릅니다.
+엔드포인트의 호출 경로에서 도달할 수 있는 도메인 에러 코드와 `@ApiException` 선언이 일치하지 않으면 `ApiExceptionConsistencyTest`가 실패합니다. 검증 범위와 조건은 [OpenAPI](openapi.md)의 「선언 검증」 절을 따릅니다. 공통 에러 코드는 이 검증 대상에 포함되지 않습니다. 엔드포인트별 공통 에러 코드의 범위도 아직 정하지 않아 현재는 모든 엔드포인트에 전체 목록이 예시로 표시됩니다. 따라서 공통 에러 코드 예시는 해당 엔드포인트에서 실제로 반환될 수 있음을 의미하지 않습니다.
 
 아직 구현되지 않은 에러 코드는 해당 기능의 설계 문서에서 관리합니다. 구현할 때 `ErrorCode` enum에 추가하고 해당 엔드포인트의 `@ApiException`에 선언합니다.
 
@@ -214,5 +214,5 @@ Bean Validation과 `FieldValidationException`을 통한 필드 단위 검증 실
 - 기존 Go API 이관인지, 신규/개편 API인지 먼저 결정합니다.
 - 기존 Go API 이관이면 status와 body shape를 기존과 맞춥니다.
 - 신규/개편 API이면 Standard 에러 응답을 사용합니다.
-- 새 에러 코드를 추가하면 해당 엔드포인트의 `@ApiException`에 선언하고, `./gradlew updateOpenApiSnapshot`으로 OpenAPI 스냅샷을 갱신합니다.
+- JSON 에러 응답으로 반환하는 새 에러 코드를 추가하면 해당 엔드포인트의 `@ApiException`에 선언하고, `./gradlew updateOpenApiSnapshot`으로 OpenAPI 스냅샷을 갱신합니다.
 - OpenAPI에 성공 예시와 주요 에러 예시를 함께 추가합니다.
