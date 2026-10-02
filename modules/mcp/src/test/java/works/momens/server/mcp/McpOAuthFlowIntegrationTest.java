@@ -163,6 +163,7 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
     mvc.perform(refreshRequest(refresh))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.error").value("invalid_grant"));
+    mvc.perform(refreshRequest(refresh)).andExpect(status().isBadRequest());
     mvc.perform(refreshRequest(rotated.get("refresh_token").stringValue()))
         .andExpect(status().isBadRequest());
     assertThat(
@@ -195,6 +196,19 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
                             .getBytes(StandardCharsets.UTF_8)),
                 0,
                 8);
+    List<String> rejected =
+        output
+            .getAll()
+            .lines()
+            .filter(
+                line ->
+                    line.contains(
+                        "event=mcp_oauth_refresh outcome=rejected reason=family_inactive"))
+            .toList();
+    assertThat(rejected)
+        .hasSize(2)
+        .anyMatch(line -> line.contains("presented_token_id=" + presentedTokenId))
+        .anyMatch(line -> line.contains("presented_token_id=" + nextTokenId));
     assertThat(output.getAll())
         .contains("event=mcp_oauth_refresh outcome=succeeded")
         .contains("event=mcp_oauth_refresh outcome=family_revoked reason=refresh_token_reused")
