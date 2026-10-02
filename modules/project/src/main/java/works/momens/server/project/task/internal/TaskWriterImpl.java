@@ -1,5 +1,6 @@
 package works.momens.server.project.task.internal;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -31,6 +32,8 @@ import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 class TaskWriterImpl implements TaskWriter {
 
   private static final String EVENT_TASK_CREATED = "task.created";
+  private static final String EVENT_TASK_UPDATED = "task.updated";
+  private static final String EVENT_TASK_DELETED = "task.deleted";
 
   private final TaskRepository taskRepository;
   private final MilestoneDirectory milestoneDirectory;
@@ -54,6 +57,7 @@ class TaskWriterImpl implements TaskWriter {
   @Transactional
   public TaskDetail update(UpdateTaskCommand command) {
     Task task = findTask(command.taskId());
+    TaskRowFields before = TaskRowFields.from(task);
     // 모바일은 편집 상태 전체를 보내므로, 기존 담당자는 재검증하지 않고 새 담당자만 검증한다.
     if (!Objects.equals(task.getAssigneeId(), command.assigneeId())) {
       validateReferences(task.getWorkspaceId(), task.getProjectId(), null, command.assigneeId());
@@ -67,6 +71,7 @@ class TaskWriterImpl implements TaskWriter {
         command.assigneeId());
     validateChecklistItemIds(task, command.checklistItems());
     task.replaceChecklist(command.checklistItems());
+    appendUpdatedEventIfChanged(task, before);
     return TaskDetailMapper.toDetail(task);
   }
 
@@ -74,6 +79,7 @@ class TaskWriterImpl implements TaskWriter {
   @Transactional
   public TaskSnapshot patch(PatchTaskCommand command) {
     Task task = findTask(command.taskId());
+    TaskRowFields before = TaskRowFields.from(task);
     if (command.milestoneSet() || command.assigneeSet()) {
       validateReferences(
           task.getWorkspaceId(),
@@ -96,6 +102,7 @@ class TaskWriterImpl implements TaskWriter {
         command.assigneeSet(),
         command.dueDate(),
         command.dueDateSet());
+    appendUpdatedEventIfChanged(task, before);
     return TaskSnapshotMapper.toSnapshot(task);
   }
 
@@ -119,7 +126,10 @@ class TaskWriterImpl implements TaskWriter {
   @Override
   @Transactional
   public void delete(UUID taskId) {
-    findTask(taskId).delete();
+    Task task = findTask(taskId);
+    task.delete();
+    outboxAppender.append(
+        task.getWorkspaceId(), "task", taskId.toString(), EVENT_TASK_DELETED, Map.of());
   }
 
   private void validateReferences(
@@ -171,5 +181,41 @@ class TaskWriterImpl implements TaskWriter {
         task.getOriginSignalId() == null ? null : task.getOriginSignalId().toString());
     outboxAppender.append(
         task.getWorkspaceId(), "task", task.getId().toString(), EVENT_TASK_CREATED, payload);
+  }
+
+  private void appendUpdatedEventIfChanged(Task task, TaskRowFields before) {
+    if (before.equals(TaskRowFields.from(task))) {
+      return;
+    }
+    String taskId = task.getId().toString();
+    outboxAppender.appendWithIdempotencyKey(
+        task.getWorkspaceId(),
+        "task",
+        taskId,
+        EVENT_TASK_UPDATED,
+        Map.of(),
+        EVENT_TASK_UPDATED + ":" + taskId + ":" + UUID.randomUUID());
+  }
+
+  private record TaskRowFields(
+      String title,
+      String description,
+      String status,
+      String priority,
+      String role,
+      UUID milestoneId,
+      UUID assigneeId,
+      LocalDate dueDate) {
+    static TaskRowFields from(Task task) {
+      return new TaskRowFields(
+          task.getTitle(),
+          task.getDescription(),
+          task.getStatus(),
+          task.getPriority(),
+          task.getRole(),
+          task.getMilestoneId(),
+          task.getAssigneeId(),
+          task.getDueDate());
+    }
   }
 }

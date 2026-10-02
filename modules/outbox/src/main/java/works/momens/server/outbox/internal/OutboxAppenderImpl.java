@@ -15,7 +15,7 @@ import works.momens.server.outbox.OutboxAppender;
  * {@code "api-server"}로 고정한다.
  *
  * <p>{@code payload} 직렬화는 web 계층 {@code ObjectMapper} 설정(날짜 포맷, 프로퍼티 네이밍 등)과 절연하기 위해 전용 {@link
- * ObjectMapper}를 쓴다. 멱등키는 {@code "{event_type}:{aggregate_id}"}로 결정적으로 조립한다(SD-3).
+ * ObjectMapper}를 쓴다. 일회성 이벤트의 멱등키는 {@code "{event_type}:{aggregate_id}"}로 결정적으로 조립한다(SD-3).
  */
 @Component
 @RequiredArgsConstructor
@@ -36,8 +36,20 @@ class OutboxAppenderImpl implements OutboxAppender {
       String aggregateId,
       String eventType,
       Map<String, Object> payload) {
+    appendWithIdempotencyKey(
+        workspaceId, aggregateType, aggregateId, eventType, payload, eventType + ":" + aggregateId);
+  }
+
+  @Override
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void appendWithIdempotencyKey(
+      UUID workspaceId,
+      String aggregateType,
+      String aggregateId,
+      String eventType,
+      Map<String, Object> payload,
+      String idempotencyKey) {
     String serializedPayload = serialize(payload);
-    String idempotencyKey = eventType + ":" + aggregateId;
     outboxEventRepository.insertIgnoringConflict(
         ISSUED_BY,
         workspaceId,

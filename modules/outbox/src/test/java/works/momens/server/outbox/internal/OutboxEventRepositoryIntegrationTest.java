@@ -78,4 +78,27 @@ class OutboxEventRepositoryIntegrationTest extends AbstractPostgresIntegrationTe
 
     assertThat(outboxEventRepository.findAll()).hasSize(1);
   }
+
+  @Test
+  @DisplayName("같은 태스크의 서로 다른 변경 멱등키는 각각 저장한다")
+  void storesSeparateChangesToSameAggregate() {
+    UUID taskId = UUID.randomUUID();
+    String key = "task.updated:" + taskId + ":";
+    for (int change = 1; change <= 2; change++) {
+      outboxEventRepository.insertIgnoringConflict(
+          "api-server",
+          WORKSPACE_ID,
+          "task",
+          taskId.toString(),
+          "task.updated",
+          "{}",
+          key + change);
+    }
+    entityManager.flush();
+    entityManager.clear();
+
+    assertThat(outboxEventRepository.findAll())
+        .extracting(OutboxEvent::getIdempotencyKey)
+        .containsExactlyInAnyOrder(key + 1, key + 2);
+  }
 }

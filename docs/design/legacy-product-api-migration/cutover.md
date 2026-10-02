@@ -179,7 +179,9 @@ Actions가 아니라 Cloudflare Workers Builds가 수행하고(저장소에 Acti
 다음 체인 전체를 통과해야 한다.
 
 1. `MOM-0898` — 공통 outbox polling·claim, offset, retry와 DLQ 또는 동등한 실패 격리
-2. `MOM-0956` — task event hydrate·projector와 task별 prod E2E 투영 확인
+2. `MOM-0956` — `task.created`·`task.updated`·`task.deleted`의 최신 상태 hydrate·삭제
+   처리와 task별 prod E2E 투영 확인. 삭제 뒤 오래된 생성·수정 이벤트 재처리에서도 문서가
+   복원되지 않아야 한다([task consumer 계약](../module-map.md#outbox)).
 3. `MOM-0957` — memory event hydrate·projector와 memory별 prod E2E 투영 확인
 4. 검증 event가 처리 완료 상태가 되고 consumer offset이 전진함
 5. retry 대기나 DLQ 또는 동등한 실패 격리 저장소에 검증 event가 남지 않음
@@ -188,6 +190,8 @@ Actions가 아니라 Cloudflare Workers Builds가 수행하고(저장소에 Acti
 현재 prod에는 시계열 수집이 없으므로 lag graph만으로 판정하지 않는다. `MOM-0898`과 두 projector
 작업이 정한 조회 수단으로 event 처리 상태·offset·실패 잔여를 직접 확인하고, task와 memory의
 증거를 각각 `MOM-0956`·`MOM-0957`에 남긴 뒤 2단계를 연다.
+task 이벤트 세 종류의 consumer 지원과 재처리를 확인한 뒤 운영 task writer를 확대·전환한다.
+미지원 이벤트가 먼저 쌓이면 처리 완료로 건너뛰지 않고 소비 지원 뒤 재시도해야 한다.
 
 ### G2 — `tasks`의 비-웹 레거시 writer (`MOM-0953`)
 
