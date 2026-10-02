@@ -64,7 +64,8 @@ DB schema, OAuth, 운영 ingress 변경도 포함하지 않는다. MCP는 도메
   JSON-RPC `id`를 중복 방지 키로 사용하지 않는다. 이 계약은 2026-09-28 사용자 확인으로 유지한다.
 - 수정은 전달한 필드를 공통 writer에 적용한다. 같은 값이나 변경 필드 없는 요청도 기존과 같은
   `Updated …` 텍스트를 반환한다. 현재 JPA writer는 실제 값이 변하지 않으면 `updated_at`을
-  갱신하지 않는다. MCP가 시간을 강제로 갱신하거나 별도 이벤트를 발행하지 않는다.
+  갱신하지 않는다. MCP가 시간을 강제로 갱신하거나 별도 이벤트를 발행하지 않는다. 공통
+  `TaskWriter`는 검색 대상 필드가 실제로 바뀌면 `task.updated`를 같은 트랜잭션에 남긴다.
 - 삭제 재시도는 이미 삭제된 마일스톤을 찾을 수 없다는 도구 오류다. 추가 삭제 효과는 없다.
 - 쓰기 호출은 인가·참조 해석·공통 writer 호출·응답 텍스트 구성까지 하나의 DB 트랜잭션으로 묶는다.
   도메인 검증이나 응답 구성 중 실패하면 rollback 후 오류를 반환한다.
@@ -81,6 +82,7 @@ DB schema, OAuth, 운영 ingress 변경도 포함하지 않는다. MCP는 도메
 - MOM-1006: 공통 task·milestone writer 동시 수정·삭제 경쟁 검증
 - MOM-0992: canonical 주소 전환, 레거시 경로 종료, client 재연결
 
-현재 공통 task writer는 생성 시 `task.created`를 발행하지만 수정 이벤트는 아직 발행하지 않는다.
-MCP 어댑터에 별도 outbox writer나 인라인 retrieval projector를 만들지 않는다. MOM-1002의 확정
-계약을 공유하고 MOM-0956·0953을 포함한 게이트가 닫힌 뒤 운영 쓰기를 활성화한다.
+공통 task writer는 생성·실제 수정·삭제에 각각 `task.created`·`task.updated`·`task.deleted`를
+발행한다. MCP 어댑터에는 태스크 삭제 도구나 별도 outbox writer, 인라인 retrieval projector가
+없다. 이벤트·재시도 계약은 [모듈 맵의 outbox 절](../design/module-map.md#outbox)을 따르고,
+MOM-0956·0953을 포함한 게이트가 닫힌 뒤 운영 쓰기를 활성화한다.

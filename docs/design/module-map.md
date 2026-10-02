@@ -297,9 +297,24 @@ append-only outbox 발행 로그 공용 모듈이다(ADR-0008).
 
 - `outbox_events` 엔티티·리포지토리·마이그레이션을 소유한다.
 - 쓰기 public API `OutboxAppender`: 호출자 트랜잭션에 합류해(`Propagation.MANDATORY`)
-  `{workspace_id, aggregate_type, aggregate_id, event_type, payload}`를 append한다. 멱등키
-  (`"{event_type}:{aggregate_id}"`)는 이 모듈이 결정적으로 조립하고, `idempotency_key UNIQUE` +
-  `ON CONFLICT DO NOTHING`으로 dedup한다(SD-3).
+  `{workspace_id, aggregate_type, aggregate_id, event_type, payload}`를 append한다. 기존 `append()`는
+  멱등키 `"{event_type}:{aggregate_id}"`를 조립한다. 반복 변경에는 호출자가
+  `appendWithIdempotencyKey()`로 변경 건별 키를 전달한다. 두 경로 모두
+  `idempotency_key UNIQUE` + `ON CONFLICT DO NOTHING`으로 같은 키를 dedup한다(SD-3).
+- task producer 계약(`MOM-1002`): `task.created`는 기존 생성 이벤트와
+  `task.created:{taskId}` 키를 유지한다. 살아 있는 task의 `title`, `description`, `status`,
+  `priority`, `role`, `milestone_id`, `assignee_id`, `due_date` 중 실제 값이 바뀌면
+  `task.updated`를 빈 payload `{}`와 `task.updated:{taskId}:{changeUUID}` 키로 남긴다.
+  체크리스트만 바뀌거나 비교 대상 값이 같으면 발행하지 않는다. soft delete에는 빈 payload의
+  `task.deleted`와 `task.deleted:{taskId}` 키를 남긴다. task 변경과 이벤트 저장은 같은
+  트랜잭션이다.
+- task consumer 계약(`MOM-0956`): envelope의 `aggregate_id`를 task ID로 사용한다.
+  `task.created`·`task.updated`는 공유 DB에서 삭제 상태를 포함한 **최신** task를 조회해
+  투영한다. `deleted_at`이 있거나 원본 행을 찾을 수 없으면 검색 문서와 source-ref를 삭제
+  상태로 수렴시킨다. `task.deleted`도 ID만으로 삭제 처리하며 살아 있는 원본 조회에
+  의존하지 않는다. 따라서 삭제 뒤 과거 생성·수정 이벤트를 재처리해도 문서를 복원하지 않는다.
+  같은 최종 값을 재요청하면 수정 이벤트를 생략하지만, HTTP 요청별 멱등성은 보장하지 않는다.
+  A→B→C 뒤 B 요청을 다시 보내 실제로 B로 바뀌면 새 UUID의 이벤트가 발행된다.
 - 조회 public API `OutboxEventReader`(`readAfter`, `latestIdBefore`, `findById`)와
   `OutboxEventView`(docs/design/signal-push-demo-design.md 10절). watermark 이후 event를 id
   오름차순으로 읽되 DB 시계 기준 안전 지연을 지나지 않은 첫 event에서 멈춘다(prefix-cap).
