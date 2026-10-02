@@ -22,10 +22,12 @@
 {
   "error": {
     "code": "COMMON_VALIDATION_FAILED",
-    "message": "요청 값이 올바르지 않습니다."
+    "message": "요청 값이 유효하지 않습니다."
   }
 }
 ```
+
+엔드포인트별로 반환할 수 있는 에러 코드는 [OpenAPI 스냅샷](openapi.json)의 operation별 실패 응답 예시에서 확인합니다. 에러 응답 형식과 에러 코드 규칙은 [API 응답과 에러 코드](api-response-error-codes.md)를 따릅니다.
 
 ## Enum
 
@@ -110,13 +112,6 @@ Google ID token을 Momens access/refresh token으로 교환합니다.
 }
 ```
 
-#### Errors
-
-- `AUTH_GOOGLE_TOKEN_INVALID`
-- `AUTH_GOOGLE_EMAIL_NOT_VERIFIED`
-- `USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY`
-- `COMMON_VALIDATION_FAILED`
-
 ### POST /api/auth/refresh
 
 Refresh token으로 access/refresh token을 재발급합니다.
@@ -140,11 +135,6 @@ Refresh token으로 access/refresh token을 재발급합니다.
 }
 ```
 
-#### Errors
-
-- `AUTH_REFRESH_TOKEN_INVALID`
-- `COMMON_VALIDATION_FAILED`
-
 ### POST /api/auth/logout
 
 Refresh token을 폐기합니다.
@@ -165,11 +155,6 @@ Refresh token을 폐기합니다.
 }
 ```
 
-#### Errors
-
-- `AUTH_REFRESH_TOKEN_INVALID`
-- `COMMON_VALIDATION_FAILED`
-
 ## 모바일 진입
 
 ### GET /api/mobile/bootstrap
@@ -181,6 +166,7 @@ Refresh token을 폐기합니다.
   접근 가능한 프로젝트 중 가장 최근에 만든 것을 선택합니다.
 - 접근 가능한 프로젝트가 없으면 `200`으로 `default_project_id`는 `null`, `projects`는 빈 배열을
   반환하고, 빈 화면 처리는 앱이 담당합니다(2026-07-04 가결정, 기획 확인 후 확정).
+- 토큰은 유효하지만 사용자가 삭제된 경우 `USER_NOT_FOUND`로 응답합니다. `GET /api/me`와 동일한 동작입니다.
 
 #### Response 200
 
@@ -218,12 +204,6 @@ Refresh token을 폐기합니다.
 }
 ```
 
-#### Errors
-
-- `AUTH_UNAUTHORIZED`
-- `AUTH_INVALID_TOKEN`
-- `USER_NOT_FOUND` (유효한 토큰이지만 사용자가 삭제된 경우. `GET /api/me`와 같은 동작)
-
 ## 프로젝트
 
 ### GET /api/mobile/projects/{projectId}/members
@@ -238,6 +218,7 @@ Refresh token을 폐기합니다.
 - `avatar_url`은 값이 없어도 `null`로 항상 포함합니다(bootstrap과 동일).
 - 레거시 `GET /workspaces/:id/members`와 달리 email, role, 시각을 내리지 않습니다. 담당자 선택
   bottom sheet가 쓰는 값(id, 이름, 아바타)만 담는 신규 계약입니다(의도된 차이).
+- project가 없거나 삭제된 경우 `PROJECT_NOT_FOUND`로 응답합니다. project는 존재하지만 요청 사용자가 해당 workspace의 멤버가 아닌 경우 `AUTH_FORBIDDEN`으로 응답합니다.
 
 #### Query
 
@@ -258,13 +239,6 @@ Refresh token을 폐기합니다.
   ]
 }
 ```
-
-#### Errors
-
-- `AUTH_UNAUTHORIZED`
-- `AUTH_INVALID_TOKEN`
-- `PROJECT_NOT_FOUND` (project가 없거나 삭제된 경우)
-- `AUTH_FORBIDDEN` (project는 있지만 요청 사용자가 소속 workspace의 멤버가 아닌 경우)
 
 ## 시그널
 
@@ -318,14 +292,6 @@ Signal과 함께 생산하고, worker가 준비되지 않은 MVP 환경에서는
 }
 ```
 
-#### Errors
-
-- `AUTH_UNAUTHORIZED`
-- `AUTH_INVALID_TOKEN`
-- `PROJECT_NOT_FOUND`
-- `COMMON_VALIDATION_FAILED`
-- `AUTH_FORBIDDEN`
-
 ### GET /api/mobile/signals/{signalId}
 
 시그널 상세 bottom sheet에 필요한 정보를 조회합니다.
@@ -369,13 +335,6 @@ project는 모바일의 현재 context로 고정되어 있고, description·task
 않으므로 응답하지 않습니다. 이는 응답 계약에서만 제외하는 것이며 backing의 `project_id`는 목록 필터와 task
 귀속에 계속 사용합니다. 처리된 Signal을 다시 보는 inbox는 MVP 이후 범위이므로 이미 처리된 Signal도
 `SIGNAL_NOT_FOUND`로 응답합니다.
-
-#### Errors
-
-- `AUTH_UNAUTHORIZED`
-- `AUTH_INVALID_TOKEN`
-- `SIGNAL_NOT_FOUND`
-- `AUTH_FORBIDDEN`
 
 ### POST /api/mobile/signals/{signalId}/actions/convert-to-task
 
@@ -440,20 +399,14 @@ backing에 저장하지 않습니다.
 }
 ```
 
-#### Errors
-
-- `AUTH_UNAUTHORIZED`
-- `AUTH_INVALID_TOKEN`
-- `SIGNAL_NOT_FOUND`
-- `SIGNAL_INVALID_STATE`
-- `AUTH_FORBIDDEN`
-
 ### POST /api/mobile/signals/{signalId}/actions/dismiss
 
 제안된 시그널을 MVP 흐름에서 수용하지 않고 목록에서 삭제 처리합니다. 모바일 화면의 버튼 라벨은 `삭제`지만
 서버 action 이름은 `dismiss`입니다. 이 액션은 물리 삭제가 아니고 시그널이 잘못됐다고 확정하는 것도 아니라,
 사용자가 현재 시그널을 task로 전환하지 않겠다는 처리 기록입니다. 삭제 처리한 시그널을 다시 보는 inbox
 흐름은 MVP 이후로 둡니다.
+
+`SIGNAL_INVALID_STATE`(409)는 Signal이 이미 다른 액션으로 처리되었거나, 현재 상태에서 요청한 액션을 수행할 수 없는 경우 반환합니다. 같은 액션을 다시 요청한 경우에는 아래의 `200` 멱등 응답으로 처리합니다.
 
 #### Response 200
 
@@ -478,17 +431,6 @@ backing에 저장하지 않습니다.
   }
 }
 ```
-
-#### Errors
-
-- `AUTH_UNAUTHORIZED`
-- `AUTH_INVALID_TOKEN`
-- `SIGNAL_NOT_FOUND`
-- `SIGNAL_INVALID_STATE`
-- `AUTH_FORBIDDEN`
-
-`SIGNAL_INVALID_STATE`(409)는 이미 다른 액션으로 처리된 Signal에 요청하거나, 현재 상태에서 요청한 액션을
-수행할 수 없는 경우에 반환합니다. 같은 액션 재요청은 위 `200` 멱등 응답으로 처리합니다.
 
 ## 브리프
 
@@ -605,13 +547,6 @@ cancelled를 분모에서 제외하는 기준은 기획이 확정했습니다. �
 배열 길이와 항상 같은 값이라 별도 개수 필드를 두지 않습니다. 후보는 진행 중인 todo와 in_progress 상태의
 태스크이고 backlog와 done, cancelled는 제외합니다(2026-07-10 기획 확정).
 
-#### Errors
-
-- `AUTH_UNAUTHORIZED`
-- `AUTH_INVALID_TOKEN`
-- `PROJECT_NOT_FOUND`
-- `AUTH_FORBIDDEN`
-
 ### GET /api/mobile/projects/{projectId}/brief/signal-summary
 
 브리프 시그널 요약의 필터 전환과 더보기에 사용합니다. 커서 기반 페이지네이션을 사용하며, 정렬은 최신순입니다(생성
@@ -657,14 +592,6 @@ cancelled를 분모에서 제외하는 기준은 기획이 확정했습니다. �
 `cursor`와 음수 `limit`은 `COMMON_VALIDATION_FAILED`(400)로 응답합니다. 커서가 마지막으로 본 항목의 생성 시각과
 id를 기준으로 하기 때문에, 페이지 사이에 시그널이 처리되어도 다음 페이지의 위치가 밀리지 않습니다.
 
-#### Errors
-
-- `AUTH_UNAUTHORIZED`
-- `AUTH_INVALID_TOKEN`
-- `PROJECT_NOT_FOUND`
-- `COMMON_VALIDATION_FAILED`
-- `AUTH_FORBIDDEN`
-
 ## 태스크
 
 ### GET /api/mobile/projects/{projectId}/tasks
@@ -702,13 +629,6 @@ id를 기준으로 하기 때문에, 페이지 사이에 시그널이 처리되�
 
 보드는 todo, in_progress, done, backlog, cancelled 다섯 그룹을 순서대로 노출합니다. 태스크 수정 화면이 상태 5종을 모두 편집하므로, backlog나 cancelled로 바꾼 태스크가 보드에서 사라지지 않도록 다섯 그룹을 모두 담습니다(MOM-75). 다섯 그룹은 태스크가 없어도 항상 포함하며 그때 tasks는 빈 배열입니다. priority는 low, medium, high로 반환하고, 저장된 값이 레거시 전용인 urgent이면 high로 반환합니다(2026-07-06 가결정). material_count는 태스크에 연결된 관련 자료 수이고, 연결이 없으면 0입니다. 웹에서 만든 태스크는 역할이 없어 role을 null로 반환합니다(레거시와 공유하는 tasks에서 role은 nullable이고, 모바일 생성 API는 role을 필수로 받습니다).
 
-#### Errors
-
-- `AUTH_UNAUTHORIZED`
-- `AUTH_INVALID_TOKEN`
-- `PROJECT_NOT_FOUND`
-- `AUTH_FORBIDDEN`
-
 ### POST /api/mobile/projects/{projectId}/tasks
 
 일반 태스크를 생성합니다.
@@ -739,14 +659,6 @@ id를 기준으로 하기 때문에, 페이지 사이에 시그널이 처리되�
 ```
 
 title, role, priority 모두 필수입니다(2026-07-06 기획 확정, 2026-07-07 역할은 하나만 선택하는 단일 값으로 재확정). role은 pm, design, backend, frontend 중 하나입니다(2026-07-08 기획 확정으로 android, qa는 폐기하고 역할은 4종만 둡니다). priority는 low, medium, high, urgent 중 하나이며, urgent는 그대로 저장하고 응답에서는 high로 표시합니다. 셋 중 하나라도 비어 있거나 허용하지 않는 값이면 COMMON_VALIDATION_FAILED로 응답합니다. 제목은 공백을 포함해 15자로 제한하며, 넘기면 COMMON_VALIDATION_FAILED로 응답합니다(수정 화면과 같은 태스크 공통 규칙). 생성한 태스크는 todo 그룹에서 시작합니다. role은 레거시 tasks에 없는 신규 속성이라 CHECK 제약을 둔 문자열 컬럼으로 저장합니다.
-
-#### Errors
-
-- `AUTH_UNAUTHORIZED`
-- `AUTH_INVALID_TOKEN`
-- `PROJECT_NOT_FOUND`
-- `COMMON_VALIDATION_FAILED`
-- `AUTH_FORBIDDEN`
 
 ### GET /api/mobile/tasks/{taskId}
 
@@ -828,11 +740,6 @@ convert-to-task 응답과 같습니다. 앱은 `generating`이면 나중에 다�
 `status`는 저장된 5종(backlog, todo, in_progress, done, cancelled)을 그대로 반환하고(상세 상태 칩이 5종 노출),
 `priority`는 보드와 같이 저장된 urgent를 high로 반환합니다. `purpose`는 레거시 `tasks.description`에 매핑됩니다.
 
-#### Errors
-
-- `TASK_NOT_FOUND`
-- `AUTH_FORBIDDEN`
-
 ### PATCH /api/mobile/tasks/{taskId}
 
 태스크 수정 화면에서 편집한 필드를 저장합니다. 요청은 리소스 전체가 아니라 편집 가능한 필드 전체(title, role, assignee_id, priority, status, purpose, checklist_items)를 담고, 서버가 관리하는 필드(materials, open_questions, next_action)는 요청에 없어 그대로 유지합니다. title, role, priority, status는 항상 채워 보냅니다. title은 생성과 달리 빈 문자열을 허용하고, title을 빈 문자열로 보내면 상세 화면이 '새 태스크'로 표시합니다.
@@ -859,13 +766,6 @@ convert-to-task 응답과 같습니다. 앱은 `generating`이면 나중에 다�
 #### Response 204
 
 저장만 하고 본문은 반환하지 않습니다. 쓰기와 읽기의 역할을 분리하기 위해서입니다. 저장 후 필요한 최신 상태는 태스크 상세 조회(`GET /api/mobile/tasks/{taskId}`)로 다시 읽습니다. 새로 추가한 완료기준의 서버 id도 이 조회에서 확인합니다.
-
-#### Errors
-
-- `TASK_NOT_FOUND`
-- `TASK_CHECKLIST_ITEM_NOT_FOUND`
-- `COMMON_VALIDATION_FAILED`
-- `AUTH_FORBIDDEN`
 
 ### PATCH /api/mobile/tasks/{taskId}/checklist-items/{itemId}
 
@@ -895,13 +795,6 @@ convert-to-task 응답과 같습니다. 앱은 `generating`이면 나중에 다�
 }
 ```
 
-#### Errors
-
-- `TASK_NOT_FOUND`
-- `TASK_CHECKLIST_ITEM_NOT_FOUND`
-- `COMMON_VALIDATION_FAILED`
-- `AUTH_FORBIDDEN`
-
 ## Push 설치
 
 ### PUT /api/me/push-devices/{firebaseInstallationId}
@@ -930,13 +823,6 @@ Android 기기의 Firebase Installation ID(FID)와 FCM registration token을 등
 
 생성과 갱신 모두 본문 없이 `204 No Content`를 반환합니다.
 
-#### Errors
-
-- `COMMON_VALIDATION_FAILED`
-- `COMMON_CONFLICT`
-- `AUTH_UNAUTHORIZED`
-- `AUTH_INVALID_TOKEN`
-
 ### DELETE /api/me/push-devices/{firebaseInstallationId}
 
 현재 인증 사용자가 소유한 설치를 비활성화합니다. 로그아웃과 별도 endpoint이며, 앱은 로그아웃 직전에
@@ -947,11 +833,6 @@ Android 기기의 Firebase Installation ID(FID)와 FCM registration token을 등
 자기 소유 설치만 비활성화하고, 이미 비활성화됐거나 없는 설치도 `204 No Content`로 멱등 처리합니다.
 다른 사용자가 소유한 활성 설치는 해제하지 않습니다. 물리 삭제하지 않아 같은 사용자의 재등록과 token
 lifecycle을 안전하게 처리합니다.
-
-#### Errors
-
-- `AUTH_UNAUTHORIZED`
-- `AUTH_INVALID_TOKEN`
 
 ### FCM push notification 계약
 
