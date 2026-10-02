@@ -150,7 +150,7 @@ soft-delete 필터는 두지 않는다. 레거시에 해당 컬럼과 필터가 
 | 워크스페이스 없음 | 403 (raw error 문자열) | **404 `WORKSPACE_NOT_FOUND`** |
 | 멤버가 아님 | 403 (raw error 문자열) | **403 `AUTH_FORBIDDEN`** |
 
-`WORKSPACE_NOT_FOUND`는 이미 [에러 코드표](../../spec/api-response-error-codes.md)에 있다.
+`WORKSPACE_NOT_FOUND`는 `WorkspaceErrorCode`에 정의되어 있습니다.
 미존재와 권한 없음을 나누면 워크스페이스 존재 여부가 드러나지만, 식별자가 추측 불가능한 UUID라
 열거 위험이 없다고 판단한다.
 
