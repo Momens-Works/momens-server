@@ -120,107 +120,24 @@ Standard 모드의 에러 응답은 아래 형태를 사용합니다.
 - 도메인 에러는 도메인 이름을 prefix로 사용합니다. 예: `WORKSPACE_`, `MEMORY_`, `SOURCE_`.
 - 같은 의미의 에러 코드는 HTTP status가 달라도 재사용하지 않습니다.
 - 코드는 삭제하거나 의미를 바꾸지 않습니다. 필요하면 새 코드를 추가합니다.
+- 도메인별 에러가 필요한 경우 공통 코드를 그대로 사용하지 않고, 의미가 명확하게 드러나는 도메인 에러 코드를 추가합니다.
 
-## 공통 에러 코드
+## 에러 코드 목록
 
-| HTTP status | Code | 사용 기준 |
-| --- | --- | --- |
-| 400 | `COMMON_BAD_REQUEST` | 요청 형식, 타입, JSON 파싱 오류 |
-| 400 | `COMMON_VALIDATION_FAILED` | Bean Validation 등 필드 검증 실패 |
-| 401 | `AUTH_UNAUTHORIZED` | 인증 정보 없음 |
-| 401 | `AUTH_INVALID_TOKEN` | 토큰 파싱/검증 실패 |
-| 403 | `AUTH_FORBIDDEN` | 인증은 되었지만 권한 없음 |
-| 404 | `COMMON_NOT_FOUND` | 특정 도메인 코드가 아직 없을 때의 기본 not found |
-| 405 | `COMMON_METHOD_NOT_ALLOWED` | 해당 경로에서 허용되지 않은 HTTP 메서드 |
-| 409 | `COMMON_CONFLICT` | 중복, 상태 충돌 등 기본 conflict |
-| 415 | `COMMON_UNSUPPORTED_MEDIA_TYPE` | 지원하지 않는 요청 Content-Type |
-| 500 | `COMMON_INTERNAL_SERVER_ERROR` | 서버 내부 오류. 상세 원인 노출 금지 |
-| 502 | `COMMON_BAD_GATEWAY` | 외부 서비스 호출 실패 |
+이 문서에는 구현된 에러 코드를 별도로 나열하지 않습니다. 공통 에러 코드는 `CommonErrorCode`에, 도메인 에러 코드는 각 모듈의 `ErrorCode` enum에 정의합니다. 엔드포인트별로 반환할 수 있는 Standard 모드 에러 코드와 HTTP status는 [OpenAPI 스냅샷](openapi.json)의 operation별 실패 응답 예시에서 확인합니다.
 
-도메인별 에러가 필요하면 공통 코드를 그대로 쓰기보다 의미가 드러나는 도메인 코드를 추가합니다.
+엔드포인트의 호출 경로에서 도달할 수 있는 도메인 에러 코드와 `@ApiException` 선언이 일치하지 않으면 `ApiExceptionConsistencyTest`가 실패합니다. 검증 범위와 조건은 [OpenAPI](openapi.md)의 「선언 검증」 절을 따릅니다.
 
-예:
+아직 구현되지 않은 에러 코드는 해당 기능의 설계 문서에서 관리합니다. 구현할 때 `ErrorCode` enum에 추가하고 해당 엔드포인트의 `@ApiException`에 선언합니다.
 
-| HTTP status | Code | 사용 기준 |
-| --- | --- | --- |
-| 400 | `WORKSPACE_INVALID_SLUG` | workspace slug 형식이 유효하지 않음 |
-| 400 | `WORKSPACE_RESERVED_SLUG` | 예약어로 지정되어 사용할 수 없는 workspace slug |
-| 409 | `WORKSPACE_SLUG_ALREADY_EXISTS` | workspace slug 중복 |
-| 404 | `WORKSPACE_NOT_FOUND` | workspace를 찾을 수 없음 |
-| 400 | `INVITATION_INVALID_TOKEN` | 초대 토큰 형식이 유효하지 않음 |
-| 404 | `INVITATION_NOT_FOUND` | 초대를 찾을 수 없음 |
-| 409 | `INVITATION_EXPIRED` | 초대가 만료됨 |
-
-### 구현된 도메인 코드
-
-| HTTP status | Code | 사용 기준 |
-| --- | --- | --- |
-| 401 | `AUTH_GOOGLE_TOKEN_INVALID` | Google ID 토큰 검증 실패 |
-| 401 | `AUTH_GOOGLE_EMAIL_NOT_VERIFIED` | Google 계정 이메일이 검증되지 않음 |
-| 401 | `AUTH_REFRESH_TOKEN_INVALID` | refresh token 형식·해시·만료·폐기 상태가 유효하지 않음 |
-| 400 | `AUTH_OAUTH_STATE_INVALID` | 웹 OAuth 콜백의 state 불일치·누락 또는 code 누락 |
-| 502 | `AUTH_OAUTH_EXCHANGE_FAILED` | 웹 OAuth code 교환·userinfo 조회 실패 |
-| 401 | `AUTH_DEV_TOKEN_SECRET_INVALID` | dev 토큰 발급 요청에서 공유 시크릿 헤더가 없거나 일치하지 않음 (dev 계열 프로필 전용) |
-| 403 | `AUTH_DEV_TOKEN_EMAIL_NOT_ALLOWED` | dev 토큰 발급 대상 이메일이 allowlist에 없음 (dev 계열 프로필 전용) |
-| 404 | `USER_NOT_FOUND` | 사용자를 찾을 수 없음 (`GET/PATCH /api/me` 등) |
-| 409 | `USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY` | 이메일로 조회한 사용자에게 이미 다른 로그인 수단이 연결되어 있어 Google 계정을 연결할 수 없음 |
-| 409 | `SIGNAL_INVALID_STATE` | 이미 다른 action으로 처리된 Signal에 다른 action을 요청함(같은 action 재요청은 200 멱등 응답) |
-| 404 | `WORKSPACE_MEMBER_NOT_FOUND` | 대상 사용자가 해당 workspace의 멤버가 아님 |
-| 400 | `WORKSPACE_INVALID_ROLE` | 초대를 수락할 때 초대에 저장된 role이 부여할 수 없는 값임. 요청 본문의 `role`이 허용하지 않는 값이면 `COMMON_VALIDATION_FAILED`로 응답함 |
-| 409 | `WORKSPACE_OWNER_PROTECTED` | 대상 사용자가 owner이므로 역할을 변경하거나 멤버십을 제거할 수 없음 |
-| 409 | `WORKSPACE_SELF_REMOVAL_NOT_ALLOWED` | 요청자가 자기 자신을 workspace에서 제거하려 함 |
-| 400 | `INVITATION_INVALID_EMAIL` | 초대할 이메일 형식이 올바르지 않음 |
-| 400 | `INVITATION_INVALID_TOKEN` | 초대 토큰이 비어 있거나 알 수 없는 상태의 초대를 가리킴 |
-| 403 | `INVITATION_EMAIL_MISMATCH` | 초대받은 이메일과 로그인한 계정의 이메일이 일치하지 않음 |
-| 404 | `INVITATION_NOT_FOUND` | 초대를 찾을 수 없음 |
-| 409 | `INVITATION_ALREADY_ACCEPTED` | 이미 수락된 초대이므로 재발송, 폐기, 재수락할 수 없음 |
-| 409 | `INVITATION_EXPIRED` | 만료된 초대를 수락하려 함 |
-| 409 | `INVITATION_REVOKED` | 폐기된 초대를 수락하려 함 |
-| 502 | `INVITATION_EMAIL_SEND_FAILED` | 초대 이메일 발송에 실패함 |
-| 409 | `WORKSPACE_MEMBER_ALREADY_EXISTS` | 초대 대상이 이미 워크스페이스 멤버임 |
-| 403 | `WORKSPACE_INVITEE_NOT_FOUND` | 멤버로 추가할 이메일에 해당하는 사용자가 없음 |
-| 403 | `WORKSPACE_MEMBER_ROLE_CONFLICT` | 대상 사용자가 이미 다른 역할로 워크스페이스에 참여 중임 |
-
-`INVITATION_NOT_FOUND`, `INVITATION_INVALID_TOKEN`, `INVITATION_EXPIRED`는 예시 표에 정의되어 있던
-코드를 구현한 것이다. `WORKSPACE_INVITEE_NOT_FOUND`와 `WORKSPACE_MEMBER_ROLE_CONFLICT`를 403으로
-정의한 것은 레거시가 이 경로의 실패를 모두 403으로 응답하기 때문이다. 기존 HTTP status를 보존한다는
-이관 원칙을 따른 결과이다.
-
-### 모바일 MVP 예정 도메인 코드
-
-모바일 MVP API를 구현할 때는 다음 도메인 코드를 추가한다.
-
-| HTTP status | Code | 사용 기준 |
-| --- | --- | --- |
-| 404 | `PROJECT_NOT_FOUND` | 프로젝트를 찾을 수 없음 |
-| 404 | `SIGNAL_NOT_FOUND` | Signal을 찾을 수 없음 |
-| 404 | `TASK_NOT_FOUND` | 태스크를 찾을 수 없음 |
-| 404 | `TASK_CHECKLIST_ITEM_NOT_FOUND` | 태스크 체크리스트 항목을 찾을 수 없음 |
-
-웹 이관에서는 다음 도메인 코드를 추가한다.
-
-| HTTP status | Code | 사용 기준 |
-| --- | --- | --- |
-| 400 | `CONTEXT_CROSS_WORKSPACE_LINK_NOT_ALLOWED` | 연결할 두 대상이 서로 다른 워크스페이스에 속함 |
-| 404 | `CONTEXT_LINK_NOT_FOUND` | 해제할 연결이 없음 |
-
-### 웹 Google 로그인(Authorization Code) 리다이렉트 계약
+## 웹 Google 로그인(Authorization Code) 리다이렉트 계약
 
 `GET /api/auth/google/login`·`GET /api/auth/google/callback`은 브라우저 리다이렉트(302)로 동작하므로
-JSON 에러 본문을 쓰지 않습니다. 콜백 실패는 브라우저에 JSON을 노출하지 않도록 `failure-uri`로
-리다이렉트하며 `?error=`에 다음 값 중 하나를 싣습니다(민감정보 미포함).
-
-| `?error=` | 의미 | 매핑 에러 코드 |
-| --- | --- | --- |
-| `invalid_state` | state 불일치·누락 또는 code 누락 | `AUTH_OAUTH_STATE_INVALID` |
-| `email_not_verified` | Google 이메일 미검증 | `AUTH_GOOGLE_EMAIL_NOT_VERIFIED` |
-| `email_conflict` | 이메일로 조회한 사용자에게 이미 다른 로그인 수단이 연결되어 있음 | `USER_EMAIL_LINKED_TO_ANOTHER_IDENTITY` |
-| `google_error` | code 교환·userinfo 실패 | `AUTH_OAUTH_EXCHANGE_FAILED` |
-| `server_error` | 그 외 예기치 못한 오류 | (기타) |
+JSON 에러 본문을 쓰지 않습니다. 실패 시 `?error=`에 실패 사유를 포함해 리다이렉트하며, 민감정보는 포함하지 않습니다. `?error=` 값 목록은 OpenAPI 스냅샷의 `completeGoogleLogin` 설명에서 확인합니다.
 
 성공 시 access/refresh를 HttpOnly 쿠키로 설정하고 `success-uri`로 리다이렉트합니다.
 
-### 웹 쿠키 세션 갱신·로그아웃 계약
+## 웹 쿠키 세션 갱신·로그아웃 계약
 
 웹은 access 만료 시 refresh 쿠키로 회전 재발급하고 로그아웃 시 세션 쿠키를 정리합니다. 두 경로 모두
 `/api/auth` 하위라 refresh 쿠키(`Path=/api/auth`)가 전송되며, same-domain 배포라 CSRF는 SameSite로
@@ -297,5 +214,5 @@ Bean Validation과 `FieldValidationException`을 통한 필드 단위 검증 실
 - 기존 Go API 이관인지, 신규/개편 API인지 먼저 결정합니다.
 - 기존 Go API 이관이면 status와 body shape를 기존과 맞춥니다.
 - 신규/개편 API이면 Standard 에러 응답을 사용합니다.
-- 새 에러 코드를 추가하면 이 문서의 코드 표 또는 도메인별 명세에 반영합니다.
+- 새 에러 코드를 추가하면 해당 엔드포인트의 `@ApiException`에 선언하고, `./gradlew updateOpenApiSnapshot`으로 OpenAPI 스냅샷을 갱신합니다.
 - OpenAPI에 성공 예시와 주요 에러 예시를 함께 추가합니다.
