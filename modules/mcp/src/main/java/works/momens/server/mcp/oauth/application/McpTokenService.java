@@ -123,6 +123,12 @@ public final class McpTokenService {
     McpGrantDetail grant = grantId == null ? null : grants.findActive(grantId).orElse(null);
     if (grant == null || memberships.roleOf(grant.workspaceId(), grant.userId()).isEmpty()) {
       families.revoke(id, Instant.now());
+      if (refresh && grantId == null) {
+        log.info(
+            "event=mcp_oauth_refresh outcome=rejected reason=family_inactive authorization_id={} presented_token_id={}",
+            id,
+            tokenId(raw));
+      }
       throw new OAuth2AuthenticationException("invalid_grant");
     }
     // Look up again under the row lock: another request may just have rotated the token.
