@@ -199,6 +199,9 @@ class McpOAuthFlowIntegrationTest extends AbstractPostgresIntegrationTest {
         .contains("event=mcp_oauth_refresh outcome=succeeded")
         .contains("event=mcp_oauth_refresh outcome=family_revoked reason=refresh_token_reused")
         .contains("presented_token_id=" + presentedTokenId, "next_token_id=" + nextTokenId)
+        .doesNotContain(
+            "presented_token_id=" + refresh.substring(0, 16),
+            "next_token_id=" + rotated.get("refresh_token").stringValue().substring(0, 16))
         .doesNotContain(refresh, rotated.get("refresh_token").stringValue());
   }
 
