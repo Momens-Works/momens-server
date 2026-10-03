@@ -41,6 +41,40 @@ class McpOAuthSecurityIntegrationTest extends AbstractPostgresIntegrationTest {
   @MockitoSpyBean MilestoneReader milestones;
 
   @Test
+  @DisplayName("삭제가 완료된 클라이언트의 인가 요청은 400 invalid_request를 반환한다")
+  void deletedClientAuthorizationRetainsExistingErrorContract() throws Exception {
+    String registered =
+        mvc.perform(
+                post("/api/oauth2/register")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        mapper.writeValueAsString(
+                            Map.of(
+                                "client_name",
+                                "deleted client test",
+                                "redirect_uris",
+                                List.of("http://localhost:3000/callback")))))
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String clientId = mapper.readTree(registered).get("client_id").stringValue();
+    assertThat(jdbc.update("DELETE FROM oauth2_registered_client WHERE client_id = ?", clientId))
+        .isEqualTo(1);
+
+    mvc.perform(
+            get("/api/oauth2/authorize")
+                .queryParam("response_type", "code")
+                .queryParam("client_id", clientId)
+                .queryParam("redirect_uri", "http://localhost:3000/callback")
+                .queryParam("code_challenge_method", "S256")
+                .queryParam("code_challenge", "ZtNPunH49FD35FWYhT5Tv8I7vRKQJ8uxMaL0_9eHjNA")
+                .queryParam("resource", "https://api.momens.works/api/mcp"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error").value("invalid_request"));
+  }
+
+  @Test
   @DisplayName("사용자 쿠키로 동의하고 MCP 토큰으로 도구를 호출하며 사용자 API 인증과 분리한다")
   void consentUsesTheExistingUserCookieAndMcpTokensCannotAuthenticateUserApis() throws Exception {
     UUID userId = UUID.randomUUID();

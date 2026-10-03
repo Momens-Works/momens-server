@@ -251,13 +251,99 @@ class McpUnusedClientCleanupIntegrationTest extends AbstractPostgresIntegrationT
   }
 
   @Test
-  @DisplayName("후보 잠금 이후 저장된 동의를 삭제 직전에 다시 확인한다")
-  void rechecksUsageAfterCandidateSelection() {
+  @DisplayName("정리 SQL이 등록 시각과 사용 이력 조회 인덱스를 사용할 수 있다")
+  void cleanupQueriesCanUseIndexes() {
     RegisteredClient client = client(25);
-    assertThat(repository.lockUnusedBefore(NOW, 100)).contains(client.getId());
-    consents.save(
-        OAuth2AuthorizationConsent.withId(client.getId(), "user").scope("mcp:tasks:read").build());
-    assertThat(repository.deleteIfUnused(client.getId())).isZero();
+    jdbc.execute("SET LOCAL enable_seqscan = off");
+    String candidates =
+        String.join(
+            "\n",
+            jdbc.queryForList(
+                "EXPLAIN " + McpUnusedClientRepository.LOCK_UNUSED_SQL,
+                String.class,
+                Timestamp.from(NOW.minus(Duration.ofHours(24))),
+                100));
+    assertThat(candidates)
+        .contains(
+            "idx_mcp_client_issued_at",
+            "idx_mcp_authorization_registered_client",
+            "idx_mcp_grants_client");
+    String deletion =
+        String.join(
+            "\n",
+            jdbc.queryForList(
+                "EXPLAIN " + McpUnusedClientRepository.DELETE_UNUSED_SQL,
+                String.class,
+                client.getId()));
+    assertThat(deletion)
+        .contains("idx_mcp_authorization_registered_client", "idx_mcp_grants_client");
+  }
+
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  @DisplayName("후보 조회 스냅샷 이후 커밋된 인가를 삭제 직전에 다시 확인한다")
+  void rechecksAuthorizationCommittedAfterCandidateSnapshot() throws Exception {
+    RegisteredClient client = client(25);
+    AtomicInteger cleanupPid = new AtomicInteger();
+    // Pause cutoff evaluation after the statement snapshot exists but before client row locking.
+    // Only the cutoff parameter expression changes; predicates and row locking use production SQL.
+    String pausedQuery =
+        McpUnusedClientRepository.LOCK_UNUSED_SQL.replace(
+            "<= ?", "<= (SELECT ?::timestamp FROM pg_advisory_xact_lock(?))");
+    try (var barrier = jdbc.getDataSource().getConnection();
+        var executor = Executors.newSingleThreadExecutor()) {
+      long key;
+      try (var statement = barrier.createStatement();
+          var result = statement.executeQuery("SELECT pg_backend_pid()")) {
+        assertThat(result.next()).isTrue();
+        key = result.getLong(1);
+      }
+      try (var lock = barrier.prepareStatement("SELECT pg_advisory_lock(?)")) {
+        lock.setLong(1, key);
+        lock.execute();
+      }
+      var deletion =
+          executor.submit(
+              () ->
+                  new TransactionTemplate(transactionManager)
+                      .execute(
+                          status -> {
+                            cleanupPid.set(
+                                jdbc.queryForObject("SELECT pg_backend_pid()", Integer.class));
+                            assertThat(
+                                    jdbc.queryForList(
+                                        pausedQuery,
+                                        String.class,
+                                        Timestamp.from(NOW.minus(Duration.ofHours(24))),
+                                        key,
+                                        100))
+                                .contains(client.getId());
+                            return repository.deleteIfUnused(client.getId());
+                          }));
+      try {
+        await()
+            .atMost(Duration.ofSeconds(5))
+            .untilAsserted(
+                () ->
+                    assertThat(
+                            jdbc.queryForObject(
+                                "SELECT count(*) FROM pg_locks WHERE pid = ? AND locktype = 'advisory' AND NOT granted",
+                                Long.class,
+                                cleanupPid.get()))
+                        .isEqualTo(1));
+        new TransactionTemplate(transactionManager)
+            .executeWithoutResult(status -> authorizations.save(authorization(client)));
+      } finally {
+        try (var unlock = barrier.prepareStatement("SELECT pg_advisory_unlock(?)")) {
+          unlock.setLong(1, key);
+          unlock.execute();
+        }
+      }
+      assertThat(deletion.get(5, TimeUnit.SECONDS)).isZero();
+      assertThat(clients.findById(client.getId())).isNotNull();
+    } finally {
+      removeFixture(client);
+    }
   }
 
   private RegisteredClient client(int ageHours) {
