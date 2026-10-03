@@ -19,21 +19,22 @@ class McpUnusedClientRepository {
       AND NOT EXISTS (SELECT 1 FROM mcp_grants g WHERE g.client_id = c.client_id)
       """;
 
+  static final String LOCK_UNUSED_SQL =
+      "SELECT c.id FROM oauth2_registered_client c WHERE c.client_id_issued_at <= ? AND "
+          + UNUSED
+          + " ORDER BY c.client_id_issued_at, c.id LIMIT ? FOR UPDATE OF c SKIP LOCKED";
+  static final String DELETE_UNUSED_SQL =
+      "DELETE FROM oauth2_registered_client c WHERE c.id = ? AND " + UNUSED;
+
   private final JdbcOperations jdbc;
 
   List<String> lockUnusedBefore(Instant cutoff, int limit) {
-    return jdbc.queryForList(
-        "SELECT c.id FROM oauth2_registered_client c WHERE c.client_id_issued_at <= ? AND "
-            + UNUSED
-            + " ORDER BY c.client_id_issued_at, c.id LIMIT ? FOR UPDATE OF c SKIP LOCKED",
-        String.class,
-        Timestamp.from(cutoff),
-        limit);
+    return jdbc.queryForList(LOCK_UNUSED_SQL, String.class, Timestamp.from(cutoff), limit);
   }
 
   int deleteIfUnused(String id) {
     // A separate statement sees authorizations committed after the candidate query's snapshot.
-    return jdbc.update("DELETE FROM oauth2_registered_client c WHERE c.id = ? AND " + UNUSED, id);
+    return jdbc.update(DELETE_UNUSED_SQL, id);
   }
 
   void lockForUse(String id) {
