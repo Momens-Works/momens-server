@@ -173,6 +173,38 @@ refresh token 저장 모델(서버 저장형 + PostgreSQL 원장)은 [ADR-0005](
   알지 않는다. 발급자가 둘 이상이 되면 대칭키 HS256 전제가 깨지는데([ADR-0004](../adr/0004-token-issuance-verification-stack.md)),
   그 전환은 이 빈 구성만 바꾸면 된다.
 
+### mcp — 미사용 OAuth client 정리
+
+`MOM-0996`은 **등록 후 24시간 이상 지났고 인가를 한 번도 시작하지 않은 client**를 정리한다.
+`oauth2_authorization`, `oauth2_authorization_consent`, `mcp_grants`에 연결된 행이 하나도
+없어야 한다. authorization·consent는 내부 등록 ID(`oauth2_registered_client.id`), grant는
+공개 `client_id`로 대조한다. 인가를 시작했다면 중단·거절·만료했어도 보존하며, 폐기된 grant도
+사용 이력으로 취급한다. 사용 기록의 보존 정책을 바꾸면 이 삭제 조건도 함께 재검토해야 한다.
+
+24시간은 사용 규모가 작은 현재 단계에서 합의한 초기 운영 기준이며, 표준이나 통계에서
+도출한 값은 아니다. 삭제된 등록으로 연결을 이어가면 재등록·재연결이 필요할 수 있다.
+[OpenAI 인증 문서](https://developers.openai.com/plugins/build/auth)는 연결별 등록 재사용을
+설명하고, [Codex 구현](https://github.com/openai/codex/blob/b741e480e203f037ca726bc2a76d99a8e8668e66/codex-rs/rmcp-client/src/oauth/credential_store.rs)도
+저장한 `client_id`로 refresh한다. 따라서 이미 사용한 연결의 비활성 기간을 삭제 기준으로 삼지 않는다.
+
+- 앱 기동 1분 뒤 시작해 매 실행 종료 1분 뒤 다시 확인하며, 트랜잭션당 최대 100건을 삭제한다.
+  한 번에 잠그는 행 수를 제한하고 남은 후보는 다음 주기에 처리한다. 24시간은 삭제 자격이
+  생기는 시점이며 실제 삭제 시각은 실행 주기와 남은 후보 수에 따라 늦어질 수 있다.
+- 후보 client 행을 `FOR UPDATE SKIP LOCKED`로 잠그고, 별도 DELETE 문에서 사용 이력을 다시
+  확인한다. 여러 인스턴스는 잠긴 후보를 건너뛴다. 정리 트랜잭션의 timeout은 10초다.
+- authorization·consent 저장은 같은 client 행의 `FOR KEY SHARE` 잠금을 트랜잭션 종료까지
+  유지한다. 인가가 먼저 시작했으면 정리가 건너뛰고, 삭제가 먼저 완료되면 저장은
+  `invalid_client`로 실패해 고아 authorization을 만들지 않는다. 운영 grant 생성은 저장된
+  authorization의 승인 경로에서만 이루어진다. 별도 grant 생성 경로를 추가하면 같은 보호가 필요하다.
+- 기본 활성이고 삭제 수와 실패를 로그로 남긴다. 정지를 원하면
+  `MOMENS_MCP_OAUTH_UNUSED_CLIENT_CLEANUP_ENABLED=false`로 설정하고 재기동한다.
+  정리 실행은 `app`의 공통 스케줄러를 사용한다.
+
+**등록 API 레이트 리밋은 이번 범위에서 제외한다.** 서버의 공통 구현과 Ingress 제한 정책이
+없어 적용 위치·식별 기준·다중 인스턴스 집계를 별도 작업에서 결정한다. 따라서 이번 정리는
+단기 대량 등록을 막지 않으며, 인가를 시작한 등록이나 24시간 미만 등록은 남는다.
+전역 저장 행 수 상한은 두지 않는다.
+
 ### workspace
 
 워크스페이스, 멤버십, 초대, RBAC, workspace-scoped 라벨 발급의 중심 모듈이다.

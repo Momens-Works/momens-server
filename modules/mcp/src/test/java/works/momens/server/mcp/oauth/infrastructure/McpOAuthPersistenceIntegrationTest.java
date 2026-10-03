@@ -47,7 +47,7 @@ import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ContextConfiguration(classes = McpOAuthPersistenceIntegrationTest.TestApplication.class)
-@Import(McpOAuthPersistenceConfig.class)
+@Import({McpOAuthPersistenceConfig.class, McpUnusedClientRepository.class})
 @DisplayName("MCP OAuth 표준 persistence 통합 테스트")
 class McpOAuthPersistenceIntegrationTest extends AbstractPostgresIntegrationTest {
 

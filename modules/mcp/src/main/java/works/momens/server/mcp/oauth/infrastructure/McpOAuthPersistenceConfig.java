@@ -19,13 +19,19 @@ class McpOAuthPersistenceConfig {
 
   @Bean
   OAuth2AuthorizationService oAuth2AuthorizationService(
-      JdbcOperations jdbcOperations, RegisteredClientRepository registeredClientRepository) {
-    return new McpOAuth2AuthorizationService(jdbcOperations, registeredClientRepository);
+      JdbcOperations jdbcOperations,
+      RegisteredClientRepository registeredClientRepository,
+      McpUnusedClientRepository unusedClients) {
+    return new McpOAuth2AuthorizationService(
+        jdbcOperations, registeredClientRepository, unusedClients);
   }
 
   @Bean
   OAuth2AuthorizationConsentService oAuth2AuthorizationConsentService(
-      JdbcOperations jdbcOperations, RegisteredClientRepository registeredClientRepository) {
-    return new McpOAuth2AuthorizationConsentService(jdbcOperations, registeredClientRepository);
+      JdbcOperations jdbcOperations,
+      RegisteredClientRepository registeredClientRepository,
+      McpUnusedClientRepository unusedClients) {
+    return new McpOAuth2AuthorizationConsentService(
+        jdbcOperations, registeredClientRepository, unusedClients);
   }
 }

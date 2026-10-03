@@ -14,6 +14,7 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationCode;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * JDBC persistence for MCP authorizations that never stores bearer material in plain text.
@@ -22,7 +23,9 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
  * reference tokens, so the persisted values are SHA-256 digests while lookup hashes the presented
  * value before delegating to the standard JDBC queries.
  */
-final class McpOAuth2AuthorizationService extends JdbcOAuth2AuthorizationService {
+class McpOAuth2AuthorizationService extends JdbcOAuth2AuthorizationService {
+
+  private final McpUnusedClientRepository unusedClients;
 
   private static final String TOKEN_PERSISTENCE_STATE = "mcp.token.persistence.state";
   private static final String TOKEN_PERSISTED_DIGEST = "mcp.token.persistence.digest";
@@ -30,12 +33,17 @@ final class McpOAuth2AuthorizationService extends JdbcOAuth2AuthorizationService
   private static final String PRESENTED_VALUE = "presented-value";
 
   McpOAuth2AuthorizationService(
-      JdbcOperations jdbcOperations, RegisteredClientRepository registeredClientRepository) {
+      JdbcOperations jdbcOperations,
+      RegisteredClientRepository registeredClientRepository,
+      McpUnusedClientRepository unusedClients) {
     super(jdbcOperations, registeredClientRepository);
+    this.unusedClients = unusedClients;
   }
 
   @Override
+  @Transactional
   public void save(OAuth2Authorization authorization) {
+    unusedClients.lockForUse(authorization.getRegisteredClientId());
     super.save(maskTokenValues(authorization));
   }
 
