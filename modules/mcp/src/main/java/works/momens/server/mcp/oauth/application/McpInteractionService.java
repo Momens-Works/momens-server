@@ -59,6 +59,9 @@ public class McpInteractionService {
       throw new OAuth2AuthenticationException("server_error");
     }
     RegisteredClient client = clients.findByClientId(token.getClientId());
+    if (client == null) {
+      throw new OAuth2AuthenticationException("invalid_client");
+    }
     OAuth2AuthorizationRequest request =
         OAuth2AuthorizationRequest.authorizationCode()
             .authorizationUri(token.getAuthorizationUri())
