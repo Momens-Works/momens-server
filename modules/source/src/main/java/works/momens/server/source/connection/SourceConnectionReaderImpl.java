@@ -1,6 +1,7 @@
 package works.momens.server.source.connection;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,12 @@ class SourceConnectionReaderImpl implements SourceConnectionReader {
     return sourceConnectionRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId).stream()
         .map(SourceConnectionReaderImpl::toDetail)
         .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<UUID> findWorkspaceId(UUID connectionId) {
+    return sourceConnectionRepository.findWorkspaceId(connectionId);
   }
 
   private static SourceConnectionDetail toDetail(SourceConnection connection) {

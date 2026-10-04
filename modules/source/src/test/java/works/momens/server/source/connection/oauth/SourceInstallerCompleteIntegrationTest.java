@@ -2,12 +2,16 @@ package works.momens.server.source.connection.oauth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.AdditionalAnswers.delegatesTo;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -29,6 +33,7 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -115,6 +120,10 @@ class SourceInstallerCompleteIntegrationTest extends AbstractPostgresIntegration
   }
 
   private SourceInstallerImpl installer() {
+    return installer(connectionRepository);
+  }
+
+  private SourceInstallerImpl installer(SourceConnectionRepository connections) {
     SourceOAuthProperties properties = properties();
     String base = "http://localhost:" + server.getAddress().getPort();
     ProviderDefinition definition =
@@ -144,7 +153,7 @@ class SourceInstallerCompleteIntegrationTest extends AbstractPostgresIntegration
         signer(),
         new ProviderOAuthClient(RestClient.builder().build()),
         new TokenEncryptor(TOKEN_KEY),
-        connectionRepository,
+        connections,
         credentialRepository,
         properties,
         new TransactionTemplate(transactionManager));
@@ -223,6 +232,56 @@ class SourceInstallerCompleteIntegrationTest extends AbstractPostgresIntegration
 
     assertThat(connectionRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId)).hasSize(2);
     assertThat(again.connection().status()).isEqualTo("ACTIVE");
+  }
+
+  @Test
+  @DisplayName("재연결 조회 이후 다른 트랜잭션이 기록한 재동기화 요청과 worker 값을 보존한다")
+  void reconnectPreservesConcurrentResyncAndWorkerUpdates() {
+    UUID firstUser = insertUser();
+    UUID id =
+        installer()
+            .completeInstall(new CompleteInstallCommand("first", state(firstUser)))
+            .connection()
+            .id();
+    UUID secondUser = insertUser();
+    Instant requestedAt = Instant.parse("2026-09-01T00:00:00Z");
+    Instant syncedAt = requestedAt.minusSeconds(10);
+    SourceConnectionRepository interleaved =
+        mock(SourceConnectionRepository.class, delegatesTo(connectionRepository));
+    doAnswer(
+            invocation -> {
+              var stale =
+                  connectionRepository
+                      .findByWorkspaceIdAndSourceTypeAndExternalWorkspaceIdOrderByCreatedAtAsc(
+                          workspaceId, "GITHUB", "jsshin");
+              TransactionTemplate concurrent = new TransactionTemplate(transactionManager);
+              concurrent.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+              concurrent.executeWithoutResult(
+                  status ->
+                      jdbcTemplate.update(
+                          "UPDATE source_connections SET resync_requested_at = ?, last_synced_at = ?,"
+                              + " captures_read_count = 42, candidates_extracted_count = 7 WHERE id = ?",
+                          Timestamp.from(requestedAt),
+                          Timestamp.from(syncedAt),
+                          id));
+              return stale;
+            })
+        .when(interleaved)
+        .findByWorkspaceIdAndSourceTypeAndExternalWorkspaceIdOrderByCreatedAtAsc(
+            workspaceId, "GITHUB", "jsshin");
+
+    CompletedInstall completed =
+        installer(interleaved)
+            .completeInstall(new CompleteInstallCommand("second", state(secondUser)));
+
+    var saved = connectionRepository.findById(id).orElseThrow();
+    assertThat(saved.getResyncRequestedAt()).isEqualTo(requestedAt);
+    assertThat(saved.getLastSyncedAt()).isEqualTo(syncedAt);
+    assertThat(saved.getCapturesReadCount()).isEqualTo(42);
+    assertThat(saved.getCandidatesExtractedCount()).isEqualTo(7);
+    assertThat(saved.getConnectedByUserId()).isEqualTo(secondUser);
+    assertThat(completed.connection().resyncRequestedAt()).isEqualTo(requestedAt);
+    assertThat(completed.connection().capturesReadCount()).isEqualTo(42);
   }
 
   @Test

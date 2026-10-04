@@ -1,0 +1,10 @@
+package works.momens.server.source;
+
+import java.util.UUID;
+
+/** source 연결 명령 public API입니다. 호출자가 권한을 확인한 workspaceId를 전달합니다. */
+public interface SourceConnectionWriter {
+
+  /** 연결 상태를 바꾸지 않고 재동기화 요청 시각을 기록합니다. 실제 수집은 worker가 수행합니다. */
+  void requestResync(UUID connectionId, UUID workspaceId);
+}

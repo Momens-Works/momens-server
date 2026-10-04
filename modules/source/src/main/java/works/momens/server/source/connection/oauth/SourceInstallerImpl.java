@@ -134,9 +134,14 @@ class SourceInstallerImpl implements SourceInstaller {
     if (!existing.isEmpty()) {
       existing.forEach(
           connection ->
-              connection.reconnect(
-                  status, identity.externalName(), state.userId(), now, identity.metadata()));
-      return sourceConnectionRepository.saveAllAndFlush(existing).getFirst();
+              sourceConnectionRepository.reconnect(
+                  connection.getId(),
+                  status,
+                  identity.externalName(),
+                  state.userId(),
+                  now,
+                  identity.metadata()));
+      return sourceConnectionRepository.findById(existing.getFirst().getId()).orElseThrow();
     }
     SourceConnection connection =
         SourceConnection.builder()
