@@ -1,19 +1,35 @@
 package works.momens.server.source.connection;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import works.momens.server.common.api.BusinessException;
 import works.momens.server.source.SourceConnectionDetail;
 import works.momens.server.source.SourceConnectionReader;
+import works.momens.server.source.SourceErrorCode;
 
 @Component
 @RequiredArgsConstructor
 class SourceConnectionReaderImpl implements SourceConnectionReader {
 
   private final SourceConnectionRepository sourceConnectionRepository;
+
+  @Override
+  @Transactional(readOnly = true)
+  public UUID getWorkspaceId(UUID connectionId) {
+    return sourceConnectionRepository
+        .findById(connectionId)
+        .map(SourceConnection::getWorkspaceId)
+        .orElseThrow(
+            () ->
+                new BusinessException(
+                    SourceErrorCode.SOURCE_CONNECTION_NOT_FOUND,
+                    Map.of("connection_id", connectionId)));
+  }
 
   @Override
   @Transactional(readOnly = true)

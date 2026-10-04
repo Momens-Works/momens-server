@@ -9,6 +9,9 @@ public interface SourceConnectionReader {
 
   Optional<UUID> findWorkspaceId(UUID connectionId);
 
+  /** 연결이 속한 워크스페이스를 반환합니다. 연결이 없으면 404 오류가 발생합니다. */
+  UUID getWorkspaceId(UUID connectionId);
+
   /**
    * 워크스페이스에 속한 source 연결을 생성 시각 내림차순으로 조회합니다.
    *
