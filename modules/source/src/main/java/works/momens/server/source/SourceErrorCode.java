@@ -14,6 +14,7 @@ import works.momens.server.common.api.ErrorCode;
  */
 @RequiredArgsConstructor
 public enum SourceErrorCode implements ErrorCode {
+  SOURCE_CONNECTION_ALREADY_DISABLED(400, "이미 비활성화된 source 연결입니다."),
   SOURCE_UNSUPPORTED_PROVIDER(400, "지원하지 않는 provider입니다."),
   SOURCE_PROVIDER_UNCONFIGURED(500, "provider 설정이 서버에 없습니다."),
   SOURCE_OAUTH_INVALID_REQUEST(400, "승인 요청에 필요한 값이 없습니다."),

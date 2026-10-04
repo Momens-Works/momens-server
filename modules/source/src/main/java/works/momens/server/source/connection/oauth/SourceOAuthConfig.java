@@ -55,4 +55,16 @@ class SourceOAuthConfig {
     requestFactory.setReadTimeout(READ_TIMEOUT);
     return new ProviderOAuthClient(RestClient.builder().requestFactory(requestFactory).build());
   }
+
+  @Bean
+  FigmaWebhookClient figmaWebhookClient() {
+    SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+    requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
+    requestFactory.setReadTimeout(READ_TIMEOUT);
+    return new FigmaWebhookClient(
+        RestClient.builder()
+            .baseUrl("https://api.figma.com")
+            .requestFactory(requestFactory)
+            .build());
+  }
 }

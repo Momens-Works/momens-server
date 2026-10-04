@@ -1,11 +1,13 @@
 package works.momens.server.source.connection;
 
+import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
@@ -44,6 +46,17 @@ public interface SourceConnectionRepository extends JpaRepository<SourceConnecti
       UUID connectedByUserId,
       Instant connectedAt,
       Map<String, Object> metadata);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select c from SourceConnection c where c.id = :id and c.workspaceId = :workspaceId")
+  Optional<SourceConnection> findForUpdate(UUID id, UUID workspaceId);
+
+  /** worker 소유 통계·동기화 시각과 metadata를 덮어쓰지 않습니다. */
+  @Modifying
+  @Query(
+      "update SourceConnection c set c.status = 'DISABLED', c.disabledAt = :now,"
+          + " c.updatedAt = :now where c.id = :id")
+  void disable(UUID id, Instant now);
 
   List<SourceConnection> findByWorkspaceIdOrderByCreatedAtDesc(UUID workspaceId);
 
