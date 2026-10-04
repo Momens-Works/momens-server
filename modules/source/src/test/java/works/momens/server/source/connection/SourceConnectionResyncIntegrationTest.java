@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -19,6 +20,7 @@ class SourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrationT
   @Autowired private JdbcTemplate jdbc;
 
   @Test
+  @DisplayName("오래된 요청이 늦게 저장되어도 요청 시각과 수정 시각이 역행하지 않는다")
   void delayedOlderRequestCannotMoveRequestOrUpdateTimeBackwards() {
     UUID workspaceId = UUID.randomUUID();
     UUID id = UUID.randomUUID();

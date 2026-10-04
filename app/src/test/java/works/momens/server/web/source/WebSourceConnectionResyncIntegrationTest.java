@@ -11,6 +11,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -38,6 +39,7 @@ class WebSourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrati
 
   @ParameterizedTest
   @ValueSource(strings = {"PENDING", "ACTIVE", "DISABLED", "ERROR", "REVOKED"})
+  @DisplayName("관리자는 모든 연결 상태에서 재동기화를 반복 요청할 수 있다")
   void adminCanRequestInEveryStateAndRepeat(String connectionStatus) throws Exception {
     UUID workspaceId = workspace();
     UUID caller = user();
@@ -66,6 +68,7 @@ class WebSourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrati
   }
 
   @Test
+  @DisplayName("소유자는 최초 동기화 전에도 재동기화를 요청할 수 있다")
   void ownerCanRequestBeforeFirstSync() throws Exception {
     UUID workspaceId = workspace();
     UUID caller = user();
@@ -80,6 +83,7 @@ class WebSourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrati
 
   @ParameterizedTest
   @ValueSource(strings = {"member", "outsider"})
+  @DisplayName("권한이 부족하면 재동기화 요청을 거부하고 데이터를 유지한다")
   void rejectsInsufficientRoleWithoutWriting(String role) throws Exception {
     UUID workspaceId = workspace();
     UUID caller = user();
@@ -99,6 +103,7 @@ class WebSourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrati
   }
 
   @Test
+  @DisplayName("존재하지 않는 연결과 잘못된 식별자의 재동기화 요청을 거부한다")
   void rejectsMissingConnectionAndInvalidId() throws Exception {
     UUID caller = user();
     mockMvc
@@ -114,6 +119,7 @@ class WebSourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrati
   }
 
   @Test
+  @DisplayName("미인증 재동기화 요청을 거부하고 데이터를 유지한다")
   void rejectsUnauthenticatedRequestWithoutWriting() throws Exception {
     UUID connectionId = connection(workspace(), "ACTIVE");
     Map<String, Object> before = row(connectionId);
@@ -126,6 +132,7 @@ class WebSourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrati
   }
 
   @Test
+  @DisplayName("writer는 워크스페이스가 다르거나 존재하지 않는 연결의 갱신을 거부한다")
   void writerRejectsMismatchedWorkspaceAndMissingConnection() {
     UUID connectionId = connection(workspace(), "ACTIVE");
     Map<String, Object> before = row(connectionId);
