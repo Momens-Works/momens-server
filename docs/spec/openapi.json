@@ -422,6 +422,51 @@
           "description"
         ]
       },
+      "CreateDecisionRequest" : {
+        "description" : "Decision 생성 요청",
+        "properties" : {
+          "alternatives" : {
+            "description" : "대안. 생략하거나 빈 문자열이면 저장하지 않습니다.",
+            "example" : "MySQL",
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "context" : {
+            "description" : "결정 배경",
+            "example" : "트랜잭션 일관성이 필요합니다.",
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "rationale" : {
+            "description" : "결정 근거",
+            "example" : "현재 운영 환경과 호환됩니다.",
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "reversibility" : {
+            "description" : "가역성은 reversible 또는 irreversible입니다. 생략·null·빈 문자열이면 reversible입니다.",
+            "example" : "reversible",
+            "pattern" : "^(reversible|irreversible|)$",
+            "type" : [
+              "string",
+              "null"
+            ]
+          },
+          "title" : {
+            "description" : "제목",
+            "example" : "PostgreSQL 사용",
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "context",
+          "rationale",
+          "title"
+        ]
+      },
       "CreateDevSignalRequest" : {
         "description" : "dev 데모용 Signal 생성 요청",
         "properties" : {
@@ -2931,6 +2976,50 @@
           "updated_at" : {
             "description" : "수정 시각(UTC)",
             "example" : "2026-06-24T00:00:00Z",
+            "format" : "date-time",
+            "type" : "string"
+          }
+        }
+      },
+      "WebDecisionResponse" : {
+        "description" : "생성된 Decision. 성공 응답은 wrapper 없이 반환합니다.",
+        "properties" : {
+          "alternatives" : {
+            "type" : "string"
+          },
+          "context" : {
+            "type" : "string"
+          },
+          "created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "decision_maker" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "project_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "rationale" : {
+            "type" : "string"
+          },
+          "reversibility" : {
+            "enum" : [
+              "reversible",
+              "irreversible"
+            ],
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "updated_at" : {
             "format" : "date-time",
             "type" : "string"
           }
@@ -12584,6 +12673,278 @@
         "summary" : "MCP 접근 요청 거절",
         "tags" : [
           "McpInteraction"
+        ]
+      }
+    },
+    "/api/projects/{projectId}/decisions" : {
+      "post" : {
+        "description" : "프로젝트에 Decision을 생성합니다. workspace member 이상이 호출할 수 있습니다. 저장과 outbox 발행을 함께 완료하며 검색 반영은 비동기입니다. 응답은 Standard 규격입니다.",
+        "operationId" : "createDecision",
+        "parameters" : [
+          {
+            "description" : "프로젝트 식별자",
+            "in" : "path",
+            "name" : "projectId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateDecisionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "examples" : {
+                  "created" : {
+                    "description" : "created",
+                    "value" : {
+                      "context" : "트랜잭션 일관성이 필요합니다.",
+                      "created_at" : "2026-10-04T00:00:00Z",
+                      "decision_maker" : "f774d489-378f-456a-8df7-05ba3714d402",
+                      "id" : "d574d489-378f-456a-8df7-05ba3714d400",
+                      "project_id" : "e674d489-378f-456a-8df7-05ba3714d401",
+                      "rationale" : "현재 운영 환경과 호환됩니다.",
+                      "reversibility" : "reversible",
+                      "title" : "PostgreSQL 사용",
+                      "updated_at" : "2026-10-04T00:00:00Z"
+                    }
+                  }
+                },
+                "schema" : {
+                  "$ref" : "#/components/schemas/WebDecisionResponse"
+                }
+              }
+            },
+            "description" : "Decision 생성 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "PROJECT_NOT_FOUND" : {
+                    "description" : "프로젝트를 찾을 수 없습니다.",
+                    "summary" : "PROJECT_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "PROJECT_NOT_FOUND",
+                        "message" : "프로젝트를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
+          }
+        },
+        "summary" : "Decision 생성",
+        "tags" : [
+          "Web"
         ]
       }
     },
