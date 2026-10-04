@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.TransactionException;
 import org.springframework.web.client.RestClientException;
 import works.momens.server.source.connection.SourceCredentialRepository;
 
@@ -41,6 +42,7 @@ public class FigmaWebhookCleaner {
             status);
       }
     } catch (DataAccessException
+        | TransactionException
         | IllegalArgumentException
         | IllegalStateException
         | RestClientException e) {

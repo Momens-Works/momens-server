@@ -95,6 +95,8 @@ def configureOpenApiSnapshotTest = { Test task ->
 
 tasks.named('test', Test) {
     configureOpenApiSnapshotTest(it)
+    // repository spy를 사용하는 통합 테스트 컨텍스트가 추가되면 기본 512MiB에서 힙이 고갈됩니다.
+    maxHeapSize = '1g'
     // 스냅샷 파일은 test 의 입력이므로 명시합니다. 선언하지 않으면 스냅샷만 바뀌었을 때
     // test 가 up-to-date 로 스킵되거나 빌드 캐시에서 복원되어 게이트가 조용히 통과합니다.
     //
