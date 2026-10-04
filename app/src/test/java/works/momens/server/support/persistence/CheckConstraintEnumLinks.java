@@ -12,6 +12,7 @@ import works.momens.server.notification.PushInstallationPlatform;
 import works.momens.server.project.blocker.BlockedEntityType;
 import works.momens.server.project.blocker.BlockerStatus;
 import works.momens.server.project.core.ProjectHealthStatus;
+import works.momens.server.project.decision.DecisionReversibility;
 import works.momens.server.project.milestone.MilestoneHealthStatus;
 import works.momens.server.project.task.TaskOrigin;
 import works.momens.server.project.task.TaskPriority;
@@ -49,6 +50,11 @@ final class CheckConstraintEnumLinks {
   /** CHECK 제약과 같은 값 집합을 나타내는 enum의 목록입니다. 하나의 컬럼에 여러 enum이 대응할 수 있으므로 항목 수가 컬럼 수보다 많을 수 있습니다. */
   static final List<EnumLink> ENUM_LINKS =
       List.of(
+          new EnumLink(
+              "decisions",
+              "reversibility",
+              storedValues(DecisionReversibility.values(), DecisionReversibility::value),
+              IntendedDifference.NONE),
           new EnumLink(
               "blockers",
               "status",
