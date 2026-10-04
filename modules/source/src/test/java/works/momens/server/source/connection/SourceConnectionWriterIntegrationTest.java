@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -44,6 +45,7 @@ import works.momens.server.source.connection.oauth.FigmaWebhookCleaner;
   SourceConnectionWriterIntegrationTest.Transactions.class
 })
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
+@DisplayName("source 연결 비활성화 PostgreSQL 통합 테스트")
 class SourceConnectionWriterIntegrationTest extends AbstractPostgresIntegrationTest {
 
   @Autowired private SourceConnectionWriter writer;
@@ -69,6 +71,7 @@ class SourceConnectionWriterIntegrationTest extends AbstractPostgresIntegrationT
 
   @ParameterizedTest
   @ValueSource(strings = {"PENDING", "ACTIVE", "ERROR", "REVOKED"})
+  @DisplayName("허용된 각 상태를 비활성화하고 다른 컬럼은 보존한다")
   void disablesEachAllowedStateWithoutOverwritingOtherColumns(String status) {
     UUID id = insert("GITHUB", status);
     Map<String, Object> before = row(id);
@@ -86,6 +89,7 @@ class SourceConnectionWriterIntegrationTest extends AbstractPostgresIntegrationT
   }
 
   @Test
+  @DisplayName("반복 비활성화는 시각을 변경하거나 webhook을 다시 삭제하지 않는다")
   void repeatDoesNotChangeDisabledTimeOrDeleteAgain() {
     UUID id = insert("FIGMA", "ACTIVE");
     writer.disable(workspaceId, id);
@@ -99,6 +103,7 @@ class SourceConnectionWriterIntegrationTest extends AbstractPostgresIntegrationT
   }
 
   @Test
+  @DisplayName("연결이 없거나 workspace가 다르면 쓰기와 외부 호출을 수행하지 않는다")
   void missingAndWrongWorkspaceDoNotWriteOrCallProvider() {
     UUID id = insert("FIGMA", "ACTIVE");
     Map<String, Object> before = row(id);
@@ -111,6 +116,7 @@ class SourceConnectionWriterIntegrationTest extends AbstractPostgresIntegrationT
   }
 
   @Test
+  @DisplayName("외부 정리 호출은 DB 커밋 이후 열린 트랜잭션 없이 수행한다")
   void providerSeesCommittedStateWithoutAnOpenTransaction() {
     UUID id = insert("FIGMA", "ACTIVE");
     doAnswer(
@@ -127,6 +133,7 @@ class SourceConnectionWriterIntegrationTest extends AbstractPostgresIntegrationT
 
   @ParameterizedTest
   @ValueSource(strings = {"{}", "{\"webhook_id\":42}", "{\"webhook_id\":\"  \"}"})
+  @DisplayName("유효한 webhook 식별자가 없으면 외부 정리를 호출하지 않는다")
   void noWebhookDoesNotCallProvider(String metadata) {
     UUID id = insert("FIGMA", "ACTIVE");
     jdbc.update("UPDATE source_connections SET metadata = ?::jsonb WHERE id = ?", metadata, id);
@@ -135,6 +142,7 @@ class SourceConnectionWriterIntegrationTest extends AbstractPostgresIntegrationT
   }
 
   @Test
+  @DisplayName("레거시처럼 webhook 식별자의 앞뒤 공백을 제거한다")
   void trimsWebhookIdLikeLegacy() {
     UUID id = insert("FIGMA", "ACTIVE");
     jdbc.update(
@@ -145,6 +153,7 @@ class SourceConnectionWriterIntegrationTest extends AbstractPostgresIntegrationT
   }
 
   @Test
+  @DisplayName("외부 트랜잭션 안에서 비활성화를 호출하면 변경 없이 거부한다")
   void refusesAmbientTransactionRatherThanDeletingBeforeItsCommit() {
     UUID id = insert("FIGMA", "ACTIVE");
     assertThatThrownBy(
@@ -155,6 +164,7 @@ class SourceConnectionWriterIntegrationTest extends AbstractPostgresIntegrationT
   }
 
   @Test
+  @DisplayName("비활성화 커밋 실패는 전파하고 webhook은 삭제하지 않는다")
   void commitFailureDoesNotDeleteWebhook() {
     UUID id = insert("FIGMA", "ACTIVE");
     jdbc.execute(
@@ -183,6 +193,7 @@ class SourceConnectionWriterIntegrationTest extends AbstractPostgresIntegrationT
   }
 
   @Test
+  @DisplayName("동시 비활성화는 한 요청만 상태를 전환하고 webhook을 정리한다")
   void concurrentDisableOnlyTransitionsAndCleansOnce() throws Exception {
     UUID id = insert("FIGMA", "ACTIVE");
     CountDownLatch ready = new CountDownLatch(2);
