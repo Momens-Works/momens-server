@@ -89,23 +89,4 @@ public class SourceConnection extends BaseEntity {
     this.connectedAt = connectedAt;
     this.metadata = metadata;
   }
-
-  /**
-   * 기존 연결이 다시 승인되면 연결 상태, 이름, 승인자, 승인 시각을 갱신하고 {@code disabled_at}을 초기화합니다.
-   *
-   * <p>레거시의 연결 갱신 경로와 동일한 동작입니다. 비활성화된 연결도 다시 승인되면 활성 상태로 전환됩니다.
-   */
-  public void reconnect(
-      String status,
-      String externalWorkspaceName,
-      UUID connectedByUserId,
-      Instant connectedAt,
-      Map<String, Object> metadata) {
-    this.status = status;
-    this.externalWorkspaceName = externalWorkspaceName;
-    this.connectedByUserId = connectedByUserId;
-    this.connectedAt = connectedAt;
-    this.metadata = metadata;
-    this.disabledAt = null;
-  }
 }

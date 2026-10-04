@@ -19,6 +19,7 @@ public enum SourceErrorCode implements ErrorCode {
   SOURCE_OAUTH_INVALID_REQUEST(400, "승인 요청에 필요한 값이 없습니다."),
   SOURCE_OAUTH_INVALID_STATE(400, "승인 요청을 확인할 수 없습니다."),
   SOURCE_OAUTH_EXCHANGE_FAILED(502, "provider와 토큰을 주고받지 못했습니다."),
+  SOURCE_CONNECTION_NOT_FOUND(404, "source 연결을 찾을 수 없습니다."),
   SOURCE_REF_NOT_FOUND(404, "source-ref를 찾을 수 없습니다.");
 
   private final int status;
