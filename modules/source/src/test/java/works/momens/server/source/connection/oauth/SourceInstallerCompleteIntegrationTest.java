@@ -16,6 +16,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -246,6 +247,7 @@ class SourceInstallerCompleteIntegrationTest extends AbstractPostgresIntegration
     UUID secondUser = insertUser();
     Instant requestedAt = Instant.parse("2026-09-01T00:00:00Z");
     Instant syncedAt = requestedAt.minusSeconds(10);
+    Instant workerUpdatedAt = Instant.now().plusSeconds(3600).truncatedTo(ChronoUnit.MICROS);
     SourceConnectionRepository interleaved =
         mock(SourceConnectionRepository.class, delegatesTo(connectionRepository));
     doAnswer(
@@ -260,9 +262,10 @@ class SourceInstallerCompleteIntegrationTest extends AbstractPostgresIntegration
                   status ->
                       jdbcTemplate.update(
                           "UPDATE source_connections SET resync_requested_at = ?, last_synced_at = ?,"
-                              + " captures_read_count = 42, candidates_extracted_count = 7 WHERE id = ?",
+                              + " captures_read_count = 42, candidates_extracted_count = 7, updated_at = ? WHERE id = ?",
                           Timestamp.from(requestedAt),
                           Timestamp.from(syncedAt),
+                          Timestamp.from(workerUpdatedAt),
                           id));
               return stale;
             })
@@ -277,10 +280,12 @@ class SourceInstallerCompleteIntegrationTest extends AbstractPostgresIntegration
     var saved = connectionRepository.findById(id).orElseThrow();
     assertThat(saved.getResyncRequestedAt()).isEqualTo(requestedAt);
     assertThat(saved.getLastSyncedAt()).isEqualTo(syncedAt);
+    assertThat(saved.getUpdatedAt()).isEqualTo(workerUpdatedAt);
     assertThat(saved.getCapturesReadCount()).isEqualTo(42);
     assertThat(saved.getCandidatesExtractedCount()).isEqualTo(7);
     assertThat(saved.getConnectedByUserId()).isEqualTo(secondUser);
     assertThat(completed.connection().resyncRequestedAt()).isEqualTo(requestedAt);
+    assertThat(completed.connection().updatedAt()).isEqualTo(workerUpdatedAt);
     assertThat(completed.connection().capturesReadCount()).isEqualTo(42);
   }
 
