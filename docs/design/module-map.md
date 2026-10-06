@@ -311,7 +311,9 @@ capability의 물리 경계로 유지하고, 배포 단위도 나누지 않는�
   `Project`·`Milestone` 엔티티를 JPQL 문자열로 직접 조회하던 숨은 결합은 두 공개 계약으로 제거했다.
 - taskupdate는 호출자가 확정한 workspace와 project 소속을 전달받아 사용하며, task 내부 저장소를 직접
   참조하지 않는다. 허용하는 의존 방향은 `taskupdate → task`이고, task는 taskupdate를 참조하지 않는다.
-- blocker는 workspace id를 직접 가진 읽기 모델이라 다른 project 하위 경계에 의존하지 않는다.
+- blocker는 `BlockerReader`와 `BlockerWriter`로 조회·생성·해결·삭제를 제공한다. `:web`이 태스크·프로젝트와
+  권한을 확인한 뒤 workspace를 전달하며, blocker는 다른 project 하위 경계에 의존하지 않는다.
+  도메인 변경과 outbox 발행 계약은 [Blocker 쓰기 명세](../spec/blocker-write.md)에 있다.
 - `ProjectHealthStatus`, `MilestoneHealthStatus`와 소유자 멤버십 검증은 project와 milestone의 구현 계약이다. 현재 저장값과 검증 동작은
   같아도 변경 이유가 다르므로 각 하위 경계가 독립적으로 소유한다.
 - 마일스톤 workspace 목록은 `milestones`에 workspace id가 없어 project를 조인한다. snapshot 쿼리 예산

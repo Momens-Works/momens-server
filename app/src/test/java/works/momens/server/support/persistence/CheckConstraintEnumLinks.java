@@ -9,6 +9,8 @@ import java.util.function.Function;
 import works.momens.server.mcp.grant.McpScope;
 import works.momens.server.mobile.MobileTaskPriority;
 import works.momens.server.notification.PushInstallationPlatform;
+import works.momens.server.project.blocker.BlockedEntityType;
+import works.momens.server.project.blocker.BlockerStatus;
 import works.momens.server.project.core.ProjectHealthStatus;
 import works.momens.server.project.milestone.MilestoneHealthStatus;
 import works.momens.server.project.task.TaskOrigin;
@@ -47,6 +49,16 @@ final class CheckConstraintEnumLinks {
   /** CHECK 제약과 같은 값 집합을 나타내는 enum의 목록입니다. 하나의 컬럼에 여러 enum이 대응할 수 있으므로 항목 수가 컬럼 수보다 많을 수 있습니다. */
   static final List<EnumLink> ENUM_LINKS =
       List.of(
+          new EnumLink(
+              "blockers",
+              "status",
+              storedValues(BlockerStatus.values(), BlockerStatus::value),
+              IntendedDifference.NONE),
+          new EnumLink(
+              "blockers",
+              "blocked_entity_type",
+              storedValues(BlockedEntityType.values(), BlockedEntityType::value),
+              IntendedDifference.NONE),
           new EnumLink(
               "source_connections",
               "status",
@@ -173,9 +185,6 @@ final class CheckConstraintEnumLinks {
    */
   static final List<ColumnWithoutEnum> COLUMNS_WITHOUT_ENUM =
       List.of(
-          new ColumnWithoutEnum(
-              "blockers", "blocked_entity_type", "레거시가 소유하는 테이블이며 이 서버에는 쓰기 경로가 없습니다"),
-          new ColumnWithoutEnum("blockers", "status", "레거시가 소유하는 테이블이며 이 서버에는 쓰기 경로가 없습니다"),
           new ColumnWithoutEnum(
               "confirmed_memories",
               "status",

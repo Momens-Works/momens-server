@@ -3,7 +3,7 @@ package works.momens.server.project.blocker;
 import java.time.Instant;
 import java.util.UUID;
 
-/** 웹 snapshot의 {@code blockers} 구획에 필요한 blocker 조회 결과. */
+/** blocker 생성 결과와 웹 snapshot의 {@code blockers} 구획에 사용하는 저장 필드. */
 public record BlockerDetail(
     UUID id,
     UUID workspaceId,

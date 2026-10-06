@@ -365,7 +365,7 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H063 | Product JSON | `GET /tasks/:taskId/updates` | `task.ListUpdates` | `TSK` | R | `implemented` (`MOM-0861`) |
 | H064 | Product JSON | `POST /tasks/:taskId/updates` | `task.CreateUpdate` | `TSK` | W | `implemented` (`MOM-0867`); worker task projector와 aggregate writer 단일화가 cutover gate. `kind`는 정식 값만 받습니다. 대소문자가 다른 값, 앞뒤에 공백이 있는 값, 빈 문자열은 400 `COMMON_VALIDATION_FAILED`로 거부합니다(`MOM-0949`). |
 | H065 | Product JSON | `DELETE /tasks/:taskId/updates/:updateId` | `task.DeleteUpdate` | `TSK` | W | `implemented` (`MOM-0867`); soft delete. worker task projector와 aggregate writer 단일화가 cutover gate |
-| H066 | Product JSON | `POST /tasks/:taskId/blockers` | `blocker.CreateForTask` | `BLK` | W | `traced`; **레거시 잔류·유지 결정**(`MOM-0975`, 2026-09-26). Task blocker 생성 API와 연결된 E2E·retrieval projection을 유지한다. 현재 owner는 `momens-api`; 신규 서버 이관 및 레거시 종료 전 최종 owner는 별도 결정한다 |
+| H066 | Product JSON | `POST /tasks/:taskId/blockers` | `blocker.CreateForTask` | `BLK` | W | `implemented` (`MOM-1018`); target `POST /api/tasks/{taskId}/blockers`. member 인가·active 생성과 `blocker.created` 원자 발행. 운영 writer는 전환 전까지 legacy. [계약](../../spec/blocker-write.md), worker `MOM-1021`·E2E `MOM-1022` gate |
 | H067 | Product JSON | `POST /tasks/:taskId/memories/:memoryId` | `relation.LinkTaskMemory` | `CTX` | W | `implemented` (`MOM-0868`): target `POST /api/tasks/{taskId}/memories/{memoryId}`. 이미 연결되어 있으면 변경하지 않고 같은 응답을 반환한다. 두 대상이 서로 다른 워크스페이스에 속하면 400 `CONTEXT_CROSS_WORKSPACE_LINK_NOT_ALLOWED`로 응답한다. |
 | H068 | Product JSON | `DELETE /tasks/:taskId/memories/:memoryId` | `relation.UnlinkTaskMemory` | `CTX` | W | `implemented` (`MOM-0868`): target `DELETE /api/tasks/{taskId}/memories/{memoryId}`. 연결을 소프트 삭제한다. 해제할 연결이 없으면 404 `CONTEXT_LINK_NOT_FOUND`로 응답한다. 타깃 메모리가 존재하는지는 레거시와 동일하게 확인하지 않는다. |
 | H069 | Product JSON | `POST /tasks/:taskId/source-refs` | `relation.CreateTaskSourceRef` | `CTX` | W | `implemented` (`MOM-0868`): target `POST /api/tasks/{taskId}/source-refs`. source-ref 생성과 연결을 하나의 트랜잭션으로 처리한다. 레거시는 두 SQL 문을 트랜잭션 없이 실행한다. `content_hash`는 저장하지 않으며, 같은 주소를 두 번 첨부하면 레거시와 동일하게 행이 두 건 생성된다. |
@@ -373,8 +373,8 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H071 | Product JSON | `DELETE /tasks/:taskId/source-refs/:sourceRefId` | `relation.UnlinkTaskSourceRef` | `CTX` | W | `implemented` (`MOM-0868`): target `DELETE /api/tasks/{taskId}/source-refs/{sourceRefId}`. 연결만 소프트 삭제하고 source-ref 행은 삭제하지 않는다. H068과 같은 기준으로 해제 여부를 판정한다. |
 | H072 | Product JSON | `GET /tasks/:taskId/context` | `relation.TaskContext` | `CTX` | R | `implemented` (`MOM-0861`); memory·source-ref hydrate. 링크가 없을 때는 레거시 단건 응답의 `null` 대신 빈 배열로 정규화. hydrate는 대상 memory/source-ref의 workspace가 relation workspace와 같은지도 확인한다(레거시보다 방어적) |
 | H073 | Product JSON | `GET /decisions/:decisionId` | `decision.Get` | `DEC` | R | `traced`; **폐기 결정·실행 대기**(`MOM-0975`, 2026-09-26). 제품·E2E 소비자가 없고 전용 단건 조회 service/repository의 다른 소비자도 없다. 신규 서버로 이관하지 않는다. decision 데이터와 기존 검색 문서는 유지한다. 생성 API의 처분은 H054 행을 따른다 |
-| H074 | Product JSON | `PATCH /blockers/:blockerId/resolve` | `blocker.Resolve` | `BLK` | W | `traced`; **레거시 잔류·유지 결정**(`MOM-0975`, 2026-09-26). Blocker 해결 API, 기존 데이터 처리와 retrieval projection을 유지한다. 현재 owner는 `momens-api`; 신규 서버 이관 및 레거시 종료 전 최종 owner는 별도 결정한다 |
-| H075 | Product JSON | `DELETE /blockers/:blockerId` | `blocker.Delete` | `BLK` | W | `traced`; **레거시 잔류·유지 결정**(`MOM-0975`, 2026-09-26). Blocker 삭제 API, admin/owner 권한 규칙, blocker 물리 삭제와 retrieval document soft-delete를 유지한다. 현재 owner는 `momens-api`; 신규 서버 이관 및 레거시 종료 전 최종 owner는 별도 결정한다 |
+| H074 | Product JSON | `PATCH /blockers/:blockerId/resolve` | `blocker.Resolve` | `BLK` | W | `implemented` (`MOM-1018`); target `PATCH /api/blockers/{blockerId}/resolve`. member 인가·반복 해결 시각 갱신과 `blocker.resolved` 원자 발행. 기존 milestone blocker 포함. [계약](../../spec/blocker-write.md), worker `MOM-1021`·E2E `MOM-1022` gate |
+| H075 | Product JSON | `DELETE /blockers/:blockerId` | `blocker.Delete` | `BLK` | W | `implemented` (`MOM-1018`); target `DELETE /api/blockers/{blockerId}`. admin/owner 인가·물리 삭제와 `blocker.deleted` 원자 발행. 검색 문서·source-ref 정리는 envelope ID로 worker가 수행. [계약](../../spec/blocker-write.md), worker `MOM-1021`·E2E `MOM-1022` gate |
 | H076 | Product JSON | `GET /source-connections/:id` | `source.Get` | `SRC` | R | `traced`; **HTTP 경로 폐기 결정·실행 대기**(`MOM-0975`, 2026-09-26). 제품 호출처가 없고 관측한 운영 로그에서도 0건이다. 신규 서버로 이관하지 않는다. Disable·ConfigureFigma 등 다른 연결 관리 기능에서 쓰는 공용 `Repository.GetByID`는 유지한다 |
 | H077 | Product JSON | `PATCH /source-connections/:id` | `source.Update` | `SRC` | W | `traced`; **HTTP 경로 폐기 결정·실행 대기**(`MOM-0975`, 2026-09-26). 제품 호출처가 없고 관측한 운영 로그에서도 0건이다. 신규 서버로 이관하지 않는다. 이름 변경 HTTP 경로를 폐기한다. 다른 연결 관리 기능에서 쓰는 공용 `Repository.GetByID`는 유지한다 |
 | H078 | Product JSON | `POST /source-connections/:id/disable` | `source.Disable` | `SRC` | W | `traced`; **레거시 잔류·유지 결정**(`MOM-0975`, 2026-09-26). 연결 비활성화 API를 유지한다. worker의 ACTIVE 연결 선택과 Figma webhook 삭제 경로도 유지한다. 현재 owner는 `momens-api`; 신규 서버 이관 및 레거시 종료 전 최종 owner는 별도 결정한다 |
@@ -491,8 +491,10 @@ eval set·retrieval 주소·접근 권한과 선택적 Vertex ADC가 필요하�
 8. ~~Product JSON별 실제 웹 사용 여부~~ — 해소. 위 [웹 FE 사용 실태](#웹-fe-사용-실태)에 기록했다
    (`MOM-0856`). [컷오버 문서](cutover.md) 6절은 전환 직후 판정 창을 정했고, 전환기 코드 제거에
    필요한 시계열 관찰 기간은 `MOM-0875`가 `MOM-0834` 이후 정한다
-9. 레거시 잔류 7건(H054·H066·H074·H075·H078·H079·H080)의 최종 담당 시스템과 전환·종료 조건.
-   현재는 `momens-api`에서 유지하며, 레거시 전체 종료 전에 확정한다(`MOM-0975`)
+9. 레거시 잔류 7건(H054·H066·H074·H075·H078·H079·H080)의 전환·종료 조건.
+   H066·H074·H075는 `MOM-1018`에서 신규 서버 구현을 완료했으며 worker `MOM-1021`과
+   E2E `MOM-1022`가 전환 gate다. 운영 writer는 전환 전까지 `momens-api`로 유지한다.
+   나머지 표면의 최종 담당 시스템과 전환 조건은 레거시 전체 종료 전에 확정한다(`MOM-0975`).
 
 ## 후속 작업 제안
 

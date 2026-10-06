@@ -101,6 +101,45 @@
           }
         }
       },
+      "BlockerResponse" : {
+        "description" : "블로커",
+        "properties" : {
+          "blocked_entity_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "blocked_entity_type" : {
+            "type" : "string"
+          },
+          "created_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "resolved_at" : {
+            "description" : "해결 시각. 미해결이면 생략합니다.",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "updated_at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "workspace_id" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }
+      },
       "BootstrapMe" : {
         "description" : "현재 사용자 요약",
         "properties" : {
@@ -363,6 +402,25 @@
             "$ref" : "#/components/schemas/Task"
           }
         }
+      },
+      "CreateBlockerRequest" : {
+        "description" : "태스크 블로커 생성 요청",
+        "properties" : {
+          "description" : {
+            "description" : "블로커 설명",
+            "example" : "배포 권한 승인이 필요합니다.",
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "workspace_id" : {
+            "description" : "대상 워크스페이스. 생략하면 태스크의 프로젝트에서 확인합니다.",
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "description"
+        ]
       },
       "CreateDevSignalRequest" : {
         "description" : "dev 데모용 Signal 생성 요청",
@@ -4539,6 +4597,502 @@
         "summary" : "웹 세션 갱신",
         "tags" : [
           "Auth"
+        ]
+      }
+    },
+    "/api/blockers/{blockerId}" : {
+      "delete" : {
+        "description" : "워크스페이스 관리자 또는 소유자가 블로커를 영구 삭제합니다.",
+        "operationId" : "deleteBlocker",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "blockerId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "example" : {
+                  "message" : "deleted"
+                },
+                "schema" : {
+                  "$ref" : "#/components/schemas/WebMessageResponse"
+                }
+              }
+            },
+            "description" : "삭제 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "BLOCKER_NOT_FOUND" : {
+                    "description" : "블로커를 찾을 수 없습니다.",
+                    "summary" : "BLOCKER_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "BLOCKER_NOT_FOUND",
+                        "message" : "블로커를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
+          }
+        },
+        "summary" : "블로커 삭제",
+        "tags" : [
+          "Web"
+        ]
+      }
+    },
+    "/api/blockers/{blockerId}/resolve" : {
+      "patch" : {
+        "description" : "워크스페이스 멤버가 블로커를 해결합니다. 이미 해결한 블로커도 해결 시각을 갱신합니다.",
+        "operationId" : "resolveBlocker",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "blockerId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "example" : {
+                  "message" : "resolved"
+                },
+                "schema" : {
+                  "$ref" : "#/components/schemas/WebMessageResponse"
+                }
+              }
+            },
+            "description" : "해결 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "BLOCKER_NOT_FOUND" : {
+                    "description" : "블로커를 찾을 수 없습니다.",
+                    "summary" : "BLOCKER_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "BLOCKER_NOT_FOUND",
+                        "message" : "블로커를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
+          }
+        },
+        "summary" : "블로커 해결",
+        "tags" : [
+          "Web"
         ]
       }
     },
@@ -14426,6 +14980,281 @@
           }
         },
         "summary" : "태스크 수정",
+        "tags" : [
+          "Web"
+        ]
+      }
+    },
+    "/api/tasks/{taskId}/blockers" : {
+      "post" : {
+        "description" : "워크스페이스 멤버가 태스크의 블로커를 생성합니다. 초기 상태는 active입니다.",
+        "operationId" : "createTaskBlocker",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "taskId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateBlockerRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "example" : {
+                  "blocked_entity_id" : "4da2a4c9-a891-49dd-9bbd-801b2efea2af",
+                  "blocked_entity_type" : "task",
+                  "created_at" : "2026-10-05T00:00:00Z",
+                  "description" : "배포 권한 승인이 필요합니다.",
+                  "id" : "876d3562-b48b-45af-91ef-1e35a4358374",
+                  "status" : "active",
+                  "updated_at" : "2026-10-05T00:00:00Z",
+                  "workspace_id" : "5d2f7f3a-5db1-4f2c-8b9e-13607dd1f5e8"
+                },
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlockerResponse"
+                }
+              }
+            },
+            "description" : "생성 성공"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "BLOCKER_WORKSPACE_MISMATCH" : {
+                    "description" : "요청한 워크스페이스와 대상의 워크스페이스가 다릅니다.",
+                    "summary" : "BLOCKER_WORKSPACE_MISMATCH",
+                    "value" : {
+                      "error" : {
+                        "code" : "BLOCKER_WORKSPACE_MISMATCH",
+                        "message" : "요청한 워크스페이스와 대상의 워크스페이스가 다릅니다."
+                      }
+                    }
+                  },
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "TASK_NOT_FOUND" : {
+                    "description" : "태스크를 찾을 수 없습니다.",
+                    "summary" : "TASK_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "TASK_NOT_FOUND",
+                        "message" : "태스크를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
+          }
+        },
+        "summary" : "태스크 블로커 생성",
         "tags" : [
           "Web"
         ]
