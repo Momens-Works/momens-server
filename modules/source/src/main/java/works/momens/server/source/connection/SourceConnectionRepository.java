@@ -41,7 +41,7 @@ public interface SourceConnectionRepository extends JpaRepository<SourceConnecti
           + " c.updatedAt = greatest(c.updatedAt, :connectedAt) where c.id = :connectionId")
   int reconnect(
       UUID connectionId,
-      String status,
+      SourceConnectionStatus status,
       String externalWorkspaceName,
       UUID connectedByUserId,
       Instant connectedAt,
@@ -54,9 +54,9 @@ public interface SourceConnectionRepository extends JpaRepository<SourceConnecti
   /** worker 소유 통계·동기화 시각과 metadata를 덮어쓰지 않습니다. */
   @Modifying
   @Query(
-      "update SourceConnection c set c.status = 'DISABLED', c.disabledAt = :now,"
+      "update SourceConnection c set c.status = :status, c.disabledAt = :now,"
           + " c.updatedAt = :now where c.id = :id")
-  void disable(UUID id, Instant now);
+  void disable(UUID id, SourceConnectionStatus status, Instant now);
 
   List<SourceConnection> findByWorkspaceIdOrderByCreatedAtDesc(UUID workspaceId);
 

@@ -35,12 +35,13 @@ class SourceConnectionWriterImpl implements SourceConnectionWriter {
                               new BusinessException(
                                   SourceErrorCode.SOURCE_CONNECTION_NOT_FOUND,
                                   Map.of("connection_id", connectionId)));
-              if ("DISABLED".equals(connection.getStatus())) {
+              if (connection.getStatus() == SourceConnectionStatus.DISABLED) {
                 throw new BusinessException(
                     SourceErrorCode.SOURCE_CONNECTION_ALREADY_DISABLED,
                     Map.of("connection_id", connectionId));
               }
-              sourceConnectionRepository.disable(connectionId, Instant.now());
+              sourceConnectionRepository.disable(
+                  connectionId, SourceConnectionStatus.DISABLED, Instant.now());
               if (!"FIGMA".equals(connection.getSourceType()) || connection.getMetadata() == null) {
                 return null;
               }

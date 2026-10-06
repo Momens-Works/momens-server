@@ -50,7 +50,7 @@ class SourceConnectionReaderImpl implements SourceConnectionReader {
         connection.getId(),
         connection.getWorkspaceId(),
         connection.getSourceType(),
-        connection.getStatus(),
+        connection.getStatus().name(),
         connection.getExternalWorkspaceId(),
         connection.getExternalWorkspaceName(),
         connection.getConnectedByUserId(),
