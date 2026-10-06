@@ -37,8 +37,8 @@ class ProjectSubDomainBoundaryTests {
   /**
    * 허용한 의존 방향은 milestone -> core, task -> core, task -> milestone, taskupdate -> task뿐입니다.
    *
-   * <p>core는 어떤 하위 도메인도 참조하지 않습니다. 진행률처럼 task를 읽어야 하는 계산은 task가 소유합니다. blocker는 workspace id를 직접 가진
-   * 읽기 모델이라 어느 쪽에도 의존하지 않습니다.
+   * <p>core는 어떤 하위 도메인도 참조하지 않습니다. 진행률처럼 task를 읽어야 하는 계산은 task가 소유합니다. blocker는 호출자가 확인한 workspace와
+   * 대상 식별자를 사용하므로 다른 하위 도메인에 의존하지 않습니다.
    */
   @Test
   void subDomainsDependOnlyInTheAllowedDirection() {
