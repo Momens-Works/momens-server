@@ -34,7 +34,7 @@ class SourceConnectionWriterImpl implements SourceConnectionWriter {
                           () ->
                               new BusinessException(
                                   SourceErrorCode.SOURCE_CONNECTION_NOT_FOUND,
-                                  Map.of("connection_id", connectionId)));
+                                  Map.of("source_connection_id", connectionId.toString())));
               if (connection.getStatus() == SourceConnectionStatus.DISABLED) {
                 throw new BusinessException(
                     SourceErrorCode.SOURCE_CONNECTION_ALREADY_DISABLED,
