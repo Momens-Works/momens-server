@@ -106,10 +106,13 @@ class WebSourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrati
   @DisplayName("존재하지 않는 연결과 잘못된 식별자의 재동기화 요청을 거부한다")
   void rejectsMissingConnectionAndInvalidId() throws Exception {
     UUID caller = user();
+    UUID missingId = UUID.randomUUID();
     mockMvc
-        .perform(request(UUID.randomUUID(), caller))
+        .perform(request(missingId, caller))
         .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.error.code").value("SOURCE_CONNECTION_NOT_FOUND"));
+        .andExpect(jsonPath("$.error.code").value("SOURCE_CONNECTION_NOT_FOUND"))
+        .andExpect(jsonPath("$.error.details.source_connection_id").value(missingId.toString()))
+        .andExpect(jsonPath("$.error.details.length()").value(1));
     mockMvc
         .perform(
             post("/api/source-connections/invalid/resync")
@@ -137,10 +140,15 @@ class WebSourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrati
     UUID connectionId = connection(workspace(), "ACTIVE");
     Map<String, Object> before = row(connectionId);
     assertThatThrownBy(() -> writer.requestResync(connectionId, UUID.randomUUID()))
-        .isInstanceOf(BusinessException.class);
+        .isInstanceOf(BusinessException.class)
+        .hasFieldOrPropertyWithValue(
+            "details", Map.of("source_connection_id", connectionId.toString()));
     assertThat(row(connectionId)).isEqualTo(before);
-    assertThatThrownBy(() -> writer.requestResync(UUID.randomUUID(), UUID.randomUUID()))
-        .isInstanceOf(BusinessException.class);
+    UUID missingId = UUID.randomUUID();
+    assertThatThrownBy(() -> writer.requestResync(missingId, UUID.randomUUID()))
+        .isInstanceOf(BusinessException.class)
+        .hasFieldOrPropertyWithValue(
+            "details", Map.of("source_connection_id", missingId.toString()));
   }
 
   private void assertOnlyRequestTimesChanged(

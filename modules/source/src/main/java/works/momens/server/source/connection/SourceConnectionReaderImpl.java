@@ -22,13 +22,12 @@ class SourceConnectionReaderImpl implements SourceConnectionReader {
   @Transactional(readOnly = true)
   public UUID getWorkspaceId(UUID connectionId) {
     return sourceConnectionRepository
-        .findById(connectionId)
-        .map(SourceConnection::getWorkspaceId)
+        .findWorkspaceId(connectionId)
         .orElseThrow(
             () ->
                 new BusinessException(
                     SourceErrorCode.SOURCE_CONNECTION_NOT_FOUND,
-                    Map.of("connection_id", connectionId)));
+                    Map.of("source_connection_id", connectionId.toString())));
   }
 
   @Override

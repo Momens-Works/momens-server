@@ -121,9 +121,12 @@ class WebSourceDisableIntegrationTest extends AbstractPostgresIntegrationTest {
     mvc.perform(authorized("invalid", fixture.userId()))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.error.code").value("COMMON_BAD_REQUEST"));
-    mvc.perform(authorized(UUID.randomUUID(), fixture.userId()))
+    UUID missingId = UUID.randomUUID();
+    mvc.perform(authorized(missingId, fixture.userId()))
         .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.error.code").value("SOURCE_CONNECTION_NOT_FOUND"));
+        .andExpect(jsonPath("$.error.code").value("SOURCE_CONNECTION_NOT_FOUND"))
+        .andExpect(jsonPath("$.error.details.source_connection_id").value(missingId.toString()))
+        .andExpect(jsonPath("$.error.details.length()").value(1));
   }
 
   @Test

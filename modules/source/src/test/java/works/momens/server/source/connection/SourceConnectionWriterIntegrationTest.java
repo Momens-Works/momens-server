@@ -108,9 +108,13 @@ class SourceConnectionWriterIntegrationTest extends AbstractPostgresIntegrationT
     UUID id = insert("FIGMA", "ACTIVE");
     Map<String, Object> before = row(id);
     assertThatThrownBy(() -> writer.disable(UUID.randomUUID(), id))
-        .hasFieldOrPropertyWithValue("errorCode", SourceErrorCode.SOURCE_CONNECTION_NOT_FOUND);
-    assertThatThrownBy(() -> writer.disable(workspaceId, UUID.randomUUID()))
-        .hasFieldOrPropertyWithValue("errorCode", SourceErrorCode.SOURCE_CONNECTION_NOT_FOUND);
+        .hasFieldOrPropertyWithValue("errorCode", SourceErrorCode.SOURCE_CONNECTION_NOT_FOUND)
+        .hasFieldOrPropertyWithValue("details", Map.of("source_connection_id", id.toString()));
+    UUID missingId = UUID.randomUUID();
+    assertThatThrownBy(() -> writer.disable(workspaceId, missingId))
+        .hasFieldOrPropertyWithValue("errorCode", SourceErrorCode.SOURCE_CONNECTION_NOT_FOUND)
+        .hasFieldOrPropertyWithValue(
+            "details", Map.of("source_connection_id", missingId.toString()));
     assertThat(row(id)).isEqualTo(before);
     verifyNoInteractions(cleaner);
   }
