@@ -17,6 +17,7 @@ import works.momens.server.project.task.TaskRole;
 import works.momens.server.project.task.TaskStatus;
 import works.momens.server.project.taskupdate.TaskUpdateKind;
 import works.momens.server.signal.SignalType;
+import works.momens.server.source.connection.SourceConnectionStatus;
 import works.momens.server.workspace.invitation.InvitationStatus;
 import works.momens.server.workspace.membership.AssignableWorkspaceRole;
 import works.momens.server.workspace.membership.WorkspaceRole;
@@ -46,6 +47,11 @@ final class CheckConstraintEnumLinks {
   /** CHECK 제약과 같은 값 집합을 나타내는 enum의 목록입니다. 하나의 컬럼에 여러 enum이 대응할 수 있으므로 항목 수가 컬럼 수보다 많을 수 있습니다. */
   static final List<EnumLink> ENUM_LINKS =
       List.of(
+          new EnumLink(
+              "source_connections",
+              "status",
+              storedValues(SourceConnectionStatus.values(), SourceConnectionStatus::name),
+              IntendedDifference.NONE),
           new EnumLink(
               "workspace_members",
               "role",
@@ -182,10 +188,6 @@ final class CheckConstraintEnumLinks {
               "outbox_events", "issued_by", "이 서버는 api-server만 저장하며 worker는 momens-worker가 저장합니다"),
           new ColumnWithoutEnum(
               "projects", "status", "마이그레이션 기본값인 active만 사용하며 코드에는 값 집합을 나타내는 enum이 없습니다"),
-          new ColumnWithoutEnum(
-              "source_connections",
-              "status",
-              "SourceInstallerImpl이 저장하는 ACTIVE와 PENDING만 상수로 선언합니다"),
           new ColumnWithoutEnum(
               "user_identities", "provider", "허용 값이 하나이므로 UserService.PROVIDER_GOOGLE 상수로만 관리합니다"));
 

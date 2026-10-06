@@ -2,6 +2,8 @@ package works.momens.server.source.connection;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.Map;
@@ -36,8 +38,9 @@ public class SourceConnection extends BaseEntity {
   @Column(name = "source_type", nullable = false)
   private String sourceType;
 
-  @Column(nullable = false)
-  private String status;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, columnDefinition = "text")
+  private SourceConnectionStatus status;
 
   @Column(name = "external_workspace_id")
   private String externalWorkspaceId;
@@ -74,7 +77,7 @@ public class SourceConnection extends BaseEntity {
   SourceConnection(
       UUID workspaceId,
       String sourceType,
-      String status,
+      SourceConnectionStatus status,
       String externalWorkspaceId,
       String externalWorkspaceName,
       UUID connectedByUserId,
