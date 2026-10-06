@@ -24,13 +24,16 @@ public interface SourceConnectionRepository extends JpaRepository<SourceConnecti
   @Query("select c.workspaceId from SourceConnection c where c.id = :connectionId")
   Optional<UUID> findWorkspaceId(UUID connectionId);
 
+  /** 요청마다 DB에서 증가하는 값을 발급합니다. Worker의 완료 시각과 비교하지 않는 요청 경계입니다. */
   @Modifying
   @Query(
-      "update SourceConnection c"
-          + " set c.resyncRequestedAt = greatest(c.resyncRequestedAt, :requestedAt),"
-          + " c.updatedAt = greatest(c.updatedAt, c.resyncRequestedAt, :requestedAt)"
-          + " where c.id = :connectionId and c.workspaceId = :workspaceId")
-  int requestResync(UUID connectionId, UUID workspaceId, Instant requestedAt);
+      value =
+          "UPDATE source_connections"
+              + " SET resync_requested_at = greatest(statement_timestamp(), resync_requested_at + interval '1 microsecond'),"
+              + " updated_at = greatest(updated_at, statement_timestamp(), resync_requested_at + interval '1 microsecond')"
+              + " WHERE id = :connectionId AND workspace_id = :workspaceId",
+      nativeQuery = true)
+  int requestResync(UUID connectionId, UUID workspaceId);
 
   /** 재승인에서 소유하는 컬럼만 갱신하며, 응답 재조회가 최신 값을 읽도록 영속성 컨텍스트를 비웁니다. */
   @Modifying(flushAutomatically = true, clearAutomatically = true)

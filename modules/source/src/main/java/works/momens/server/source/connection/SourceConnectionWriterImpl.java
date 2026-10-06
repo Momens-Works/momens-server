@@ -1,6 +1,5 @@
 package works.momens.server.source.connection;
 
-import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -57,7 +56,7 @@ class SourceConnectionWriterImpl implements SourceConnectionWriter {
   @Override
   @Transactional
   public void requestResync(UUID connectionId, UUID workspaceId) {
-    if (sourceConnectionRepository.requestResync(connectionId, workspaceId, Instant.now()) == 0) {
+    if (sourceConnectionRepository.requestResync(connectionId, workspaceId) == 0) {
       throw new BusinessException(
           SourceErrorCode.SOURCE_CONNECTION_NOT_FOUND,
           Map.of("source_connection_id", connectionId.toString()));

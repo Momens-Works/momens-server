@@ -46,7 +46,7 @@ class WebSourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrati
     member(workspaceId, caller, "admin");
     UUID connectionId = connection(workspaceId, connectionStatus);
     Map<String, Object> before = row(connectionId);
-    Instant started = Instant.now().minusSeconds(1);
+    Instant started = databaseNow();
 
     mockMvc
         .perform(request(connectionId, caller))
@@ -55,7 +55,7 @@ class WebSourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrati
 
     Map<String, Object> first = row(connectionId);
     Instant requested = ((Timestamp) first.get("resync_requested_at")).toInstant();
-    assertThat(requested).isAfter(started).isBeforeOrEqualTo(Instant.now());
+    assertThat(requested).isBetween(started, databaseNow());
     assertThat(first.get("updated_at")).isEqualTo(first.get("resync_requested_at"));
     assertThat(requested).isAfter(((Timestamp) first.get("last_synced_at")).toInstant());
     assertOnlyRequestTimesChanged(before, first);
@@ -149,6 +149,10 @@ class WebSourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrati
         .isInstanceOf(BusinessException.class)
         .hasFieldOrPropertyWithValue(
             "details", Map.of("source_connection_id", missingId.toString()));
+  }
+
+  private Instant databaseNow() {
+    return jdbcTemplate.queryForObject("SELECT clock_timestamp()", Timestamp.class).toInstant();
   }
 
   private void assertOnlyRequestTimesChanged(
