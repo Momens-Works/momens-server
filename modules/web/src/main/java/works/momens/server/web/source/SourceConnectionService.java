@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.source.BeginInstallCommand;
+import works.momens.server.source.ConfigureFigmaCommand;
 import works.momens.server.source.SourceConnectionDetail;
 import works.momens.server.source.SourceConnectionReader;
 import works.momens.server.source.SourceConnectionWriter;
@@ -29,6 +30,14 @@ class SourceConnectionService {
   private final SourceConnectionReader sourceConnectionReader;
   private final SourceInstaller sourceInstaller;
   private final SourceConnectionWriter sourceConnectionWriter;
+
+  public SourceConnectionDetail configureFigma(
+      UUID connectionId, UUID userId, ConfigureFigmaCommand command) {
+    UUID workspaceId = sourceConnectionReader.getWorkspaceId(connectionId);
+    workspaceAccessChecker.requireWorkspaceExists(workspaceId);
+    workspaceAccessChecker.requireRoleAtLeast(workspaceId, userId, WorkspaceRole.ADMIN);
+    return sourceConnectionWriter.configureFigma(workspaceId, connectionId, command);
+  }
 
   public void disable(UUID connectionId, UUID userId) {
     UUID workspaceId = sourceConnectionReader.getWorkspaceId(connectionId);
