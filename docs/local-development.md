@@ -341,6 +341,13 @@ webhook을 보상 삭제합니다. worker 통계·재동기화 시각은 충돌 
 재활성화 시 `disabled_at`을 비웁니다. 만료·누락된 credential은 재인증이 필요하며 자동 refresh는 하지
 않습니다. Figma OAuth 재연결은 기존 설정과 webhook ID를 보존하고 `PENDING`으로 전환합니다.
 
+Figma는 [팀당 webhook을 최대 20개로 제한](https://developers.figma.com/docs/rest-api/webhooks/)합니다.
+새 webhook을 먼저 만드는 방식이므로 대상 팀이 이미 한도를 채웠다면 재설정 등록이 실패합니다
+(`502 SOURCE_FIGMA_WEBHOOK_FAILED`). 기존 연결 상태·설정과 webhook은 보존됩니다.
+운영자는 Figma의 webhook 목록에서 소유자와 실제 사용 여부를 확인하고, 미사용 webhook을 정리해
+여유 슬롯을 확보한 뒤 재시도해야 합니다. 사용 중인 기존 webhook을 먼저 삭제해 한도를 우회하지 않습니다.
+모두 사용 중이면 안전하게 정리할 수 있는 webhook이 없으므로 팀의 webhook 사용 계획을 조정해야 합니다.
+
 외부 호출 중에는 DB 트랜잭션을 열어 두지 않습니다. DB commit 결과가 불명확하면 별도 트랜잭션으로
 저장 여부를 확인하고, 확인할 수 없을 때는 새 webhook을 삭제하지 않고 `action=reconcile` 경고를 남깁니다.
 provider POST 결과가 유실되거나 프로세스가 종료되면 잔여 webhook이 생길 수 있으며, 영속적인 정리
