@@ -35,11 +35,16 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.json.JsonMapper;
@@ -146,6 +151,11 @@ class FigmaConnectionConfiguratorIntegrationTest extends AbstractPostgresIntegra
 
   private FigmaConnectionConfigurator configurator(
       FigmaWebhookProperties properties, Duration timeout) {
+    return configurator(properties, timeout, new TransactionTemplate(manager));
+  }
+
+  private FigmaConnectionConfigurator configurator(
+      FigmaWebhookProperties properties, Duration timeout, TransactionTemplate transactions) {
     var factory = new SimpleClientHttpRequestFactory();
     factory.setConnectTimeout(Duration.ofSeconds(1));
     factory.setReadTimeout(timeout);
@@ -162,7 +172,7 @@ class FigmaConnectionConfiguratorIntegrationTest extends AbstractPostgresIntegra
         client,
         new FigmaWebhookCleaner(credentials, encryptor, client),
         properties,
-        new TransactionTemplate(manager));
+        transactions);
   }
 
   @AfterEach
@@ -342,6 +352,84 @@ class FigmaConnectionConfiguratorIntegrationTest extends AbstractPostgresIntegra
       jdbc.execute("DROP TRIGGER reject_figma_commit ON source_connections");
       jdbc.execute("DROP FUNCTION reject_figma_commit()");
     }
+  }
+
+  @Test
+  @DisplayName("commit 결과가 불명확해도 실제 저장된 신규 webhook은 삭제하지 않는다")
+  void unknownCommitPreservesStoredWebhook() {
+    assertUnknownCommitPreservesWebhook(false);
+  }
+
+  @Test
+  @DisplayName("commit 결과 재조회도 실패하면 webhook을 보존하고 reconcile 경고를 남긴다")
+  void unknownCommitAndLookupFailureRequireReconciliation(CapturedOutput output) {
+    assertUnknownCommitPreservesWebhook(true);
+    assertThat(output.getOut())
+        .contains(
+            "WARN",
+            "Figma configure outcome unknown",
+            "connectionId=" + id,
+            "webhookId=new-1",
+            "action=reconcile")
+        .doesNotContain("private-commit-error", "private-lookup-error", "private-token");
+  }
+
+  private void assertUnknownCommitPreservesWebhook(boolean failLookup) {
+    previous("ACTIVE");
+    var failure = new TransactionSystemException("private-commit-error");
+    var executions = new AtomicInteger();
+    var transactions =
+        new TransactionTemplate(manager) {
+          @Override
+          public <T> T execute(TransactionCallback<T> action) {
+            int execution = executions.incrementAndGet();
+            if (execution == 3 && failLookup) {
+              return super.execute(
+                  tx -> {
+                    throw new DataAccessResourceFailureException("private-lookup-error");
+                  });
+            }
+            if (execution != 2) {
+              return super.execute(action);
+            }
+            var completion = new AtomicReference<TransactionSynchronization>();
+            super.execute(
+                tx -> {
+                  T result = action.doInTransaction(tx);
+                  var callbacks =
+                      TransactionSynchronizationManager.getSynchronizations().stream()
+                          .filter(
+                              sync ->
+                                  sync.getClass().getEnclosingClass()
+                                      == FigmaConnectionConfigurator.class)
+                          .toList();
+                  assertThat(callbacks).hasSize(1);
+                  completion.set(callbacks.getFirst());
+                  return result;
+                });
+            // Commit PostgreSQL for real, then simulate an indeterminate completion report.
+            // Only notify the application callback; Spring resource callbacks already completed.
+            completion.get().afterCompletion(TransactionSynchronization.STATUS_UNKNOWN);
+            throw failure;
+          }
+        };
+    configurator =
+        configurator(
+            new FigmaWebhookProperties("https://worker.example/webhooks/figma", "private-passcode"),
+            Duration.ofSeconds(5),
+            transactions);
+
+    assertThatThrownBy(this::configure).isSameAs(failure);
+    assertThat(executions.get()).isEqualTo(3);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT metadata->>'webhook_id' FROM source_connections WHERE id=?",
+                String.class,
+                id))
+        .isEqualTo("new-1");
+    assertThat(row()).containsEntry("status", "ACTIVE").containsEntry("disabled_at", null);
+    assertThat(creates.get()).isEqualTo(1);
+    assertThat(deletes).isEmpty();
   }
 
   @Test
