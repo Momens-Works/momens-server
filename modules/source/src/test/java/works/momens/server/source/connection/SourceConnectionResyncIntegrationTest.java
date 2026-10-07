@@ -43,9 +43,8 @@ class SourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrationT
         Timestamp.from(previous),
         Timestamp.from(workerUpdate),
         id);
-    SourceConnectionWriterImpl writer = new SourceConnectionWriterImpl(repository);
     for (int i = 1; i <= 3; i++) {
-      writer.requestResync(id, workspaceId);
+      assertThat(repository.requestResync(id, workspaceId)).isEqualTo(1);
       assertThat(time(id, "resync_requested_at")).isEqualTo(previous.plusNanos(i * 1000L));
       assertThat(time(id, "updated_at")).isEqualTo(workerUpdate);
     }
@@ -57,12 +56,11 @@ class SourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrationT
     UUID workspaceId = UUID.randomUUID();
     UUID id = connection(workspaceId);
     Instant before = jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class).toInstant();
-    SourceConnectionWriterImpl writer = new SourceConnectionWriterImpl(repository);
-    writer.requestResync(id, workspaceId);
+    assertThat(repository.requestResync(id, workspaceId)).isEqualTo(1);
     Instant first = time(id, "resync_requested_at");
     Instant after = jdbc.queryForObject("SELECT clock_timestamp()", Timestamp.class).toInstant();
     assertThat(first).isBetween(before, after);
-    writer.requestResync(id, workspaceId);
+    assertThat(repository.requestResync(id, workspaceId)).isEqualTo(1);
     assertThat(time(id, "resync_requested_at")).isAfter(first);
     assertThat(time(id, "updated_at")).isEqualTo(time(id, "resync_requested_at"));
   }
@@ -95,8 +93,7 @@ class SourceConnectionResyncIntegrationTest extends AbstractPostgresIntegrationT
                   return new TransactionTemplate(transactionManager)
                       .execute(
                           status -> {
-                            new SourceConnectionWriterImpl(repository)
-                                .requestResync(id, workspaceId);
+                            assertThat(repository.requestResync(id, workspaceId)).isEqualTo(1);
                             return time(id, "resync_requested_at");
                           });
                 }));
