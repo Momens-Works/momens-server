@@ -9,8 +9,11 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import works.momens.server.common.api.BusinessException;
+import works.momens.server.source.ConfigureFigmaCommand;
+import works.momens.server.source.SourceConnectionDetail;
 import works.momens.server.source.SourceConnectionWriter;
 import works.momens.server.source.SourceErrorCode;
+import works.momens.server.source.connection.oauth.FigmaConnectionConfigurator;
 import works.momens.server.source.connection.oauth.FigmaWebhookCleaner;
 
 @Service
@@ -20,6 +23,14 @@ class SourceConnectionWriterImpl implements SourceConnectionWriter {
   private final SourceConnectionRepository sourceConnectionRepository;
   private final TransactionTemplate transactionTemplate;
   private final FigmaWebhookCleaner figmaWebhookCleaner;
+  private final FigmaConnectionConfigurator figmaConnectionConfigurator;
+
+  @Override
+  @Transactional(propagation = Propagation.NEVER)
+  public SourceConnectionDetail configureFigma(
+      UUID workspaceId, UUID connectionId, ConfigureFigmaCommand command) {
+    return figmaConnectionConfigurator.configure(workspaceId, connectionId, command);
+  }
 
   @Override
   @Transactional(propagation = Propagation.NEVER)

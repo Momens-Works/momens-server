@@ -36,6 +36,7 @@ import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.source.SourceConnectionWriter;
 import works.momens.server.source.SourceErrorCode;
+import works.momens.server.source.connection.oauth.FigmaConnectionConfigurator;
 import works.momens.server.source.connection.oauth.FigmaWebhookCleaner;
 
 @DataJpaTest
@@ -52,6 +53,7 @@ class SourceConnectionWriterIntegrationTest extends AbstractPostgresIntegrationT
   @Autowired private JdbcTemplate jdbc;
   @Autowired private TransactionTemplate transactions;
   @MockitoBean private FigmaWebhookCleaner cleaner;
+  @MockitoBean private FigmaConnectionConfigurator configurator;
   private UUID workspaceId;
 
   @BeforeEach

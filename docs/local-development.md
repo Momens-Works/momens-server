@@ -319,3 +319,34 @@ diff만 출력합니다.
 
 `MOMENS_MCP_CONSENT_URI`에 로컬 FE의 `/oauth/authorize` 절대 주소를 지정합니다.
 미설정 시 authorize는 `server_error`를 반환합니다.
+
+## Figma 연결 설정 (MOM-1016)
+
+OAuth가 완료된 Figma 연결은 `PENDING`입니다. admin/owner가
+`POST /api/source-connections/{id}/figma/configure` (`API-Version: 1`)에
+`{"team_id":"팀 ID","file_keys":["파일 키"]}`를 보내면 webhook을 등록하고 `ACTIVE`로 전환합니다.
+파일 키는 앞뒤 공백·빈 값·중복을 제거하고 대소문자와 순서를 유지합니다.
+
+- `MOMENS_SOURCE_FIGMA_WEBHOOK_ENDPOINT`: 기존 worker의 `/webhooks/figma` 수신 URL.
+- `MOMENS_SOURCE_FIGMA_WEBHOOK_PASSCODE`: worker의 `FIGMA_WEBHOOK_PASSCODE`와 **동일한 값**.
+- 토큰 암호화 키는 기존 `MOMENS_SOURCE_OAUTH_TOKEN_KEY`를 사용하며 worker/레거시와 같아야 합니다.
+
+설정 기본값은 비어 있어 서버 기동을 막지 않습니다. 미설정 시 configure는 Standard 오류
+`SOURCE_FIGMA_WEBHOOK_UNCONFIGURED`(500)를 반환합니다. 실제 값의 주입·provider 검증은 MOM-0954에서
+수행하며 수신 endpoint의 소유권은 변경하지 않습니다.
+
+재설정은 새 webhook 등록과 DB 활성화가 끝난 뒤 이전 webhook을 정리합니다. 등록 실패는 기존
+설정을 보존하며, 동시 설정·비활성화·OAuth 재연결로 읽었던 상태가 바뀌면 409를 반환하고 이번 요청의
+webhook을 보상 삭제합니다. worker 통계·재동기화 시각은 충돌 기준에서 제외하고 갱신하지 않습니다.
+재활성화 시 `disabled_at`을 비웁니다. 만료·누락된 credential은 재인증이 필요하며 자동 refresh는 하지
+않습니다. Figma OAuth 재연결은 기존 설정과 webhook ID를 보존하고 `PENDING`으로 전환합니다.
+
+외부 호출 중에는 DB 트랜잭션을 열어 두지 않습니다. DB commit 결과가 불명확하면 별도 트랜잭션으로
+저장 여부를 확인하고, 확인할 수 없을 때는 새 webhook을 삭제하지 않고 `action=reconcile` 경고를 남깁니다.
+provider POST 결과가 유실되거나 프로세스가 종료되면 잔여 webhook이 생길 수 있으며, 영속적인 정리
+재시도는 이번 범위에 포함하지 않습니다. POST는 자동 재시도하지 않습니다.
+
+운영 전환 전 MOM-1022에서는 worker의 `webhook_id` 기반 연결 매칭과 동일 파일의 다중 워크스페이스
+등록을 별도로 검증해야 합니다. 현 worker의 첫 `file_keys` 일치 연결 선택은 이번 서버 변경으로 해결되지
+않습니다. 또한 레거시 configure/disable/reconnect 쓰기와의 동시 실행까지 보장하지 않으므로 전환 시
+같은 연결의 lifecycle 쓰기를 신규 서버로 함께 라우팅해야 합니다.

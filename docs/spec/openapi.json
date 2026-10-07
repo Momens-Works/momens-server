@@ -302,6 +302,30 @@
           }
         }
       },
+      "ConfigureFigmaRequest" : {
+        "description" : "Figma 팀 webhook과 수집할 파일 허용 목록",
+        "properties" : {
+          "file_keys" : {
+            "description" : "파일 키. 공백 제거 후 빈 값 제외·중복 제거, 대소문자와 순서 유지",
+            "items" : {
+              "description" : "파일 키. 공백 제거 후 빈 값 제외·중복 제거, 대소문자와 순서 유지",
+              "type" : "string"
+            },
+            "minItems" : 1,
+            "type" : "array"
+          },
+          "team_id" : {
+            "description" : "Figma 팀 ID",
+            "example" : "123456789",
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "file_keys",
+          "team_id"
+        ]
+      },
       "ConfirmedMemoryResponse" : {
         "description" : "확정 메모리",
         "properties" : {
@@ -14102,6 +14126,358 @@
           }
         },
         "summary" : "source 연결 비활성화",
+        "tags" : [
+          "Web"
+        ]
+      }
+    },
+    "/api/source-connections/{connectionId}/figma/configure" : {
+      "post" : {
+        "description" : "admin 또는 owner가 팀 webhook과 파일 허용 목록을 설정합니다. 모든 연결 상태에서 재설정할 수 있습니다. 성공 시 ACTIVE로 전환하고 disabled_at을 비웁니다. 등록 실패 시 기존 설정을 유지합니다. 동시 변경은 409, 만료·누락된 토큰은 재인증 필요 오류입니다. 오류는 Standard 형식입니다.",
+        "operationId" : "configureFigmaSourceConnection",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "connectionId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "API-Version",
+            "schema" : {
+              "default" : "1",
+              "enum" : [
+                "1"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfigureFigmaRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "example" : {
+                  "candidates_extracted_count" : 0,
+                  "captures_read_count" : 0,
+                  "created_at" : "2026-10-07T00:00:00Z",
+                  "id" : "00000000-0000-4000-8000-000000000001",
+                  "metadata" : {
+                    "file_keys" : [
+                      "file-key"
+                    ],
+                    "team_id" : "123456789",
+                    "webhook_id" : "webhook-id"
+                  },
+                  "source_type" : "FIGMA",
+                  "status" : "ACTIVE",
+                  "updated_at" : "2026-10-07T00:00:00Z",
+                  "workspace_id" : "00000000-0000-4000-8000-000000000002"
+                },
+                "schema" : {
+                  "$ref" : "#/components/schemas/SourceConnectionResponse"
+                }
+              }
+            },
+            "description" : "활성화된 연결"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_REQUEST" : {
+                    "description" : "요청 형식이 올바르지 않습니다.",
+                    "summary" : "COMMON_BAD_REQUEST",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_REQUEST",
+                        "message" : "요청 형식이 올바르지 않습니다."
+                      }
+                    }
+                  },
+                  "COMMON_VALIDATION_FAILED" : {
+                    "description" : "요청 값이 유효하지 않습니다.",
+                    "summary" : "COMMON_VALIDATION_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_VALIDATION_FAILED",
+                        "message" : "요청 값이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "SOURCE_FIGMA_INVALID_CONFIG" : {
+                    "description" : "Figma 팀과 하나 이상의 파일 키가 필요합니다.",
+                    "summary" : "SOURCE_FIGMA_INVALID_CONFIG",
+                    "value" : {
+                      "error" : {
+                        "code" : "SOURCE_FIGMA_INVALID_CONFIG",
+                        "message" : "Figma 팀과 하나 이상의 파일 키가 필요합니다."
+                      }
+                    }
+                  },
+                  "SOURCE_FIGMA_REAUTH_REQUIRED" : {
+                    "description" : "Figma 연결을 다시 승인해야 합니다.",
+                    "summary" : "SOURCE_FIGMA_REAUTH_REQUIRED",
+                    "value" : {
+                      "error" : {
+                        "code" : "SOURCE_FIGMA_REAUTH_REQUIRED",
+                        "message" : "Figma 연결을 다시 승인해야 합니다."
+                      }
+                    }
+                  },
+                  "SOURCE_NOT_FIGMA_CONNECTION" : {
+                    "description" : "Figma 연결이 아닙니다.",
+                    "summary" : "SOURCE_NOT_FIGMA_CONNECTION",
+                    "value" : {
+                      "error" : {
+                        "code" : "SOURCE_NOT_FIGMA_CONNECTION",
+                        "message" : "Figma 연결이 아닙니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_INVALID_TOKEN" : {
+                    "description" : "토큰이 유효하지 않습니다.",
+                    "summary" : "AUTH_INVALID_TOKEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_INVALID_TOKEN",
+                        "message" : "토큰이 유효하지 않습니다."
+                      }
+                    }
+                  },
+                  "AUTH_UNAUTHORIZED" : {
+                    "description" : "인증이 필요합니다.",
+                    "summary" : "AUTH_UNAUTHORIZED",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_UNAUTHORIZED",
+                        "message" : "인증이 필요합니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "AUTH_FORBIDDEN" : {
+                    "description" : "권한이 없습니다.",
+                    "summary" : "AUTH_FORBIDDEN",
+                    "value" : {
+                      "error" : {
+                        "code" : "AUTH_FORBIDDEN",
+                        "message" : "권한이 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_NOT_FOUND" : {
+                    "description" : "요청한 리소스를 찾을 수 없습니다.",
+                    "summary" : "COMMON_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_NOT_FOUND",
+                        "message" : "요청한 리소스를 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "SOURCE_CONNECTION_NOT_FOUND" : {
+                    "description" : "source 연결을 찾을 수 없습니다.",
+                    "summary" : "SOURCE_CONNECTION_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "SOURCE_CONNECTION_NOT_FOUND",
+                        "message" : "source 연결을 찾을 수 없습니다."
+                      }
+                    }
+                  },
+                  "WORKSPACE_NOT_FOUND" : {
+                    "description" : "워크스페이스를 찾을 수 없습니다.",
+                    "summary" : "WORKSPACE_NOT_FOUND",
+                    "value" : {
+                      "error" : {
+                        "code" : "WORKSPACE_NOT_FOUND",
+                        "message" : "워크스페이스를 찾을 수 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "405" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_METHOD_NOT_ALLOWED" : {
+                    "description" : "허용되지 않은 HTTP 메서드입니다.",
+                    "summary" : "COMMON_METHOD_NOT_ALLOWED",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_METHOD_NOT_ALLOWED",
+                        "message" : "허용되지 않은 HTTP 메서드입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_CONFLICT" : {
+                    "description" : "요청이 현재 상태와 충돌합니다.",
+                    "summary" : "COMMON_CONFLICT",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_CONFLICT",
+                        "message" : "요청이 현재 상태와 충돌합니다."
+                      }
+                    }
+                  },
+                  "SOURCE_CONNECTION_CHANGED" : {
+                    "description" : "연결이 변경되었습니다. 최신 상태를 확인한 뒤 다시 시도해 주세요.",
+                    "summary" : "SOURCE_CONNECTION_CHANGED",
+                    "value" : {
+                      "error" : {
+                        "code" : "SOURCE_CONNECTION_CHANGED",
+                        "message" : "연결이 변경되었습니다. 최신 상태를 확인한 뒤 다시 시도해 주세요."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Conflict"
+          },
+          "415" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_UNSUPPORTED_MEDIA_TYPE" : {
+                    "description" : "지원하지 않는 미디어 타입입니다.",
+                    "summary" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_UNSUPPORTED_MEDIA_TYPE",
+                        "message" : "지원하지 않는 미디어 타입입니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Unsupported Media Type"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_INTERNAL_SERVER_ERROR" : {
+                    "description" : "서버 내부 오류가 발생했습니다.",
+                    "summary" : "COMMON_INTERNAL_SERVER_ERROR",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_INTERNAL_SERVER_ERROR",
+                        "message" : "서버 내부 오류가 발생했습니다."
+                      }
+                    }
+                  },
+                  "SOURCE_FIGMA_CREDENTIAL_INVALID" : {
+                    "description" : "저장된 Figma 자격 증명을 사용할 수 없습니다.",
+                    "summary" : "SOURCE_FIGMA_CREDENTIAL_INVALID",
+                    "value" : {
+                      "error" : {
+                        "code" : "SOURCE_FIGMA_CREDENTIAL_INVALID",
+                        "message" : "저장된 Figma 자격 증명을 사용할 수 없습니다."
+                      }
+                    }
+                  },
+                  "SOURCE_FIGMA_WEBHOOK_UNCONFIGURED" : {
+                    "description" : "Figma webhook 설정이 서버에 없습니다.",
+                    "summary" : "SOURCE_FIGMA_WEBHOOK_UNCONFIGURED",
+                    "value" : {
+                      "error" : {
+                        "code" : "SOURCE_FIGMA_WEBHOOK_UNCONFIGURED",
+                        "message" : "Figma webhook 설정이 서버에 없습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "examples" : {
+                  "COMMON_BAD_GATEWAY" : {
+                    "description" : "외부 서비스 호출에 실패했습니다.",
+                    "summary" : "COMMON_BAD_GATEWAY",
+                    "value" : {
+                      "error" : {
+                        "code" : "COMMON_BAD_GATEWAY",
+                        "message" : "외부 서비스 호출에 실패했습니다."
+                      }
+                    }
+                  },
+                  "SOURCE_FIGMA_WEBHOOK_FAILED" : {
+                    "description" : "Figma webhook을 등록하지 못했습니다.",
+                    "summary" : "SOURCE_FIGMA_WEBHOOK_FAILED",
+                    "value" : {
+                      "error" : {
+                        "code" : "SOURCE_FIGMA_WEBHOOK_FAILED",
+                        "message" : "Figma webhook을 등록하지 못했습니다."
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description" : "Bad Gateway"
+          }
+        },
+        "summary" : "Figma 연결 설정·활성화",
         "tags" : [
           "Web"
         ]

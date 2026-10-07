@@ -1,6 +1,7 @@
 package works.momens.server.source.connection.oauth;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -128,19 +129,27 @@ class SourceInstallerImpl implements SourceInstaller {
             : SourceConnectionStatus.ACTIVE;
     Instant now = Instant.now();
     List<SourceConnection> existing =
-        sourceConnectionRepository
-            .findByWorkspaceIdAndSourceTypeAndExternalWorkspaceIdOrderByCreatedAtAsc(
-                state.workspaceId(), provider.sourceType(), identity.externalId());
+        OAuthProviderRegistry.FIGMA.equals(provider.sourceType())
+            ? sourceConnectionRepository.findFigmaForReconnect(
+                state.workspaceId(), identity.externalId())
+            : sourceConnectionRepository
+                .findByWorkspaceIdAndSourceTypeAndExternalWorkspaceIdOrderByCreatedAtAsc(
+                    state.workspaceId(), provider.sourceType(), identity.externalId());
     if (!existing.isEmpty()) {
       existing.forEach(
-          connection ->
-              sourceConnectionRepository.reconnect(
-                  connection.getId(),
-                  status,
-                  identity.externalName(),
-                  state.userId(),
-                  now,
-                  identity.metadata()));
+          connection -> {
+            Map<String, Object> metadata = identity.metadata();
+            if (OAuthProviderRegistry.FIGMA.equals(provider.sourceType())) {
+              // configure의 마지막 검증과 같은 행 잠금을 사용합니다. 재승인 후에도 기존 webhook 정리가 가능해야 합니다.
+              metadata = new LinkedHashMap<>();
+              if (connection.getMetadata() != null) {
+                metadata.putAll(connection.getMetadata());
+              }
+              metadata.putAll(identity.metadata());
+            }
+            sourceConnectionRepository.reconnect(
+                connection.getId(), status, identity.externalName(), state.userId(), now, metadata);
+          });
       return sourceConnectionRepository.findById(existing.getFirst().getId()).orElseThrow();
     }
     SourceConnection connection =

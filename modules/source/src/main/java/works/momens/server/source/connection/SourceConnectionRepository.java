@@ -50,6 +50,14 @@ public interface SourceConnectionRepository extends JpaRepository<SourceConnecti
       Instant connectedAt,
       Map<String, Object> metadata);
 
+  /** 활성화 소유 컬럼만 갱신하고 worker 통계는 보존합니다. */
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query(
+      "update SourceConnection c set c.metadata = :metadata, c.status = :status,"
+          + " c.disabledAt = null, c.updatedAt = greatest(c.updatedAt, :now) where c.id = :id")
+  void configureFigma(
+      UUID id, Map<String, Object> metadata, SourceConnectionStatus status, Instant now);
+
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select c from SourceConnection c where c.id = :id and c.workspaceId = :workspaceId")
   Optional<SourceConnection> findForUpdate(UUID id, UUID workspaceId);
@@ -62,6 +70,12 @@ public interface SourceConnectionRepository extends JpaRepository<SourceConnecti
   void disable(UUID id, SourceConnectionStatus status, Instant now);
 
   List<SourceConnection> findByWorkspaceIdOrderByCreatedAtDesc(UUID workspaceId);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query(
+      "select c from SourceConnection c where c.workspaceId = :workspaceId"
+          + " and c.sourceType = 'FIGMA' and c.externalWorkspaceId = :externalId order by c.createdAt")
+  List<SourceConnection> findFigmaForReconnect(UUID workspaceId, String externalId);
 
   List<SourceConnection> findByWorkspaceIdAndSourceTypeAndExternalWorkspaceIdOrderByCreatedAtAsc(
       UUID workspaceId, String sourceType, String externalWorkspaceId);

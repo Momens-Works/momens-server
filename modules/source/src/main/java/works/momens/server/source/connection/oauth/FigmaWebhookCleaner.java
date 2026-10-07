@@ -9,7 +9,7 @@ import org.springframework.transaction.TransactionException;
 import org.springframework.web.client.RestClientException;
 import works.momens.server.source.connection.SourceCredentialRepository;
 
-/** 비활성화가 완료된 연결의 webhook을 best effort로 정리합니다. */
+/** 비활성화·재설정·실패 보상에서 지정한 webhook만 best effort로 정리합니다. */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -33,6 +33,21 @@ public class FigmaWebhookCleaner {
             webhookId);
         return;
       }
+      deleteWithToken(connectionId, webhookId, token);
+    } catch (DataAccessException
+        | TransactionException
+        | IllegalArgumentException
+        | IllegalStateException e) {
+      log.warn(
+          "Figma webhook cleanup failed connectionId={} webhookId={} failureType={}",
+          connectionId,
+          webhookId,
+          e.getClass().getSimpleName());
+    }
+  }
+
+  void deleteWithToken(UUID connectionId, String webhookId, String token) {
+    try {
       int status = client.delete(token, webhookId);
       if (status < 200 || status >= 300) {
         log.warn(
@@ -41,11 +56,7 @@ public class FigmaWebhookCleaner {
             webhookId,
             status);
       }
-    } catch (DataAccessException
-        | TransactionException
-        | IllegalArgumentException
-        | IllegalStateException
-        | RestClientException e) {
+    } catch (IllegalArgumentException | IllegalStateException | RestClientException e) {
       log.warn(
           "Figma webhook cleanup failed connectionId={} webhookId={} failureType={}",
           connectionId,
