@@ -15,7 +15,7 @@ public record WebDecisionResponse(
     String context,
     String alternatives,
     String rationale,
-    String reversibility,
+    @Schema(allowableValues = {"reversible", "irreversible"}) String reversibility,
     UUID decisionMaker,
     Instant createdAt,
     Instant updatedAt) {
