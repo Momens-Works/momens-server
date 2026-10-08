@@ -17,4 +17,4 @@ public record CreateMilestoneRequest(
     @Schema(description = "진행률. 0 이상 100 이하이며, 생략하면 0이 적용됩니다.") Integer progress,
     @Schema(description = "마일스톤 요약") String summary,
     @Schema(description = "마지막 맥락 갱신 시각") Instant lastContextAt,
-    @Schema(description = "소유자 식별자 목록. 생략하면 프로젝트 소유자가 적용됩니다.") List<UUID> ownerUserIds) {}
+    @Schema(description = "소유자 식별자 목록. 생략하면 요청자가 소유자로 지정됩니다.") List<UUID> ownerUserIds) {}

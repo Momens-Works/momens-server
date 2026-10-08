@@ -15,7 +15,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.ProjectSeedSql;
-import works.momens.server.project.core.ProjectOwnerReader;
 import works.momens.server.project.milestone.CreateMilestoneCommand;
 import works.momens.server.project.milestone.MilestoneDetail;
 import works.momens.server.project.milestone.MilestoneWriter;
@@ -24,11 +23,10 @@ import works.momens.server.workspace.membership.WorkspaceMembershipReader;
 /**
  * 마일스톤 생성 public API의 동작을 검증합니다.
  *
- * <p>PostgreSQL(Testcontainers) 환경에서 소유자 기본값이 결정되는 우선순위를 확인합니다. 요청에서 소유자를 지정한 경우, 소유자를 지정하지 않아 프로젝트
- * 소유자가 적용되는 경우, 프로젝트 소유자도 없어 요청자가 적용되는 경우를 각각 검증합니다. 첫 번째 테스트에서는 마일스톤과 소유자 행이 실제로 저장되는지와 상태 기본값이
- * 적용되는지도 함께 확인합니다.
+ * <p>PostgreSQL(Testcontainers) 환경에서 소유자를 결정하는 기준을 검증합니다. 요청에서 소유자를 지정한 경우와 지정하지 않은 경우를 각각 확인하며,
+ * 소유자를 지정하지 않은 경우에는 프로젝트 소유자가 현재 워크스페이스 멤버가 아니어도 요청자가 소유자로 저장되는지 함께 검증합니다.
  *
- * <p>워크스페이스 멤버십 조회는 다른 모듈의 public API이므로 {@code @MockitoBean}으로 대체하고 반환값을 지정합니다.
+ * <p>워크스페이스 멤버십 조회는 다른 모듈의 public API이므로 {@code @MockitoBean}으로 대체하고 필요한 반환값을 지정합니다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -41,7 +39,6 @@ class MilestoneCreatorIntegrationTest extends AbstractPostgresIntegrationTest {
   @Autowired private TestEntityManager entityManager;
 
   @MockitoBean private WorkspaceMembershipReader workspaceMembershipReader;
-  @MockitoBean private ProjectOwnerReader projectOwnerReader;
 
   @Test
   void savesRequestedOwnersAndLegacyDefaults() {
@@ -67,22 +64,10 @@ class MilestoneCreatorIntegrationTest extends AbstractPostgresIntegrationTest {
   }
 
   @Test
-  void fallsBackToProjectOwnersWhenOwnersAreOmitted() {
-    Fixture fixture = newProject("momens-project-owners");
-    UUID projectOwnerId = ProjectSeedSql.insertUser(entityManager, "projectowner@momens.works");
-    given(projectOwnerReader.listOwnerUserIds(fixture.projectId()))
-        .willReturn(List.of(projectOwnerId));
-    givenMembers(fixture.workspaceId(), fixture.requesterId(), projectOwnerId);
-
-    MilestoneDetail detail = milestoneWriter.create(command(fixture, null));
-
-    assertThat(detail.ownerUserIds()).containsExactly(projectOwnerId);
-  }
-
-  @Test
-  void fallsBackToRequesterWhenProjectHasNoOwners() {
-    Fixture fixture = newProject("momens-no-owners");
-    given(projectOwnerReader.listOwnerUserIds(fixture.projectId())).willReturn(List.of());
+  void ownsTheRequesterWhenOwnersAreOmitted() {
+    Fixture fixture = newProject("momens-omitted-owners");
+    UUID formerMember = ProjectSeedSql.insertUser(entityManager, "formermember@momens.works");
+    ProjectSeedSql.insertProjectOwner(entityManager, fixture.projectId(), formerMember);
     givenMembers(fixture.workspaceId(), fixture.requesterId());
 
     MilestoneDetail detail = milestoneWriter.create(command(fixture, null));
