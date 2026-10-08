@@ -1,5 +1,6 @@
 package works.momens.server.project;
 
+import java.time.Instant;
 import java.util.UUID;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 
@@ -54,6 +55,27 @@ public final class ProjectSeedSql {
         .setParameter(4, ownerId)
         .executeUpdate();
     return id;
+  }
+
+  /** {@code project_owners} 행을 추가합니다. 생성 시각은 현재 시각으로 설정합니다. */
+  public static void insertProjectOwner(
+      TestEntityManager entityManager, UUID projectId, UUID ownerUserId) {
+    insertProjectOwner(entityManager, projectId, ownerUserId, Instant.now());
+  }
+
+  /** 생성 시각을 지정해 {@code project_owners} 행을 추가합니다. 소유자 목록의 정렬을 검증하는 테스트에서 이 값을 사용합니다. */
+  public static void insertProjectOwner(
+      TestEntityManager entityManager, UUID projectId, UUID ownerUserId, Instant createdAt) {
+    entityManager
+        .getEntityManager()
+        .createNativeQuery(
+            "INSERT INTO project_owners (project_id, owner_user_id, created_at)"
+                + " VALUES (?1, ?2, ?3)")
+        .setParameter(1, projectId)
+        .setParameter(2, ownerUserId)
+        .setParameter(3, createdAt)
+        .executeUpdate();
+    entityManager.clear();
   }
 
   /** 민수가 생산하는 열린질문 행을 삽입합니다. 서버에 쓰기 경로가 없어 SQL로 넣습니다. */

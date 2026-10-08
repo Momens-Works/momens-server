@@ -17,7 +17,6 @@ import works.momens.server.common.api.FieldValidationException;
 import works.momens.server.common.persistence.JpaAuditingConfig;
 import works.momens.server.common.test.AbstractPostgresIntegrationTest;
 import works.momens.server.project.ProjectSeedSql;
-import works.momens.server.project.core.ProjectOwnerReader;
 import works.momens.server.project.milestone.MilestoneDetail;
 import works.momens.server.project.milestone.MilestoneWriter;
 import works.momens.server.project.milestone.UpdateMilestoneCommand;
@@ -33,7 +32,6 @@ class MilestoneWriterIntegrationTest extends AbstractPostgresIntegrationTest {
   @Autowired private MilestoneOwnerRepository milestoneOwnerRepository;
   @Autowired private TestEntityManager entityManager;
 
-  @MockitoBean private ProjectOwnerReader projectOwnerReader;
   @MockitoBean private WorkspaceMembershipReader workspaceMembershipReader;
 
   @Test

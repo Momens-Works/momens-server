@@ -118,9 +118,12 @@ class ProjectDetailReaderIntegrationTest extends AbstractPostgresIntegrationTest
     insertUserWithId(tieHigh, "tie-high@momens.works");
     insertUserWithId(tieLow, "tie-low@momens.works");
 
-    insertProjectOwner(projectId, tieHigh, Instant.parse("2026-06-01T00:00:00Z"));
-    insertProjectOwner(projectId, tieLow, Instant.parse("2026-06-01T00:00:00Z"));
-    insertProjectOwner(projectId, late, Instant.parse("2026-06-02T00:00:00Z"));
+    ProjectSeedSql.insertProjectOwner(
+        entityManager, projectId, tieHigh, Instant.parse("2026-06-01T00:00:00Z"));
+    ProjectSeedSql.insertProjectOwner(
+        entityManager, projectId, tieLow, Instant.parse("2026-06-01T00:00:00Z"));
+    ProjectSeedSql.insertProjectOwner(
+        entityManager, projectId, late, Instant.parse("2026-06-02T00:00:00Z"));
 
     assertThat(onlyDetailOf(workspaceId).ownerUserIds()).containsExactly(tieLow, tieHigh, late);
   }
@@ -149,7 +152,8 @@ class ProjectDetailReaderIntegrationTest extends AbstractPostgresIntegrationTest
     UUID deleted = saveProject(workspaceId, ownerId, "삭제됨").getId();
     softDelete(deleted);
     saveProject(otherWorkspace, ownerId, "다른 워크스페이스");
-    insertProjectOwner(newer, explicitOwner, Instant.parse("2026-06-01T00:00:00Z"));
+    ProjectSeedSql.insertProjectOwner(
+        entityManager, newer, explicitOwner, Instant.parse("2026-06-01T00:00:00Z"));
 
     List<ProjectDetail> details = projectDetailReader.listDetailsByWorkspaceId(workspaceId);
 
@@ -186,19 +190,6 @@ class ProjectDetailReaderIntegrationTest extends AbstractPostgresIntegrationTest
         .setParameter(2, email)
         .setParameter(3, "이름")
         .executeUpdate();
-  }
-
-  private void insertProjectOwner(UUID projectId, UUID ownerUserId, Instant createdAt) {
-    entityManager
-        .getEntityManager()
-        .createNativeQuery(
-            "INSERT INTO project_owners (project_id, owner_user_id, created_at)"
-                + " VALUES (?1, ?2, ?3)")
-        .setParameter(1, projectId)
-        .setParameter(2, ownerUserId)
-        .setParameter(3, createdAt)
-        .executeUpdate();
-    entityManager.clear();
   }
 
   /** 목록 정렬을 결정적으로 만들기 위해 생성 시각을 지정합니다. 감사 필드라 앱에서 정할 수 없습니다. */

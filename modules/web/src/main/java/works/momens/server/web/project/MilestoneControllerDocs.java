@@ -27,7 +27,7 @@ interface MilestoneControllerDocs {
   @Operation(
       operationId = "createMilestone",
       summary = "마일스톤 생성",
-      description = "프로젝트에 마일스톤을 생성하고 소유자 목록을 포함해 반환합니다. 소유자를 지정하지 않으면 프로젝트 소유자가 적용됩니다.")
+      description = "프로젝트에 마일스톤을 생성하고 소유자 목록과 함께 반환합니다. 소유자를 지정하지 않으면 요청자가 소유자로 지정됩니다.")
   @ApiResponse(
       responseCode = "201",
       description = "마일스톤 생성 성공",

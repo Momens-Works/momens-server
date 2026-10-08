@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 import works.momens.server.common.api.BusinessException;
 import works.momens.server.common.api.CommonErrorCode;
 import works.momens.server.common.api.FieldValidationException;
-import works.momens.server.project.core.ProjectOwnerReader;
 import works.momens.server.project.milestone.CreateMilestoneCommand;
 import works.momens.server.project.milestone.MilestoneDetail;
 import works.momens.server.project.milestone.MilestoneHealthStatus;
@@ -26,7 +25,6 @@ class MilestoneWriterImpl implements MilestoneWriter {
 
   private final MilestoneRepository milestoneRepository;
   private final MilestoneOwnerRepository milestoneOwnerRepository;
-  private final ProjectOwnerReader projectOwnerReader;
   private final MilestoneOwnerMembershipChecker ownerMembershipChecker;
 
   @Override
@@ -110,13 +108,11 @@ class MilestoneWriterImpl implements MilestoneWriter {
         .toList();
   }
 
-  private List<UUID> resolveOwnerUserIds(CreateMilestoneCommand command) {
+  private static List<UUID> resolveOwnerUserIds(CreateMilestoneCommand command) {
     List<UUID> requested = command.ownerUserIds();
-    if (requested != null && !requested.isEmpty()) {
-      return List.copyOf(requested);
-    }
-    List<UUID> projectOwnerUserIds = projectOwnerReader.listOwnerUserIds(command.projectId());
-    return projectOwnerUserIds.isEmpty() ? List.of(command.requesterId()) : projectOwnerUserIds;
+    return requested == null || requested.isEmpty()
+        ? List.of(command.requesterId())
+        : List.copyOf(requested);
   }
 
   private static String healthStatusOf(MilestoneHealthStatus requested) {
