@@ -252,8 +252,10 @@ endpoint는 그대로 살아 있다.
 | H020 `GET /workspaces` | 세션 확인 직후 호출해 워크스페이스 개수로 로그인·온보딩 상태를 판단하는 핵심 경로 (`momens-fe/src/api/useApiSession.ts`) | **포함** |
 | H022 `GET /workspaces/:id` | snapshot 조회 실패 시의 폴백에서만 호출. 해당 코드는 모든 배포 API가 `/snapshot`을 제공하면 삭제한다고 주석에 명시돼 있다 (`momens-fe/src/api/workspaceSnapshot.ts`) | 제외 |
 
-H022는 서버에 구현해 두되 클라이언트를 옮기지 않는다. 유일한 소비자가 snapshot 폴백이므로 H023
-계약을 잠글 때 이 endpoint가 계속 필요한지와 함께 전환 여부를 판단한다.
+H022는 서버에 구현해 두되 클라이언트를 옮기지 않는다. 2026-10-08 사용자 합의에 따라
+웹 전환(`MOM-0967`) 때 `loadWorkspaceSnapshotLegacy` 폴백을 제거하고 H023만 사용한다.
+snapshot 404를 개별 API 재호출로 우회하지 않으며 관련 폴백 테스트도 갱신한다.
+이미 구현한 신규 서버 H022 API는 유지한다. 실제 FE 변경·배포는 아직 수행하지 않았다.
 
 구현을 함께 하는 이유는 두 endpoint가 같은 reader와 DTO를 쓰기 때문이다. 지금 빼면 나중에 같은
 코드를 다시 열어야 한다.
