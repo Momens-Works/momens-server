@@ -307,7 +307,8 @@ capability의 물리 경계로 유지하고, 배포 단위도 나누지 않는�
   모듈과 project 내부의 다른 하위 도메인도 필요한 named interface의 root API만 참조한다.
 - project core는 다른 하위 도메인을 참조하지 않는다. 진행률은 task가 `TaskProgressReader`로 제공하고,
   task는 프로젝트 생존·workspace 조회에 `ProjectReader`, 마일스톤 소속 검증에 `MilestoneDirectory`를
-  사용한다. milestone은 기본 소유자 조회에 `ProjectOwnerReader`를 사용한다. task repository가
+  사용한다. milestone은 요청자를 기본 소유자로 사용하므로 런타임에서 core의 공개 계약에 의존하지
+  않습니다. 하지만 `MilestoneDetail`의 Javadoc에서 `ProjectDetail`을 참조합니다. task repository가
   `Project`·`Milestone` 엔티티를 JPQL 문자열로 직접 조회하던 숨은 결합은 두 공개 계약으로 제거했다.
 - taskupdate는 호출자가 확정한 workspace와 project 소속을 전달받아 사용하며, task 내부 저장소를 직접
   참조하지 않는다. 허용하는 의존 방향은 `taskupdate → task`이고, task는 taskupdate를 참조하지 않는다.
