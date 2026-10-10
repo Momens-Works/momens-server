@@ -297,12 +297,12 @@ projection도 함께 발생한다. 모델 언어와 변경 이유가 분리될 �
 내부는 도메인 하위 경계로 논리 분리했다(MOM-71·MOM-0887). `:project` Gradle 모듈은 프로젝트 운영
 capability의 물리 경계로 유지하고, 배포 단위도 나누지 않는다.
 
-- 프로젝트 코어는 `core`, 태스크는 `task`, 태스크 업데이트는 `taskupdate`, 마일스톤은 `milestone`, blocker는 `blocker`에 두고 다섯
+- 프로젝트 코어는 `core`, 태스크는 `task`, 태스크 업데이트는 `taskupdate`, 마일스톤은 `milestone`,
+  blocker는 `blocker`, decision은 `decision`에 두고 여섯
   패키지를 Spring Modulith named interface로 선언한다. 다른 상위 모듈은 nested application module을
   직접 참조할 수 없으므로 외부 공개 계약이 필요한 이 경계에는 nested module을 사용하지 않는다.
-  decision은 아직 구현이 없어 경계를 선점하지 않는다.
 - 각 하위 도메인 root에는 해당 경계의 공개 계약만 두고 구현은 `core.internal`, `task.internal`,
-  `taskupdate.internal`, `milestone.internal`, `blocker.internal`에 둔다. `works.momens.server.project` 최상위 패키지는
+  `taskupdate.internal`, `milestone.internal`, `blocker.internal`, `decision.internal`에 둔다. `works.momens.server.project` 최상위 패키지는
   namespace와 application module 선언만 소유하며 production Java 타입을 두지 않는다. 다른 Gradle
   모듈과 project 내부의 다른 하위 도메인도 필요한 named interface의 root API만 참조한다.
 - project core는 다른 하위 도메인을 참조하지 않는다. 진행률은 task가 `TaskProgressReader`로 제공하고,
@@ -312,6 +312,10 @@ capability의 물리 경계로 유지하고, 배포 단위도 나누지 않는�
   `Project`·`Milestone` 엔티티를 JPQL 문자열로 직접 조회하던 숨은 결합은 두 공개 계약으로 제거했다.
 - taskupdate는 호출자가 확정한 workspace와 project 소속을 전달받아 사용하며, task 내부 저장소를 직접
   참조하지 않는다. 허용하는 의존 방향은 `taskupdate → task`이고, task는 taskupdate를 참조하지 않는다.
+- decision은 `DecisionWriter`로 생성을 제공한다(`MOM-1017`). `:web`이 프로젝트와 권한을 확인한 뒤
+  workspace를 전달하며, writer는 `ProjectReader`의 공유 잠금 조회로 프로젝트 활성 상태와 workspace를
+  다시 확인한다. 허용하는 의존 방향은 `decision → core`이며, Decision 저장과 `decision.created`
+  outbox 발행은 같은 트랜잭션에서 처리한다.
 - blocker는 `BlockerReader`와 `BlockerWriter`로 조회·생성·해결·삭제를 제공한다. `:web`이 태스크·프로젝트와
   권한을 확인한 뒤 workspace를 전달하며, blocker는 다른 project 하위 경계에 의존하지 않는다.
   도메인 변경과 outbox 발행 계약은 [Blocker 쓰기 명세](../spec/blocker-write.md)에 있다.

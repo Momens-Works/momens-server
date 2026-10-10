@@ -78,7 +78,7 @@ rg --files ../momens-api/cmd
 그 결과 MCP tool 11개, startup migration runner, retrieval backfill·embedding loop, Slack 비동기
 처리, HTTP server lifecycle, 오프라인 CLI 3개를 확인했다. 별도 cron/scheduler 등록은 없었다.
 
-현재 HTTP 항목은 `implemented` 50개, `traced` 46개다. 비-HTTP·tool 항목 19개는 모두
+현재 HTTP 항목은 `implemented` 62개, `traced` 34개다. 비-HTTP·tool 항목 19개는 모두
 `traced` 상태다. `cutover_ready` 이상인 항목은 아직 없다.
 
 ## 공통 전환 규칙
@@ -203,6 +203,9 @@ MCP grants UI(H035·H036)는 실사용이다.
 
 이번 작업은 처분 결정이며 route 제거·비활성화는 아직 실행하지 않았으므로 상태는 `traced`다.
 `retired` 전환은 실제 제거 또는 비활성 확인 후 수행한다.
+
+후속 `MOM-1017`에서 H054의 신규 서버 생성 API와 outbox 발행을 구현했다. 위 내용은
+`MOM-0975` 당시의 처분 결정이며, 현재 구현 상태와 운영 전환 조건은 아래 H054 행을 따른다.
 
 ## Trace profile
 
@@ -353,7 +356,7 @@ Standard 모드**이며, 모두 `MOM-0848`에서 `traced`됐다.
 | H051 | Product JSON | `GET /projects/:projectId/milestones` | `milestone.List` | `MIL` | R | `traced`. read 기반만 구현(`MOM-0858`), endpoint는 전환 대상이 아니다. 웹 소비자가 snapshot 폴백(`workspaceSnapshot.ts:130`)뿐임이 FE 기준선에서 확인됐다. 마일스톤 데이터는 H023으로 소비된다 |
 | H052 | Product JSON | `POST /projects/:projectId/tasks` | `task.Create` | `TSK` | W | `implemented` (`MOM-0867`); `task.created` outbox 계약을 따른다. worker task projector·legacy MCP·Slack을 포함한 aggregate writer 단일화가 cutover gate. `status`와 `priority`는 정식 값만 받습니다. 레거시에서 허용하던 기존 입력값(`progress`, `in-progress`, `med`), 대소문자가 다른 값, 앞뒤에 공백이 있는 값, 빈 문자열은 400 `COMMON_VALIDATION_FAILED`로 거부합니다(`MOM-0949`). |
 | H053 | Product JSON | `GET /projects/:projectId/tasks` | `task.List` | `TSK` | R | `implemented` (`MOM-0861`); 모바일 보드 계약과 별도 |
-| H054 | Product JSON | `POST /projects/:projectId/decisions` | `decision.Create` | `DEC` | W | `traced`; **레거시 잔류·유지 결정**(`MOM-0975`, 2026-09-26). Decision 생성 API와 연결된 E2E·retrieval projection을 유지한다. 현재 owner는 `momens-api`; 신규 서버 이관 및 레거시 종료 전 최종 owner는 별도 결정한다 |
+| H054 | Product JSON | `POST /projects/:projectId/decisions` | `decision.Create` | `DEC` | W | `implemented` (`MOM-1017`); 신규 서버의 Decision 생성과 `decision.created` outbox 원자 발행을 구현했다. worker projector `MOM-1020`, 검색 E2E `MOM-1022`, 권한 확인과 legacy writer 중단·신규 writer 활성화가 전환 gate다. 운영 writer는 전환 전까지 `momens-api`로 유지한다. 목록·단건 HTTP 조회의 폐기 결정은 유지한다 |
 | H055 | Product JSON | `GET /projects/:projectId/decisions` | `decision.List` | `DEC` | R | `traced`; **폐기 결정·실행 대기**(`MOM-0975`, 2026-09-26). 제품·E2E 소비자가 없고 전용 목록 조회 service/repository의 다른 소비자도 없다. 신규 서버로 이관하지 않는다. decision 데이터와 기존 검색 문서는 유지한다. 생성 API의 처분은 H054 행을 따른다 |
 | H056 | Product JSON | `GET /milestones/:milestoneId` | `milestone.Get` | `MIL` | R | `traced`. 전환 대상이 아니다. 웹 클라이언트에 호출 코드가 없다(FE 기준선 `src/api/client.ts`에 대응 메서드 없음). `MOM-0858`은 단건 조회 public API를 두지 않았다 |
 | H057 | Product JSON | `PATCH /milestones/:milestoneId` | `milestone.Update` | `MIL` | W | `traced`: 웹 미호출. `momens-fe`에 호출 코드가 없어 HTTP endpoint는 이관하지 않는다. MCP 도구 `update_milestone`이 사용할 수 있도록 `:project`의 `MilestoneWriter` public contract와 구현을 추가했다(`MOM-0972`). MCP 도구 자체 이관은 N013에서 추적한다 |
@@ -492,6 +495,8 @@ eval set·retrieval 주소·접근 권한과 선택적 Vertex ADC가 필요하�
    (`MOM-0856`). [컷오버 문서](cutover.md) 6절은 전환 직후 판정 창을 정했고, 전환기 코드 제거에
    필요한 시계열 관찰 기간은 `MOM-0875`가 `MOM-0834` 이후 정한다
 9. 레거시 잔류 7건(H054·H066·H074·H075·H078·H079·H080)의 전환·종료 조건.
+   H054는 `MOM-1017`에서 신규 서버 구현을 완료했으며 worker `MOM-1020`과 E2E `MOM-1022`,
+   권한 확인과 writer 단일화가 전환 gate다.
    H066·H074·H075는 `MOM-1018`에서 신규 서버 구현을 완료했으며 worker `MOM-1021`과
    E2E `MOM-1022`가 전환 gate다. 운영 writer는 전환 전까지 `momens-api`로 유지한다.
    나머지 표면의 최종 담당 시스템과 전환 조건은 레거시 전체 종료 전에 확정한다(`MOM-0975`).
