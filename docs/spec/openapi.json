@@ -13314,16 +13314,6 @@
                       }
                     }
                   },
-                  "SOURCE_FIGMA_REAUTH_REQUIRED" : {
-                    "description" : "Figma 연결을 다시 승인해야 합니다.",
-                    "summary" : "SOURCE_FIGMA_REAUTH_REQUIRED",
-                    "value" : {
-                      "error" : {
-                        "code" : "SOURCE_FIGMA_REAUTH_REQUIRED",
-                        "message" : "Figma 연결을 다시 승인해야 합니다."
-                      }
-                    }
-                  },
                   "SOURCE_NOT_FIGMA_CONNECTION" : {
                     "description" : "Figma 연결이 아닙니다.",
                     "summary" : "SOURCE_NOT_FIGMA_CONNECTION",
@@ -13466,6 +13456,16 @@
                       "error" : {
                         "code" : "SOURCE_CONNECTION_CHANGED",
                         "message" : "연결이 변경되었습니다. 최신 상태를 확인한 뒤 다시 시도해 주세요."
+                      }
+                    }
+                  },
+                  "SOURCE_FIGMA_REAUTH_REQUIRED" : {
+                    "description" : "Figma 연결을 다시 승인해야 합니다.",
+                    "summary" : "SOURCE_FIGMA_REAUTH_REQUIRED",
+                    "value" : {
+                      "error" : {
+                        "code" : "SOURCE_FIGMA_REAUTH_REQUIRED",
+                        "message" : "Figma 연결을 다시 승인해야 합니다."
                       }
                     }
                   }

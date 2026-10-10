@@ -63,6 +63,11 @@ public class FigmaConnectionConfigurator {
     if (!properties.isConfigured()) {
       throw new BusinessException(SourceErrorCode.SOURCE_FIGMA_WEBHOOK_UNCONFIGURED, Map.of());
     }
+    Object previous =
+        before.connection().getMetadata() == null
+            ? null
+            : before.connection().getMetadata().get("webhook_id");
+    String previousWebhookId = previous instanceof String id ? id.strip() : null;
     String token = decrypt(before.credential());
     String webhookId = client.create(token, teamId, workspaceId, properties);
     // DB 결과가 불명확하면 새 webhook을 삭제하지 않습니다. 잘못 삭제하면 저장된 ACTIVE 연결을 끊습니다.
@@ -101,21 +106,28 @@ public class FigmaConnectionConfigurator {
       if (completion[0] == TransactionSynchronization.STATUS_ROLLED_BACK) {
         cleaner.deleteWithToken(connectionId, webhookId, token);
       } else if (completion[0] == TransactionSynchronization.STATUS_UNKNOWN) {
-        cleanupIfNotStored(workspaceId, connectionId, webhookId, token);
+        cleanupIfNotStored(workspaceId, connectionId, webhookId, previousWebhookId, token);
       }
     }
-    Object previous =
-        before.connection().getMetadata() == null
-            ? null
-            : before.connection().getMetadata().get("webhook_id");
-    if (previous instanceof String id && !id.isBlank() && !id.strip().equals(webhookId)) {
-      cleaner.deleteWithToken(connectionId, id.strip(), token);
-    }
+    deletePreviousWebhook(connectionId, previousWebhookId, webhookId, token);
     return saved;
   }
 
+  private void deletePreviousWebhook(
+      UUID connectionId, String previousWebhookId, String webhookId, String token) {
+    if (previousWebhookId != null
+        && !previousWebhookId.isBlank()
+        && !previousWebhookId.equals(webhookId)) {
+      cleaner.deleteWithToken(connectionId, previousWebhookId, token);
+    }
+  }
+
   private void cleanupIfNotStored(
-      UUID workspaceId, UUID connectionId, String webhookId, String token) {
+      UUID workspaceId,
+      UUID connectionId,
+      String webhookId,
+      String previousWebhookId,
+      String token) {
     try {
       // commit 결과를 모를 때 새 transaction의 행 잠금으로 먼저 DB 결과를 확인합니다.
       boolean stored =
@@ -130,14 +142,17 @@ public class FigmaConnectionConfigurator {
                                       && webhookId.equals(
                                           connection.getMetadata().get("webhook_id")))
                           .orElse(false)));
-      if (!stored) {
+      if (stored) {
+        deletePreviousWebhook(connectionId, previousWebhookId, webhookId, token);
+      } else {
         cleaner.deleteWithToken(connectionId, webhookId, token);
       }
     } catch (DataAccessException | TransactionException e) {
       log.warn(
-          "Figma configure outcome unknown connectionId={} webhookId={} action=reconcile",
+          "Figma configure outcome unknown connectionId={} webhookId={} previousWebhookId={} action=reconcile",
           connectionId,
-          webhookId);
+          webhookId,
+          previousWebhookId);
     }
   }
 

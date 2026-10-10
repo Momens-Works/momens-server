@@ -355,8 +355,8 @@ class FigmaConnectionConfiguratorIntegrationTest extends AbstractPostgresIntegra
   }
 
   @Test
-  @DisplayName("commit 결과가 불명확해도 실제 저장된 신규 webhook은 삭제하지 않는다")
-  void unknownCommitPreservesStoredWebhook() {
+  @DisplayName("commit 성공 재확인 시 신규 webhook은 보존하고 이전 webhook만 삭제한다")
+  void unknownCommitCleansPreviousWebhook() {
     assertUnknownCommitPreservesWebhook(false);
   }
 
@@ -370,6 +370,7 @@ class FigmaConnectionConfiguratorIntegrationTest extends AbstractPostgresIntegra
             "Figma configure outcome unknown",
             "connectionId=" + id,
             "webhookId=new-1",
+            "previousWebhookId=old",
             "action=reconcile")
         .doesNotContain("private-commit-error", "private-lookup-error", "private-token");
   }
@@ -429,7 +430,11 @@ class FigmaConnectionConfiguratorIntegrationTest extends AbstractPostgresIntegra
         .isEqualTo("new-1");
     assertThat(row()).containsEntry("status", "ACTIVE").containsEntry("disabled_at", null);
     assertThat(creates.get()).isEqualTo(1);
-    assertThat(deletes).isEmpty();
+    if (failLookup) {
+      assertThat(deletes).isEmpty();
+    } else {
+      assertThat(deletes).containsExactly("old");
+    }
   }
 
   @Test

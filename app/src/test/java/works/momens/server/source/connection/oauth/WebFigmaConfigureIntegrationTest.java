@@ -162,6 +162,34 @@ class WebFigmaConfigureIntegrationTest extends AbstractPostgresIntegrationTest {
     verifyNoInteractions(client);
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {"missing", "expired", "blank"})
+  @DisplayName("누락·만료·빈 토큰은 재인증 필요 409를 반환하고 연결을 보존한다")
+  void requiresReauthorization(String credentialState) throws Exception {
+    switch (credentialState) {
+      case "missing" ->
+          jdbc.update("DELETE FROM source_credentials WHERE connection_id=?", connectionId);
+      case "expired" ->
+          jdbc.update(
+              "UPDATE source_credentials SET expires_at=now()-interval '1 day' WHERE connection_id=?",
+              connectionId);
+      case "blank" ->
+          jdbc.update(
+              "UPDATE source_credentials SET access_token_enc=? WHERE connection_id=?",
+              encryptor.encrypt(" "),
+              connectionId);
+      default -> throw new IllegalArgumentException(credentialState);
+    }
+    mvc.perform(request(connectionId))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.error.code").value("SOURCE_FIGMA_REAUTH_REQUIRED"));
+    verifyNoInteractions(client);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM source_connections WHERE id=?", String.class, connectionId))
+        .isEqualTo("PENDING");
+  }
+
   @Test
   @DisplayName("등록 실패는 안전한 Standard 오류를 반환하고 PENDING을 유지한다")
   void providerFailure() throws Exception {
