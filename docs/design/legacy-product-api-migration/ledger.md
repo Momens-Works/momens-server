@@ -552,9 +552,10 @@ eval set·retrieval 주소·접근 권한과 선택적 Vertex ADC가 필요하�
 구현 중 조용히 정하지 않는다.
 
 1. ~~웹 트래픽을 capability별로 혼합 전환할지, 신규 인증과 준비된 Product API를 한 번에 전환할지~~
-   — 해소. Product capability별 혼합 전환은 기각하고 인증과 Product API를 2단계로 나눴다. 다만
-   미이관 OAuth interaction·MCP grant UI는 한시적 legacy base로 격리한다. 두 단계의 게이트와
-   롤백 절차는 [웹 컷오버 실행과 rollback runbook](cutover.md)에 있다(`MOM-0911`)
+   — 해소. Product capability별 혼합 전환은 기각하고 인증과 Product API의 2단계 구분은 유지한다.
+   1단계 인증 전환은 `MOM-0906`에서 완료했다. 2단계는 `MOM-0953`·`MOM-0967`·`MOM-0992`에
+   따라 Product API·OAuth/MCP UI·MCP를 같은 실행 창에서 전환한다. 기존 legacy base 격리 계획은
+   대체됐으며 실행·롤백은 최신 티켓의 조건을 따른다. 운영 전환과 검증은 아직 완료되지 않았다.
 2. ~~MCP transport·OAuth authorization server의 target Gradle module과 grant/token 이전 방식~~
    — 해소. 별도 `:mcp` 모듈이 MCP/OAuth 표면을 소유하고 사용자 세션 토큰과 MCP client
    토큰을 분리한다. 기존 grant/client/token은 이전하지 않고 전부 재연결하며, canonical
